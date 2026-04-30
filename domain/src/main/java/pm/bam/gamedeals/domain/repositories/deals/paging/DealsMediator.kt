@@ -8,24 +8,22 @@ import androidx.paging.LoadType.REFRESH
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
+import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealPage
-import pm.bam.gamedeals.domain.models.toDeal
-import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
+import pm.bam.gamedeals.domain.models.DealsSortBy
+import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.fatal
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
-import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsSortBy
 
 // Note: Not injected as created anew each time a store is required, as per guidelines and best practice.
-@OptIn(ExperimentalPagingApi::class)
+@OptIn(ExperimentalPagingApi::class, ExperimentalSerializationApi::class)
 internal class DealsMediator(
     private val domainDatabase: DomainDatabase,
     private val cheapsharkSource: CheapsharkSource,
-    private val currencyTransformation: CurrencyTransformation,
     private val storeId: Int,
     private val pageSize: Int,
     private val logger: Logger
@@ -47,13 +45,13 @@ internal class DealsMediator(
             debug(logger) { "pageNumber: $pageNumber - $loadType" }
 
             val deals = cheapsharkSource.fetchDealsForStore(
-                query = RemoteDealsQuery(
+                query = SearchParameters(
                     storeID = storeId,
                     pageSize = pageSize,
                     pageNumber = pageNumber,
-                    sortBy = RemoteDealsSortBy.DEALRATING
+                    sortBy = DealsSortBy.DEALRATING
                 )
-            ).map { it.toDeal(currencyTransformation) }
+            )
 
 
             debug(logger) { "deals size: ${deals.size} - ${deals.map { it.gameID }}" }

@@ -6,7 +6,6 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.runs
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -16,10 +15,8 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.models.toStore
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.cheapshark.models.RemoteStore
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
 class StoresRepositoryImplTest {
@@ -37,13 +34,9 @@ class StoresRepositoryImplTest {
 
     @Test
     fun `observe stores with refresh called`() = runTest {
-        val remoteResults: RemoteStore = mockk()
         val results: Store = mockk {
             every { expires } returns System.currentTimeMillis() + 10000
         }
-
-        mockkStatic(RemoteStore::toStore)
-        every { remoteResults.toStore() } returns results
 
         coEvery { storesDao.observeAllStores() } returns flowOf(listOf())
         coEvery { storesDao.getAllStores() } returns listOf(results)
@@ -61,15 +54,11 @@ class StoresRepositoryImplTest {
 
     @Test
     fun `refresh stores - unforced - expired deals`() = runTest {
-        val remoteResults: RemoteStore = mockk()
         val results: Store = mockk {
             every { expires } returns 0
         }
 
-        mockkStatic(RemoteStore::toStore)
-        every { remoteResults.toStore() } returns results
-
-        coEvery { cheapsharkSource.fetchStores() } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchStores() } returns listOf(results)
         coEvery { storesDao.getAllStores() } returns listOf(results)
         coEvery { storesDao.addStores(results) } just runs
 
@@ -83,13 +72,9 @@ class StoresRepositoryImplTest {
 
     @Test
     fun `refresh deals - unforced - not expired deals`() = runTest {
-        val remoteResults: RemoteStore = mockk()
         val results: Store = mockk {
             every { expires } returns System.currentTimeMillis() + 10000
         }
-
-        mockkStatic(RemoteStore::toStore)
-        every { remoteResults.toStore() } returns results
 
         coEvery { storesDao.getAllStores() } returns listOf(results)
 
@@ -103,15 +88,11 @@ class StoresRepositoryImplTest {
 
     @Test
     fun `refresh deals - forced`() = runTest {
-        val remoteResults: RemoteStore = mockk()
         val results: Store = mockk {
             every { expires } returns 0
         }
 
-        mockkStatic(RemoteStore::toStore)
-        every { remoteResults.toStore() } returns results
-
-        coEvery { cheapsharkSource.fetchStores() } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchStores() } returns listOf(results)
         coEvery { storesDao.getAllStores() } returns listOf(results)
         coEvery { storesDao.addStores(results) } just runs
 

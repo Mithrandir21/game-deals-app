@@ -4,10 +4,8 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -16,10 +14,8 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.models.Release
-import pm.bam.gamedeals.domain.models.toRelease
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.cheapshark.models.RemoteRelease
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
 class ReleasesRepositoryImplTest {
@@ -37,14 +33,10 @@ class ReleasesRepositoryImplTest {
 
     @Test
     fun `observe stores with refresh called`() = runTest {
-        val remoteRelease: RemoteRelease = mockk()
-        val results: Release = mockk()
+        val release: Release = mockk()
 
-        mockkStatic(RemoteRelease::toRelease)
-        every { remoteRelease.toRelease() } returns results
-
-        coEvery { releasesDao.observeAllReleases() } returns flowOf(listOf(results))
-        coEvery { cheapsharkSource.fetchReleases() } returns listOf(remoteRelease)
+        coEvery { releasesDao.observeAllReleases() } returns flowOf(listOf(release))
+        coEvery { cheapsharkSource.fetchReleases() } returns listOf(release)
         coEvery { releasesDao.addReleases(any()) } just Runs
 
 
@@ -53,19 +45,15 @@ class ReleasesRepositoryImplTest {
 
         coVerify(exactly = 1) { releasesDao.observeAllReleases() }
         coVerify(exactly = 1) { cheapsharkSource.fetchReleases() }
-        coVerify(exactly = 1) { releasesDao.addReleases(results) }
+        coVerify(exactly = 1) { releasesDao.addReleases(release) }
     }
 
 
     @Test
     fun `refresh deals`() = runTest {
-        val remoteRelease: RemoteRelease = mockk()
-        val results: Release = mockk()
+        val release: Release = mockk()
 
-        mockkStatic(RemoteRelease::toRelease)
-        every { remoteRelease.toRelease() } returns results
-
-        coEvery { cheapsharkSource.fetchReleases() } returns listOf(remoteRelease)
+        coEvery { cheapsharkSource.fetchReleases() } returns listOf(release)
         coEvery { releasesDao.addReleases(any()) } just Runs
 
 
@@ -73,6 +61,6 @@ class ReleasesRepositoryImplTest {
 
         coVerify(exactly = 0) { releasesDao.observeAllReleases() }
         coVerify(exactly = 1) { cheapsharkSource.fetchReleases() }
-        coVerify(exactly = 1) { releasesDao.addReleases(results) }
+        coVerify(exactly = 1) { releasesDao.addReleases(release) }
     }
 }

@@ -2,23 +2,20 @@ package pm.bam.gamedeals.domain.repositories.giveaway
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
-import pm.bam.gamedeals.domain.models.toGiveaway
+import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import javax.inject.Inject
 
 internal class GiveawaysRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val giveawaysDao: GiveawaysDao,
-    private val gamerPowerSource: GamerPowerSource,
-    private val datetimeParsing: DatetimeParsing
+    private val gamerPowerSource: GamerPowerSource
 ) : GiveawaysRepository {
 
     override fun observeGiveaways(): Flow<List<Giveaway>> =
@@ -56,6 +53,5 @@ internal class GiveawaysRepositoryImpl @Inject constructor(
 
     override suspend fun refreshGiveaways() =
         gamerPowerSource.fetchGiveaways()
-            .map { remoteRelease -> remoteRelease.toGiveaway(datetimeParsing) }
             .let { giveawaysDao.addGiveaways(*it.toTypedArray()) }
 }

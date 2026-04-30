@@ -53,8 +53,6 @@ dependencies {
 
     implementation(project(":logging"))
     implementation(project(":common"))
-    implementation(project(":remote:cheapshark"))
-    implementation(project(":remote:gamerpower"))
 
     implementation(libs.androidx.ktx)
     implementation(libs.androidx.appcompat)
@@ -75,8 +73,16 @@ dependencies {
     implementation(libs.androidx.paging)
 
     testImplementation(project(":testing"))
+    // Used by repository tests to spin up a real CheapsharkSource against MockWebServer
+    // and to mock the GamerPower source. Mappers and DTOs are no longer leaked into
+    // domain main sources, but tests deliberately exercise the wiring.
+    testImplementation(project(":remote:cheapshark"))
+    testImplementation(project(":remote:gamerpower"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
     testImplementation(libs.core.testing)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.okhttp)
+    testImplementation(libs.kotlinx)
 }

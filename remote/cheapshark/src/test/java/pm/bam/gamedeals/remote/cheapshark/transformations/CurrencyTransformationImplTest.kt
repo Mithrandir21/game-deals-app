@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.domain.transformations
+package pm.bam.gamedeals.remote.cheapshark.transformations
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

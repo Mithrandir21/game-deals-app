@@ -4,11 +4,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.models.toStore
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.verbose
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import javax.inject.Inject
 
 internal class StoresRepositoryImpl @Inject constructor(
@@ -31,7 +30,6 @@ internal class StoresRepositoryImpl @Inject constructor(
 
         if (refresh) {
             cheapsharkSource.fetchStores()
-                .map { remoteStore -> remoteStore.toStore() }
                 .let { storesDao.addStores(*it.toTypedArray()) }
         }
     }

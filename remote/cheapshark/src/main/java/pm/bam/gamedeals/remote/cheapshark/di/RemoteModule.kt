@@ -4,13 +4,16 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.CheapsharkSourceImpl
 import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
+import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
+import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformationImpl
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import javax.inject.Singleton
 
@@ -25,13 +28,34 @@ internal class InternalRemoteModule {
 
     @Provides
     @Singleton
+    @CurrencyDenomination
+    fun provideCurrencyDenomination(): String = "$"
+
+    @Provides
+    @Singleton
+    fun provideCurrencyTransformation(@CurrencyDenomination currencySymbol: String): CurrencyTransformation =
+        CurrencyTransformationImpl(currencySymbol)
+
+    @Provides
+    @Singleton
     fun provideCheapsharkSource(
         logger: Logger,
         dealsApi: DealsApi,
         gamesApi: GamesApi,
         releaseApi: ReleaseApi,
         storesApi: StoresApi,
-        remoteExceptionTransformer: RemoteExceptionTransformer
+        remoteExceptionTransformer: RemoteExceptionTransformer,
+        currencyTransformation: CurrencyTransformation,
+        datetimeFormatter: DateTimeFormatter
     ): CheapsharkSource =
-        CheapsharkSourceImpl(logger, dealsApi, gamesApi, releaseApi, storesApi, remoteExceptionTransformer)
+        CheapsharkSourceImpl(
+            logger,
+            dealsApi,
+            gamesApi,
+            releaseApi,
+            storesApi,
+            remoteExceptionTransformer,
+            currencyTransformation,
+            datetimeFormatter
+        )
 }

@@ -8,8 +8,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
-import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.common.serializer.Serializer
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
@@ -27,16 +25,14 @@ import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
-import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
-import pm.bam.gamedeals.domain.transformations.CurrencyTransformationImpl
+import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.verbose
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import java.util.concurrent.Executors
 import javax.inject.Singleton
 
@@ -53,15 +49,6 @@ class DomainModule {
 @Module
 @InstallIn(SingletonComponent::class)
 internal class InternalDomainModule {
-
-    @Provides
-    @Singleton
-    @CurrencyDenomination
-    fun provideCurrencyDenomination(): String = "$"
-
-    @Provides
-    @Singleton
-    fun provideCurrencyTransformation(@CurrencyDenomination currencySymbol: String): CurrencyTransformation = CurrencyTransformationImpl(currencySymbol)
 
     @Provides
     @Domain
@@ -84,21 +71,17 @@ internal class InternalDomainModule {
         logger: Logger,
         dealsDao: DealsDao,
         db: DomainDatabase,
-        cheapsharkSource: CheapsharkSource,
-        currencyTransformation: CurrencyTransformation,
-        dateTimeFormatter: DateTimeFormatter
+        cheapsharkSource: CheapsharkSource
     ): DealsRepository =
-        DealsRepositoryImpl(logger, dealsDao, db, cheapsharkSource, currencyTransformation, dateTimeFormatter)
+        DealsRepositoryImpl(logger, dealsDao, db, cheapsharkSource)
 
     @Provides
     @Singleton
     fun provideGamesRepository(
         gamesDao: GamesDao,
-        cheapsharkSource: CheapsharkSource,
-        currencyTransformation: CurrencyTransformation,
-        dateTimeFormatter: DateTimeFormatter
+        cheapsharkSource: CheapsharkSource
     ): GamesRepository =
-        GamesRepositoryImpl(gamesDao, cheapsharkSource, currencyTransformation, dateTimeFormatter)
+        GamesRepositoryImpl(gamesDao, cheapsharkSource)
 
     @Provides
     @Singleton
@@ -112,8 +95,8 @@ internal class InternalDomainModule {
 
     @Provides
     @Singleton
-    fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, gamerPowerSource: GamerPowerSource, datetimeParsing: DatetimeParsing): GiveawaysRepository =
-        GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource, datetimeParsing)
+    fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, gamerPowerSource: GamerPowerSource): GiveawaysRepository =
+        GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource)
 
     @Provides
     @Singleton
