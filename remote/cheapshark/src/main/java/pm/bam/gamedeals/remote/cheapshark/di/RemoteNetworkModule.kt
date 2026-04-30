@@ -73,7 +73,7 @@ class RemoteNetworkModule {
     internal fun provideReleaseApi(@CheapShark retrofit: Retrofit): ReleaseApi = retrofit.create(ReleaseApi::class.java)
 }
 
-/** A [Qualifier] used specifically for dependencies associated specifically with this GamerPower module as opposed to any other Module. */
+/** A [Qualifier] used specifically for dependencies associated specifically with this CheapShark module as opposed to any other Module. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-internal annotation class CheapShark
+annotation class CheapShark

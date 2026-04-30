@@ -1,0 +1,20 @@
+{
+  "gameInfo": {
+    "storeID": 1,
+    "gameID": 102,
+    "name": "Half-Life 2",
+    "salePrice": 0.99,
+    "retailPrice": 9.99,
+    "steamRatingPercent": 97,
+    "steamRatingCount": "250000",
+    "metacriticScore": 96,
+    "releaseDate": 1100000000,
+    "publisher": "Valve",
+    "thumb": "https://example.com/hl2.jpg"
+  },
+  "cheaperStores": [],
+  "cheapestPrice": {
+    "price": 0.49,
+    "date": 1690000000
+  }
+}

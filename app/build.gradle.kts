@@ -68,7 +68,7 @@ android {
         versionCode = 9
         versionName = "1.0.6"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "pm.bam.gamedeals.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -169,6 +169,20 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.compose.junit4)
+    androidTestImplementation(libs.hilt.testing)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.kotlinx)
+    androidTestImplementation(libs.kotlinx.retrofit)
+    androidTestImplementation(libs.okhttp)
+    androidTestImplementation(libs.retrofit)
+    androidTestImplementation(libs.sandwich)
+    androidTestImplementation(libs.room)
+    androidTestImplementation(libs.room.runtime)
+    androidTestImplementation(project(":remote:cheapshark"))
+    androidTestImplementation(project(":remote:gamerpower"))
+    kaptAndroidTest(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.compose.test)

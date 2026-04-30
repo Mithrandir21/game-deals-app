@@ -5,7 +5,7 @@ import pm.bam.gamedeals.remote.cheapshark.models.RemoteStore
 import retrofit2.http.GET
 import retrofit2.http.Headers
 
-internal interface StoresApi {
+interface StoresApi {
 
     @GET("/api/1.0/stores")
     @Headers("Accept: application/json")

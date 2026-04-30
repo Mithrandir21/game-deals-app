@@ -1,0 +1,20 @@
+{
+  "gameInfo": {
+    "storeID": 1,
+    "gameID": 101,
+    "name": "Portal 2",
+    "salePrice": 1.99,
+    "retailPrice": 9.99,
+    "steamRatingPercent": 98,
+    "steamRatingCount": "300000",
+    "metacriticScore": 95,
+    "releaseDate": 1303689600,
+    "publisher": "Valve",
+    "thumb": "https://example.com/portal2.jpg"
+  },
+  "cheaperStores": [],
+  "cheapestPrice": {
+    "price": 0.99,
+    "date": 1690000000
+  }
+}

@@ -21,18 +21,18 @@ import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
 @Database(version = 3, entities = [Deal::class, DealPage::class, Game::class, Store::class, Release::class, Giveaway::class], exportSchema = false)
 @TypeConverters(StoreImagesConverter::class, GiveawayPlatformsConverter::class, LocalDatetimeConverter::class)
-internal abstract class DomainDatabase : RoomDatabase() {
+abstract class DomainDatabase : RoomDatabase() {
 
-    abstract fun getDealsDao(): DealsDao
+    internal abstract fun getDealsDao(): DealsDao
 
-    abstract fun getGamesDao(): GamesDao
+    internal abstract fun getGamesDao(): GamesDao
 
-    abstract fun getStoresDao(): StoresDao
+    internal abstract fun getStoresDao(): StoresDao
 
-    abstract fun getPagingDao(): PagingDao
+    internal abstract fun getPagingDao(): PagingDao
 
-    abstract fun getReleasesDao(): ReleasesDao
+    internal abstract fun getReleasesDao(): ReleasesDao
 
-    abstract fun getGiveawaysDao(): GiveawaysDao
+    internal abstract fun getGiveawaysDao(): GiveawaysDao
 
 }

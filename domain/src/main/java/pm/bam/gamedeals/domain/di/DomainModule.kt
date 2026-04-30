@@ -43,7 +43,7 @@ import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDat
 import java.util.concurrent.Executors
 import javax.inject.Singleton
 
-@Module(includes = [InternalDomainModule::class])
+@Module(includes = [InternalDomainModule::class, DatabaseModule::class])
 @InstallIn(SingletonComponent::class)
 class DomainModule {
 
@@ -51,6 +51,30 @@ class DomainModule {
     @Domain
     fun provideDomainSharedPreference(@ApplicationContext appContext: Context): SharedPreferences =
         appContext.getSharedPreferences("gamedeals_domain_storage", Context.MODE_PRIVATE)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+class DatabaseModule {
+
+    @Provides
+    @Singleton
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        logger: Logger,
+        @Domain storeImagesConverter: StoreImagesConverter,
+        @Domain giveawayPlatformsConverter: GiveawayPlatformsConverter,
+        @Domain localDatetimeConverter: LocalDatetimeConverter
+    ): DomainDatabase =
+        Room.databaseBuilder(context, DomainDatabase::class.java, "${DomainDatabase::class.java.simpleName}.db")
+            .fallbackToDestructiveMigration()
+            .addTypeConverter(storeImagesConverter)
+            .addTypeConverter(giveawayPlatformsConverter)
+            .addTypeConverter(localDatetimeConverter)
+            .setQueryCallback({ sqlQuery, bindArgs ->
+                verbose(logger) { "SQL Query: $sqlQuery SQL Args: $bindArgs" }
+            }, Executors.newSingleThreadExecutor())
+            .build()
 }
 
 @Module
@@ -105,25 +129,6 @@ internal class InternalDomainModule {
     @Singleton
     fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, remoteGiveawayDataSource: RemoteGiveawayDataSource, datetimeParsing: DatetimeParsing): GiveawaysRepository =
         GiveawaysRepositoryImpl(logger, giveawaysDao, remoteGiveawayDataSource, datetimeParsing)
-
-    @Provides
-    @Singleton
-    fun provideDatabase(
-        @ApplicationContext context: Context,
-        logger: Logger,
-        @Domain storeImagesConverter: StoreImagesConverter,
-        @Domain giveawayPlatformsConverter: GiveawayPlatformsConverter,
-        @Domain localDatetimeConverter: LocalDatetimeConverter
-    ): DomainDatabase =
-        Room.databaseBuilder(context, DomainDatabase::class.java, "${DomainDatabase::class.java.simpleName}.db")
-            .fallbackToDestructiveMigration()
-            .addTypeConverter(storeImagesConverter)
-            .addTypeConverter(giveawayPlatformsConverter)
-            .addTypeConverter(localDatetimeConverter)
-            .setQueryCallback({ sqlQuery, bindArgs ->
-                verbose(logger) { "SQL Query: $sqlQuery SQL Args: $bindArgs" }
-            }, Executors.newSingleThreadExecutor())
-            .build()
 
     @Provides
     @Singleton

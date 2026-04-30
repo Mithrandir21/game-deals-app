@@ -61,4 +61,4 @@ class RemoteNetworkModule {
 /** A [Qualifier] used specifically for dependencies associated specifically with this GamerPower module as opposed to any other Module. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-internal annotation class GamerPower
+annotation class GamerPower
