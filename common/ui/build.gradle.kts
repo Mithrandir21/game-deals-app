@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.compose.navigation)
+    implementation(libs.androidx.compose.runtime)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -63,11 +64,18 @@ dependencies {
     implementation(libs.androidx.compose.material3.window)
     implementation(libs.androidx.compose.material3.adaptive)
 
+    implementation(libs.coil)
+    implementation(libs.coil.compose)
+
     testImplementation(project(":testing"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
 
+    androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.junit4)
+    debugImplementation(libs.androidx.compose.test)
 }

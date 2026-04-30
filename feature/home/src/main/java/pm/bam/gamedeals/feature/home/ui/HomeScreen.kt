@@ -58,15 +58,14 @@ import pm.bam.gamedeals.common.ui.PreviewRelease
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.TabletLandscape
 import pm.bam.gamedeals.common.ui.TabletPortrait
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.ui.DealBottomSheet
-import pm.bam.gamedeals.feature.deal.ui.DealBottomSheetData
-import pm.bam.gamedeals.feature.deal.ui.DealDetailsViewModel
 import pm.bam.gamedeals.feature.home.R
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData.DealData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData.StoreData
@@ -82,11 +81,10 @@ internal fun HomeScreen(
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: HomeViewModel = hiltViewModel(),
-    dealDealDetailsViewModel: DealDetailsViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
-    val dealDetails = dealDealDetailsViewModel.dealDealDetails.collectAsStateWithLifecycle()
+    val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
 
@@ -96,7 +94,7 @@ internal fun HomeScreen(
         data = data.value,
         dealDetails = dealDetails.value,
         onViewDealDetails = { dealId, dealStoreId, dealTitle, dealPriceDenominated ->
-            dealDealDetailsViewModel.loadDealDetails(
+            viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
                 dealTitle = dealTitle,
@@ -105,7 +103,7 @@ internal fun HomeScreen(
         },
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
-        onDismissDealDetails = { dealDealDetailsViewModel.dismissDealDetails() },
+        onDismissDealDetails = { viewModel.dismissDealDetails() },
         goToWeb = goToWeb,
         onRetry = { viewModel.loadTopStoresDeals() }
     )

@@ -20,7 +20,6 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.ui.DealDetailsViewModel
 import pm.bam.gamedeals.feature.home.R
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
@@ -37,8 +36,6 @@ class HomeScreenTest {
     private val viewModel: HomeViewModel = mockk {
         every { events } returns MutableSharedFlow<HomeViewModel.HomeUiEvent>().asSharedFlow()
     }
-
-    private val dealDealDetailsViewModel: DealDetailsViewModel = mockk()
 
     private val storeId = 1
     private val storeTitle = "StoreTitle"
@@ -75,7 +72,7 @@ class HomeScreenTest {
 
     @Before
     fun setup() {
-        every { dealDealDetailsViewModel.dealDealDetails } returns MutableStateFlow(null)
+        every { viewModel.dealDetails } returns MutableStateFlow(null)
     }
 
     @Test
@@ -91,8 +88,7 @@ class HomeScreenTest {
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
                 goToWeb = { _, _ -> },
-                viewModel = viewModel,
-                dealDealDetailsViewModel = dealDealDetailsViewModel
+                viewModel = viewModel
             )
         }
 
@@ -128,8 +124,7 @@ class HomeScreenTest {
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
                 goToWeb = { _, _ -> },
-                viewModel = viewModel,
-                dealDealDetailsViewModel = dealDealDetailsViewModel
+                viewModel = viewModel
             )
         }
 
@@ -165,8 +160,7 @@ class HomeScreenTest {
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
                 goToWeb = { _, _ -> },
-                viewModel = viewModel,
-                dealDealDetailsViewModel = dealDealDetailsViewModel
+                viewModel = viewModel
             )
         }
 

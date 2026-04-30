@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.withMinimumDuration
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
@@ -56,6 +58,13 @@ internal class HomeViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeScreenData()
+    )
+
+    private val _dealDetails = MutableStateFlow<DealBottomSheetData?>(null)
+    val dealDetails: StateFlow<DealBottomSheetData?> = _dealDetails.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
     )
 
     private val _events = MutableSharedFlow<HomeUiEvent>(
@@ -94,6 +103,63 @@ internal class HomeViewModel @Inject constructor(
                 }
                 .collect { _events.emit(HomeUiEvent.NavigateToGame(it)) }
         }
+
+    fun loadDealDetails(
+        dealId: String,
+        dealStoreId: Int,
+        dealTitle: String,
+        dealPriceDenominated: String
+    ) {
+        viewModelScope.launch {
+            try {
+                _dealDetails.emit(
+                    DealBottomSheetData.DealDetailsLoading(
+                        store = storesRepository.getStore(dealStoreId),
+                        gameName = dealTitle,
+                        dealId = dealId,
+                        gameSalesPriceDenominated = dealPriceDenominated
+                    )
+                )
+
+                val data = withMinimumDuration(750L) {
+                    val dealDetails = dealsRepository.getDeal(dealId)
+                    val store = storesRepository.getStore(dealStoreId)
+
+                    DealBottomSheetData.DealDetailsData(
+                        store = store,
+                        gameName = dealTitle,
+                        dealId = dealId,
+                        gameSalesPriceDenominated = dealPriceDenominated,
+                        gameInfo = dealDetails.gameInfo,
+                        cheapestPrice = dealDetails.cheapestPrice,
+                        cheaperStores = dealDetails.cheaperStores.map { storesRepository.getStore(it.storeID) to it }
+                    )
+                }
+                _dealDetails.emit(data)
+            } catch (t: Throwable) {
+                fatal(logger, t)
+                try {
+                    _dealDetails.emit(
+                        DealBottomSheetData.DealDetailsError(
+                            store = storesRepository.getStore(dealStoreId),
+                            gameName = dealTitle,
+                            dealId = dealId,
+                            gameSalesPriceDenominated = dealPriceDenominated
+                        )
+                    )
+                } catch (inner: Throwable) {
+                    fatal(logger, inner)
+                    dismissDealDetails()
+                }
+            }
+        }
+    }
+
+    fun dismissDealDetails() {
+        viewModelScope.launch {
+            _dealDetails.emit(null)
+        }
+    }
 
     private fun loadTopStoreDataFlow() =
         flow { emitAll(storesRepository.observeStores()) }

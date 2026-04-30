@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.feature.deal.ui
+package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -43,11 +43,11 @@ import pm.bam.gamedeals.common.ui.PreviewDealCheapestPrice
 import pm.bam.gamedeals.common.ui.PreviewDealDetails
 import pm.bam.gamedeals.common.ui.PreviewDealGameInfo
 import pm.bam.gamedeals.common.ui.PreviewStore
+import pm.bam.gamedeals.common.ui.R
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +86,7 @@ private fun DealContent(
             AsyncImage(
                 model = data.store.images.logo,
                 contentDescription = stringResource(R.string.deal_details_store_thumbnail, data.store.storeName),
-                error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                error = painterResource(id = R.drawable.videogame_thumb),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(48.dp)
@@ -180,7 +180,7 @@ private fun GameDetails(
                         AsyncImage(
                             model = it.first.images.logo,
                             contentDescription = stringResource(R.string.deal_details_cheaper_store_thumbnail, data.store.storeName),
-                            error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                            error = painterResource(id = R.drawable.videogame_thumb),
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .size(32.dp)
@@ -233,7 +233,7 @@ private fun GameDetails(
                 AsyncImage(
                     model = data.gameInfo.thumb,
                     contentDescription = stringResource(R.string.deal_details_game_image, data.gameName),
-                    error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                    error = painterResource(id = R.drawable.videogame_thumb),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -396,7 +396,7 @@ private fun DealBottomErrorPreview() {
     }
 }
 
-internal const val DEAL_URL = "https://www.cheapshark.com/redirect?dealID="
+const val DEAL_URL = "https://www.cheapshark.com/redirect?dealID="
 
 internal const val CheapestPriceTag = "CheapestPrice"
 internal const val DataLoadingTag = "DataLoading"
