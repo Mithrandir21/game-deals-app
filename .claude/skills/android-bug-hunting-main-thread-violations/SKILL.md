@@ -1,5 +1,5 @@
 ---
-name: main-thread-violations
+name: android-bug-hunting-main-thread-violations
 description: >
   Hunt for main-thread (UI thread) violations in Android code: blocking I/O, network calls,
   Room DAO calls without suspend/Flow, file reads, SharedPreferences.commit(), heavy
@@ -19,7 +19,7 @@ ANRs and jank almost always trace to one cause: blocking work on the main thread
 patterns are concrete and pattern-matchable. This skill enumerates them and looks for
 each.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunt`).
+**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
 Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
 Recommended Fix, Confidence Rationale.
 

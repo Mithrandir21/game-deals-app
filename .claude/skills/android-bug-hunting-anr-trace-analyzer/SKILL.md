@@ -1,5 +1,5 @@
 ---
-name: anr-trace-analyzer
+name: android-bug-hunting-anr-trace-analyzer
 description: >
   Analyze an Android ANR (Application Not Responding) trace and identify what is blocking
   the main thread. Reads the "main" thread stack to determine the cause class — I/O blocking

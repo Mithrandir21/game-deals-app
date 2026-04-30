@@ -1,5 +1,5 @@
 ---
-name: kmp-defects
+name: android-bug-hunting-kmp-defects
 description: >
   Hunt for runtime defects specific to Kotlin Multiplatform projects: expect declarations
   without actual implementations across all active source sets, Android/JVM types leaking
@@ -23,7 +23,7 @@ platform leakage into `commonMain`, `expect`/`actual` mismatches, K/N runtime qu
 Swift-interop hazards. The bugs are specific and pattern-matchable; this skill enumerates
 them.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunt`).
+**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
 Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
 Recommended Fix, Confidence Rationale.
 

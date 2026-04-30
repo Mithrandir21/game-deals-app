@@ -1,5 +1,5 @@
 ---
-name: coroutine-and-flow-defects
+name: android-bug-hunting-coroutine-and-flow-defects
 description: >
   Hunt for runtime defects in Kotlin coroutine and Flow usage in Android/KMP code. Covers
   scope misuse (GlobalScope, runBlocking in production, wrong scope for the work),
@@ -24,7 +24,7 @@ patterns are well-cataloged, and almost all of them are detectable from source. 
 skill encodes those patterns and hunts for them systematically.
 
 **Output format.** Every finding uses the shared Bug Report Format defined by the
-dispatcher (`android-bug-hunt`). If running standalone, use the same format — the
+dispatcher (`android-bug-hunting-dispatcher`). If running standalone, use the same format — the
 fields are: Severity, Category, Location, Effort, Confidence, Description, Impact,
 Evidence, Recommended Fix, Confidence Rationale.
 

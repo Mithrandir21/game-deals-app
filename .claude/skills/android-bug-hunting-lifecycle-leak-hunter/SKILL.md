@@ -1,5 +1,5 @@
 ---
-name: lifecycle-leak-hunter
+name: android-bug-hunting-lifecycle-leak-hunter
 description: >
   Hunt for memory leaks and lifecycle violations in Android code: Activity/Fragment/View/Context
   references held past their lifecycle, ViewBinding accessed after onDestroyView, listeners
@@ -21,7 +21,7 @@ Memory leaks on Android almost always come from a small set of patterns: holding
 to something with a short lifecycle from something with a longer one. This skill looks for
 the specific patterns that cause leaks, not for general "code smells."
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunt`).
+**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
 Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
 Recommended Fix, Confidence Rationale.
 
@@ -328,8 +328,8 @@ file descriptors and memory. Even when closed, the field reference may keep buff
 **Recommended fix.** Open and close inside a `use { }` block at the call site. If you
 truly need a long-lived stream, document it and ensure deterministic teardown.
 
-(Note: this overlaps with `resource-leaks`. Flag here when the *holder* is the lifecycle
-violation; flag in `resource-leaks` when the resource lifecycle itself is the issue.)
+(Note: this overlaps with `android-bug-hunting-resource-leaks`. Flag here when the *holder* is the lifecycle
+violation; flag in `android-bug-hunting-resource-leaks` when the resource lifecycle itself is the issue.)
 
 ---
 

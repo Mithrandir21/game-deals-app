@@ -1,5 +1,5 @@
 ---
-name: stacktrace-analyzer
+name: android-bug-hunting-stacktrace-analyzer
 description: >
   Analyze a Java/Kotlin/Android stacktrace or crash report and produce a high-confidence
   hypothesis about the root cause. Identifies the exception type, locates the first frame
@@ -69,7 +69,7 @@ Reason: Input dispatching timed out
   at com.example.app.MainActivity.onResume(MainActivity.kt:23)
 ```
 
-(For ANR traces specifically, prefer the `anr-trace-analyzer` skill — it's deeper.)
+(For ANR traces specifically, prefer the `android-bug-hunting-anr-trace-analyzer` skill — it's deeper.)
 
 ---
 
@@ -168,7 +168,7 @@ thread since it may potentially lock the UI for a long period of time.`
 **Likely cause.** A non-suspend, non-Flow Room DAO method called from Main.
 
 **Where to look.** First app frame's class — find the DAO method invoked. See
-`main-thread-violations` D1 for the static-analysis equivalent.
+`android-bug-hunting-main-thread-violations` D1 for the static-analysis equivalent.
 
 ---
 
@@ -228,7 +228,7 @@ permission flow.
 
 **Signature.** That exception name.
 
-**Likely cause.** Networking on Main. See `main-thread-violations` D4.
+**Likely cause.** Networking on Main. See `android-bug-hunting-main-thread-violations` D4.
 
 ---
 

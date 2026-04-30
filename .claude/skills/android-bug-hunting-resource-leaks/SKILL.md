@@ -1,5 +1,5 @@
 ---
-name: resource-leaks
+name: android-bug-hunting-resource-leaks
 description: >
   Hunt for resource leaks in Android/Kotlin code: Cursor, InputStream, OutputStream, Reader,
   Writer not closed; OkHttp Response bodies not closed; database transactions left open;
@@ -25,7 +25,7 @@ The pattern is almost always: opened, used, *missed close on an early return / e
 path*. Kotlin's `use { }` extension makes the fix cheap; this skill finds the places
 where it isn't applied.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunt`).
+**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
 Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
 Recommended Fix, Confidence Rationale.
 
@@ -362,7 +362,7 @@ try {
 
 ### D14 — `BroadcastReceiver` registered with `Context.registerReceiver` not unregistered
 
-This overlaps with `lifecycle-leak-hunter` D5 — flag here when the receiver holds a
+This overlaps with `android-bug-hunting-lifecycle-leak-hunter` D5 — flag here when the receiver holds a
 specific resource (file, socket, native handle), not just an Activity reference.
 
 ---

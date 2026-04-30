@@ -1,5 +1,5 @@
 ---
-name: android-bug-hunt
+name: android-bug-hunting-dispatcher
 description: >
   Systematic bug hunt across an Android (or KMP) codebase. Dispatches a focused set of
   specialist sub-agents — each targeting a specific class of defect (coroutine/Flow misuse,
@@ -61,12 +61,12 @@ Build a small profile of the project:
 
 | Signal | Dispatch |
 |---|---|
-| Coroutines/Flow used anywhere | `coroutine-and-flow-defects` (almost always) |
-| Activities/Fragments/Services exist | `lifecycle-leak-hunter` |
-| `@Composable` functions exist | `compose-correctness` |
-| Room, Retrofit, file I/O, or `SharedPreferences.commit` references | `main-thread-violations` |
-| `Cursor`, `InputStream`, `OutputStream`, OkHttp `Response`, `TypedArray` references | `resource-leaks` |
-| `commonMain` source set or `expect`/`actual` declarations | `kmp-defects` |
+| Coroutines/Flow used anywhere | `android-bug-hunting-coroutine-and-flow-defects` (almost always) |
+| Activities/Fragments/Services exist | `android-bug-hunting-lifecycle-leak-hunter` |
+| `@Composable` functions exist | `android-bug-hunting-compose-correctness` |
+| Room, Retrofit, file I/O, or `SharedPreferences.commit` references | `android-bug-hunting-main-thread-violations` |
+| `Cursor`, `InputStream`, `OutputStream`, OkHttp `Response`, `TypedArray` references | `android-bug-hunting-resource-leaks` |
+| `commonMain` source set or `expect`/`actual` declarations | `android-bug-hunting-kmp-defects` |
 
 If the user has narrowed the scope ("just look for memory leaks", "compose only"), dispatch
 only those specialists.
@@ -176,8 +176,8 @@ Once all specialists have written their findings:
 
 1. **Read every `findings-*.md`.**
 2. **Deduplicate.** If two specialists flag the same root cause from different angles
-   (e.g. lifecycle-leak-hunter flags a Fragment holding a binding past `onDestroyView`,
-   and compose-correctness flags the same Fragment for a related state issue), unify
+   (e.g. android-bug-hunting-lifecycle-leak-hunter flags a Fragment holding a binding past `onDestroyView`,
+   and android-bug-hunting-compose-correctness flags the same Fragment for a related state issue), unify
    them into one finding that cites both perspectives.
 3. **Renumber.** Assign global IDs `BUG-001`, `BUG-002`, … in final severity order.
 4. **Sort.** Critical first, then High, Medium, Low. Within a severity tier, sort by

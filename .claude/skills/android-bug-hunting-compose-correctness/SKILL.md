@@ -1,5 +1,5 @@
 ---
-name: compose-correctness
+name: android-bug-hunting-compose-correctness
 description: >
   Hunt for runtime defects in Jetpack Compose code: side effects launched outside
   LaunchedEffect/DisposableEffect, state read in non-composable scopes, remember/rememberSaveable
@@ -22,7 +22,7 @@ that look like "weird UI behaviour" rather than crashes — duplicated effects, 
 missed updates, infinite recomposition, jank from over-recomposition. This skill encodes
 the well-known antipatterns and looks for each one.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunt`).
+**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
 Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
 Recommended Fix, Confidence Rationale.
 
