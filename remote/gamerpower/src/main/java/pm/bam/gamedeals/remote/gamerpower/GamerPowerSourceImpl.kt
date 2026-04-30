@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.remote.gamerpower.datasources.giveaway
+package pm.bam.gamedeals.remote.gamerpower
 
 import com.skydoves.sandwich.getOrThrow
 import pm.bam.gamedeals.logging.Logger
@@ -9,16 +9,19 @@ import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
 import javax.inject.Inject
 
-internal class RemoteGiveawayDataSourceImpl @Inject constructor(
+internal class GamerPowerSourceImpl @Inject constructor(
     private val logger: Logger,
     private val gamesApi: GamesApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer
-) : RemoteGiveawayDataSource {
+) : GamerPowerSource {
 
-    override suspend fun getGiveaways(): List<RemoteGiveaway> =
+    override suspend fun fetchGiveaways(): List<RemoteGiveaway> =
         gamesApi.getAllGames()
-            .log(logger, tag = RemoteGiveawayDataSourceImpl::class.simpleName)
+            .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
 
+    private companion object {
+        private val TAG: String = GamerPowerSourceImpl::class.simpleName.orEmpty()
+    }
 }

@@ -18,8 +18,8 @@ import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.verbose
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
 import javax.inject.Inject
 
 internal const val DEAL_PAGE_COUNT = 60
@@ -28,7 +28,7 @@ internal class DealsRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val dealsDao: DealsDao,
     private val domainDatabase: DomainDatabase,
-    private val remoteDealsDataSource: RemoteDealsDataSource,
+    private val cheapsharkSource: CheapsharkSource,
     private val currencyTransformation: CurrencyTransformation,
     private val datetimeFormatter: DateTimeFormatter
 ) : DealsRepository {
@@ -42,7 +42,7 @@ internal class DealsRepositoryImpl @Inject constructor(
             pageSize = DEAL_PAGE_COUNT,
             enablePlaceholders = false
         ),
-        remoteMediator = DealsMediator(domainDatabase, remoteDealsDataSource, currencyTransformation, storeId, DEAL_PAGE_COUNT, logger)
+        remoteMediator = DealsMediator(domainDatabase, cheapsharkSource, currencyTransformation, storeId, DEAL_PAGE_COUNT, logger)
     ) {
         dealsDao.getPagingStoreDeals(storeId)
     }.flow
@@ -59,7 +59,7 @@ internal class DealsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDeal(dealId: String): DealDetails =
-        remoteDealsDataSource.getDeals(dealId).toDealDetails(currencyTransformation, datetimeFormatter)
+        cheapsharkSource.fetchDealDetails(dealId).toDealDetails(currencyTransformation, datetimeFormatter)
 
     override suspend fun refreshDeals(storeId: Int, force: Boolean) {
         val refresh = force || refreshNeeded(storeId)
@@ -69,7 +69,7 @@ internal class DealsRepositoryImpl @Inject constructor(
         if (refresh) {
             domainDatabase.withTransaction {
                 dealsDao.clearDealsForStore(storeId)
-                remoteDealsDataSource.getDeals(RemoteDealsQuery(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
+                cheapsharkSource.fetchDealsForStore(RemoteDealsQuery(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
                     .map { remoteDeal -> remoteDeal.toDeal(currencyTransformation) }
                     .let { dealsDao.addDeals(*it.toTypedArray()) }
             }

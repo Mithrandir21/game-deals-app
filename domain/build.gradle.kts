@@ -80,4 +80,7 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
     testImplementation(libs.core.testing)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.okhttp)
+    testImplementation(libs.kotlinx)
 }

@@ -21,8 +21,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.toGame
 import pm.bam.gamedeals.domain.models.toGameDetails
 import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
-import pm.bam.gamedeals.remote.cheapshark.datasources.games.RemoteGamesDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteGame
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteGameDetails
 
@@ -33,15 +32,13 @@ class GamesRepositoryImplTest {
 
     private val gamesDao: GamesDao = mockk()
 
-    private val remoteGamesDataSource: RemoteGamesDataSource = mockk()
-
-    private val remoteDealsDataSource: RemoteDealsDataSource = mockk()
+    private val cheapsharkSource: CheapsharkSource = mockk()
 
     private val currencyTransformation: CurrencyTransformation = mockk()
 
     private val dateTimeFormatter: DateTimeFormatter = mockk()
 
-    private val impl = GamesRepositoryImpl(gamesDao, remoteGamesDataSource, remoteDealsDataSource, currencyTransformation, dateTimeFormatter)
+    private val impl = GamesRepositoryImpl(gamesDao, cheapsharkSource, currencyTransformation, dateTimeFormatter)
 
     @Test
     fun `observe games with refresh called`() = runTest {
@@ -52,7 +49,7 @@ class GamesRepositoryImplTest {
         every { remoteResults.toGame(currencyTransformation) } returns results
 
         coEvery { gamesDao.observeAllGames() } returns flowOf(emptyList())
-        coEvery { remoteGamesDataSource.searchGames("") } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchGames("") } returns listOf(remoteResults)
         coEvery { gamesDao.addGames(results) } just runs
 
 
@@ -60,7 +57,7 @@ class GamesRepositoryImplTest {
         Assert.assertTrue(result.isEmpty())
 
         coVerify(exactly = 1) { gamesDao.observeAllGames() }
-        coVerify(exactly = 1) { remoteGamesDataSource.searchGames("") }
+        coVerify(exactly = 1) { cheapsharkSource.fetchGames("") }
         coVerify(exactly = 1) { gamesDao.addGames(results) }
     }
 
@@ -75,13 +72,13 @@ class GamesRepositoryImplTest {
         mockkStatic(RemoteGameDetails::toGameDetails)
         every { remoteResults.toGameDetails(currencyTransformation, dateTimeFormatter) } returns results
 
-        coEvery { remoteGamesDataSource.getGameDetails(idString) } returns remoteResults
+        coEvery { cheapsharkSource.fetchGameDetails(idString) } returns remoteResults
 
 
         val result = impl.getGameDetails(id)
         Assert.assertEquals(results, result)
 
-        coVerify(exactly = 1) { remoteGamesDataSource.getGameDetails(idString) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchGameDetails(idString) }
     }
 
 
@@ -93,13 +90,13 @@ class GamesRepositoryImplTest {
         mockkStatic(RemoteGame::toGame)
         every { remoteResults.toGame(currencyTransformation) } returns results
 
-        coEvery { remoteGamesDataSource.searchGames("") } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchGames("") } returns listOf(remoteResults)
         coEvery { gamesDao.addGames(results) } just runs
 
 
         impl.refreshGames()
 
-        coVerify(exactly = 1) { remoteGamesDataSource.searchGames("") }
+        coVerify(exactly = 1) { cheapsharkSource.fetchGames("") }
         coVerify(exactly = 1) { gamesDao.addGames(results) }
     }
 

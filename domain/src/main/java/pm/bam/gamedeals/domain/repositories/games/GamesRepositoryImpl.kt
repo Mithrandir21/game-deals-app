@@ -14,14 +14,12 @@ import pm.bam.gamedeals.domain.models.toGame
 import pm.bam.gamedeals.domain.models.toGameDetails
 import pm.bam.gamedeals.domain.models.toRemoteDealsQuery
 import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
-import pm.bam.gamedeals.remote.cheapshark.datasources.games.RemoteGamesDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import javax.inject.Inject
 
 internal class GamesRepositoryImpl @Inject constructor(
     private val gamesDao: GamesDao,
-    private val remoteGamesDataSource: RemoteGamesDataSource,
-    private val remoteDealsDataSource: RemoteDealsDataSource,
+    private val cheapsharkSource: CheapsharkSource,
     private val currencyTransformation: CurrencyTransformation,
     private val dateTimeFormatter: DateTimeFormatter
 ) : GamesRepository {
@@ -31,25 +29,25 @@ internal class GamesRepositoryImpl @Inject constructor(
             .onStart { refreshGames() }
 
     override suspend fun searchGames(query: String): List<Game> =
-        remoteGamesDataSource.searchGames(query)
+        cheapsharkSource.fetchGames(query)
             .map { remoteGame -> remoteGame.toGame(currencyTransformation) }
 
     @ExperimentalSerializationApi
     override suspend fun searchGames(searchParameters: SearchParameters): List<Deal> =
-        remoteDealsDataSource.getDeals(searchParameters.toRemoteDealsQuery())
+        cheapsharkSource.fetchDealsForStore(searchParameters.toRemoteDealsQuery())
             .map { remoteDeal -> remoteDeal.toDeal(currencyTransformation) }
 
     @ExperimentalSerializationApi
     override suspend fun getReleaseGameId(gameTitle: String): Int? =
-        remoteDealsDataSource.getDeals(SearchParameters(title = gameTitle, exact = true).toRemoteDealsQuery())
+        cheapsharkSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true).toRemoteDealsQuery())
             .firstOrNull()
             ?.gameID
 
     override suspend fun getGameDetails(dealId: Int): GameDetails =
-        remoteGamesDataSource.getGameDetails(dealId.toString()).toGameDetails(currencyTransformation, dateTimeFormatter)
+        cheapsharkSource.fetchGameDetails(dealId.toString()).toGameDetails(currencyTransformation, dateTimeFormatter)
 
     override suspend fun refreshGames() =
-        remoteGamesDataSource.searchGames("")
+        cheapsharkSource.fetchGames("")
             .map { remoteGame -> remoteGame.toGame(currencyTransformation) }
             .let { gamesDao.addGames(*it.toTypedArray()) }
 }

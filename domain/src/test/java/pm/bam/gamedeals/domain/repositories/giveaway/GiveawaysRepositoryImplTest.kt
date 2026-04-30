@@ -25,7 +25,7 @@ import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.toGiveaway
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDataSource
+import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import pm.bam.gamedeals.remote.gamerpower.models.RemoteGiveaway
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import java.time.LocalDateTime
@@ -39,11 +39,11 @@ class GiveawaysRepositoryImplTest {
 
     private val giveawaysDao: GiveawaysDao = mockk()
 
-    private val remoteGiveawayDataSource: RemoteGiveawayDataSource = mockk()
+    private val gamerPowerSource: GamerPowerSource = mockk()
 
     private val datetimeParsing: DatetimeParsing = mockk()
 
-    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, remoteGiveawayDataSource, datetimeParsing)
+    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource, datetimeParsing)
 
     @Test
     fun `observe giveaways with descending publishedDate order`() = runTest {
@@ -73,12 +73,12 @@ class GiveawaysRepositoryImplTest {
         mockkStatic(RemoteGiveaway::toGiveaway)
         every { remoteGiveaway.toGiveaway(datetimeParsing) } returns giveaway
 
-        coEvery { remoteGiveawayDataSource.getGiveaways() } returns listOf(remoteGiveaway)
+        coEvery { gamerPowerSource.fetchGiveaways() } returns listOf(remoteGiveaway)
         coEvery { giveawaysDao.addGiveaways(any()) } just Runs
 
         impl.refreshGiveaways()
 
-        coVerify(exactly = 1) { remoteGiveawayDataSource.getGiveaways() }
+        coVerify(exactly = 1) { gamerPowerSource.fetchGiveaways() }
         coVerify(exactly = 1) { giveawaysDao.addGiveaways(any()) }
     }
 

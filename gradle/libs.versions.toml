@@ -106,6 +106,7 @@ coil-test = { group = "io.coil-kt", name = "coil-test", version.ref = "coil" }
 okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp-logging" }
+mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 sandwich = { group = "com.github.skydoves", name = "sandwich-retrofit", version.ref = "sandwich" }
 sandwich-serializer = { group = "com.github.skydoves", name = "sandwich-retrofit-serialization", version.ref = "sandwich" }

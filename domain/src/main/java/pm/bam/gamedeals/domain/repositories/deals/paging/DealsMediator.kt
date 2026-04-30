@@ -16,15 +16,15 @@ import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsSortBy
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
 
 // Note: Not injected as created anew each time a store is required, as per guidelines and best practice.
 @OptIn(ExperimentalPagingApi::class)
 internal class DealsMediator(
     private val domainDatabase: DomainDatabase,
-    private val remoteDealsDataSource: RemoteDealsDataSource,
+    private val cheapsharkSource: CheapsharkSource,
     private val currencyTransformation: CurrencyTransformation,
     private val storeId: Int,
     private val pageSize: Int,
@@ -46,8 +46,8 @@ internal class DealsMediator(
 
             debug(logger) { "pageNumber: $pageNumber - $loadType" }
 
-            val deals = remoteDealsDataSource.getDeals(
-                remoteDealsQuery = RemoteDealsQuery(
+            val deals = cheapsharkSource.fetchDealsForStore(
+                query = RemoteDealsQuery(
                     storeID = storeId,
                     pageSize = pageSize,
                     pageNumber = pageNumber,
