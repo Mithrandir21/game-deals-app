@@ -110,8 +110,12 @@ internal fun HomeScreen(
         onRetry = { viewModel.loadTopStoresDeals() }
     )
 
-    // Collect the release game id and navigate to the game screen
-    SingleEventEffect(viewModel.releaseGameId) { goToGame(it) }
+    // Collect one-shot UI events and dispatch them
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is HomeViewModel.HomeUiEvent.NavigateToGame -> goToGame(event.gameId)
+        }
+    }
 }
 
 @Composable

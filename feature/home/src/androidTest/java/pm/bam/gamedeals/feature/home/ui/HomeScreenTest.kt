@@ -12,8 +12,9 @@ import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.asSharedFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +35,7 @@ class HomeScreenTest {
     val screenOrientationRule: ScreenOrientationRule = ScreenOrientationRule(ScreenOrientation.PORTRAIT)
 
     private val viewModel: HomeViewModel = mockk {
-        every { releaseGameId } returns flowOf()
+        every { events } returns MutableSharedFlow<HomeViewModel.HomeUiEvent>().asSharedFlow()
     }
 
     private val dealDealDetailsViewModel: DealDetailsViewModel = mockk()
