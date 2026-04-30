@@ -70,7 +70,11 @@ dependencies {
     implementation(libs.sandwich)
     implementation(libs.sandwich.serializer)
 
+    testImplementation(project(":testing"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.okhttp)
+    testImplementation(libs.kotlinx)
 }
