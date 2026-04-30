@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -37,8 +37,6 @@ internal class GiveawaysViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // Wrap in `flow { emitAll(...) }` so any synchronous throw from `observeGiveaways()`
-            // is delivered as an upstream exception to the `.catch { }` below.
             flow { emitAll(giveawaysRepository.observeGiveaways()) }
                 .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it) }
                 .logFlow(logger)
@@ -47,18 +45,18 @@ internal class GiveawaysViewModel @Inject constructor(
         }
     }
 
-    fun reloadGiveaways() = viewModelScope.launch {
-        _uiState.update { it.copy(status = GiveawaysScreenStatus.LOADING) }
-        try {
-            giveawaysRepository.refreshGiveaways()
-        } catch (t: Throwable) {
-            _uiState.update { it.copy(status = GiveawaysScreenStatus.ERROR) }
+    fun reloadGiveaways() {
+        viewModelScope.launch {
+            flow { emit(_uiState.value.copy(status = GiveawaysScreenStatus.LOADING)) }
+                .onStart { giveawaysRepository.refreshGiveaways() }
+                .logFlow(logger)
+                .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
+                .collect { _uiState.emit(it) }
         }
     }
 
     fun loadGiveaway(parameters: GiveawaySearchParameters) {
         viewModelScope.launch {
-            // Same rationale as init.
             flow { emitAll(giveawaysRepository.observeGiveaways(parameters)) }
                 .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it) }
                 .logFlow(logger)

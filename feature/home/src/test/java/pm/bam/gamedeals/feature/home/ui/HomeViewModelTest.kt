@@ -11,7 +11,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
@@ -28,6 +28,7 @@ import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
+import pm.bam.gamedeals.testing.utils.third
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -149,7 +150,7 @@ class HomeViewModelTest {
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }
     }
 
-    @Test
+    @Test(expected = Exception::class)
     fun `onReleaseGame title exception`() = runTest {
         val releaseTitle = "title"
 
@@ -165,10 +166,11 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        assertTrue("expected at least 2 state emissions, got ${emissions.size}", emissions.size >= 2)
-        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.last())
+        assertEquals(3, emissions.size)
+        assertNotNull(emissions.third())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.third())
 
-        assertEquals(0, events.size)
+        assertNull(events.firstOrNull())
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }

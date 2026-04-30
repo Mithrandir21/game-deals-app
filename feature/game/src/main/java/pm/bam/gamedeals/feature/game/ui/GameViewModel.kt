@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,12 +11,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.delayOnStart
 import pm.bam.gamedeals.common.logFlow
+import pm.bam.gamedeals.common.toFlow
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -56,25 +57,25 @@ internal class GameViewModel @Inject constructor(
     }
 
 
-    fun reloadGameDetails(gameId: Int) = viewModelScope.launch {
-        try {
-            _uiState.emit(GameScreenData.Loading)
-            val details = gamesRepository.getGameDetails(gameId)
-            val dealDetails = details.deals.map { deal -> storesRepository.getStore(deal.storeID) to deal }
-            _uiState.emit(GameScreenData.Data(details, dealDetails))
-        } catch (t: Throwable) {
-            _uiState.emit(GameScreenData.Error)
+    fun reloadGameDetails(gameId: Int) {
+        viewModelScope.launch {
+            loadGameDetailsFlow(gameId)
+                .collect { _uiState.emit(it) }
         }
     }
 
-    private fun loadGameDetailsFlow(gameId: Int): Flow<GameScreenData> = flow {
-        emit(GameScreenData.Loading)
-        val details = gamesRepository.getGameDetails(gameId)
-        val dealDetails = details.deals.map { deal -> storesRepository.getStore(deal.storeID) to deal }
-        emit(GameScreenData.Data(details, dealDetails))
-    }
-        .logFlow(logger)
-        .catch { emit(GameScreenData.Error) }
+    private fun loadGameDetailsFlow(gameId: Int) =
+        flowOf(gameId)
+            .flatMapLatest { gamesRepository.getGameDetails(it).toFlow() }
+            .flatMapLatest { details ->
+                details.deals
+                    .map { deal -> storesRepository.getStore(deal.storeID) to deal }
+                    .let { dealDetails -> GameScreenData.Data(details, dealDetails) }
+                    .toFlow<GameScreenData>()
+            }
+            .onStart { _uiState.emit(GameScreenData.Loading) }
+            .logFlow(logger)
+            .catch { emit(GameScreenData.Error) }
 
 
     fun loadGameDetails(gameId: Int) = gameIdFlow.update { gameId }
