@@ -100,7 +100,7 @@ class DealDetailsViewModelTest {
             ), emissions.second()
         )
 
-        delay(1000) // Delay because Flow 'mapDelayAtLeast'
+        delay(1000) // Delay because of 'withMinimumDuration(750)' in loadDealDetails
 
 
         assertEquals(3, emissions.size)

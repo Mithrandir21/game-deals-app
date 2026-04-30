@@ -4,23 +4,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
@@ -56,8 +56,12 @@ internal class HomeViewModel @Inject constructor(
         initialValue = HomeScreenData()
     )
 
-    private val _releaseGameId = Channel<Int>(capacity = Channel.BUFFERED)
-    val releaseGameId: Flow<Int> = _releaseGameId.receiveAsFlow()
+    private val _events = MutableSharedFlow<HomeUiEvent>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val events: SharedFlow<HomeUiEvent> = _events.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -74,22 +78,23 @@ internal class HomeViewModel @Inject constructor(
                 .collect { _uiState.emit(it) }
         }
 
-    fun onReleaseGame(releaseTitle: String) =
-        viewModelScope.launch {
-            flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
-                .onStart { _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.LOADING)) }
-                .map { gameId -> gameId ?: throw IllegalStateException("Game not found") }
-                .onError { fatal(logger, it) }
-                .onCompletion {
-                    when (it == null) {
-                        true -> _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.SUCCESS))
-                        else -> _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.ERROR))
-                    }
-                }
-                .collect { _releaseGameId.send(it) }
+    fun onReleaseGame(releaseTitle: String) = viewModelScope.launch {
+        _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.LOADING))
+        try {
+            val gameId = gamesRepository.getReleaseGameId(releaseTitle)
+                ?: throw IllegalStateException("Game not found")
+            _events.emit(HomeUiEvent.NavigateToGame(gameId))
+            _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.SUCCESS))
+        } catch (t: Throwable) {
+            fatal(logger, t)
+            _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.ERROR))
         }
+    }
 
     private fun loadTopStoreDataFlow() =
+        // Wrap in `flow { emitAll(...) }` so any synchronous throw from `observeStores()`
+        // (e.g. a backing-store read failure surfaced before the first emission) is delivered
+        // as an upstream exception to the `.catch { }` below instead of escaping construction.
         flow { emitAll(storesRepository.observeStores()) }
             .map { listOfStores -> listOfStores.filter { topStores.contains(it.storeID) } }
             .map { listOfStores -> listOfStores.map { it to dealsRepository.getStoreDeals(it.storeID, LIMIT_DEALS) } }
@@ -111,15 +116,22 @@ internal class HomeViewModel @Inject constructor(
             .catch { emit(HomeScreenData(state = HomeScreenStatus.ERROR)) }
 
     private fun loadNewReleases(): Flow<List<Release>> =
+        // Wrap in `flow { emitAll(...) }` so synchronous throws from `observeReleases()` are
+        // delivered as upstream exceptions to the `.catch { }` below (see loadTopStoreDataFlow).
         flow { emitAll(releasesRepository.observeReleases()) }
             .logFlow(logger)
             .catch { emit(emptyList()) }
 
     private fun loadGiveaways(): Flow<List<Giveaway>> =
+        // Same rationale as loadNewReleases.
         flow { emitAll(giveawaysRepository.observeGiveaways()) }
             .onStart { giveawaysRepository.refreshGiveaways() }
             .logFlow(logger)
             .catch { emit(emptyList()) }
+
+    internal sealed interface HomeUiEvent {
+        data class NavigateToGame(val gameId: Int) : HomeUiEvent
+    }
 
     internal data class HomeScreenData(
         val state: HomeScreenStatus = HomeScreenStatus.LOADING,

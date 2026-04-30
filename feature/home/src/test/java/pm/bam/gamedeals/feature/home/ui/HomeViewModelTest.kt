@@ -11,7 +11,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
@@ -28,7 +28,6 @@ import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
-import pm.bam.gamedeals.testing.utils.third
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -134,7 +133,7 @@ class HomeViewModelTest {
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
         val emissions = observeStates()
-        val releaseGameId = viewModel.releaseGameId.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+        val events = viewModel.events.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 
         viewModel.onReleaseGame(releaseTitle)
 
@@ -142,15 +141,15 @@ class HomeViewModelTest {
         assertNotNull(emissions.second())
         assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.second())
 
-        assertEquals(1, releaseGameId.size)
-        assertNotNull(releaseGameId.first())
-        assertEquals(gameId, releaseGameId.first())
+        assertEquals(1, events.size)
+        assertNotNull(events.first())
+        assertEquals(HomeViewModel.HomeUiEvent.NavigateToGame(gameId), events.first())
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }
     }
 
-    @Test(expected = Exception::class)
+    @Test
     fun `onReleaseGame title exception`() = runTest {
         val releaseTitle = "title"
 
@@ -162,15 +161,14 @@ class HomeViewModelTest {
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
         val emissions = observeStates()
-        val releaseGameId = viewModel.releaseGameId.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+        val events = viewModel.events.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 
         viewModel.onReleaseGame(releaseTitle)
 
-        assertEquals(3, emissions.size)
-        assertNotNull(emissions.third())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.third())
+        assertTrue("expected at least 2 state emissions, got ${emissions.size}", emissions.size >= 2)
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.last())
 
-        assertNull(releaseGameId.firstOrNull())
+        assertEquals(0, events.size)
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }

@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.common
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.transformLatest
 
 
@@ -65,27 +65,18 @@ inline fun <T> Flow<T>.onCompletionFailure(crossinline failureAction: suspend Fl
 fun <T> Flow<T>.delayOnStart(delayMillis: Long): Flow<T> = onStart { delay(delayMillis) }
 
 /**
- * Returns a flow containing the results of applying the given [transform] function to each value of the original flow
- * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
- * or because the suspend function was delayed for the remaining time.
+ * Runs [block] and ensures the total elapsed wall-clock time is at least [delayMillis] before
+ * returning the result. If [block] completes faster than [delayMillis], suspends for the remainder.
+ *
+ * Useful for "minimum loading duration" UX where you want to avoid flashing a loading state too briefly.
  */
-fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend (value: T) -> R): Flow<R> =
-    transform { value ->
-        val timeBeforeTransformation = System.currentTimeMillis()
-        val transformedTransformation = transformFunction(value)
-        val timeAfterTransformation = System.currentTimeMillis()
-
-        val transformationDuration = timeAfterTransformation - timeBeforeTransformation
-
-        val transformationShorterThanDelay = delayMillis > transformationDuration
-
-        if (transformationShorterThanDelay) {
-            val remainingDelay = delayMillis - transformationDuration
-            delay(remainingDelay)
-        }
-
-        return@transform emit(transformedTransformation)
-    }
+suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block: suspend () -> T): T = coroutineScope {
+    val before = System.currentTimeMillis()
+    val result = block()
+    val elapsed = System.currentTimeMillis() - before
+    if (elapsed < delayMillis) delay(delayMillis - elapsed)
+    result
+}
 
 
 /**
