@@ -140,6 +140,14 @@ androidx-compose-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-compose-test = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "ui-test-junit4" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 
+# Build-logic convention-plugin classpath deps.
+# These resolve the Gradle plugin artifacts so precompiled convention plugins
+# can `pluginManager.apply("...")` them by id at runtime.
+android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "android-gradle-plugin" }
+kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "jetbrains-kotlin-plugin" }
+ksp-gradle-plugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "google-ksp-plugin" }
+compose-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "jetbrains-kotlin-plugin" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
@@ -153,3 +161,10 @@ kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", vers
 firebase-performance = { id = "com.google.firebase.firebase-perf", version.ref = "firebase-performance-plugin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services-plugin" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+
+# Convention plugins (registered by the build-logic included build).
+gamedeals-android-library = { id = "pm.bam.gamedeals.android.library" }
+gamedeals-android-library-compose = { id = "pm.bam.gamedeals.android.library.compose" }
+gamedeals-android-ksp = { id = "pm.bam.gamedeals.android.ksp" }
+gamedeals-android-feature = { id = "pm.bam.gamedeals.android.feature" }
+gamedeals-android-application = { id = "pm.bam.gamedeals.android.application" }
