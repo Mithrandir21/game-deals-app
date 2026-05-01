@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -65,20 +66,20 @@ internal class HomeViewModel @Inject constructor(
     )
     val events: SharedFlow<HomeUiEvent> = _events.asSharedFlow()
 
+    private var loadJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            loadTopStoreDataFlow()
-                .collect { _uiState.emit(it) }
-        }
+        loadTopStoresDeals()
     }
 
-    fun loadTopStoresDeals() =
-        viewModelScope.launch {
+    fun loadTopStoresDeals() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             loadTopStoreDataFlow()
-                .logFlow(logger)
                 .onStart { emit(_uiState.value.copy(state = HomeScreenStatus.LOADING)) }
                 .collect { _uiState.emit(it) }
         }
+    }
 
     fun onReleaseGame(releaseTitle: String) =
         viewModelScope.launch {
