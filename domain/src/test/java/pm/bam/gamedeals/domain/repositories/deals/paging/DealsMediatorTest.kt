@@ -15,10 +15,13 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.slot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -135,6 +138,30 @@ internal class DealsMediatorTest {
 
         coVerify(exactly = 0) { pagingDao.insert(any()) }
         coVerify(exactly = 0) { dealsDao.addDeals(any()) }
+    }
+
+
+    @Test
+    fun `APPEND rethrows CancellationException instead of returning Error`() = runTest {
+        val page = 0
+        val dealPage = DealPage(defaultStoreId, page)
+        val cancellation = CancellationException("scope cancelled")
+
+        coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } throws cancellation
+
+
+        try {
+            mediator.load(LoadType.APPEND, state)
+            fail("Expected CancellationException to propagate")
+        } catch (e: CancellationException) {
+            assertSame(cancellation, e)
+        }
+
+        coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
+        coVerify(exactly = 0) { domainDatabase.withTransaction(any()) }
+        coVerify(exactly = 0) { logger.fatalThrowable(any(), any()) }
     }
 
 
