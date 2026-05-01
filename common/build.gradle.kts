@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":logging"))
 
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
