@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -133,6 +134,7 @@ private fun ScreenScaffold(
     val context = LocalContext.current
     val scrollState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentOnReload by rememberUpdatedState(onReload)
 
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
@@ -197,7 +199,7 @@ private fun ScreenScaffold(
                             actionLabel = context.getString(R.string.giveaway_screen_data_loading_error_retry)
                         )
                         if (results == SnackbarResult.ActionPerformed) {
-                            onReload()
+                            currentOnReload()
                         }
                     }
                 }
