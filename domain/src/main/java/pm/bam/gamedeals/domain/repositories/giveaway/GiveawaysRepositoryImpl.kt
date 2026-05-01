@@ -11,13 +11,13 @@ import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.toGiveaway
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDataSource
+import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import javax.inject.Inject
 
 internal class GiveawaysRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val giveawaysDao: GiveawaysDao,
-    private val remoteGiveawayDataSource: RemoteGiveawayDataSource,
+    private val gamerPowerSource: GamerPowerSource,
     private val datetimeParsing: DatetimeParsing
 ) : GiveawaysRepository {
 
@@ -55,7 +55,7 @@ internal class GiveawaysRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshGiveaways() =
-        remoteGiveawayDataSource.getGiveaways()
+        gamerPowerSource.fetchGiveaways()
             .map { remoteRelease -> remoteRelease.toGiveaway(datetimeParsing) }
             .let { giveawaysDao.addGiveaways(*it.toTypedArray()) }
 }

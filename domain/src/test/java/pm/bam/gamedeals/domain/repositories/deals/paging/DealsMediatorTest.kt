@@ -30,7 +30,7 @@ import pm.bam.gamedeals.domain.models.DealPage
 import pm.bam.gamedeals.domain.models.toDeal
 import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteDeal
 
 @OptIn(ExperimentalPagingApi::class)
@@ -45,7 +45,7 @@ internal class DealsMediatorTest {
         every { getDealsDao() } returns dealsDao
         every { getPagingDao() } returns pagingDao
     }
-    private val remoteDealsDataSource: RemoteDealsDataSource = mockk()
+    private val cheapsharkSource: CheapsharkSource = mockk()
     private val currencyTransformation: CurrencyTransformation = mockk()
     private val logger: Logger = mockk {
         every { log(any(), any(), any(), any()) } just runs
@@ -59,7 +59,7 @@ internal class DealsMediatorTest {
 
     @Before
     fun setup() {
-        mediator = DealsMediator(domainDatabase, remoteDealsDataSource, currencyTransformation, defaultStoreId, pageSize, logger)
+        mediator = DealsMediator(domainDatabase, cheapsharkSource, currencyTransformation, defaultStoreId, pageSize, logger)
 
         // Captures and invokes the Lambda for "withTransaction"
         mockkStatic("androidx.room.RoomDatabaseKt")
@@ -77,7 +77,7 @@ internal class DealsMediatorTest {
 
 
         coVerify(exactly = 0) { pagingDao.getStorePage(defaultStoreId) }
-        coVerify(exactly = 0) { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) }
+        coVerify(exactly = 0) { cheapsharkSource.fetchDealsForStore(query = any()) }
     }
 
 
@@ -93,7 +93,7 @@ internal class DealsMediatorTest {
         mockkStatic(RemoteDeal::toDeal)
         every { remoteResults.toDeal(currencyTransformation) } returns results
 
-        coEvery { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(remoteResults)
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
         coEvery { pagingDao.insert(newDealPage) } just runs
@@ -107,7 +107,7 @@ internal class DealsMediatorTest {
         assertFalse((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
 
         coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { domainDatabase.withTransaction(any()) }
 
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
@@ -126,7 +126,7 @@ internal class DealsMediatorTest {
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
 
-        coEvery { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) } throws exception
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } throws exception
 
 
         val result: RemoteMediator.MediatorResult = mediator.load(LoadType.APPEND, state)
@@ -135,7 +135,7 @@ internal class DealsMediatorTest {
         assertEquals(exception, (result as RemoteMediator.MediatorResult.Error).throwable)
 
         coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 0) { domainDatabase.withTransaction(any()) }
 
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
@@ -157,7 +157,7 @@ internal class DealsMediatorTest {
         mockkStatic(RemoteDeal::toDeal)
         every { remoteResults.toDeal(currencyTransformation) } returns results
 
-        coEvery { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(remoteResults)
 
         coEvery { pagingDao.clearStorePage(defaultStoreId) } just runs
         coEvery { pagingDao.insert(newDealPage) } just runs
@@ -172,7 +172,7 @@ internal class DealsMediatorTest {
         assertFalse((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
 
         coVerify(exactly = 0) { pagingDao.getStorePage(defaultStoreId) }
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { domainDatabase.withTransaction(any()) }
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(defaultStoreId) }

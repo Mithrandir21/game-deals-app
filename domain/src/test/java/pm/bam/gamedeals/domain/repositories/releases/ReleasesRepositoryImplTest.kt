@@ -18,7 +18,7 @@ import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.toRelease
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.datasources.releases.RemoteReleasesDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteRelease
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
@@ -31,9 +31,9 @@ class ReleasesRepositoryImplTest {
 
     private val releasesDao: ReleasesDao = mockk()
 
-    private val remoteReleasesDataSource: RemoteReleasesDataSource = mockk()
+    private val cheapsharkSource: CheapsharkSource = mockk()
 
-    private val impl = ReleasesRepositoryImpl(logger, releasesDao, remoteReleasesDataSource)
+    private val impl = ReleasesRepositoryImpl(logger, releasesDao, cheapsharkSource)
 
     @Test
     fun `observe stores with refresh called`() = runTest {
@@ -44,7 +44,7 @@ class ReleasesRepositoryImplTest {
         every { remoteRelease.toRelease() } returns results
 
         coEvery { releasesDao.observeAllReleases() } returns flowOf(listOf(results))
-        coEvery { remoteReleasesDataSource.getReleases() } returns listOf(remoteRelease)
+        coEvery { cheapsharkSource.fetchReleases() } returns listOf(remoteRelease)
         coEvery { releasesDao.addReleases(any()) } just Runs
 
 
@@ -52,7 +52,7 @@ class ReleasesRepositoryImplTest {
         Assert.assertTrue(result.isNotEmpty())
 
         coVerify(exactly = 1) { releasesDao.observeAllReleases() }
-        coVerify(exactly = 1) { remoteReleasesDataSource.getReleases() }
+        coVerify(exactly = 1) { cheapsharkSource.fetchReleases() }
         coVerify(exactly = 1) { releasesDao.addReleases(results) }
     }
 
@@ -65,14 +65,14 @@ class ReleasesRepositoryImplTest {
         mockkStatic(RemoteRelease::toRelease)
         every { remoteRelease.toRelease() } returns results
 
-        coEvery { remoteReleasesDataSource.getReleases() } returns listOf(remoteRelease)
+        coEvery { cheapsharkSource.fetchReleases() } returns listOf(remoteRelease)
         coEvery { releasesDao.addReleases(any()) } just Runs
 
 
         impl.refreshReleases()
 
         coVerify(exactly = 0) { releasesDao.observeAllReleases() }
-        coVerify(exactly = 1) { remoteReleasesDataSource.getReleases() }
+        coVerify(exactly = 1) { cheapsharkSource.fetchReleases() }
         coVerify(exactly = 1) { releasesDao.addReleases(results) }
     }
 }

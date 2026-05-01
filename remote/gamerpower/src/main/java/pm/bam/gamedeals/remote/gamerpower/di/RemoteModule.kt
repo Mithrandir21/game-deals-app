@@ -6,9 +6,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
+import pm.bam.gamedeals.remote.gamerpower.GamerPowerSourceImpl
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
-import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDataSource
-import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDataSourceImpl
 import javax.inject.Singleton
 
 @Module(includes = [RemoteNetworkModule::class, InternalRemoteModule::class])
@@ -22,6 +22,10 @@ internal class InternalRemoteModule {
 
     @Provides
     @Singleton
-    fun provideRemoteDealsDataSource(logger: Logger, gamesApi: GamesApi, remoteExceptionTransformer: RemoteExceptionTransformer): RemoteGiveawayDataSource =
-        RemoteGiveawayDataSourceImpl(logger, gamesApi, remoteExceptionTransformer)
+    fun provideGamerPowerSource(
+        logger: Logger,
+        gamesApi: GamesApi,
+        remoteExceptionTransformer: RemoteExceptionTransformer
+    ): GamerPowerSource =
+        GamerPowerSourceImpl(logger, gamesApi, remoteExceptionTransformer)
 }

@@ -26,8 +26,8 @@ import pm.bam.gamedeals.domain.models.toDeal
 import pm.bam.gamedeals.domain.models.toDealDetails
 import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteDeal
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteDealDetails
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -44,13 +44,13 @@ class DealsRepositoryImplTest {
 
     private val domainDatabase: DomainDatabase = mockk()
 
-    private val remoteDealsDataSource: RemoteDealsDataSource = mockk()
+    private val cheapsharkSource: CheapsharkSource = mockk()
 
     private val currencyTransformation: CurrencyTransformation = mockk()
 
     private val datetimeFormatter: DateTimeFormatter = mockk()
 
-    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, remoteDealsDataSource, currencyTransformation, datetimeFormatter)
+    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, cheapsharkSource, currencyTransformation, datetimeFormatter)
 
     @Test
     fun `observe deals with refresh called`() = runTest {
@@ -72,13 +72,13 @@ class DealsRepositoryImplTest {
         mockkStatic(RemoteDealDetails::toDealDetails)
         every { remoteResults.toDealDetails(currencyTransformation, datetimeFormatter) } returns results
 
-        coEvery { remoteDealsDataSource.getDeals(id) } returns remoteResults
+        coEvery { cheapsharkSource.fetchDealDetails(id) } returns remoteResults
 
 
         val result = impl.getDeal(id)
         assertEquals(results, result)
 
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(id) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealDetails(id) }
     }
 
     @Test
@@ -98,7 +98,7 @@ class DealsRepositoryImplTest {
         val transactionLambda = slot<suspend () -> Unit>()
         coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
 
-        coEvery { remoteDealsDataSource.getDeals(remoteResultsQuery) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(remoteResultsQuery) } returns listOf(remoteResults)
         coEvery { dealsDao.getStoreDeals(remoteStoreId) } returns listOf(results)
         coEvery { dealsDao.clearDealsForStore(remoteStoreId) } just runs
         coEvery { dealsDao.addDeals(results) } just runs
@@ -106,7 +106,7 @@ class DealsRepositoryImplTest {
 
         impl.refreshDeals(remoteStoreId)
 
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(remoteResultsQuery) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(remoteResultsQuery) }
         coVerify(exactly = 1) { dealsDao.getStoreDeals(remoteStoreId) }
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(remoteStoreId) }
         coVerify(exactly = 1) { dealsDao.addDeals(results) }
@@ -124,7 +124,7 @@ class DealsRepositoryImplTest {
 
         impl.refreshDeals(remoteStoreId)
 
-        coVerify(exactly = 0) { remoteDealsDataSource.getDeals(remoteDealsQuery = any()) }
+        coVerify(exactly = 0) { cheapsharkSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { dealsDao.getStoreDeals(remoteStoreId) }
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(remoteStoreId) }
         coVerify(exactly = 0) { dealsDao.addDeals(any()) }
@@ -147,14 +147,14 @@ class DealsRepositoryImplTest {
         val transactionLambda = slot<suspend () -> Unit>()
         coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
 
-        coEvery { remoteDealsDataSource.getDeals(remoteResultsQuery) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(remoteResultsQuery) } returns listOf(remoteResults)
         coEvery { dealsDao.clearDealsForStore(remoteStoreId) } just runs
         coEvery { dealsDao.addDeals(results) } just runs
 
 
         impl.refreshDeals(remoteStoreId, force = true)
 
-        coVerify(exactly = 1) { remoteDealsDataSource.getDeals(remoteResultsQuery) }
+        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(remoteResultsQuery) }
         coVerify(exactly = 0) { dealsDao.getStoreDeals(any()) }
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(remoteStoreId) }
         coVerify(exactly = 1) { dealsDao.addDeals(results) }

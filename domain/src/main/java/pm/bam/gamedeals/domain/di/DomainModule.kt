@@ -35,11 +35,8 @@ import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.verbose
-import pm.bam.gamedeals.remote.cheapshark.datasources.deals.RemoteDealsDataSource
-import pm.bam.gamedeals.remote.cheapshark.datasources.games.RemoteGamesDataSource
-import pm.bam.gamedeals.remote.cheapshark.datasources.releases.RemoteReleasesDataSource
-import pm.bam.gamedeals.remote.cheapshark.datasources.stores.RemoteStoresDataSource
-import pm.bam.gamedeals.remote.gamerpower.datasources.giveaway.RemoteGiveawayDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
+import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import java.util.concurrent.Executors
 import javax.inject.Singleton
 
@@ -83,28 +80,40 @@ internal class InternalDomainModule {
 
     @Provides
     @Singleton
-    fun provideDealsRepository(logger: Logger, dealsDao: DealsDao, db: DomainDatabase, remoteDealsDataSource: RemoteDealsDataSource, currencyTransformation: CurrencyTransformation, dateTimeFormatter: DateTimeFormatter): DealsRepository =
-        DealsRepositoryImpl(logger, dealsDao, db, remoteDealsDataSource, currencyTransformation, dateTimeFormatter)
+    fun provideDealsRepository(
+        logger: Logger,
+        dealsDao: DealsDao,
+        db: DomainDatabase,
+        cheapsharkSource: CheapsharkSource,
+        currencyTransformation: CurrencyTransformation,
+        dateTimeFormatter: DateTimeFormatter
+    ): DealsRepository =
+        DealsRepositoryImpl(logger, dealsDao, db, cheapsharkSource, currencyTransformation, dateTimeFormatter)
 
     @Provides
     @Singleton
-    fun provideGamesRepository(gamesDao: GamesDao, remoteGamesDataSource: RemoteGamesDataSource, remoteDealsDataSource: RemoteDealsDataSource, currencyTransformation: CurrencyTransformation, dateTimeFormatter: DateTimeFormatter): GamesRepository =
-        GamesRepositoryImpl(gamesDao, remoteGamesDataSource, remoteDealsDataSource, currencyTransformation, dateTimeFormatter)
+    fun provideGamesRepository(
+        gamesDao: GamesDao,
+        cheapsharkSource: CheapsharkSource,
+        currencyTransformation: CurrencyTransformation,
+        dateTimeFormatter: DateTimeFormatter
+    ): GamesRepository =
+        GamesRepositoryImpl(gamesDao, cheapsharkSource, currencyTransformation, dateTimeFormatter)
 
     @Provides
     @Singleton
-    fun provideStoresRepository(logger: Logger, storesDao: StoresDao, remoteStoresDataSource: RemoteStoresDataSource): StoresRepository =
-        StoresRepositoryImpl(logger, storesDao, remoteStoresDataSource)
+    fun provideStoresRepository(logger: Logger, storesDao: StoresDao, cheapsharkSource: CheapsharkSource): StoresRepository =
+        StoresRepositoryImpl(logger, storesDao, cheapsharkSource)
 
     @Provides
     @Singleton
-    fun provideReleasesRepository(logger: Logger, releasesDao: ReleasesDao, remoteReleasesDataSource: RemoteReleasesDataSource): ReleasesRepository =
-        ReleasesRepositoryImpl(logger, releasesDao, remoteReleasesDataSource)
+    fun provideReleasesRepository(logger: Logger, releasesDao: ReleasesDao, cheapsharkSource: CheapsharkSource): ReleasesRepository =
+        ReleasesRepositoryImpl(logger, releasesDao, cheapsharkSource)
 
     @Provides
     @Singleton
-    fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, remoteGiveawayDataSource: RemoteGiveawayDataSource, datetimeParsing: DatetimeParsing): GiveawaysRepository =
-        GiveawaysRepositoryImpl(logger, giveawaysDao, remoteGiveawayDataSource, datetimeParsing)
+    fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, gamerPowerSource: GamerPowerSource, datetimeParsing: DatetimeParsing): GiveawaysRepository =
+        GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource, datetimeParsing)
 
     @Provides
     @Singleton
@@ -145,4 +154,3 @@ internal class InternalDomainModule {
     @Singleton
     fun provideGiveawaysDao(db: DomainDatabase): GiveawaysDao = db.getGiveawaysDao()
 }
-

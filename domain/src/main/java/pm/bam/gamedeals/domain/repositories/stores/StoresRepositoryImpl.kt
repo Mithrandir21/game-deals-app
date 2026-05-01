@@ -8,13 +8,13 @@ import pm.bam.gamedeals.domain.models.toStore
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.verbose
-import pm.bam.gamedeals.remote.cheapshark.datasources.stores.RemoteStoresDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import javax.inject.Inject
 
 internal class StoresRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val storesDao: StoresDao,
-    private val remoteStoresDataSource: RemoteStoresDataSource
+    private val cheapsharkSource: CheapsharkSource
 ) : StoresRepository {
 
     override fun observeStores(): Flow<List<Store>> =
@@ -30,7 +30,7 @@ internal class StoresRepositoryImpl @Inject constructor(
         debug(logger) { "Stores refresh needed: $refresh" }
 
         if (refresh) {
-            remoteStoresDataSource.getStores()
+            cheapsharkSource.fetchStores()
                 .map { remoteStore -> remoteStore.toStore() }
                 .let { storesDao.addStores(*it.toTypedArray()) }
         }

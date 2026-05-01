@@ -8,13 +8,13 @@ import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.toRelease
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import pm.bam.gamedeals.remote.cheapshark.datasources.releases.RemoteReleasesDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import javax.inject.Inject
 
 internal class ReleasesRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val releasesDao: ReleasesDao,
-    private val remoteReleasesDataSource: RemoteReleasesDataSource
+    private val cheapsharkSource: CheapsharkSource
 ) : ReleasesRepository {
 
     override fun observeReleases(): Flow<List<Release>> =
@@ -23,7 +23,7 @@ internal class ReleasesRepositoryImpl @Inject constructor(
             .onError { fatal(logger, it) }
 
     override suspend fun refreshReleases() =
-        remoteReleasesDataSource.getReleases()
+        cheapsharkSource.fetchReleases()
             .map { remoteRelease -> remoteRelease.toRelease() }
             .let { releasesDao.addReleases(*it.toTypedArray()) }
 }

@@ -18,7 +18,7 @@ import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.toStore
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.datasources.stores.RemoteStoresDataSource
+import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteStore
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
@@ -31,9 +31,9 @@ class StoresRepositoryImplTest {
 
     private val storesDao: StoresDao = mockk()
 
-    private val remoteStoDataSource: RemoteStoresDataSource = mockk()
+    private val cheapsharkSource: CheapsharkSource = mockk()
 
-    private val impl = StoresRepositoryImpl(logger, storesDao, remoteStoDataSource)
+    private val impl = StoresRepositoryImpl(logger, storesDao, cheapsharkSource)
 
     @Test
     fun `observe stores with refresh called`() = runTest {
@@ -52,7 +52,7 @@ class StoresRepositoryImplTest {
         val result = impl.observeStores().first()
         Assert.assertTrue(result.isEmpty())
 
-        coVerify(exactly = 0) { remoteStoDataSource.getStores() }
+        coVerify(exactly = 0) { cheapsharkSource.fetchStores() }
         coVerify(exactly = 1) { storesDao.observeAllStores() }
         coVerify(exactly = 1) { storesDao.getAllStores() }
         coVerify(exactly = 0) { storesDao.addStores(results) }
@@ -69,14 +69,14 @@ class StoresRepositoryImplTest {
         mockkStatic(RemoteStore::toStore)
         every { remoteResults.toStore() } returns results
 
-        coEvery { remoteStoDataSource.getStores() } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchStores() } returns listOf(remoteResults)
         coEvery { storesDao.getAllStores() } returns listOf(results)
         coEvery { storesDao.addStores(results) } just runs
 
 
         impl.refreshStores()
 
-        coVerify(exactly = 1) { remoteStoDataSource.getStores() }
+        coVerify(exactly = 1) { cheapsharkSource.fetchStores() }
         coVerify(exactly = 1) { storesDao.getAllStores() }
         coVerify(exactly = 1) { storesDao.addStores(results) }
     }
@@ -96,7 +96,7 @@ class StoresRepositoryImplTest {
 
         impl.refreshStores()
 
-        coVerify(exactly = 0) { remoteStoDataSource.getStores() }
+        coVerify(exactly = 0) { cheapsharkSource.fetchStores() }
         coVerify(exactly = 1) { storesDao.getAllStores() }
         coVerify(exactly = 0) { storesDao.addStores(results) }
     }
@@ -111,14 +111,14 @@ class StoresRepositoryImplTest {
         mockkStatic(RemoteStore::toStore)
         every { remoteResults.toStore() } returns results
 
-        coEvery { remoteStoDataSource.getStores() } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchStores() } returns listOf(remoteResults)
         coEvery { storesDao.getAllStores() } returns listOf(results)
         coEvery { storesDao.addStores(results) } just runs
 
 
         impl.refreshStores()
 
-        coVerify(exactly = 1) { remoteStoDataSource.getStores() }
+        coVerify(exactly = 1) { cheapsharkSource.fetchStores() }
         coVerify(exactly = 1) { storesDao.getAllStores() }
         coVerify(exactly = 1) { storesDao.addStores(results) }
     }
