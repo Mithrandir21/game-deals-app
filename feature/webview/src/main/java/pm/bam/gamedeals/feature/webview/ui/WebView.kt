@@ -78,6 +78,12 @@ internal fun WebView(
                     )
                 }
             ) { contentPadding: PaddingValues ->
+                // Track the last URL we loaded so `update` only reloads when the
+                // `url` argument actually changes. Without this guard, every parent
+                // recomposition (e.g. `loading` toggling) would call `loadUrl(url)`
+                // again and snap the WebView back to the original URL, breaking
+                // intra-WebView navigation. See issue #34.
+                var lastLoadedUrl by remember { mutableStateOf<String?>(null) }
                 AndroidView(
                     modifier = Modifier.padding(contentPadding),
                     factory = { context ->
@@ -99,11 +105,15 @@ internal fun WebView(
                                     loading = false
                                 }
                             }
+                            loadUrl(url)
+                            lastLoadedUrl = url
                         }
                     },
                     update = { webView ->
-                        loading = true
-                        webView.loadUrl(url)
+                        if (lastLoadedUrl != url) {
+                            webView.loadUrl(url)
+                            lastLoadedUrl = url
+                        }
                     }
                 )
             }
