@@ -53,10 +53,6 @@ android {
 
         // This allows Espresso test to change device configurations, like Orientation during testing.
         emulatorControl.enable = true
-
-        // Robolectric (used to back SavedStateHandle.toRoute<...>() with a real android.os.Bundle
-        // in JVM unit tests) needs Android resources to be packaged for the test runtime.
-        unitTests.isIncludeAndroidResources = true
     }
 }
 
@@ -105,9 +101,6 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.core.testing)
     testImplementation(libs.coroutines.testing)
-    // Provides a real android.os.Bundle on the JVM so SavedStateHandle.toRoute<...>()
-    // can decode typed-route args inside the ViewModel under test.
-    testImplementation(libs.robolectric)
 
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.junit)

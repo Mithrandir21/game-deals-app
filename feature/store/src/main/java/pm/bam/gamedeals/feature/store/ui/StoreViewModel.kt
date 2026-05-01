@@ -3,7 +3,6 @@ package pm.bam.gamedeals.feature.store.ui
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.domain.models.Store
@@ -36,8 +34,10 @@ internal class StoreViewModel @Inject constructor(
 ) : ViewModel() {
 
     // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
-    // Seeded from the typed [Destination.Store] route so the screen no longer needs to push the id in.
-    private val storeIdFlow = MutableStateFlow<Int?>(savedStateHandle.toRoute<Destination.Store>().storeId)
+    // Seeded from the typed [Destination.Store] route. nav-compose populates SavedStateHandle
+    // with the @Serializable property name as key for primitive args, so reading by key works
+    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
+    private val storeIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("storeId")!!)
 
     private val _storeDetails = MutableStateFlow<Store?>(null)
     val storeDetails: StateFlow<Store?> = _storeDetails.stateIn(

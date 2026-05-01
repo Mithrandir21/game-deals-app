@@ -47,12 +47,6 @@ android {
     tasks.withType<Test> {
         jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
     }
-
-    testOptions {
-        // Robolectric (used to back SavedStateHandle.toRoute<...>() with a real android.os.Bundle
-        // in JVM unit tests) needs Android resources to be packaged for the test runtime.
-        unitTests.isIncludeAndroidResources = true
-    }
 }
 
 dependencies {
@@ -93,9 +87,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
-    // Provides a real android.os.Bundle on the JVM so SavedStateHandle.toRoute<...>()
-    // can decode typed-route args inside the ViewModel under test.
-    testImplementation(libs.robolectric)
 
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.junit)

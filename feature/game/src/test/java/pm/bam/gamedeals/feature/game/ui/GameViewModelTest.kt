@@ -10,8 +10,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -21,10 +19,7 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
 
-// Robolectric provides the real android.os.Bundle implementation that
-// SavedStateHandle.toRoute<Destination.Game>() relies on to decode the seeded gameId.
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class GameViewModelTest {
 
     @get:Rule

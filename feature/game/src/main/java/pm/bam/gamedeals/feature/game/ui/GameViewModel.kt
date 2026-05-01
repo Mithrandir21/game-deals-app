@@ -3,7 +3,6 @@ package pm.bam.gamedeals.feature.game.ui
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.delayOnStart
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.toFlow
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -38,8 +36,10 @@ internal class GameViewModel @Inject constructor(
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
-    // Seeded from the typed [Destination.Game] route so the screen no longer needs to push the id in.
-    private val gameIdFlow = MutableStateFlow<Int?>(savedStateHandle.toRoute<Destination.Game>().gameId)
+    // Seeded from the typed [Destination.Game] route. nav-compose populates SavedStateHandle
+    // with the @Serializable property name as key for primitive args, so reading by key works
+    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
+    private val gameIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("gameId")!!)
 
     private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
     val uiState: StateFlow<GameScreenData> = _uiState.stateIn(

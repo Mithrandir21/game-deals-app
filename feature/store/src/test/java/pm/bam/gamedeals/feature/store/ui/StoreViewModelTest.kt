@@ -12,8 +12,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -22,10 +20,7 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
 
-// Robolectric provides the real android.os.Bundle implementation that
-// SavedStateHandle.toRoute<Destination.Store>() relies on to decode the seeded storeId.
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class StoreViewModelTest {
 
     @get:Rule
