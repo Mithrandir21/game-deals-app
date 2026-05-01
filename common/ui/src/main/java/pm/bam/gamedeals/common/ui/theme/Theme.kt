@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -269,7 +270,7 @@ fun GameDealsTheme(
     }
     val view = LocalView.current
     if (!view.isInEditMode) {
-        SideEffect {
+        LaunchedEffect(colorScheme.primary, darkTheme) {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
