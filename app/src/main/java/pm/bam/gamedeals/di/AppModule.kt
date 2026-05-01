@@ -11,7 +11,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.Dispatchers
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.toLogLevel
@@ -53,7 +52,6 @@ class AppModule {
         @Coil coilLogger: coil.util.Logger
     ): ImageLoader = ImageLoader.Builder(appContext)
         .crossfade(true)
-        .dispatcher(Dispatchers.Default)
         .logger(coilLogger)
         .build()
 
