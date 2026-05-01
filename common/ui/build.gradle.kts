@@ -49,6 +49,8 @@ android {
 
 dependencies {
 
+    implementation(project(":logging"))
+    implementation(project(":common"))
     implementation(project(":domain"))
 
     implementation(libs.androidx.ktx)
