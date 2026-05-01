@@ -18,7 +18,6 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
-import pm.bam.gamedeals.testing.utils.second
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StoreViewModelTest {
@@ -64,9 +63,13 @@ class StoreViewModelTest {
 
         // The ID is now seeded from SavedStateHandle at construction, so the load
         // happens immediately after the flow becomes active rather than via setStoreId.
-        assertEquals(2, emissions.size)
-        assertNull(emissions.first())
-        assertEquals(store, emissions.second())
+        // storeDetails is now backed directly by _storeDetails via asStateFlow(); the
+        // previous `stateIn(WhileSubscribed, null)` wrapper produced a spurious null
+        // initial-value emission on every cold subscription (issue #37). With the wrapper
+        // removed, the late subscriber under UnconfinedTestDispatcher sees only the
+        // conflated current value because init { } already loaded the store.
+        assertEquals(1, emissions.size)
+        assertEquals(store, emissions.first())
     }
 
     @Test

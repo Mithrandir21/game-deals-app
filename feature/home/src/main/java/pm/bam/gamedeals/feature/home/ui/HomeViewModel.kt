@@ -9,9 +9,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
@@ -54,11 +53,7 @@ internal class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeScreenData())
-    val uiState: StateFlow<HomeScreenData> = _uiState.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeScreenData()
-    )
+    val uiState: StateFlow<HomeScreenData> = _uiState.asStateFlow()
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
