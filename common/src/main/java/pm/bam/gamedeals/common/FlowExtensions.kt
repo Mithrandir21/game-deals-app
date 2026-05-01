@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.common
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -86,6 +87,21 @@ fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend
 
         return@transform emit(transformedTransformation)
     }
+
+
+/**
+ * Runs [block] and ensures the total elapsed wall-clock time is at least [delayMillis] before
+ * returning the result. If [block] completes faster than [delayMillis], suspends for the remainder.
+ *
+ * Useful for "minimum loading duration" UX where you want to avoid flashing a loading state too briefly.
+ */
+suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block: suspend () -> T): T = coroutineScope {
+    val before = System.currentTimeMillis()
+    val result = block()
+    val elapsed = System.currentTimeMillis() - before
+    if (elapsed < delayMillis) delay(delayMillis - elapsed)
+    result
+}
 
 
 /**
