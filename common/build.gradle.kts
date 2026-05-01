@@ -28,7 +28,10 @@ dependencies {
     implementation(project(":logging"))
 
     testImplementation(libs.junit)
+<<<<<<< wave/2026-05-01-bug-hunt/issue-42-storage-suspend
     testImplementation(libs.mockk)
+=======
+>>>>>>> dev
     testImplementation(libs.coroutines.testing)
 
     androidTestImplementation(libs.androidx.junit)

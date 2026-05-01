@@ -1,8 +1,10 @@
 package pm.bam.gamedeals.common
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.catch
@@ -66,26 +68,24 @@ inline fun <T> Flow<T>.onCompletionFailure(crossinline failureAction: suspend Fl
 fun <T> Flow<T>.delayOnStart(delayMillis: Long): Flow<T> = onStart { delay(delayMillis) }
 
 /**
- * Returns a flow containing the results of applying the given [transform] function to each value of the original flow
+ * Returns a flow containing the results of applying the given [transformFunction] to each value of the original flow
  * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
  * or because the suspend function was delayed for the remaining time.
+ *
+ * Implementation runs the transformation and the [delay] concurrently inside a [coroutineScope]
+ * so the elapsed time is measured by the coroutine's own clock. This makes the operator behave
+ * identically in production and under `runTest` with a `TestDispatcher`'s virtual time, instead
+ * of relying on `System.currentTimeMillis()` (which ignores the test's virtual clock).
  */
 fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend (value: T) -> R): Flow<R> =
     transform { value ->
-        val timeBeforeTransformation = System.currentTimeMillis()
-        val transformedTransformation = transformFunction(value)
-        val timeAfterTransformation = System.currentTimeMillis()
-
-        val transformationDuration = timeAfterTransformation - timeBeforeTransformation
-
-        val transformationShorterThanDelay = delayMillis > transformationDuration
-
-        if (transformationShorterThanDelay) {
-            val remainingDelay = delayMillis - transformationDuration
-            delay(remainingDelay)
+        coroutineScope {
+            val deferred = async { transformFunction(value) }
+            val pad = launch { delay(delayMillis) }
+            val result = deferred.await()
+            pad.join()
+            emit(result)
         }
-
-        return@transform emit(transformedTransformation)
     }
 
 
@@ -105,53 +105,39 @@ suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block:
 
 
 /**
- * Returns a flow containing the results of applying the given [transformLatest] function to each value of the original flow
+ * Returns a flow containing the results of applying the given [transformFunction] to each value of the original flow
  * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
  * or because the suspend function was delayed for the remaining time.
+ *
+ * Like [mapDelayAtLeast] but using `transformLatest` so a new upstream value cancels any in-flight
+ * transformation. Time is measured via [delay] inside [coroutineScope] for virtual-time correctness
+ * under `runTest`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 inline fun <T, R> Flow<T>.flatMapLatestDelayAtLeast(delayMillis: Long, crossinline transformFunction: suspend (value: T) -> R): Flow<R> =
     transformLatest { value ->
-
-        val timeBeforeTransformation = System.currentTimeMillis()
-        val transformedTransformation = transformFunction(value)
-        val timeAfterTransformation = System.currentTimeMillis()
-
-        val transformationDuration = timeAfterTransformation - timeBeforeTransformation
-
-        val transformationShorterThanDelay = delayMillis > transformationDuration
-
-        if (transformationShorterThanDelay) {
-            val remainingDelay = delayMillis - transformationDuration
-            delay(remainingDelay)
+        coroutineScope {
+            val deferred = async { transformFunction(value) }
+            val pad = launch { delay(delayMillis) }
+            val result = deferred.await()
+            pad.join()
+            emit(result)
         }
-
-        return@transformLatest emit(transformedTransformation)
     }
 
 
 /**
- * Returns a flow containing the results of applying the given [transformLatest] function to each value of the original flow
- * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
- * or because the suspend function was delayed for the remaining time.
+ * Returns a flow that emits each value of the original flow only after given [delayMillis] has
+ * passed since that value arrived. Uses `transformLatest`, so a new upstream value cancels any
+ * pending pad before it emits.
+ *
+ * Time is measured via [delay] for virtual-time correctness under `runTest`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T> Flow<T>.latestDelayAtLeast(delayMillis: Long): Flow<T> =
     transformLatest { value ->
-
-        val timeBeforeTransformation = System.currentTimeMillis()
-        val timeAfterTransformation = System.currentTimeMillis()
-
-        val transformationDuration = timeAfterTransformation - timeBeforeTransformation
-
-        val transformationShorterThanDelay = delayMillis > transformationDuration
-
-        if (transformationShorterThanDelay) {
-            val remainingDelay = delayMillis - transformationDuration
-            delay(remainingDelay)
-        }
-
-        return@transformLatest emit(value)
+        delay(delayMillis)
+        emit(value)
     }
 
 /**

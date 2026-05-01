@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.androidx.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.compose.activity)
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.compose.runtime)
 
