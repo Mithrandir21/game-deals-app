@@ -12,6 +12,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -287,12 +289,12 @@ fun GameDealsTheme(
 }
 
 @Composable
-fun ColorScheme.fullscreenSemiTransparentBackground() =
-    if (isSystemInDarkTheme()) {
-        Color(0x8047464F)
-    } else {
-        Color(0x6547464F)
+fun ColorScheme.fullscreenSemiTransparentBackground(): Color {
+    val isDark = isSystemInDarkTheme()
+    return remember(isDark) {
+        if (isDark) Color(0x8047464F) else Color(0x6547464F)
     }
+}
 
 
 /**

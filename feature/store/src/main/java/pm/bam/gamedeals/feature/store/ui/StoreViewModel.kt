@@ -69,7 +69,9 @@ internal class StoreViewModel @Inject constructor(
         // cachedIn() shares the paging state across multiple consumers of posts,
         // e.g. different generations of UI across rotation config change
         .cachedIn(viewModelScope)
-        .catch { logger.fatalThrowable(it) }
+        // No .catch here: Paging surfaces load errors via LoadState.Error so the UI can
+        // recover via retry(). A .catch after .cachedIn would swallow construction-time
+        // exceptions and leave LazyPagingItems stuck on the last-cached PagingData.
         .logFlow(logger)
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
