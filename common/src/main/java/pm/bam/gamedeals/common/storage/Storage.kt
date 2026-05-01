@@ -15,13 +15,13 @@ interface Storage {
      * @throws DataNotFoundException if no data found for given [storageKey] and no [defaultValue] is given.
      */
     @Throws(DataNotFoundException::class)
-    fun <T : Any> get(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T? = null): T
+    suspend fun <T : Any> get(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T? = null): T
 
     /**
      * Retrieves the data found at the given [storageKey] mapping, or the [defaultValue] if given.
      * Also deserializes to given type token for complex types such as as Lists, Sets or Maps.
      */
-    fun <T : Any> getNullable(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T? = null): T?
+    suspend fun <T : Any> getNullable(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T? = null): T?
 
     /**
      * Saves the data at the given [storageKey] mapping as a serialized string for complex types such as Lists, Sets or Maps,
@@ -30,15 +30,15 @@ interface Storage {
      * @throws DataExistsException if [overwrite] is true and data exists for the given [storageKey].
      */
     @Throws(DataExistsException::class)
-    fun <T : Any> save(storageKey: String, data: T, serializationStrategy: SerializationStrategy<T>, overwrite: Boolean = true): Boolean
+    suspend fun <T : Any> save(storageKey: String, data: T, serializationStrategy: SerializationStrategy<T>, overwrite: Boolean = true): Boolean
 
     /** Returns a boolean indicating whether the storage contains data for the given [storageKey]. */
-    fun containsKey(storageKey: String): Boolean
+    suspend fun containsKey(storageKey: String): Boolean
 
     /**
      * Removes any data found at the given [storageKey] mapping.
      *
      * @return True for remove data, False for any other scenario.
      */
-    fun remove(storageKey: String): Boolean
+    suspend fun remove(storageKey: String): Boolean
 }

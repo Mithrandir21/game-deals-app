@@ -23,9 +23,12 @@ dependencies {
     ksp(libs.hilt.compiler)
     ksp(libs.hilt.androidx.compiler)
 
+    implementation(libs.coroutines)
+
     implementation(project(":logging"))
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
 
     androidTestImplementation(libs.androidx.junit)
