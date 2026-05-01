@@ -8,6 +8,7 @@ import androidx.paging.LoadType.REFRESH
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.models.Deal
@@ -72,6 +73,12 @@ internal class DealsMediator(
             }
 
             return MediatorResult.Success(endOfPaginationReached = deals.isEmpty())
+        } catch (e: CancellationException) {
+            // Honour structured concurrency: never swallow cancellation. Paging /
+            // viewModelScope cancels mid-load on normal navigation, and reporting
+            // that as `MediatorResult.Error` surfaces a fake load failure to the UI
+            // and a fatal log entry to Crashlytics.
+            throw e
         } catch (e: Exception) {
             fatal(logger, e)
             return MediatorResult.Error(e)
