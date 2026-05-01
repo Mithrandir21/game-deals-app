@@ -16,6 +16,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
@@ -142,7 +143,7 @@ class GameScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             GameViewModel.GameScreenData.Data(
                 gameDetails = gameDetails,
-                dealDetails = listOf(store to gameDeal)
+                dealDetails = persistentListOf(store to gameDeal)
             )
         )
 
@@ -186,7 +187,7 @@ class GameScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             GameViewModel.GameScreenData.Data(
                 gameDetails = gameDetails,
-                dealDetails = listOf(store to gameDeal)
+                dealDetails = persistentListOf(store to gameDeal)
             )
         )
 

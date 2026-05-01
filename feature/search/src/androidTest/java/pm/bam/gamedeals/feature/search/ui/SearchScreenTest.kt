@@ -19,6 +19,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -152,7 +153,7 @@ class SearchScreenTest {
             every { salePriceDenominated } returns dealSalePriceDenominated
             every { thumb } returns "Thumb"
         }
-        val data = SearchViewModel.SearchData.SearchResults(listOf(singleDeal))
+        val data = SearchViewModel.SearchData.SearchResults(persistentListOf(singleDeal))
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
 

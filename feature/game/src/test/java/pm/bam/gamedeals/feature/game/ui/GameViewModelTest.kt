@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
@@ -93,7 +94,7 @@ class GameViewModelTest {
 
         assertEquals(2, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
-        assertEquals(GameViewModel.GameScreenData.Data(gameDetails, listOf(store to gameDeals)), emissions.second())
+        assertEquals(GameViewModel.GameScreenData.Data(gameDetails, persistentListOf(store to gameDeals)), emissions.second())
     }
 
 
@@ -119,6 +120,6 @@ class GameViewModelTest {
 
         assertEquals(2, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
-        assertEquals(GameViewModel.GameScreenData.Data(gameDetails, listOf(store to gameDeals)), emissions.second())
+        assertEquals(GameViewModel.GameScreenData.Data(gameDetails, persistentListOf(store to gameDeals)), emissions.second())
     }
 }

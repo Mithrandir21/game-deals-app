@@ -1,9 +1,12 @@
 package pm.bam.gamedeals.feature.game.ui
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,7 +73,7 @@ internal class GameViewModel @Inject constructor(
             .flatMapLatest { details ->
                 details.deals
                     .map { deal -> storesRepository.getStore(deal.storeID) to deal }
-                    .let { dealDetails -> GameScreenData.Data(details, dealDetails) }
+                    .let { dealDetails -> GameScreenData.Data(details, dealDetails.toImmutableList()) }
                     .toFlow<GameScreenData>()
             }
             .onStart { _uiState.emit(GameScreenData.Loading) }
@@ -81,9 +84,11 @@ internal class GameViewModel @Inject constructor(
     sealed class GameScreenData {
         data object Loading : GameScreenData()
         data object Error : GameScreenData()
+
+        @Immutable
         data class Data(
             val gameDetails: GameDetails,
-            val dealDetails: List<Pair<Store, GameDetails.GameDeal>>
+            val dealDetails: ImmutableList<Pair<Store, GameDetails.GameDeal>>
         ) : GameScreenData()
     }
 }

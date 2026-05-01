@@ -5,6 +5,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -97,7 +98,7 @@ class HomeViewModelTest {
 
         assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS, items = data), emissions.first())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS, items = data.toImmutableList()), emissions.first())
 
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
