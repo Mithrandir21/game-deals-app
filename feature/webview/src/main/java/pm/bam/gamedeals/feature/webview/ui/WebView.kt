@@ -78,6 +78,9 @@ internal fun WebView(
                     )
                 }
             ) { contentPadding: PaddingValues ->
+                // Track the last URL we loaded so `update` only reloads when the `url` argument actually changes.
+                var lastLoadedUrl by remember { mutableStateOf<String?>(null) }
+                
                 AndroidView(
                     modifier = Modifier.padding(contentPadding),
                     factory = { context ->
@@ -99,11 +102,15 @@ internal fun WebView(
                                     loading = false
                                 }
                             }
+                            loadUrl(url)
+                            lastLoadedUrl = url
                         }
                     },
                     update = { webView ->
-                        loading = true
-                        webView.loadUrl(url)
+                        if (lastLoadedUrl != url) {
+                            webView.loadUrl(url)
+                            lastLoadedUrl = url
+                        }
                     }
                 )
             }
