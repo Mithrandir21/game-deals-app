@@ -4,6 +4,7 @@ import io.mockk.coEvery
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
@@ -68,6 +69,21 @@ class GiveawaysViewModelTest {
 
         // Loading is emitted twice, but observed only once because StateFlow emits only distinct values
         Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.first().status)
+    }
+
+    @Test
+    fun `reload Giveaways emits LOADING before refresh completes`() = runTest {
+        coEvery { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
+        val refreshGate = CompletableDeferred<Unit>()
+        coEvery { giveawaysRepository.refreshGiveaways() } coAnswers { refreshGate.await() }
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        viewModel.reloadGiveaways()
+
+        val emissions = observeStates(viewModel)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.last().status)
+
+        refreshGate.complete(Unit)
     }
 
     @Test
