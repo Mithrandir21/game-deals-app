@@ -2,21 +2,38 @@ package pm.bam.gamedeals.domain.repositories.stores
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
-import pm.bam.gamedeals.logging.verbose
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal val STORES_TTL_MILLIS = millisInHour * 8
 
 @Singleton
 class StoresRepository @Inject internal constructor(
     private val logger: Logger,
     private val storesDao: StoresDao,
-    private val cheapsharkSource: CheapsharkSource
+    private val cheapsharkSource: CheapsharkSource,
+    private val clock: Clock,
 ) {
+
+    private val cache = CachedResource(
+        clock = clock,
+        read = { storesDao.getAllStores() },
+        expiresAtMillis = { it.expires },
+        refresh = {
+            val expiresAt = clock.nowMillis() + STORES_TTL_MILLIS
+            cheapsharkSource.fetchStores()
+                .map { it.copy(expires = expiresAt) }
+                .let { storesDao.addStores(*it.toTypedArray()) }
+        }
+    )
 
     fun observeStores(): Flow<List<Store>> =
         storesDao.observeAllStores()
@@ -26,18 +43,7 @@ class StoresRepository @Inject internal constructor(
         storesDao.getStore(storeId)
 
     suspend fun refreshStores(force: Boolean = false) {
-        val refresh = force || refreshNeeded()
-
-        debug(logger) { "Stores refresh needed: $refresh" }
-
-        if (refresh) {
-            cheapsharkSource.fetchStores()
-                .let { storesDao.addStores(*it.toTypedArray()) }
-        }
+        val refreshed = cache.refreshIfNeeded(force)
+        debug(logger) { "Stores refresh needed: $refreshed" }
     }
-
-    private suspend fun refreshNeeded(): Boolean =
-        storesDao.getAllStores()
-            .let { stores -> stores.isEmpty() || stores.any { it.expires < System.currentTimeMillis() } }
-            .apply { verbose(logger) { "Stores Expiration logic returned: $this" } }
 }

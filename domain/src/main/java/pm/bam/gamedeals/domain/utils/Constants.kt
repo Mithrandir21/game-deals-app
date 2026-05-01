@@ -1,4 +1,4 @@
 package pm.bam.gamedeals.domain.utils
 
 internal const val IMAGE_BASE = "https://www.cheapshark.com"
-internal const val millisInHour = 60 * 60 * 1000
+const val millisInHour: Long = 60L * 60L * 1000L
