@@ -2,18 +2,18 @@ package pm.bam.gamedeals.feature.home.navigation
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.ui.HomeScreen
 
 fun NavGraphBuilder.homeScreen(
-    route: String,
     goToSearch: () -> Unit,
     goToGame: (gameId: Int) -> Unit,
     goToStore: (storeId: Int) -> Unit,
     goToGiveaway: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit
 ) {
-    composable(route) {
+    composable<Destination.Home> {
         HomeScreen(
             onSearch = goToSearch,
             goToGame = goToGame,

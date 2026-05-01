@@ -1,24 +1,19 @@
 package pm.bam.gamedeals.feature.webview.navigation
 
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavType
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
+import androidx.navigation.toRoute
+import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.feature.webview.ui.WebView
 
 fun NavGraphBuilder.webViewScreen(
-    route: String,
-    urlArg: String,
-    gameTitleArg: String,
     onBack: () -> Unit
 ) {
-    composable(
-        route = route,
-        arguments = listOf(navArgument(urlArg) { type = NavType.StringType }, navArgument(gameTitleArg) { type = NavType.StringType })
-    ) { entry ->
+    composable<Destination.WebView> { entry ->
+        val args = entry.toRoute<Destination.WebView>()
         WebView(
-            url = entry.arguments?.getString(urlArg)!!,
-            gameTitle = entry.arguments?.getString(gameTitleArg)!!,
+            url = args.url,
+            gameTitle = args.gameTitle,
             onBack = onBack
         )
     }

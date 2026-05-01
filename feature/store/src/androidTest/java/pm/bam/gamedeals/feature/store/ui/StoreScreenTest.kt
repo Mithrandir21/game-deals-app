@@ -71,12 +71,10 @@ class StoreScreenTest {
         )
 
         every { viewModel.deals } returns flowOf(pagingData)
-        every { viewModel.setStoreId(storeId) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
                 StoreScreen(
-                    storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel
@@ -90,17 +88,13 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
-        verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
 
     @Test
     fun loadSingleDeal() {
-        every { viewModel.setStoreId(storeId) } just runs
-
         composeTestRule.setContent {
             GameDealsTheme {
                 StoreScreen(
-                    storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel
@@ -111,18 +105,15 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
-        verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
 
     @Test
     fun loadDealDetails() {
-        every { viewModel.setStoreId(any()) } just runs
         every { viewModel.loadDealDetails(any(), any(), any(), any()) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
                 StoreScreen(
-                    storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel
@@ -136,7 +127,6 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
-        verify(exactly = 1) { viewModel.setStoreId(storeId) }
         verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any()) }
     }
 
@@ -154,12 +144,10 @@ class StoreScreenTest {
 
 
         every { viewModel.storeDetails } returns storeDetails
-        every { viewModel.setStoreId(storeId) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
                 StoreScreen(
-                    storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel
@@ -176,7 +164,6 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
-        verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
 
     @Test
@@ -184,12 +171,10 @@ class StoreScreenTest {
         val onBack: () -> Unit = mockk()
 
         every { onBack.invoke() } just runs
-        every { viewModel.setStoreId(storeId) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
                 StoreScreen(
-                    storeId = storeId,
                     onBack = onBack,
                     goToWeb = { _, _ -> },
                     viewModel = viewModel
@@ -203,7 +188,6 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
-        verify(exactly = 1) { viewModel.setStoreId(storeId) }
         verify(exactly = 1) { onBack.invoke() }
     }
 }
