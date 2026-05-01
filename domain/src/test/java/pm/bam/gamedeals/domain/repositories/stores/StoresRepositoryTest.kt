@@ -19,7 +19,7 @@ import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
-class StoresRepositoryImplTest {
+class StoresRepositoryTest {
 
     @get:Rule
     val instantExecutorRule = InstantTaskExecutorRule()
@@ -30,7 +30,7 @@ class StoresRepositoryImplTest {
 
     private val cheapsharkSource: CheapsharkSource = mockk()
 
-    private val impl = StoresRepositoryImpl(logger, storesDao, cheapsharkSource)
+    private val impl = StoresRepository(logger, storesDao, cheapsharkSource)
 
     @Test
     fun `observe stores with refresh called`() = runTest {

@@ -15,18 +15,6 @@ import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.db.dao.StoresDao
-import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
-import pm.bam.gamedeals.domain.repositories.games.GamesRepository
-import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
-import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
-import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepositoryImpl
-import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
-import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
-import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
-import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
-import pm.bam.gamedeals.domain.source.CheapsharkSource
-import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
@@ -64,39 +52,6 @@ internal class InternalDomainModule {
 
     @Provides
     fun provideLocalDateSerializer() = LocalDateSerializer()
-
-    @Provides
-    @Singleton
-    fun provideDealsRepository(
-        logger: Logger,
-        dealsDao: DealsDao,
-        db: DomainDatabase,
-        cheapsharkSource: CheapsharkSource
-    ): DealsRepository =
-        DealsRepositoryImpl(logger, dealsDao, db, cheapsharkSource)
-
-    @Provides
-    @Singleton
-    fun provideGamesRepository(
-        gamesDao: GamesDao,
-        cheapsharkSource: CheapsharkSource
-    ): GamesRepository =
-        GamesRepositoryImpl(gamesDao, cheapsharkSource)
-
-    @Provides
-    @Singleton
-    fun provideStoresRepository(logger: Logger, storesDao: StoresDao, cheapsharkSource: CheapsharkSource): StoresRepository =
-        StoresRepositoryImpl(logger, storesDao, cheapsharkSource)
-
-    @Provides
-    @Singleton
-    fun provideReleasesRepository(logger: Logger, releasesDao: ReleasesDao, cheapsharkSource: CheapsharkSource): ReleasesRepository =
-        ReleasesRepositoryImpl(logger, releasesDao, cheapsharkSource)
-
-    @Provides
-    @Singleton
-    fun provideGiveawayRepository(logger: Logger, giveawaysDao: GiveawaysDao, gamerPowerSource: GamerPowerSource): GiveawaysRepository =
-        GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource)
 
     @Provides
     @Singleton

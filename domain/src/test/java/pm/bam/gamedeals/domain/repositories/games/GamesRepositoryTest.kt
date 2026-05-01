@@ -17,7 +17,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 
-class GamesRepositoryImplTest {
+class GamesRepositoryTest {
 
     @get:Rule
     val instantExecutorRule = InstantTaskExecutorRule()
@@ -26,7 +26,7 @@ class GamesRepositoryImplTest {
 
     private val cheapsharkSource: CheapsharkSource = mockk()
 
-    private val impl = GamesRepositoryImpl(gamesDao, cheapsharkSource)
+    private val impl = GamesRepository(gamesDao, cheapsharkSource)
 
     @Test
     fun `observe games with refresh called`() = runTest {

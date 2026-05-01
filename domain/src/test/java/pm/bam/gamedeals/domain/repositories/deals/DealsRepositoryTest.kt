@@ -26,7 +26,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
 
 
-class DealsRepositoryImplTest {
+class DealsRepositoryTest {
 
     @get:Rule
     val instantExecutorRule = InstantTaskExecutorRule()
@@ -39,7 +39,7 @@ class DealsRepositoryImplTest {
 
     private val cheapsharkSource: CheapsharkSource = mockk()
 
-    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, cheapsharkSource)
+    private val impl = DealsRepository(logger, dealsDao, domainDatabase, cheapsharkSource)
 
 
     @Test
