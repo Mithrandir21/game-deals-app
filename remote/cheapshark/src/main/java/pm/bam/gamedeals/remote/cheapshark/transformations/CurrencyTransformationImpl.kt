@@ -1,6 +1,6 @@
-package pm.bam.gamedeals.domain.transformations
+package pm.bam.gamedeals.remote.cheapshark.transformations
 
-import pm.bam.gamedeals.domain.di.CurrencyDenomination
+import pm.bam.gamedeals.remote.cheapshark.di.CurrencyDenomination
 import javax.inject.Inject
 import kotlin.math.absoluteValue
 

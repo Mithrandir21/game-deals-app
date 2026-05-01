@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.domain.transformations
+package pm.bam.gamedeals.remote.cheapshark.transformations
 
 fun interface CurrencyTransformation {
     fun valueToDenominated(value: Double): String

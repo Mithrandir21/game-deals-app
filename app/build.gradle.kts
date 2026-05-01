@@ -119,6 +119,11 @@ dependencies {
     implementation(project(":common:ui"))
     implementation(project(":domain"))
 
+    // Remote source adapters — wired into Hilt at the app boundary so :domain
+    // stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
+    implementation(project(":remote:cheapshark"))
+    implementation(project(":remote:gamerpower"))
+
     implementation(project(":feature:home"))
     implementation(project(":feature:game"))
     implementation(project(":feature:store"))

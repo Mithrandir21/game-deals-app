@@ -2,6 +2,8 @@ package pm.bam.gamedeals.remote.gamerpower
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.skydoves.sandwich.retrofit.adapters.ApiResponseCallAdapterFactory
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -12,12 +14,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
+import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
-import pm.bam.gamedeals.remote.gamerpower.models.RemoteGiveawayType
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import retrofit2.Retrofit
+import java.time.LocalDateTime
 
 /**
  * HTTP-level coverage for the [GamerPowerSourceImpl] facade. Stands a real
@@ -31,6 +35,10 @@ class GamerPowerSourceImplTest {
 
     private lateinit var mockWebServer: MockWebServer
     private lateinit var impl: GamerPowerSourceImpl
+
+    private val datetimeParsing: DatetimeParsing = mockk {
+        every { parseDatetime(any()) } returns LocalDateTime.of(2026, 1, 1, 0, 0)
+    }
 
     @OptIn(ExperimentalSerializationApi::class)
     @Before
@@ -50,7 +58,8 @@ class GamerPowerSourceImplTest {
         impl = GamerPowerSourceImpl(
             logger = logger,
             gamesApi = retrofit.create(GamesApi::class.java),
-            remoteExceptionTransformer = RemoteExceptionTransformer { it }
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            datetimeParsing = datetimeParsing
         )
     }
 
@@ -66,7 +75,7 @@ class GamerPowerSourceImplTest {
         val result = impl.fetchGiveaways()
         assertEquals(1, result.size)
         assertEquals("Free Game", result.first().title)
-        assertEquals(RemoteGiveawayType.GAME, result.first().type)
+        assertEquals(GiveawayType.GAME, result.first().type)
 
         val recorded = mockWebServer.takeRequest()
         assertEquals("/api/giveaways", recorded.path)

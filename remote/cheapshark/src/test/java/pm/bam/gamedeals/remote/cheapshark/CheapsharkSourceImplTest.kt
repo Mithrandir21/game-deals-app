@@ -2,6 +2,8 @@ package pm.bam.gamedeals.remote.cheapshark
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.skydoves.sandwich.retrofit.adapters.ApiResponseCallAdapterFactory
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -14,12 +16,14 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
+import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
-import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
+import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import retrofit2.Retrofit
@@ -36,6 +40,15 @@ class CheapsharkSourceImplTest {
 
     private lateinit var mockWebServer: MockWebServer
     private lateinit var impl: CheapsharkSourceImpl
+
+    private val currencyTransformation: CurrencyTransformation = mockk {
+        every { valueToDenominated(any()) } answers { "$${firstArg<Double>()}" }
+    }
+
+    private val datetimeFormatter: DateTimeFormatter = mockk {
+        every { formatToISODate(any<Long>()) } returns "2020-01-01"
+        every { formatToISODateNullable(any<Long>()) } returns "2020-01-01"
+    }
 
     @OptIn(ExperimentalSerializationApi::class)
     @Before
@@ -58,7 +71,9 @@ class CheapsharkSourceImplTest {
             gamesApi = retrofit.create(GamesApi::class.java),
             releaseApi = retrofit.create(ReleaseApi::class.java),
             storesApi = retrofit.create(StoresApi::class.java),
-            remoteExceptionTransformer = RemoteExceptionTransformer { it }
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            currencyTransformation = currencyTransformation,
+            datetimeFormatter = datetimeFormatter
         )
     }
 
@@ -87,7 +102,7 @@ class CheapsharkSourceImplTest {
         val pageSize = 60
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(DEAL_LIST_BODY))
 
-        val result = impl.fetchDealsForStore(RemoteDealsQuery(storeID = storeId, pageSize = pageSize))
+        val result = impl.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = pageSize, sortBy = null))
         assertEquals(1, result.size)
         assertEquals("Game One", result.first().title)
 
@@ -128,7 +143,7 @@ class CheapsharkSourceImplTest {
 
         val result = impl.fetchGames(title = title)
         assertEquals(1, result.size)
-        assertEquals("Halo", result.first().external)
+        assertEquals("Halo", result.first().title)
 
         val recorded = mockWebServer.takeRequest()
         assertTrue(recorded.path!!.startsWith("/api/1.0/games"))

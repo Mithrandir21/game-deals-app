@@ -6,9 +6,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import pm.bam.gamedeals.domain.utils.IMAGE_BASE
 import pm.bam.gamedeals.domain.utils.millisInHour
-import pm.bam.gamedeals.remote.cheapshark.models.RemoteStore
 
 @Immutable
 @Entity(tableName = "Store")
@@ -44,25 +42,3 @@ data class Store(
         val icon: String
     )
 }
-
-internal fun RemoteStore.RemoteStoreImages.toStoreImages(): Store.StoreImages =
-    Store.StoreImages(
-        banner = IMAGE_BASE.plus(banner),
-        logo = IMAGE_BASE.plus(logo),
-        icon = IMAGE_BASE.plus(icon)
-    )
-
-internal fun RemoteStore.toStore(): Store =
-    Store(
-        storeID = storeID,
-        storeName = storeName,
-        isActive = isActive.toBooleanStrict(),
-        images = images.toStoreImages()
-    )
-
-internal fun Int.toBooleanStrict() =
-    when (this) {
-        0 -> false
-        1 -> true
-        else -> throw Exception("Unknown value for int to boolean conversion: $this")
-    }

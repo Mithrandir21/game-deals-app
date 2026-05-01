@@ -5,7 +5,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import pm.bam.gamedeals.remote.cheapshark.models.RemoteRelease
 
 @Immutable
 @Entity(tableName = "Release")
@@ -19,10 +18,3 @@ data class Release(
     @SerialName("image")
     val image: String,
 )
-
-internal fun RemoteRelease.toRelease(): Release =
-    Release(
-        title = title,
-        date = date,
-        image = image,
-    )

@@ -6,7 +6,3 @@ import javax.inject.Qualifier
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 internal annotation class Domain
-
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-internal annotation class CurrencyDenomination

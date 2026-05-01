@@ -6,20 +6,17 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
-import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
+import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
-import pm.bam.gamedeals.domain.models.toDeal
-import pm.bam.gamedeals.domain.models.toDealDetails
+import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.deals.paging.DealsMediator
-import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.verbose
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import javax.inject.Inject
 
 internal const val DEAL_PAGE_COUNT = 60
@@ -28,9 +25,7 @@ internal class DealsRepositoryImpl @Inject constructor(
     private val logger: Logger,
     private val dealsDao: DealsDao,
     private val domainDatabase: DomainDatabase,
-    private val cheapsharkSource: CheapsharkSource,
-    private val currencyTransformation: CurrencyTransformation,
-    private val datetimeFormatter: DateTimeFormatter
+    private val cheapsharkSource: CheapsharkSource
 ) : DealsRepository {
 
     override fun observeAllDeals(): Flow<List<Deal>> =
@@ -42,7 +37,7 @@ internal class DealsRepositoryImpl @Inject constructor(
             pageSize = DEAL_PAGE_COUNT,
             enablePlaceholders = false
         ),
-        remoteMediator = DealsMediator(domainDatabase, cheapsharkSource, currencyTransformation, storeId, DEAL_PAGE_COUNT, logger)
+        remoteMediator = DealsMediator(domainDatabase, cheapsharkSource, storeId, DEAL_PAGE_COUNT, logger)
     ) {
         dealsDao.getPagingStoreDeals(storeId)
     }.flow
@@ -59,8 +54,9 @@ internal class DealsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDeal(dealId: String): DealDetails =
-        cheapsharkSource.fetchDealDetails(dealId).toDealDetails(currencyTransformation, datetimeFormatter)
+        cheapsharkSource.fetchDealDetails(dealId)
 
+    @OptIn(ExperimentalSerializationApi::class)
     override suspend fun refreshDeals(storeId: Int, force: Boolean) {
         val refresh = force || refreshNeeded(storeId)
 
@@ -69,8 +65,7 @@ internal class DealsRepositoryImpl @Inject constructor(
         if (refresh) {
             domainDatabase.withTransaction {
                 dealsDao.clearDealsForStore(storeId)
-                cheapsharkSource.fetchDealsForStore(RemoteDealsQuery(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
-                    .map { remoteDeal -> remoteDeal.toDeal(currencyTransformation) }
+                cheapsharkSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
                     .let { dealsDao.addDeals(*it.toTypedArray()) }
             }
         }

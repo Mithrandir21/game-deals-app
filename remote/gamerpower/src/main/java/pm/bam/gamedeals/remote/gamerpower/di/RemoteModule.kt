@@ -4,9 +4,10 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
+import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
-import pm.bam.gamedeals.remote.gamerpower.GamerPowerSource
 import pm.bam.gamedeals.remote.gamerpower.GamerPowerSourceImpl
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import javax.inject.Singleton
@@ -25,7 +26,8 @@ internal class InternalRemoteModule {
     fun provideGamerPowerSource(
         logger: Logger,
         gamesApi: GamesApi,
-        remoteExceptionTransformer: RemoteExceptionTransformer
+        remoteExceptionTransformer: RemoteExceptionTransformer,
+        datetimeParsing: DatetimeParsing
     ): GamerPowerSource =
-        GamerPowerSourceImpl(logger, gamesApi, remoteExceptionTransformer)
+        GamerPowerSourceImpl(logger, gamesApi, remoteExceptionTransformer, datetimeParsing)
 }

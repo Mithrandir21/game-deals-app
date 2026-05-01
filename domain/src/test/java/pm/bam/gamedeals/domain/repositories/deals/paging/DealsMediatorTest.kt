@@ -27,11 +27,8 @@ import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.PagingDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealPage
-import pm.bam.gamedeals.domain.models.toDeal
-import pm.bam.gamedeals.domain.transformations.CurrencyTransformation
+import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.cheapshark.CheapsharkSource
-import pm.bam.gamedeals.remote.cheapshark.models.RemoteDeal
 
 @OptIn(ExperimentalPagingApi::class)
 internal class DealsMediatorTest {
@@ -46,7 +43,6 @@ internal class DealsMediatorTest {
         every { getPagingDao() } returns pagingDao
     }
     private val cheapsharkSource: CheapsharkSource = mockk()
-    private val currencyTransformation: CurrencyTransformation = mockk()
     private val logger: Logger = mockk {
         every { log(any(), any(), any(), any()) } just runs
         every { fatalThrowable(any(), any()) } just runs
@@ -59,7 +55,7 @@ internal class DealsMediatorTest {
 
     @Before
     fun setup() {
-        mediator = DealsMediator(domainDatabase, cheapsharkSource, currencyTransformation, defaultStoreId, pageSize, logger)
+        mediator = DealsMediator(domainDatabase, cheapsharkSource, defaultStoreId, pageSize, logger)
 
         // Captures and invokes the Lambda for "withTransaction"
         mockkStatic("androidx.room.RoomDatabaseKt")
@@ -87,13 +83,9 @@ internal class DealsMediatorTest {
         val dealPage = DealPage(defaultStoreId, page)
         val newDealPage = DealPage(defaultStoreId, page + 1)
 
-        val remoteResults: RemoteDeal = mockk()
-        val results: Deal = mockk()
+        val deal: Deal = mockk()
 
-        mockkStatic(RemoteDeal::toDeal)
-        every { remoteResults.toDeal(currencyTransformation) } returns results
-
-        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(deal)
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
         coEvery { pagingDao.insert(newDealPage) } just runs
@@ -151,13 +143,9 @@ internal class DealsMediatorTest {
         val page = 0
         val newDealPage = DealPage(defaultStoreId, page + 1)
 
-        val remoteResults: RemoteDeal = mockk()
-        val results: Deal = mockk()
+        val deal: Deal = mockk()
 
-        mockkStatic(RemoteDeal::toDeal)
-        every { remoteResults.toDeal(currencyTransformation) } returns results
-
-        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(remoteResults)
+        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(deal)
 
         coEvery { pagingDao.clearStorePage(defaultStoreId) } just runs
         coEvery { pagingDao.insert(newDealPage) } just runs
