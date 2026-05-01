@@ -63,11 +63,6 @@ class StoreViewModelTest {
 
         // The ID is now seeded from SavedStateHandle at construction, so the load
         // happens immediately after the flow becomes active rather than via setStoreId.
-        // storeDetails is now backed directly by _storeDetails via asStateFlow(); the
-        // previous `stateIn(WhileSubscribed, null)` wrapper produced a spurious null
-        // initial-value emission on every cold subscription (issue #37). With the wrapper
-        // removed, the late subscriber under UnconfinedTestDispatcher sees only the
-        // conflated current value because init { } already loaded the store.
         assertEquals(1, emissions.size)
         assertEquals(store, emissions.first())
     }

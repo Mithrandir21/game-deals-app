@@ -42,11 +42,6 @@ class GiveawaysViewModelTest {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        // uiState is now backed directly by _uiState via asStateFlow(); the previous
-        // `stateIn(WhileSubscribed, initial)` wrapper produced a spurious initial-value
-        // emission on every cold subscription (issue #37). With the wrapper removed, the
-        // late subscriber under UnconfinedTestDispatcher sees only the conflated SUCCESS
-        // value because init { } already drained the flow.
         Assert.assertEquals(1, emissions.size)
         Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
     }
@@ -57,8 +52,6 @@ class GiveawaysViewModelTest {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        // See `initially loading`: the ERROR branch in init updates _uiState to ERROR
-        // before observeStates subscribes, so a single conflated emission is observed.
         Assert.assertEquals(1, emissions.size)
         Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.first().status)
     }
@@ -96,8 +89,6 @@ class GiveawaysViewModelTest {
         viewModel.loadGiveaway(para)
 
         val emissions = observeStates(viewModel)
-        // See `initially loading`: with asStateFlow() the late subscriber sees only the
-        // conflated current value, after init { } and loadGiveaway have both completed.
         Assert.assertEquals(1, emissions.size)
         Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
         Assert.assertEquals(2, emissions.first().giveaways.size)

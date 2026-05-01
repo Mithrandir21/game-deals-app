@@ -60,11 +60,6 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
 
         val emissions = observeStates()
-        // uiState is now backed directly by _uiState via asStateFlow(); the previous
-        // `stateIn(WhileSubscribed, initial)` wrapper produced a spurious initial-value
-        // emission on every cold subscription (issue #37). With the wrapper removed, a
-        // late subscriber under UnconfinedTestDispatcher sees only the conflated SUCCESS
-        // value because init { } already drained the flow before observeStates ran.
         assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
         assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.first())
@@ -98,7 +93,6 @@ class HomeViewModelTest {
             }
 
 
-        // See `initially loading state` for why a single conflated emission is expected.
         assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
         assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS, items = data), emissions.first())
@@ -115,7 +109,6 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
         val emissions = observeStates()
 
-        // See `initially loading state` for why a single conflated emission is expected.
         assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
         assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.first())
@@ -142,9 +135,6 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        // See `initially loading state`: with asStateFlow() the late subscriber sees only
-        // the conflated SUCCESS value. onReleaseGame's onCompletion re-emits SUCCESS which
-        // is conflated away, so still a single observed emission.
         assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
         assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.first())
@@ -173,10 +163,6 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        // See `initially loading state`: with asStateFlow() the late subscriber begins at the
-        // current SUCCESS value. onReleaseGame's onStart writes LOADING then onCompletion
-        // writes ERROR; the LOADING transition is conflated away because the subscriber wasn't
-        // suspended on it, leaving 2 observed values: SUCCESS then ERROR.
         assertEquals(2, emissions.size)
         assertNotNull(emissions.second())
         assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.second())
