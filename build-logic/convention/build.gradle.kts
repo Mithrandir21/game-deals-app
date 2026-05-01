@@ -4,9 +4,6 @@ plugins {
 
 group = "pm.bam.gamedeals.buildlogic"
 
-// Match the JDK target used by the rest of the project so the precompiled
-// plugin classes link against JDK 21 bytecode and avoid JavaCompile mismatches
-// on CI (see lesson L-2026-04-30-02).
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21

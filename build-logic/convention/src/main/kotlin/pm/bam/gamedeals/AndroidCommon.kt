@@ -44,8 +44,6 @@ internal fun Project.configureAndroidCommon(extension: CommonExtension<*, *, *, 
         }
     }
 
-    // Match Kotlin toolchain to Java target. CI runner JDK is 21 — see
-    // L-2026-04-30-02 in .claude/lessons.md before touching this.
     extensions.configure(KotlinAndroidProjectExtension::class.java) {
         jvmToolchain(21)
     }
