@@ -40,7 +40,9 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -296,6 +298,7 @@ private fun ScreenScaffold(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val currentOnRetry by rememberUpdatedState(onRetry)
 
     val title = when (data) {
         GameScreenData.Loading, GameScreenData.Error -> stringResource(R.string.game_screen_toolbar_title_loading)
@@ -344,7 +347,7 @@ private fun ScreenScaffold(
                             actionLabel = context.getString(R.string.game_screen_data_loading_error_retry)
                         )
                         if (results == SnackbarResult.ActionPerformed) {
-                            onRetry()
+                            currentOnRetry()
                         }
                     }
 

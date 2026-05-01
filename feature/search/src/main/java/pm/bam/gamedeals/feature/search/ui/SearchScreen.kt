@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -140,6 +141,7 @@ private fun Screen(
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentOnRetry by rememberUpdatedState(onRetry)
 
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
@@ -207,7 +209,7 @@ private fun Screen(
                 actionLabel = context.getString(R.string.search_screen_data_loading_error_retry)
             )
             if (results == SnackbarResult.ActionPerformed) {
-                onRetry()
+                currentOnRetry()
             }
         }
     }

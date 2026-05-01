@@ -30,7 +30,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -178,6 +180,7 @@ private fun Screen(
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentOnRetry by rememberUpdatedState(onRetry)
 
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
@@ -293,7 +296,7 @@ private fun Screen(
                         actionLabel = context.getString(R.string.home_screen_data_loading_error_retry)
                     )
                     if (results == SnackbarResult.ActionPerformed) {
-                        onRetry()
+                        currentOnRetry()
                     }
                 }
             }
