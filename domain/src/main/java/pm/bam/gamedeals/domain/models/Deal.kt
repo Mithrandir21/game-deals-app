@@ -9,7 +9,6 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import pm.bam.gamedeals.domain.utils.millisInHour
 
 @OptIn(ExperimentalSerializationApi::class)
 @Immutable
@@ -62,13 +61,14 @@ data class Deal(
     val thumb: String,
 
     /**
-     * An expiration date has been artificially to determine when
-     * the Store should be considered as expired, set as now + (something time).
+     * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
      *
-     * @see millisInHour
+     * The repository stamps this via the injected `Clock` plus the resource's TTL when adding
+     * fetched entities to the DAO; defaults to `0L` (already-expired) so any unstamped entity
+     * is considered stale by the cache.
      */
     @SerialName("expires")
-    val expires: Long = System.currentTimeMillis().plus(millisInHour * 8)
+    val expires: Long = 0L
 )
 
 @Serializable
