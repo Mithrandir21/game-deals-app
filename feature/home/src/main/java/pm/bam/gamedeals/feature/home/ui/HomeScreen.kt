@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.SingleEventEffect
 import pm.bam.gamedeals.common.ui.FoldableLandscape
 import pm.bam.gamedeals.common.ui.FoldablePortrait
@@ -427,9 +428,9 @@ private fun ScreenEmptyPreview() {
         onReleaseTitle = {},
         data = HomeViewModel.HomeScreenData(
             state = LOADING,
-            releases = listOf(),
-            giveaways = listOf(),
-            items = listOf()
+            releases = persistentListOf(),
+            giveaways = persistentListOf(),
+            items = persistentListOf()
         ),
         dealDetails = null,
         onViewDealDetails = { _, _, _, _ -> },
@@ -454,21 +455,21 @@ private fun ScreenPreview() {
         onReleaseTitle = {},
         data = HomeViewModel.HomeScreenData(
             state = SUCCESS,
-            releases = listOf(
+            releases = persistentListOf(
                 PreviewRelease.copy(title = "Game 1"),
                 PreviewRelease.copy(title = "Game 2"),
                 PreviewRelease.copy(title = "Game 3"),
                 PreviewRelease.copy(title = "Game 4"),
                 PreviewRelease.copy(title = "Game 5"),
             ),
-            giveaways = listOf(
+            giveaways = persistentListOf(
                 PreviewGiveaway.copy(id = 1, title = "Giveaway 1"),
                 PreviewGiveaway.copy(id = 2, title = "Giveaway 2"),
                 PreviewGiveaway.copy(id = 3, title = "Giveaway 3 - Very long title with even more title to make it longer, possibly over many, many lines"),
                 PreviewGiveaway.copy(id = 4, title = "Giveaway 4"),
                 PreviewGiveaway.copy(id = 5, title = "Giveaway 5"),
             ),
-            items = listOf(
+            items = persistentListOf(
                 StoreData(store = PreviewStore.copy(storeID = 1)),
                 DealData(deal = PreviewDeal.copy(dealID = "deal-1-a")),
                 ViewAllData(store = PreviewStore.copy(storeID = 1)),

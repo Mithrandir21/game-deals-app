@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.common.ui.FoldableLandscape
 import pm.bam.gamedeals.common.ui.FoldablePortrait
 import pm.bam.gamedeals.common.ui.PhoneLandscape
@@ -396,7 +397,7 @@ private fun PreviewCompact() {
         windowWidth = WindowWidthSizeClass.Compact,
         data = GameScreenData.Data(
             gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }
+            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
         ),
         onBack = {},
         goToWeb = { _, _ -> },
@@ -412,7 +413,7 @@ private fun PreviewMedium() {
         windowWidth = WindowWidthSizeClass.Medium,
         data = GameScreenData.Data(
             gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }
+            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
         ),
         onBack = {},
         goToWeb = { _, _ -> },
@@ -429,7 +430,7 @@ private fun PreviewExpanded() {
         windowWidth = WindowWidthSizeClass.Expanded,
         data = GameScreenData.Data(
             gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }
+            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
         ),
         onBack = {},
         goToWeb = { _, _ -> },

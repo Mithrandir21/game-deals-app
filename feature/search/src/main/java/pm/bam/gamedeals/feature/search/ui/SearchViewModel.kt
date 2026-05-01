@@ -1,8 +1,11 @@
 package pm.bam.gamedeals.feature.search.ui
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +51,7 @@ internal class SearchViewModel @Inject constructor(
                             .map {
                                 when (it.isEmpty()) {
                                     true -> SearchData.NoResults
-                                    false -> SearchData.SearchResults(it)
+                                    false -> SearchData.SearchResults(it.toImmutableList())
                                 }
                             }
                     }
@@ -84,8 +87,10 @@ internal class SearchViewModel @Inject constructor(
         data object Loading : SearchData()
         data object NoResults : SearchData()
         data object Error : SearchData()
+
+        @Immutable
         data class SearchResults(
-            val searchResults: List<Deal>
+            val searchResults: ImmutableList<Deal>
         ) : SearchData()
     }
 }

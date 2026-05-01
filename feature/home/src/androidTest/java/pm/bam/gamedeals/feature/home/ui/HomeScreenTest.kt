@@ -12,6 +12,7 @@ import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -149,7 +150,7 @@ class HomeScreenTest {
 
     @Test
     fun storeDataLoaded() {
-        val mockData = HomeScreenData(state = HomeScreenStatus.SUCCESS, items = listOf(mockStoreData, mockDealData, mockViewAllData))
+        val mockData = HomeScreenData(state = HomeScreenStatus.SUCCESS, items = persistentListOf(mockStoreData, mockDealData, mockViewAllData))
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 

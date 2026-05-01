@@ -1,8 +1,12 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +36,7 @@ internal class GiveawaysViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             flow { emitAll(giveawaysRepository.observeGiveaways()) }
-                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it) }
+                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
                 .logFlow(logger)
                 .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
                 .collect { _uiState.emit(it) }
@@ -54,7 +58,7 @@ internal class GiveawaysViewModel @Inject constructor(
     fun loadGiveaway(parameters: GiveawaySearchParameters) {
         viewModelScope.launch {
             flow { emitAll(giveawaysRepository.observeGiveaways(parameters)) }
-                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it) }
+                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
                 .logFlow(logger)
                 .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
                 .collect { _uiState.emit(it) }
@@ -62,9 +66,10 @@ internal class GiveawaysViewModel @Inject constructor(
     }
 
 
+    @Immutable
     data class GiveawaysScreenData(
         val status: GiveawaysScreenStatus = GiveawaysScreenStatus.LOADING,
-        val giveaways: List<Giveaway> = emptyList()
+        val giveaways: ImmutableList<Giveaway> = persistentListOf()
     )
 
 

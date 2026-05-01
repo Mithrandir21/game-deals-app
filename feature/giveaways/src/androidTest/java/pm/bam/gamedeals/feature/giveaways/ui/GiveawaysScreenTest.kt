@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -100,7 +101,7 @@ class GiveawaysScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
-                giveaways = listOf(giveaway)
+                giveaways = persistentListOf(giveaway)
             )
         )
 

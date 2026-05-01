@@ -1,8 +1,12 @@
 package pm.bam.gamedeals.feature.home.ui
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -121,7 +125,14 @@ internal class HomeViewModel @Inject constructor(
             }
             .flatMapLatest { loadNewReleases().map { releases -> releases to it } }
             .flatMapLatest { loadGiveaways().map { giveaways -> Triple(it.first, giveaways.take(LIMIT_GIVEAWAYS), it.second) } }
-            .map { HomeScreenData(state = HomeScreenStatus.SUCCESS, releases = it.first, giveaways = it.second, items = it.third) }
+            .map {
+                HomeScreenData(
+                    state = HomeScreenStatus.SUCCESS,
+                    releases = it.first.toImmutableList(),
+                    giveaways = it.second.toImmutableList(),
+                    items = it.third.toImmutableList()
+                )
+            }
             .logFlow(logger)
             .catch { emit(HomeScreenData(state = HomeScreenStatus.ERROR)) }
 
@@ -140,11 +151,12 @@ internal class HomeViewModel @Inject constructor(
         data class NavigateToGame(val gameId: Int) : HomeUiEvent
     }
 
+    @Immutable
     internal data class HomeScreenData(
         val state: HomeScreenStatus = HomeScreenStatus.LOADING,
-        val releases: List<Release> = emptyList(),
-        val giveaways: List<Giveaway> = emptyList(),
-        val items: List<HomeScreenListData> = emptyList()
+        val releases: ImmutableList<Release> = persistentListOf(),
+        val giveaways: ImmutableList<Giveaway> = persistentListOf(),
+        val items: ImmutableList<HomeScreenListData> = persistentListOf()
     )
 
     internal enum class HomeScreenStatus {

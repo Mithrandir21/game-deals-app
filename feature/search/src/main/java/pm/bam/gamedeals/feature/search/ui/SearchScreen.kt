@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.ui.PhoneLandscape
 import pm.bam.gamedeals.common.ui.PhonePortrait
@@ -462,7 +463,7 @@ private fun SearchScreenPreview() {
         onShowFiltersChanged = {},
         existingSearchParameters = SearchParameters(),
         searchData = SearchViewModel.SearchData.SearchResults(
-            searchResults = List(15) { PreviewDeal.copy(dealID = "$it") }
+            searchResults = List(15) { PreviewDeal.copy(dealID = "$it") }.toImmutableList()
         ),
         onSearchTitleChanged = {},
         onSearchedGame = {},

@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":common:ui"))
     implementation(libs.compose.material.icons)
+    implementation(libs.kotlinx.collections.immutable)
 
     testImplementation(project(":testing"))
 }

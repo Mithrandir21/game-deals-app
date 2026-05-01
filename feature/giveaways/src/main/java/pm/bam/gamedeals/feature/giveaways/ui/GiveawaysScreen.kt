@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.ui.PhonePortrait
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -447,7 +448,7 @@ private fun PreviewData() {
     ScreenScaffold(
         data = GiveawaysViewModel.GiveawaysScreenData(
             status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
-            giveaways = listOf(
+            giveaways = persistentListOf(
                 PreviewGiveaway.copy(id = 1),
                 PreviewGiveaway.copy(id = 2).copy(worthDenominated = null),
                 PreviewGiveaway.copy(id = 3),

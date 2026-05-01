@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.search.ui
 
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
@@ -90,7 +91,7 @@ class SearchViewModelTest {
 
         delay(1200) // Delay because Flow 'flatMapLatestDelayAtLeast'
 
-        assertEquals(SearchData.SearchResults(deals), emissions.third())
+        assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.third())
     }
 
     @Test
