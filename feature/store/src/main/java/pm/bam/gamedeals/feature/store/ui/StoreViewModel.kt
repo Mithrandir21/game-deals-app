@@ -7,14 +7,13 @@ import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
@@ -40,11 +39,7 @@ internal class StoreViewModel @Inject constructor(
     private val storeIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("storeId")!!)
 
     private val _storeDetails = MutableStateFlow<Store?>(null)
-    val storeDetails: StateFlow<Store?> = _storeDetails.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
-    )
+    val storeDetails: StateFlow<Store?> = _storeDetails.asStateFlow()
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails

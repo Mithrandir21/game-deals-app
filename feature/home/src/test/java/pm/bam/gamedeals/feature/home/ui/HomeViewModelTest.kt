@@ -28,7 +28,6 @@ import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
-import pm.bam.gamedeals.testing.utils.third
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -61,11 +60,9 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
 
         val emissions = observeStates()
-        assertEquals(2, emissions.size)
+        assertEquals(1, emissions.size)
         assertNotNull(emissions.first())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.LOADING), emissions.first())
-        assertNotNull(emissions.second())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.second())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.first())
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
         coVerify(exactly = 0) { dealsRepository.getStoreDeals(any(), any()) }
@@ -96,9 +93,9 @@ class HomeViewModelTest {
             }
 
 
-        assertEquals(2, emissions.size)
-        assertNotNull(emissions.second())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS, items = data), emissions.second())
+        assertEquals(1, emissions.size)
+        assertNotNull(emissions.first())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS, items = data), emissions.first())
 
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
@@ -112,9 +109,9 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
         val emissions = observeStates()
 
-        assertEquals(2, emissions.size)
-        assertNotNull(emissions.second())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.second())
+        assertEquals(1, emissions.size)
+        assertNotNull(emissions.first())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.first())
 
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
@@ -138,9 +135,9 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        assertEquals(2, emissions.size)
-        assertNotNull(emissions.second())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.second())
+        assertEquals(1, emissions.size)
+        assertNotNull(emissions.first())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.first())
 
         assertEquals(1, events.size)
         assertNotNull(events.first())
@@ -166,9 +163,9 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        assertEquals(3, emissions.size)
-        assertNotNull(emissions.third())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.third())
+        assertEquals(2, emissions.size)
+        assertNotNull(emissions.second())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.second())
 
         assertNull(events.firstOrNull())
 

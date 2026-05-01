@@ -4,12 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.mapDelayAtLeast
@@ -30,11 +29,7 @@ class DealDetailsViewModel @Inject constructor(
 
 
     private val _dealDetails = MutableStateFlow<DealBottomSheetData?>(null)
-    val dealDealDetails: StateFlow<DealBottomSheetData?> = _dealDetails.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
-    )
+    val dealDealDetails: StateFlow<DealBottomSheetData?> = _dealDetails.asStateFlow()
 
     fun loadDealDetails(
         dealId: String,

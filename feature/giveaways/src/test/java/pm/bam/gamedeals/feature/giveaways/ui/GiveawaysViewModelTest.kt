@@ -42,9 +42,8 @@ class GiveawaysViewModelTest {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        Assert.assertEquals(2, emissions.size)
-        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.first().status)
-        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.second().status)
+        Assert.assertEquals(1, emissions.size)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
     }
 
     @Test
@@ -53,8 +52,8 @@ class GiveawaysViewModelTest {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        Assert.assertEquals(2, emissions.size)
-        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.first().status)
+        Assert.assertEquals(1, emissions.size)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.first().status)
     }
 
     @Test
@@ -90,12 +89,11 @@ class GiveawaysViewModelTest {
         viewModel.loadGiveaway(para)
 
         val emissions = observeStates(viewModel)
-        Assert.assertEquals(2, emissions.size)
-        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.first().status)
-        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.second().status)
-        Assert.assertEquals(2, emissions.second().giveaways.size)
-        Assert.assertEquals(resultThree, emissions.second().giveaways.first())
-        Assert.assertEquals(resultOne, emissions.second().giveaways.second())
+        Assert.assertEquals(1, emissions.size)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
+        Assert.assertEquals(2, emissions.first().giveaways.size)
+        Assert.assertEquals(resultThree, emissions.first().giveaways.first())
+        Assert.assertEquals(resultOne, emissions.first().giveaways.second())
     }
 
 
