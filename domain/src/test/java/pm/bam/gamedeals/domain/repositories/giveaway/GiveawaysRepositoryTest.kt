@@ -26,7 +26,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import java.time.LocalDateTime
 
-class GiveawaysRepositoryImplTest {
+class GiveawaysRepositoryTest {
 
     @get:Rule
     val instantExecutorRule = InstantTaskExecutorRule()
@@ -37,7 +37,7 @@ class GiveawaysRepositoryImplTest {
 
     private val gamerPowerSource: GamerPowerSource = mockk()
 
-    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource)
+    private val impl = GiveawaysRepository(logger, giveawaysDao, gamerPowerSource)
 
     @Test
     fun `observe giveaways with descending publishedDate order`() = runTest {
