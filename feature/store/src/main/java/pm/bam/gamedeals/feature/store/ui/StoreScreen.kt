@@ -55,12 +55,11 @@ import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.TabletLandscape
 import pm.bam.gamedeals.common.ui.TabletPortrait
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.ui.DealBottomSheet
-import pm.bam.gamedeals.feature.deal.ui.DealBottomSheetData
-import pm.bam.gamedeals.feature.deal.ui.DealDetailsViewModel
 import pm.bam.gamedeals.feature.store.R
 
 @Composable
@@ -68,15 +67,14 @@ internal fun StoreScreen(
     storeId: Int,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: StoreViewModel = hiltViewModel(),
-    dealDealDetailsViewModel: DealDetailsViewModel = hiltViewModel()
+    viewModel: StoreViewModel = hiltViewModel()
 ) {
     viewModel.setStoreId(storeId)
 
     val deals: LazyPagingItems<Deal> = viewModel.deals.collectAsLazyPagingItems()
     val storeDetails = viewModel.storeDetails.collectAsStateWithLifecycle()
 
-    val dealDetails = dealDealDetailsViewModel.dealDealDetails.collectAsStateWithLifecycle()
+    val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
 
     StoreDeals(
         deals = deals,
@@ -84,14 +82,14 @@ internal fun StoreScreen(
         storeDetails = storeDetails.value,
         onBack = onBack,
         onLoadDealDetails = { dealId, dealStoreId, dealTitle, dealPriceDenominated ->
-            dealDealDetailsViewModel.loadDealDetails(
+            viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
                 dealTitle = dealTitle,
                 dealPriceDenominated = dealPriceDenominated,
             )
         },
-        onDismissDealDetails = { dealDealDetailsViewModel.dismissDealDetails() },
+        onDismissDealDetails = { viewModel.dismissDealDetails() },
         goToWeb = goToWeb
     )
 }

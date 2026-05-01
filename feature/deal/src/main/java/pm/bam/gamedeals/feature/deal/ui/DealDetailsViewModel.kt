@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.mapDelayAtLeast
 import pm.bam.gamedeals.common.onError
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger

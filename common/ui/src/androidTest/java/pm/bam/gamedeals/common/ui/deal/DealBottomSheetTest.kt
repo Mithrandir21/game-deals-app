@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.feature.deal.ui
+package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assert
@@ -15,10 +15,10 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Rule
 import org.junit.Test
+import pm.bam.gamedeals.common.ui.R
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.R
 
 class DealBottomSheetTest {
 

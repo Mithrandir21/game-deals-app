@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
@@ -57,6 +59,9 @@ internal class HomeViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeScreenData()
     )
+
+    private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
+    val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
     private val _events = MutableSharedFlow<HomeUiEvent>(
         replay = 0,
@@ -94,6 +99,14 @@ internal class HomeViewModel @Inject constructor(
                 }
                 .collect { _events.emit(HomeUiEvent.NavigateToGame(it)) }
         }
+
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
+        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealTitle, dealPriceDenominated)
+    }
+
+    fun dismissDealDetails() {
+        dealDetailsController.dismiss(viewModelScope)
+    }
 
     private fun loadTopStoreDataFlow() =
         flow { emitAll(storesRepository.observeStores()) }

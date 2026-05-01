@@ -22,11 +22,10 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.deal.ui.DealBottomSheetData
-import pm.bam.gamedeals.feature.deal.ui.DealDetailsViewModel
 
 class StoreScreenTest {
 
@@ -36,8 +35,6 @@ class StoreScreenTest {
     private val deal: Deal = mockk()
 
     private val viewModel: StoreViewModel = mockk()
-
-    private val dealDealDetailsViewModel: DealDetailsViewModel = mockk()
 
     private val storeId = 1
 
@@ -57,7 +54,7 @@ class StoreScreenTest {
         val storeDetails: StateFlow<Store?> = MutableStateFlow(null)
 
         every { viewModel.deals } returns dealPaging
-        every { dealDealDetailsViewModel.dealDealDetails } returns dealDetails
+        every { viewModel.dealDetails } returns dealDetails
         every { viewModel.storeDetails } returns storeDetails
     }
 
@@ -82,8 +79,7 @@ class StoreScreenTest {
                     storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                    dealDealDetailsViewModel = dealDealDetailsViewModel
+                    viewModel = viewModel
                 )
             }
         }
@@ -92,7 +88,7 @@ class StoreScreenTest {
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { dealDealDetailsViewModel.dealDealDetails }
+        verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
         verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
@@ -107,14 +103,13 @@ class StoreScreenTest {
                     storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                    dealDealDetailsViewModel = dealDealDetailsViewModel
+                    viewModel = viewModel
                 )
             }
         }
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { dealDealDetailsViewModel.dealDealDetails }
+        verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
         verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
@@ -122,7 +117,7 @@ class StoreScreenTest {
     @Test
     fun loadDealDetails() {
         every { viewModel.setStoreId(any()) } just runs
-        every { dealDealDetailsViewModel.loadDealDetails(any(), any(), any(), any()) } just runs
+        every { viewModel.loadDealDetails(any(), any(), any(), any()) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
@@ -130,8 +125,7 @@ class StoreScreenTest {
                     storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                    dealDealDetailsViewModel = dealDealDetailsViewModel
+                    viewModel = viewModel
                 )
             }
         }
@@ -140,10 +134,10 @@ class StoreScreenTest {
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { dealDealDetailsViewModel.dealDealDetails }
+        verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
         verify(exactly = 1) { viewModel.setStoreId(storeId) }
-        verify(exactly = 1) { dealDealDetailsViewModel.loadDealDetails(any(), any(), any(), any()) }
+        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any()) }
     }
 
     @Test
@@ -168,8 +162,7 @@ class StoreScreenTest {
                     storeId = storeId,
                     onBack = {},
                     goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                    dealDealDetailsViewModel = dealDealDetailsViewModel
+                    viewModel = viewModel
                 )
             }
         }
@@ -181,7 +174,7 @@ class StoreScreenTest {
 
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { dealDealDetailsViewModel.dealDealDetails }
+        verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
         verify(exactly = 1) { viewModel.setStoreId(storeId) }
     }
@@ -199,8 +192,7 @@ class StoreScreenTest {
                     storeId = storeId,
                     onBack = onBack,
                     goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                    dealDealDetailsViewModel = dealDealDetailsViewModel
+                    viewModel = viewModel
                 )
             }
         }
@@ -209,7 +201,7 @@ class StoreScreenTest {
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { dealDealDetailsViewModel.dealDealDetails }
+        verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.storeDetails }
         verify(exactly = 1) { viewModel.setStoreId(storeId) }
         verify(exactly = 1) { onBack.invoke() }

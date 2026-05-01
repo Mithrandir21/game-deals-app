@@ -55,7 +55,6 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":common"))
     implementation(project(":common:ui"))
-    implementation(project(":feature:deal"))
 
     implementation(libs.androidx.ktx)
     implementation(libs.androidx.appcompat)

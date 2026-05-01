@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -39,6 +41,9 @@ internal class StoreViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
     )
+
+    private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
+    val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
     init {
         viewModelScope.launch {
@@ -64,4 +69,12 @@ internal class StoreViewModel @Inject constructor(
         .cachedIn(viewModelScope)
         .catch { logger.fatalThrowable(it) }
         .logFlow(logger)
+
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
+        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealTitle, dealPriceDenominated)
+    }
+
+    fun dismissDealDetails() {
+        dealDetailsController.dismiss(viewModelScope)
+    }
 }

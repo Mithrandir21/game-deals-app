@@ -2,8 +2,6 @@
 <resources>
 
     <string name="deal_details_go_to_deal_label">Go to Deal</string>
-    <string name="deal_details_go_metacritic_label">Metacritic</string>
-    <string name="deal_details_go_wiki_label">Wiki</string>
 
     <string name="deal_details_game_image">%1$s Game image</string>
     <string name="deal_details_store_thumbnail">%1$s Store thumbnail</string>
