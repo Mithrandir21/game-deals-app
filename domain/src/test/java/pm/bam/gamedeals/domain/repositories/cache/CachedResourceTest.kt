@@ -12,8 +12,7 @@ import pm.bam.gamedeals.common.time.Clock
  * refresh and a fresh entry does not, without touching Room or any Android API.
  *
  * Picks a JVM unit test (over `androidTest` + in-memory Room) on purpose: [CachedResource] is
- * Flow-/Room-free, so a JVM test is faster, deterministic, and matches the project's policy of
- * not introducing Robolectric to drive deterministic-time tests (see L-2026-05-01-02).
+ * Flow-/Room-free, so a JVM test is faster, deterministic, and avoids pulling in Robolectric.
  */
 class CachedResourceTest {
 
