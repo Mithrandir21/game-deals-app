@@ -64,13 +64,10 @@ import pm.bam.gamedeals.feature.store.R
 
 @Composable
 internal fun StoreScreen(
-    storeId: Int,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: StoreViewModel = hiltViewModel()
 ) {
-    viewModel.setStoreId(storeId)
-
     val deals: LazyPagingItems<Deal> = viewModel.deals.collectAsLazyPagingItems()
     val storeDetails = viewModel.storeDetails.collectAsStateWithLifecycle()
 

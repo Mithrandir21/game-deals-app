@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.game.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.delayOnStart
 import pm.bam.gamedeals.common.logFlow
@@ -29,13 +29,17 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 internal class GameViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository
 ) : ViewModel() {
 
-    // We store and react to the GameId changes so that only a single 'game deals' flow can exists
-    private val gameIdFlow = MutableStateFlow<Int?>(null)
+    // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
+    // Seeded from the typed [Destination.Game] route. nav-compose populates SavedStateHandle
+    // with the @Serializable property name as key for primitive args, so reading by key works
+    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
+    private val gameIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("gameId")!!)
 
     private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
     val uiState: StateFlow<GameScreenData> = _uiState.stateIn(
@@ -57,7 +61,8 @@ internal class GameViewModel @Inject constructor(
     }
 
 
-    fun reloadGameDetails(gameId: Int) {
+    fun reloadGameDetails() {
+        val gameId = gameIdFlow.value ?: return
         viewModelScope.launch {
             loadGameDetailsFlow(gameId)
                 .collect { _uiState.emit(it) }
@@ -77,8 +82,6 @@ internal class GameViewModel @Inject constructor(
             .logFlow(logger)
             .catch { emit(GameScreenData.Error) }
 
-
-    fun loadGameDetails(gameId: Int) = gameIdFlow.update { gameId }
 
     sealed class GameScreenData {
         data object Loading : GameScreenData()

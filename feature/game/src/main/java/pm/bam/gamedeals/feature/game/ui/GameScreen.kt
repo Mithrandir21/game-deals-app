@@ -73,17 +73,14 @@ import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 internal fun GameScreen(
-    gameId: Int,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: GameViewModel = hiltViewModel()
 ) {
-    viewModel.loadGameDetails(gameId)
-
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val windowInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo()
 
-    val onRetry: () -> Unit = { viewModel.reloadGameDetails(gameId) }
+    val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
 
     ScreenScaffold(
         windowWidth = windowInfo.windowSizeClass.widthSizeClass,

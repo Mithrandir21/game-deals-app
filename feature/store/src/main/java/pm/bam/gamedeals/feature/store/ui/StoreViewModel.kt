@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.store.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
@@ -27,13 +27,17 @@ import javax.inject.Inject
 
 @HiltViewModel
 internal class StoreViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository
 ) : ViewModel() {
 
-    // We store and react to the StoreId changes so that only a single 'deals' flow can exists
-    private val storeIdFlow = MutableStateFlow<Int?>(null)
+    // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
+    // Seeded from the typed [Destination.Store] route. nav-compose populates SavedStateHandle
+    // with the @Serializable property name as key for primitive args, so reading by key works
+    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
+    private val storeIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("storeId")!!)
 
     private val _storeDetails = MutableStateFlow<Store?>(null)
     val storeDetails: StateFlow<Store?> = _storeDetails.stateIn(
@@ -56,8 +60,6 @@ internal class StoreViewModel @Inject constructor(
                 .collect { _storeDetails.emit(it) }
         }
     }
-
-    fun setStoreId(storeId: Int) = storeIdFlow.update { storeId }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val deals = storeIdFlow

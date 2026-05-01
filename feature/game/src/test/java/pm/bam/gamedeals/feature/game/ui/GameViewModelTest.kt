@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.game.ui
 
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -7,7 +8,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -28,16 +28,23 @@ class GameViewModelTest {
     private val gamesRepository: GamesRepository = mockk()
     private val storesRepository: StoresRepository = mockk()
 
-    private lateinit var viewModel: GameViewModel
-
-    @Before
-    fun setup() {
-        viewModel = GameViewModel(TestingLoggingListener(), gamesRepository, storesRepository)
-    }
+    private fun createViewModel(gameId: Int): GameViewModel = GameViewModel(
+        // The typed route stores its args under their property names in the SavedStateHandle,
+        // matching what the Compose Navigation runtime hands to a destination's ViewModel.
+        savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId)),
+        logger = TestingLoggingListener(),
+        gamesRepository = gamesRepository,
+        storesRepository = storesRepository,
+    )
 
 
     @Test
     fun `initially loading state`() = runTest {
+        val gameId = 1
+        // No mocks: the init flow stays in delayOnStart and does not emit before we assert.
+        coEvery { gamesRepository.getGameDetails(gameId) } returns mockk(relaxed = true)
+
+        val viewModel = createViewModel(gameId)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainDispatcherRule.testDispatcher)
 
         assertEquals(1, emissions.size)
@@ -46,15 +53,12 @@ class GameViewModelTest {
 
 
     @Test
-    fun `error state`() = runTest {val gameId = 1
+    fun `error state`() = runTest {
+        val gameId = 1
         coEvery { gamesRepository.getGameDetails(gameId) } throws Exception()
 
+        val viewModel = createViewModel(gameId)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainDispatcherRule.testDispatcher)
-
-        assertEquals(1, emissions.size)
-        assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
-
-        viewModel.loadGameDetails(gameId)
 
         assertEquals(1, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
@@ -79,12 +83,8 @@ class GameViewModelTest {
         coEvery { gamesRepository.getGameDetails(gameId) } returns gameDetails
         coEvery { storesRepository.getStore(storeId) } returns store
 
+        val viewModel = createViewModel(gameId)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainDispatcherRule.testDispatcher)
-
-        assertEquals(1, emissions.size)
-        assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
-
-        viewModel.loadGameDetails(gameId)
 
         assertEquals(1, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
@@ -109,12 +109,13 @@ class GameViewModelTest {
         coEvery { gamesRepository.getGameDetails(gameId) } returns gameDetails
         coEvery { storesRepository.getStore(storeId) } returns store
 
+        val viewModel = createViewModel(gameId)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainDispatcherRule.testDispatcher)
 
         assertEquals(1, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
 
-        viewModel.reloadGameDetails(gameId)
+        viewModel.reloadGameDetails()
 
         assertEquals(2, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())

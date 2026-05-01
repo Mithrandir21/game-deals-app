@@ -3,10 +3,7 @@ package pm.bam.gamedeals.feature.game.ui
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.filterToOne
-import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -79,20 +76,16 @@ class GameScreenTest {
 
     @Before
     fun setup() {
-        every { viewModel.loadGameDetails(any()) } just runs
-        every { viewModel.reloadGameDetails(any()) } just runs
+        every { viewModel.reloadGameDetails() } just runs
     }
 
     @Test
     fun initialLoading() {
-        val gameId = 1
-
         every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Loading)
 
         composeTestRule.setContent {
             GameDealsTheme {
                 GameScreen(
-                    gameId = gameId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel,
@@ -103,14 +96,11 @@ class GameScreenTest {
         composeTestRule.onNodeWithTag(LoadingDataTag)
             .assertIsDisplayed()
 
-        verify(exactly = 1) { viewModel.loadGameDetails(gameId) }
         verify(exactly = 1) { viewModel.uiState }
     }
 
     @Test
     fun errorState() {
-        val gameId = 1
-
         every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Error)
 
         var snackText = ""
@@ -122,7 +112,6 @@ class GameScreenTest {
 
             GameDealsTheme {
                 GameScreen(
-                    gameId = gameId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel,
@@ -136,8 +125,7 @@ class GameScreenTest {
         composeTestRule.onNodeWithText(snackRetry)
             .assertIsDisplayed()
 
-        verify(exactly = 1) { viewModel.loadGameDetails(gameId) }
-        verify(exactly = 0) { viewModel.reloadGameDetails(gameId) }
+        verify(exactly = 0) { viewModel.reloadGameDetails() }
         verify(exactly = 1) { viewModel.uiState }
 
         // Retry button clicked
@@ -145,14 +133,12 @@ class GameScreenTest {
             .assertIsDisplayed()
             .performClick()
 
-        verify(exactly = 1) { viewModel.reloadGameDetails(gameId) }
+        verify(exactly = 1) { viewModel.reloadGameDetails() }
     }
 
 
     @Test
     fun gameDetailsLoaded() {
-        val gameId = 1
-
         every { viewModel.uiState } returns MutableStateFlow(
             GameViewModel.GameScreenData.Data(
                 gameDetails = gameDetails,
@@ -163,7 +149,6 @@ class GameScreenTest {
         composeTestRule.setContent {
             GameDealsTheme {
                 GameScreen(
-                    gameId = gameId,
                     onBack = {},
                     goToWeb = { _, _ -> },
                     viewModel = viewModel,
@@ -182,7 +167,6 @@ class GameScreenTest {
             .assertIsDisplayed()
             .assertTextEquals(mockStoreName)
 
-        verify(exactly = 1) { viewModel.loadGameDetails(gameId) }
         verify(exactly = 1) { viewModel.uiState }
     }
 
@@ -196,7 +180,6 @@ class GameScreenTest {
 
     @Test
     fun onBackActioned() {
-        val gameId = 1
         val onBack: () -> Unit = mockk()
 
         every { onBack.invoke() } just runs
@@ -210,7 +193,6 @@ class GameScreenTest {
         composeTestRule.setContent {
             GameDealsTheme {
                 GameScreen(
-                    gameId = gameId,
                     onBack = onBack,
                     goToWeb = { _, _ -> },
                     viewModel = viewModel,
@@ -221,7 +203,6 @@ class GameScreenTest {
         composeTestRule.onNodeWithTag(TopAppNavBarTag)
             .performClick()
 
-        verify(exactly = 1) { viewModel.loadGameDetails(gameId) }
         verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { onBack.invoke() }
     }
