@@ -138,6 +138,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 androidx-espresso-device = { group = "androidx.test.espresso", name = "espresso-device", version.ref = "espresso-device" }
 androidx-compose-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "ui-test-junit4" }
 androidx-compose-test = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "ui-test-junit4" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 
 
 [plugins]

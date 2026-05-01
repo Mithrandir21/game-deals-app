@@ -12,7 +12,7 @@ import java.time.ZoneOffset
 import javax.inject.Inject
 
 @ProvidedTypeConverter
-internal class StoreImagesConverter @Inject constructor(
+class StoreImagesConverter @Inject constructor(
     private val serializer: Serializer
 ) {
     @TypeConverter
@@ -23,7 +23,7 @@ internal class StoreImagesConverter @Inject constructor(
 }
 
 @ProvidedTypeConverter
-internal class LocalDatetimeConverter @Inject constructor() {
+class LocalDatetimeConverter @Inject constructor() {
     @TypeConverter
     fun convertToJsonString(localDateTime: LocalDateTime): Long = localDateTime.toEpochSecond(ZoneOffset.UTC)
 
@@ -32,7 +32,7 @@ internal class LocalDatetimeConverter @Inject constructor() {
 }
 
 @ProvidedTypeConverter
-internal class GiveawayPlatformsConverter @Inject constructor() {
+class GiveawayPlatformsConverter @Inject constructor() {
     @TypeConverter
     fun convertToJsonString(platforms: List<GiveawayPlatform>): String = platforms.joinToString(separator = ", ")
 

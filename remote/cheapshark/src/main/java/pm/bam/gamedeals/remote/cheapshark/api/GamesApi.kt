@@ -7,7 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Query
 
-internal interface GamesApi {
+interface GamesApi {
 
     @Suppress("kotlin:S107")
     @GET("/api/1.0/games")

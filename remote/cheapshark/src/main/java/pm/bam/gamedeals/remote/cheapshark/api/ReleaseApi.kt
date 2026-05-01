@@ -5,7 +5,7 @@ import pm.bam.gamedeals.remote.cheapshark.models.RemoteRelease
 import retrofit2.http.GET
 import retrofit2.http.Headers
 
-internal interface ReleaseApi {
+interface ReleaseApi {
 
     @Suppress("kotlin:S107")
     @GET("/api/other/releases")

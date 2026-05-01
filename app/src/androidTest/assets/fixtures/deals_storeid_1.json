@@ -1,0 +1,20 @@
+[
+  {
+    "internalName": "PORTAL2",
+    "title": "Portal 2",
+    "dealID": "abc123",
+    "storeID": 1,
+    "gameID": 101,
+    "salePrice": 1.99,
+    "normalPrice": 9.99,
+    "isOnSale": 1,
+    "savings": 80.0,
+    "metacriticScore": 95,
+    "steamRatingPercent": 98,
+    "steamRatingCount": "300000",
+    "releaseDate": 1303689600,
+    "lastChange": 1700000000,
+    "dealRating": 9.5,
+    "thumb": "https://example.com/portal2.jpg"
+  }
+]
