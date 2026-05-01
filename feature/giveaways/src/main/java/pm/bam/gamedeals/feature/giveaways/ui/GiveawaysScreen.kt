@@ -182,7 +182,10 @@ private fun ScreenScaffold(
                         state = scrollState,
                         modifier = Modifier.padding(innerPadding),
                         content = {
-                            items(count = data.giveaways.size) {
+                            items(
+                                count = data.giveaways.size,
+                                key = { index -> data.giveaways[index].id }
+                            ) {
                                 GiveawayListItem(data.giveaways[it]) { goToWeb(data.giveaways[it].gamerpowerUrl, data.giveaways[it].title) }
                             }
                         }

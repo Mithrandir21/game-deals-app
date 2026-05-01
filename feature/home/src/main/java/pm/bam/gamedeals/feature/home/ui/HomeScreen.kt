@@ -207,7 +207,10 @@ private fun Screen(
                             if (data.releases.isNotEmpty()) {
                                 item { SectionHeader(stringResource(R.string.home_screen_new_releases_label)) }
 
-                                items(data.releases.size) { index ->
+                                items(
+                                    count = data.releases.size,
+                                    key = { index -> "release-${data.releases[index].title}" }
+                                ) { index ->
                                     ReleaseRow(data.releases[index], onReleaseTitle)
                                 }
                             }
@@ -215,7 +218,10 @@ private fun Screen(
                             if (data.giveaways.isNotEmpty()) {
                                 item { SectionHeader(stringResource(R.string.home_screen_giveaways_label)) }
 
-                                items(data.giveaways.size) { index ->
+                                items(
+                                    count = data.giveaways.size,
+                                    key = { index -> "giveaway-${data.giveaways[index].id}" }
+                                ) { index ->
                                     GiveawayRow(data.giveaways[index]) { url -> goToWeb(url, data.giveaways[index].title) }
                                 }
 
@@ -233,7 +239,16 @@ private fun Screen(
                             }
 
                             if (data.items.isNotEmpty()) {
-                                items(data.items.size) { index ->
+                                items(
+                                    count = data.items.size,
+                                    key = { index ->
+                                        when (val itemData = data.items[index]) {
+                                            is StoreData -> "store-${itemData.store.storeID}"
+                                            is DealData -> "deal-${itemData.deal.dealID}"
+                                            is ViewAllData -> "all-${itemData.store.storeID}"
+                                        }
+                                    }
+                                ) { index ->
                                     when (val itemData = data.items[index]) {
                                         is StoreData -> StoreHeader(itemData.store)
                                         is DealData -> StoreDealRow(itemData.deal, onViewDealDetails)
@@ -441,28 +456,28 @@ private fun ScreenPreview() {
                 PreviewRelease.copy(title = "Game 2"),
                 PreviewRelease.copy(title = "Game 3"),
                 PreviewRelease.copy(title = "Game 4"),
-                PreviewRelease.copy(title = "Game 1"),
+                PreviewRelease.copy(title = "Game 5"),
             ),
             giveaways = listOf(
-                PreviewGiveaway.copy(title = "Giveaway 1"),
-                PreviewGiveaway.copy(title = "Giveaway 2"),
-                PreviewGiveaway.copy(title = "Giveaway 3 - Very long title with even more title to make it longer, possibly over many, many lines"),
-                PreviewGiveaway.copy(title = "Giveaway 4"),
-                PreviewGiveaway.copy(title = "Giveaway 5"),
+                PreviewGiveaway.copy(id = 1, title = "Giveaway 1"),
+                PreviewGiveaway.copy(id = 2, title = "Giveaway 2"),
+                PreviewGiveaway.copy(id = 3, title = "Giveaway 3 - Very long title with even more title to make it longer, possibly over many, many lines"),
+                PreviewGiveaway.copy(id = 4, title = "Giveaway 4"),
+                PreviewGiveaway.copy(id = 5, title = "Giveaway 5"),
             ),
             items = listOf(
                 StoreData(store = PreviewStore.copy(storeID = 1)),
-                DealData(deal = PreviewDeal),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-1-a")),
                 ViewAllData(store = PreviewStore.copy(storeID = 1)),
-                StoreData(store = PreviewStore.copy(storeID = 1)),
-                DealData(deal = PreviewDeal),
-                DealData(deal = PreviewDeal),
-                DealData(deal = PreviewDeal),
-                ViewAllData(store = PreviewStore.copy(storeID = 1)),
-                StoreData(store = PreviewStore.copy(storeID = 1)),
-                DealData(deal = PreviewDeal),
-                DealData(deal = PreviewDeal),
-                ViewAllData(store = PreviewStore.copy(storeID = 1))
+                StoreData(store = PreviewStore.copy(storeID = 2)),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-2-a")),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-2-b")),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-2-c")),
+                ViewAllData(store = PreviewStore.copy(storeID = 2)),
+                StoreData(store = PreviewStore.copy(storeID = 3)),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-3-a")),
+                DealData(deal = PreviewDeal.copy(dealID = "deal-3-b")),
+                ViewAllData(store = PreviewStore.copy(storeID = 3))
             )
         ),
         dealDetails = null,
