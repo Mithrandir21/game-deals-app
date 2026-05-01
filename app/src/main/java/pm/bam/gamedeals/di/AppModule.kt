@@ -12,6 +12,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.toLogLevel
 import javax.inject.Singleton
@@ -23,6 +24,15 @@ class AppModule {
     @Provides
     @Singleton
     fun provideFirebase(): FirebaseAnalytics = Firebase.analytics
+
+    /**
+     * System-clock adapter for the [Clock] port declared in `:common`.
+     * Lives in the composition root so `:domain`/`:common` never depend on a concrete clock.
+     * This is the only place in production code that calls [System.currentTimeMillis].
+     */
+    @Provides
+    @Singleton
+    fun provideClock(): Clock = Clock { System.currentTimeMillis() }
 
     @Coil
     @Provides
