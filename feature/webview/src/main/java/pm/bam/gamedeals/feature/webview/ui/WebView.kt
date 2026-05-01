@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.webview.ui
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -80,28 +81,32 @@ internal fun WebView(
             ) { contentPadding: PaddingValues ->
                 // Track the last URL we loaded so `update` only reloads when the `url` argument actually changes.
                 var lastLoadedUrl by remember { mutableStateOf<String?>(null) }
-                
+
+                val webViewClient = remember {
+                    object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            loading = true
+                            return super.shouldOverrideUrlLoading(view, request)
+                        }
+
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            loading = true
+                        }
+
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            loading = false
+                        }
+                    }
+                }
+
                 AndroidView(
                     modifier = Modifier.padding(contentPadding),
                     factory = { context ->
                         WebView(context).apply {
                             settings.javaScriptEnabled = true
-                            this.webViewClient = object : WebViewClient() {
-                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                    loading = true
-                                    return super.shouldOverrideUrlLoading(view, request)
-                                }
-
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                    super.onPageStarted(view, url, favicon)
-                                    loading = true
-                                }
-
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    super.onPageFinished(view, url)
-                                    loading = false
-                                }
-                            }
+                            this.webViewClient = webViewClient
                             loadUrl(url)
                             lastLoadedUrl = url
                         }
@@ -111,6 +116,14 @@ internal fun WebView(
                             webView.loadUrl(url)
                             lastLoadedUrl = url
                         }
+                    },
+                    onRelease = { webView ->
+                        webView.stopLoading()
+                        webView.webViewClient = WebViewClient()
+                        webView.loadUrl("about:blank")
+                        (webView.parent as? ViewGroup)?.removeView(webView)
+                        webView.removeAllViews()
+                        webView.destroy()
                     }
                 )
             }
