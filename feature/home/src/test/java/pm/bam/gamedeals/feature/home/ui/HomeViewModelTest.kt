@@ -6,8 +6,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -171,6 +173,34 @@ class HomeViewModelTest {
 
         coVerify(exactly = 1) { storesRepository.observeStores() }
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }
+    }
+
+    @Test
+    fun `loadTopStoresDeals cancels prior collector before relaunching`() = runTest {
+        val store: Store = mockk { every { storeID } returns topStores.first() }
+        val deal: Deal = mockk()
+        val storesFlow = MutableSharedFlow<List<Store>>(replay = 1)
+
+        coEvery { storesRepository.observeStores() } returns storesFlow
+        coEvery { releasesRepository.observeReleases() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.refreshGiveaways() } returns Unit
+        coEvery { dealsRepository.getStoreDeals(topStores.first(), LIMIT_DEALS) } returns listOf(deal)
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        runCurrent()
+
+        viewModel.loadTopStoresDeals()
+        viewModel.loadTopStoresDeals()
+        viewModel.loadTopStoresDeals()
+        runCurrent()
+
+        assertEquals(1, storesFlow.subscriptionCount.value)
+
+        storesFlow.emit(listOf(store))
+        runCurrent()
+
+        coVerify(exactly = 1) { dealsRepository.getStoreDeals(topStores.first(), LIMIT_DEALS) }
     }
 
     private fun TestScope.observeStates() = viewModel.uiState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
