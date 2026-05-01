@@ -1,7 +1,7 @@
 package pm.bam.gamedeals.common.ui.theme
 
-import android.app.Activity
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -12,7 +12,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -269,9 +268,13 @@ fun GameDealsTheme(
         else -> lightScheme
     }
     val view = LocalView.current
-    if (!view.isInEditMode) {
+    val activity = LocalActivity.current
+    // `activity` is null in non-Activity hosts such as @Preview renders on device,
+    // ComposeViews used in service notifications, or dialogs hosted on Application
+    // context. Skip status-bar styling rather than crashing with ClassCastException.
+    if (!view.isInEditMode && activity != null) {
         LaunchedEffect(colorScheme.primary, darkTheme) {
-            val window = (view.context as Activity).window
+            val window = activity.window
             window.statusBarColor = colorScheme.primary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
