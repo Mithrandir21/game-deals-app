@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.remote.gamerpower.mappers
 
-import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayType
@@ -9,9 +8,7 @@ import pm.bam.gamedeals.remote.gamerpower.models.RemoteGiveawayType
 
 private const val WORTH_NOT_AVAILABLE = "N/A"
 
-internal fun RemoteGiveaway.toGiveaway(
-    datetimeParsing: DatetimeParsing
-): Giveaway =
+internal fun RemoteGiveaway.toDomain(ctx: GamerPowerMapperContext): Giveaway =
     Giveaway(
         id = id,
         title = title,
@@ -22,8 +19,8 @@ internal fun RemoteGiveaway.toGiveaway(
         description = description,
         instructions = instructions,
         openGiveawayUrl = openGiveawayUrl,
-        publishedDate = datetimeParsing.parseDatetime(publishedDate),
-        type = type.toGiveawayType(),
+        publishedDate = ctx.dates.parseDatetime(publishedDate),
+        type = type.toDomain(),
         platforms = platforms.toGiveawayPlatform(),
         endDate = endDate,
         users = users,
@@ -32,7 +29,7 @@ internal fun RemoteGiveaway.toGiveaway(
         openGiveaway = openGiveaway,
     )
 
-internal fun RemoteGiveawayType.toGiveawayType(): GiveawayType =
+internal fun RemoteGiveawayType.toDomain(): GiveawayType =
     when (this) {
         RemoteGiveawayType.GAME -> GiveawayType.GAME
         RemoteGiveawayType.DLC -> GiveawayType.DLC

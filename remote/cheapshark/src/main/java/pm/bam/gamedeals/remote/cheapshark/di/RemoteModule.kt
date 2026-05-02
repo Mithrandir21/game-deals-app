@@ -12,6 +12,7 @@ import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
+import pm.bam.gamedeals.remote.cheapshark.mappers.CheapsharkMapperContext
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformationImpl
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
@@ -38,6 +39,13 @@ internal class InternalRemoteModule {
 
     @Provides
     @Singleton
+    fun provideCheapsharkMapperContext(
+        currency: CurrencyTransformation,
+        dates: DateTimeFormatter,
+    ): CheapsharkMapperContext = CheapsharkMapperContext(currency, dates)
+
+    @Provides
+    @Singleton
     fun provideCheapsharkSource(
         logger: Logger,
         dealsApi: DealsApi,
@@ -45,8 +53,7 @@ internal class InternalRemoteModule {
         releaseApi: ReleaseApi,
         storesApi: StoresApi,
         remoteExceptionTransformer: RemoteExceptionTransformer,
-        currencyTransformation: CurrencyTransformation,
-        datetimeFormatter: DateTimeFormatter
+        ctx: CheapsharkMapperContext,
     ): CheapsharkSource =
         CheapsharkSourceImpl(
             logger,
@@ -55,7 +62,6 @@ internal class InternalRemoteModule {
             releaseApi,
             storesApi,
             remoteExceptionTransformer,
-            currencyTransformation,
-            datetimeFormatter
+            ctx,
         )
 }

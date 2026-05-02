@@ -19,6 +19,7 @@ import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
+import pm.bam.gamedeals.remote.gamerpower.mappers.GamerPowerMapperContext
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import retrofit2.Retrofit
 import java.time.LocalDateTime
@@ -59,7 +60,7 @@ class GamerPowerSourceImplTest {
             logger = logger,
             gamesApi = retrofit.create(GamesApi::class.java),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
-            datetimeParsing = datetimeParsing
+            ctx = GamerPowerMapperContext(datetimeParsing),
         )
     }
 

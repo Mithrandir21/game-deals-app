@@ -10,6 +10,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.GamerPowerSourceImpl
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
+import pm.bam.gamedeals.remote.gamerpower.mappers.GamerPowerMapperContext
 import javax.inject.Singleton
 
 @Module(includes = [RemoteNetworkModule::class, InternalRemoteModule::class])
@@ -23,11 +24,17 @@ internal class InternalRemoteModule {
 
     @Provides
     @Singleton
+    fun provideGamerPowerMapperContext(
+        dates: DatetimeParsing,
+    ): GamerPowerMapperContext = GamerPowerMapperContext(dates)
+
+    @Provides
+    @Singleton
     fun provideGamerPowerSource(
         logger: Logger,
         gamesApi: GamesApi,
         remoteExceptionTransformer: RemoteExceptionTransformer,
-        datetimeParsing: DatetimeParsing
+        ctx: GamerPowerMapperContext,
     ): GamerPowerSource =
-        GamerPowerSourceImpl(logger, gamesApi, remoteExceptionTransformer, datetimeParsing)
+        GamerPowerSourceImpl(logger, gamesApi, remoteExceptionTransformer, ctx)
 }

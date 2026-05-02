@@ -1,7 +1,7 @@
 package pm.bam.gamedeals.remote.cheapshark
 
+import com.skydoves.sandwich.ApiResponse
 import com.skydoves.sandwich.getOrThrow
-import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -15,14 +15,8 @@ import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
-import pm.bam.gamedeals.remote.cheapshark.mappers.toDeal
-import pm.bam.gamedeals.remote.cheapshark.mappers.toDealDetails
-import pm.bam.gamedeals.remote.cheapshark.mappers.toGame
-import pm.bam.gamedeals.remote.cheapshark.mappers.toGameDetails
-import pm.bam.gamedeals.remote.cheapshark.mappers.toRelease
-import pm.bam.gamedeals.remote.cheapshark.mappers.toRemoteDealsQuery
-import pm.bam.gamedeals.remote.cheapshark.mappers.toStore
-import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
+import pm.bam.gamedeals.remote.cheapshark.mappers.CheapsharkMapperContext
+import pm.bam.gamedeals.remote.cheapshark.mappers.toDomain
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
@@ -35,12 +29,11 @@ internal class CheapsharkSourceImpl @Inject constructor(
     private val releaseApi: ReleaseApi,
     private val storesApi: StoresApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
-    private val currencyTransformation: CurrencyTransformation,
-    private val datetimeFormatter: DateTimeFormatter
+    private val ctx: CheapsharkMapperContext,
 ) : CheapsharkSource {
 
     override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> {
-        val remoteQuery = query?.toRemoteDealsQuery()
+        val remoteQuery = query?.toDomain()
         return dealsApi.getDeals(
             storeID = remoteQuery?.storeID,
             pageNumber = remoteQuery?.pageNumber,
@@ -58,19 +51,11 @@ internal class CheapsharkSourceImpl @Inject constructor(
             aaa = remoteQuery?.aaa,
             steamworks = remoteQuery?.steamworks,
             onSale = remoteQuery?.onSale
-        )
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .map { it.toDeal(currencyTransformation) }
+        ).unwrap().map { it.toDomain(ctx) }
     }
 
     override suspend fun fetchDealDetails(id: String): DealDetails =
-        dealsApi.getDeal(id)
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .toDealDetails(currencyTransformation, datetimeFormatter)
+        dealsApi.getDeal(id).unwrap().toDomain(ctx)
 
     override suspend fun fetchGames(
         title: String,
@@ -79,31 +64,22 @@ internal class CheapsharkSourceImpl @Inject constructor(
         pageNumber: Int?
     ): List<Game> =
         gamesApi.getGames(title, steamAppID, limit, pageNumber)
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .map { it.toGame(currencyTransformation) }
+            .unwrap()
+            .map { it.toDomain(ctx) }
 
     override suspend fun fetchGameDetails(id: String): GameDetails =
-        gamesApi.getGame(id)
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .toGameDetails(currencyTransformation, datetimeFormatter)
+        gamesApi.getGame(id).unwrap().toDomain(ctx)
 
     override suspend fun fetchReleases(): List<Release> =
-        releaseApi.getReleases()
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .map { it.toRelease() }
+        releaseApi.getReleases().unwrap().map { it.toDomain() }
 
     override suspend fun fetchStores(): List<Store> =
-        storesApi.getStores()
-            .log(logger, tag = TAG)
+        storesApi.getStores().unwrap().map { it.toDomain() }
+
+    private fun <T> ApiResponse<T>.unwrap(): T =
+        log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
-            .map { it.toStore() }
 
     private companion object {
         private val TAG: String = CheapsharkSourceImpl::class.simpleName.orEmpty()

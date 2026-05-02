@@ -23,6 +23,7 @@ import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
+import pm.bam.gamedeals.remote.cheapshark.mappers.CheapsharkMapperContext
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -72,8 +73,7 @@ class CheapsharkSourceImplTest {
             releaseApi = retrofit.create(ReleaseApi::class.java),
             storesApi = retrofit.create(StoresApi::class.java),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
-            currencyTransformation = currencyTransformation,
-            datetimeFormatter = datetimeFormatter
+            ctx = CheapsharkMapperContext(currencyTransformation, datetimeFormatter),
         )
     }
 
