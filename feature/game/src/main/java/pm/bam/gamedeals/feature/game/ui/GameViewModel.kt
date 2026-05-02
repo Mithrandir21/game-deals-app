@@ -8,10 +8,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -46,11 +49,20 @@ internal class GameViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
     val uiState: StateFlow<GameScreenData> = _uiState.asStateFlow()
 
+    private val reloadTrigger = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
     init {
         viewModelScope.launch {
-            gameIdFlow
-                .filterNotNull() // Skip our initial null value
-                .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
+            combine(
+                gameIdFlow
+                    .filterNotNull() // Skip our initial null value
+                    .distinctUntilChanged(), // Skip fetching if gameId is the same, like on orientation change
+                reloadTrigger.onStart { emit(Unit) },
+            ) { id, _ -> id }
                 .delayOnStart(1000)
                 .flatMapLatest { loadGameDetailsFlow(it) }
                 .logFlow(logger)
@@ -60,11 +72,7 @@ internal class GameViewModel @Inject constructor(
 
 
     fun reloadGameDetails() {
-        val gameId = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            loadGameDetailsFlow(gameId)
-                .collect { _uiState.emit(it) }
-        }
+        reloadTrigger.tryEmit(Unit)
     }
 
     private fun loadGameDetailsFlow(gameId: Int) =

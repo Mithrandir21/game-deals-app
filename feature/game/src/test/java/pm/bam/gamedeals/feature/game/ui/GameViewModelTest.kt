@@ -17,8 +17,10 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.utils.fourth
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
+import pm.bam.gamedeals.testing.utils.third
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameViewModelTest {
@@ -116,10 +118,15 @@ class GameViewModelTest {
         assertEquals(1, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
 
-        viewModel.reloadGameDetails()
+        delay(1200) // Initial load completes after delayOnStart.
 
         assertEquals(2, emissions.size)
-        assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
         assertEquals(GameViewModel.GameScreenData.Data(gameDetails, persistentListOf(store to gameDeals)), emissions.second())
+
+        viewModel.reloadGameDetails()
+
+        assertEquals(4, emissions.size)
+        assertEquals(GameViewModel.GameScreenData.Loading, emissions.third())
+        assertEquals(GameViewModel.GameScreenData.Data(gameDetails, persistentListOf(store to gameDeals)), emissions.fourth())
     }
 }
