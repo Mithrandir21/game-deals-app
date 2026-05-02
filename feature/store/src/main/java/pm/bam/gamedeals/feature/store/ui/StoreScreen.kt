@@ -22,16 +22,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,6 +69,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.store.R
+import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
 @Composable
 internal fun StoreScreen(
@@ -68,15 +77,19 @@ internal fun StoreScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: StoreViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: LazyPagingItems<Deal> = viewModel.deals.collectAsLazyPagingItems()
-    val storeDetails = viewModel.storeDetails.collectAsStateWithLifecycle()
+    val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
 
-    val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
+    val store = (uiState as? StoreScreenData.Data)?.store
 
     StoreDeals(
         deals = deals,
-        dealDetails = dealDetails.value,
-        storeDetails = storeDetails.value,
+        dealDetails = dealDetails,
+        storeDetails = store,
+        snackbarHostState = snackbarHostState,
         onBack = onBack,
         onLoadDealDetails = { dealId, dealStoreId, dealTitle, dealPriceDenominated ->
             viewModel.loadDealDetails(
@@ -89,6 +102,26 @@ internal fun StoreScreen(
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         goToWeb = goToWeb
     )
+
+    when (uiState) {
+        StoreScreenData.Loading -> CircularProgressIndicator(
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.Center)
+        )
+
+        StoreScreenData.Error -> LaunchedEffect(snackbarHostState) {
+            val results = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.store_screen_data_loading_error_msg),
+                actionLabel = context.getString(R.string.store_screen_data_loading_error_retry)
+            )
+            if (results == SnackbarResult.ActionPerformed) {
+                onBack()
+            }
+        }
+
+        is StoreScreenData.Data -> Unit
+    }
 }
 
 @Composable
@@ -143,6 +176,7 @@ private fun StoreDeals(
     deals: LazyPagingItems<Deal>,
     dealDetails: DealBottomSheetData? = null,
     storeDetails: Store? = null,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
     onLoadDealDetails: (dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
     onDismissDealDetails: () -> Unit,
@@ -151,7 +185,8 @@ private fun StoreDeals(
     val listState = rememberLazyListState()
 
     Scaffold(
-        topBar = { StoreToolbar(onBack, storeDetails) }
+        topBar = { StoreToolbar(onBack, storeDetails) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding: PaddingValues ->
         LazyColumn(
             modifier = Modifier

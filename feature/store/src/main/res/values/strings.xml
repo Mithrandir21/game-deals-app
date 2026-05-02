@@ -5,4 +5,7 @@
     <string name="store_screen_store_banner">%1$s Store banner</string>
     <string name="store_screen_navigation_back_icon">Back</string>
 
+    <string name="store_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
+    <string name="store_screen_data_loading_error_retry">Back</string>
+
 </resources>

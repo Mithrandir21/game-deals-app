@@ -7,14 +7,16 @@ import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
@@ -33,40 +35,37 @@ internal class StoreViewModel @Inject constructor(
 ) : ViewModel() {
 
     // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
-    // Seeded from the typed [Destination.Store] route. nav-compose populates SavedStateHandle
-    // with the @Serializable property name as key for primitive args, so reading by key works
-    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
-    private val storeIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("storeId")!!)
-
-    private val _storeDetails = MutableStateFlow<Store?>(null)
-    val storeDetails: StateFlow<Store?> = _storeDetails.asStateFlow()
+    private val storeIdFlow = MutableStateFlow(savedStateHandle.get<Int>("storeId"))
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
-    init {
-        viewModelScope.launch {
-            storeIdFlow
-                .filterNotNull() // Skip our initial null value
-                .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
-                .map { storesRepository.getStore(it) }
-                .logFlow(logger)
-                .catch { logger.fatalThrowable(it) }
-                .collect { _storeDetails.emit(it) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<StoreScreenData> = storeIdFlow
+        .flatMapLatest { id: Int? ->
+            when (id) {
+                null -> flowOf<StoreScreenData>(StoreScreenData.Error)
+                else -> flowOf(id)
+                    .map { storesRepository.getStore(id) }
+                    .map<Store, StoreScreenData> { StoreScreenData.Data(it) }
+                    .logFlow(logger)
+                    .catch { emit(StoreScreenData.Error) }
+                    .onStart { emit(StoreScreenData.Loading) }
+            }
         }
-    }
+        .logFlow(logger)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = StoreScreenData.Loading
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val deals = storeIdFlow
         .filterNotNull() // Skip our initial null value
         .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
         .flatMapLatest { dealsRepository.getPagingStoreDeals(it) }
-        // cachedIn() shares the paging state across multiple consumers of posts,
-        // e.g. different generations of UI across rotation config change
         .cachedIn(viewModelScope)
-        // No .catch here: Paging surfaces load errors via LoadState.Error so the UI can
-        // recover via retry(). A .catch after .cachedIn would swallow construction-time
-        // exceptions and leave LazyPagingItems stuck on the last-cached PagingData.
         .logFlow(logger)
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
@@ -75,5 +74,11 @@ internal class StoreViewModel @Inject constructor(
 
     fun dismissDealDetails() {
         dealDetailsController.dismiss(viewModelScope)
+    }
+
+    sealed class StoreScreenData {
+        data object Loading : StoreScreenData()
+        data object Error : StoreScreenData()
+        data class Data(val store: Store) : StoreScreenData()
     }
 }

@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
@@ -41,10 +39,7 @@ internal class GameViewModel @Inject constructor(
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
-    // Seeded from the typed [Destination.Game] route. nav-compose populates SavedStateHandle
-    // with the @Serializable property name as key for primitive args, so reading by key works
-    // here without going through the toRoute<>() Bundle round-trip (keeps unit tests JVM-only).
-    private val gameIdFlow = MutableStateFlow<Int?>(savedStateHandle.get<Int>("gameId")!!)
+    private val gameIdFlow = MutableStateFlow(savedStateHandle.get<Int>("gameId"))
 
     private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
     val uiState: StateFlow<GameScreenData> = _uiState.asStateFlow()
@@ -58,13 +53,16 @@ internal class GameViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
-                gameIdFlow
-                    .filterNotNull() // Skip our initial null value
-                    .distinctUntilChanged(), // Skip fetching if gameId is the same, like on orientation change
+                gameIdFlow,
                 reloadTrigger.onStart { emit(Unit) },
             ) { id, _ -> id }
                 .delayOnStart(1000)
-                .flatMapLatest { loadGameDetailsFlow(it) }
+                .flatMapLatest { id ->
+                    when (id) {
+                        null -> flowOf(GameScreenData.Error)
+                        else -> loadGameDetailsFlow(id)
+                    }
+                }
                 .logFlow(logger)
                 .collect { _uiState.emit(it) }
         }

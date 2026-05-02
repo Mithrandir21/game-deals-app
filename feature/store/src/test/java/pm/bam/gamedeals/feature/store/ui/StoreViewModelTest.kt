@@ -9,7 +9,6 @@ import io.mockk.runs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Store
@@ -39,47 +38,50 @@ class StoreViewModelTest {
     )
 
     @Test
-    fun `initially store details is null when no store data is loaded`() = runTest {
+    fun `initially store details is loading then error on failure`() = runTest {
         val storeId = 1
         val exception: Exception = mockk { every { printStackTrace() } just runs }
         coEvery { storesRepository.getStore(storeId) } throws exception
 
         val viewModel = createViewModel(storeId)
-        val emissions = viewModel.storeDetails.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 
-        assertEquals(1, emissions.size)
-        assertNull(emissions.first())
+        println("Emissions: $emissions")
+        assertEquals("Expected Loading and Error", 2, emissions.size)
+        assertEquals(StoreViewModel.StoreScreenData.Loading, emissions.first())
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
     }
 
     @Test
-    fun `seeded storeId loads StoreDetails`() = runTest {
+    fun `seeded storeId loads StoreDetails Data state`() = runTest {
         val storeId = 1
         val store: Store = mockk()
 
         coEvery { storesRepository.getStore(storeId) } returns store
 
         val viewModel = createViewModel(storeId)
-        val emissions = viewModel.storeDetails.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 
-        // The ID is now seeded from SavedStateHandle at construction, so the load
-        // happens immediately after the flow becomes active rather than via setStoreId.
-        assertEquals(1, emissions.size)
-        assertEquals(store, emissions.first())
+        println("Emissions: $emissions")
+        println("Emissions: $emissions")
+        assertEquals("Expected Loading and Error", 2, emissions.size)
+        assertEquals(StoreViewModel.StoreScreenData.Loading, emissions.first())
+        assertEquals(StoreViewModel.StoreScreenData.Data(store), emissions.last())
     }
 
     @Test
-    fun `seeded storeId failure - throws caught error`() = runTest {
-        val storeId = 1
-        val exception: Exception = mockk {
-            every { printStackTrace() } just runs
-        }
+    fun `missing storeId emits Error state`() = runTest {
+        val viewModel = StoreViewModel(
+            savedStateHandle = SavedStateHandle(),
+            logger = TestingLoggingListener(),
+            dealsRepository = dealsRepository,
+            storesRepository = storesRepository,
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 
-        coEvery { storesRepository.getStore(storeId) } throws exception
-
-        val viewModel = createViewModel(storeId)
-        val emissions = viewModel.storeDetails.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
-
-        assertEquals(1, emissions.size)
-        assertNull(emissions.first())
+        println("Emissions: $emissions")
+        assertEquals("Expected Loading and Error", 2, emissions.size)
+        assertEquals(StoreViewModel.StoreScreenData.Loading, emissions.first())
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
     }
 }
