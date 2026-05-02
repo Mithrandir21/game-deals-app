@@ -337,7 +337,7 @@ private fun Filters(
     val priceRange = priceLowest..priceHighest
 
     val existingLowest = existingSearchParameters.lowerPrice.takeIf { it != null }?.toFloat() ?: priceLowest
-    val existingHighest = existingSearchParameters.upperPrice.takeIf { it != null }?.toFloat() ?: priceLowest
+    val existingHighest = existingSearchParameters.upperPrice.takeIf { it != null }?.toFloat() ?: priceHighest
     val existingPriceRange = existingLowest..existingHighest
 
     val steamRange = SearchFilterMinRate..SearchFilterMaxRate
