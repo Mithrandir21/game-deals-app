@@ -1,0 +1,177 @@
+campaign_slug: "2026-05-01-bug-hunt"
+labels: ["bug-hunt"]
+created: "2026-05-01"
+status: "complete"
+completed: "2026-05-01"
+current_wave: 4
+last_resume: "2026-05-01"
+issues:
+  - number: 30
+    title: "WebView never destroyed when composable leaves composition"
+    wave: 3
+    branch: "wave/2026-05-01-bug-hunt/issue-30-webview-destroy"
+    pr: 67
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/67"
+    status: "merged"
+    files: ["feature/webview/src/main/java/pm/bam/gamedeals/feature/webview/ui/WebView.kt"]
+  - number: 31
+    title: "DealsMediator catches CancellationException as a generic error"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt/issue-31-dealsmediator-cancellation"
+    pr: 60
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/60"
+    status: "merged"
+    files:
+      - "domain/src/main/java/pm/bam/gamedeals/domain/repositories/deals/paging/DealsMediator.kt"
+      - "domain/src/test/java/pm/bam/gamedeals/domain/repositories/deals/paging/DealsMediatorTest.kt"
+  - number: 32
+    title: "ViewModel mutators called from composable body (Store/Game)"
+    wave: 3
+    status: "closed_already_fixed"
+    note: "Closed manually 2026-05-01 — already fixed by PR #50 (refactor(#23) typed Compose Navigation routes). storeId/gameId now seeded via SavedStateHandle at construction; the LaunchedEffect bug class cannot reproduce."
+    files:
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt"
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt"
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/navigation/StoreNavigation.kt"
+      - "feature/store/src/androidTest/java/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameScreen.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/navigation/GameNavigation.kt"
+      - "feature/game/src/androidTest/java/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt"
+  - number: 33
+    title: "HomeViewModel.loadTopStoresDeals stacks duplicate Room collectors"
+    wave: 3
+    branch: "wave/2026-05-01-bug-hunt/issue-33-homevm-job-cancellation"
+    pr: 68
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/68"
+    status: "merged"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+      - "feature/home/src/test/java/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt"
+    note: "Rebased onto current origin/dev post-#66; clean rebase. Agent's commit also dropped .logFlow(logger) from the unified loadTopStoresDeals() launcher — small behaviour drop, restorable in follow-up if desired."
+  - number: 34
+    title: "WebView.update reloads original URL on every recomposition"
+    wave: 2
+    branch: "wave/2026-05-01-bug-hunt/issue-34-webview-update-loadurl"
+    pr: 64
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/64"
+    status: "merged"
+    files: ["feature/webview/src/main/java/pm/bam/gamedeals/feature/webview/ui/WebView.kt"]
+    note: "Subsumed #40 via Closes #40; #40 auto-closed on merge 2026-05-01."
+  - number: 35
+    title: "LazyColumn.items() missing stable keys (Home/Giveaways)"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt/issue-35-lazycolumn-keys"
+    pr: 62
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/62"
+    status: "merged"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt"
+    scope_expansion: "Fixed duplicate identifiers in HomeScreen.kt's ScreenPreview sample data so the new key parameters wouldn't crash on duplicates. Stayed inside cleared file set."
+  - number: 36
+    title: "GiveawaysViewModel.reloadGiveaways operator order hides LOADING"
+    wave: 3
+    branch: "wave/2026-05-01-bug-hunt/issue-36-giveaways-loading-order"
+    pr: 69
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/69"
+    status: "merged"
+    files:
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+    note: "Rebased onto current origin/dev post-#66; resolved a single import-block conflict (both onStart and stateIn became unused — both dropped)."
+  - number: 37
+    title: "Six ViewModels redundantly wrap MutableStateFlow with stateIn"
+    wave: 2
+    branch: "wave/2026-05-01-bug-hunt/issue-37-viewmodel-statein"
+    pr: 66
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/66"
+    status: "merged"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt"
+      - "feature/deal/src/main/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModel.kt"
+      - "feature/home/src/test/java/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+      - "feature/store/src/test/java/pm/bam/gamedeals/feature/store/ui/StoreViewModelTest.kt"
+    note: "Existing HomeVM/GiveawaysVM/StoreVM tests were asserting the buggy size=2 emission shape; updated to assert correct conflated semantics (size=1)."
+  - number: 38
+    title: "Screen state classes hold unstable List without @Immutable"
+    wave: 4
+    branch: "wave/2026-05-01-bug-hunt/issue-38-immutable-screen-state"
+    pr: 70
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/70"
+    status: "merged"
+    files:
+      - "gradle/libs.versions.toml"
+      - "feature/home/build.gradle.kts"
+      - "feature/giveaways/build.gradle.kts"
+      - "feature/search/build.gradle.kts"
+      - "feature/game/build.gradle.kts"
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt"
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt"
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchScreen.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameScreen.kt"
+      - "feature/home/src/test/java/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt"
+      - "feature/home/src/androidTest/java/pm/bam/gamedeals/feature/home/ui/HomeScreenTest.kt"
+      - "feature/giveaways/src/androidTest/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreenTest.kt"
+      - "feature/search/src/test/java/pm/bam/gamedeals/feature/search/ui/SearchViewModelTest.kt"
+      - "feature/search/src/androidTest/java/pm/bam/gamedeals/feature/search/ui/SearchScreenTest.kt"
+      - "feature/game/src/test/java/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
+      - "feature/game/src/androidTest/java/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt"
+    note: "Belt-and-suspenders: both @Immutable and ImmutableList migration. Adds kotlinx-collections-immutable 0.4.0 to catalog + 4 module deps. GameScreenData kept inner Pair (conservative), DealBottomSheet already had @Immutable so untouched. 10 caller-site updates across 4 previews + 7 test files."
+  - number: 39
+    title: "onRetry/onReload stale-captured by LaunchedEffect"
+    wave: 2
+    branch: "wave/2026-05-01-bug-hunt/issue-39-launchedeffect-stale-captures"
+    pr: 65
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/65"
+    status: "merged"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt"
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameScreen.kt"
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchScreen.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt"
+  - number: 40
+    title: "loading state mutated inside AndroidView.update lambda"
+    files: ["feature/webview/src/main/java/pm/bam/gamedeals/feature/webview/ui/WebView.kt"]
+    status: "closed_as_duplicate"
+    note: "Auto-closed 2026-05-01 when PR #64 (issue #34) merged with Closes #40."
+  - number: 41
+    title: "GameDealsTheme casts view.context as Activity (crash in @Preview)"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt/issue-41-theme-localactivity"
+    pr: 61
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/61"
+    status: "merged"
+    files:
+      - "common/ui/src/main/java/pm/bam/gamedeals/common/ui/theme/Theme.kt"
+      - "common/ui/build.gradle.kts"
+    scope_expansion: "Added implementation(libs.androidx.compose.activity) to common/ui/build.gradle.kts so LocalActivity resolves on the :common:ui classpath. Unavoidable for the chosen approach."
+  - number: 42
+    title: "Storage non-suspending; uses commit() on the main thread"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt/issue-42-storage-suspend"
+    pr: 63
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/63"
+    status: "merged"
+    files:
+      - "common/src/main/java/pm/bam/gamedeals/common/storage/Storage.kt"
+      - "common/src/main/java/pm/bam/gamedeals/common/storage/SettingStorage.kt"
+      - "app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt"
+      - "common/build.gradle.kts"
+      - "common/src/test/java/pm/bam/gamedeals/common/storage/SettingStorageTest.kt"
+    scope_expansion: "Added test deps (mockk, coroutines.testing) and coroutines impl to common/build.gradle.kts; created new SettingStorageTest. Used ApplicationInfo.FLAG_DEBUGGABLE instead of BuildConfig.DEBUG to avoid opting into BuildConfig generation for one boolean."
+
+conflict_clusters:
+  webview: [30, 34, 40]            # all touch feature/webview/.../WebView.kt
+  viewmodel_hub: [32, 33, 36, 37, 38]  # six VM files; #37 spans all six
+  screens_home_giveaways: [35, 39]
+  screens_game: [32, 39]
