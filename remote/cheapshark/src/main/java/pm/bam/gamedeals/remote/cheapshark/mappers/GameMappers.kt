@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.remote.cheapshark.mappers
 
+import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -59,5 +60,5 @@ internal fun RemoteGameDetails.toGameDetails(
     GameDetails(
         info = info.toGameInfo(),
         cheapestPriceEver = cheapestPriceEver.toGameCheapestPriceEver(currencyTransformation, datetimeFormatter),
-        deals = deals.map { it.toGameDeal(currencyTransformation) },
+        deals = deals.map { it.toGameDeal(currencyTransformation) }.toImmutableList(),
     )

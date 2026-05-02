@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui
 
+import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -26,6 +27,6 @@ val PreviewDealDetails = DealDetails(PreviewDealGameInfo, listOf(PreviewDealChea
 val PreviewGameDetailsInfo = GameDetails.GameInfo(title = "Game Title", steamAppID = null, thumb = "Thumb")
 val PreviewGameCheapestPriceEver = GameDetails.GameCheapestPriceEver(19.99, "$19.99", date = "January 13, 2011")
 val PreviewGameDeal = GameDetails.GameDeal(1, "123", 9.99, "$9.99", 29.99, "$29.99", 90)
-val PreviewGameDetails = GameDetails(PreviewGameDetailsInfo, PreviewGameCheapestPriceEver, listOf(PreviewGameDeal))
+val PreviewGameDetails = GameDetails(PreviewGameDetailsInfo, PreviewGameCheapestPriceEver, persistentListOf(PreviewGameDeal))
 
 val PreviewGame = Game(1, 123, 7.49, "$7.49", "123", "Game Tile", "Game Internal Title", "Thumb")

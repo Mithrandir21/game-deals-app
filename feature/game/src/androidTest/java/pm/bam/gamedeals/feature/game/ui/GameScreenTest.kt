@@ -61,7 +61,7 @@ class GameScreenTest {
     }
     private val gameDetails: GameDetails = mockk {
         every { info } returns gameInfo
-        every { deals } returns listOf(gameDeal)
+        every { deals } returns persistentListOf(gameDeal)
         every { cheapestPriceEver } returns mockCheapestPriceEver
     }
 

@@ -78,7 +78,7 @@ class GameViewModelTest {
         val storeId = 2
         val store: Store = mockk()
         val gameDeals: GameDetails.GameDeal = mockk { every { storeID } returns storeId }
-        val dealsList = listOf(gameDeals)
+        val dealsList = persistentListOf(gameDeals)
         val gameDetails: GameDetails = mockk { every { deals } returns dealsList }
 
         coEvery { gamesRepository.getGameDetails(gameId) } returns gameDetails
@@ -104,7 +104,7 @@ class GameViewModelTest {
         val storeId = 2
         val store: Store = mockk()
         val gameDeals: GameDetails.GameDeal = mockk { every { storeID } returns storeId }
-        val dealsList = listOf(gameDeals)
+        val dealsList = persistentListOf(gameDeals)
         val gameDetails: GameDetails = mockk { every { deals } returns dealsList }
 
         coEvery { gamesRepository.getGameDetails(gameId) } returns gameDetails
