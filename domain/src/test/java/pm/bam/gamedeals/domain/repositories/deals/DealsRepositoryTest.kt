@@ -10,10 +10,12 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -21,6 +23,8 @@ import org.junit.Test
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
+import pm.bam.gamedeals.domain.db.entities.DealEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.source.CheapsharkSource
@@ -46,6 +50,11 @@ class DealsRepositoryTest {
     private val clock = Clock { now }
 
     private val impl = DealsRepository(logger, dealsDao, domainDatabase, cheapsharkSource, clock)
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
 
     @Test
@@ -78,8 +87,9 @@ class DealsRepositoryTest {
     fun `refreshDeals - forced - fetches via source, stamps expires, writes to DAO`() = runTest {
         val storeId = 1
         val fetched: Deal = mockk()
-        val stamped: Deal = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        val stamped: DealEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { fetched.toEntity(expiresAt = now + millisInHour * 8) } returns stamped
 
         mockkStatic("androidx.room.RoomDatabaseKt")
         val transactionLambda = slot<suspend () -> Unit>()
@@ -87,7 +97,7 @@ class DealsRepositoryTest {
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
-        coEvery { dealsDao.addDeals(*anyVararg()) } just runs
+        coEvery { dealsDao.addDealEntities(*anyVararg()) } just runs
 
 
         impl.refreshDeals(storeId, force = true)
@@ -95,20 +105,21 @@ class DealsRepositoryTest {
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
-        verify(exactly = 1) { fetched.copy(expires = now + millisInHour * 8) }
+        coVerify(exactly = 1) { dealsDao.addDealEntities(stamped) }
+        verify(exactly = 1) { fetched.toEntity(expiresAt = now + millisInHour * 8) }
     }
 
 
     @Test
     fun `refreshDeals - unforced - expired deals - fetches via source`() = runTest {
         val storeId = 1
-        val expired: Deal = mockk { every { expires } returns now - 10_000 }
+        val expired: DealEntity = mockk { every { expires } returns now - 10_000 }
         val fetched: Deal = mockk()
-        val stamped: Deal = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        val stamped: DealEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { fetched.toEntity(expiresAt = now + millisInHour * 8) } returns stamped
 
-        coEvery { dealsDao.getStoreDeals(storeId) } returns listOf(expired)
+        coEvery { dealsDao.getStoreDealEntities(storeId) } returns listOf(expired)
 
         mockkStatic("androidx.room.RoomDatabaseKt")
         val transactionLambda = slot<suspend () -> Unit>()
@@ -116,7 +127,7 @@ class DealsRepositoryTest {
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
-        coEvery { dealsDao.addDeals(*anyVararg()) } just runs
+        coEvery { dealsDao.addDealEntities(*anyVararg()) } just runs
 
 
         impl.refreshDeals(storeId)
@@ -124,15 +135,15 @@ class DealsRepositoryTest {
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
+        coVerify(exactly = 1) { dealsDao.addDealEntities(stamped) }
     }
 
 
     @Test
     fun `refreshDeals - unforced - skips source when DAO has fresh deals`() = runTest {
         val storeId = 1
-        val fresh: Deal = mockk { every { expires } returns now + 10_000 }
-        coEvery { dealsDao.getStoreDeals(storeId) } returns listOf(fresh)
+        val fresh: DealEntity = mockk { every { expires } returns now + 10_000 }
+        coEvery { dealsDao.getStoreDealEntities(storeId) } returns listOf(fresh)
 
 
         impl.refreshDeals(storeId)

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.source.CheapsharkSource
@@ -25,13 +26,13 @@ class StoresRepository @Inject internal constructor(
 
     private val cache = CachedResource(
         clock = clock,
-        read = { storesDao.getAllStores() },
+        read = { storesDao.getAllStoreEntities() },
         expiresAtMillis = { it.expires },
         refresh = {
             val expiresAt = clock.nowMillis() + STORES_TTL_MILLIS
             cheapsharkSource.fetchStores()
-                .map { it.copy(expires = expiresAt) }
-                .let { storesDao.addStores(*it.toTypedArray()) }
+                .map { it.toEntity(expiresAt = expiresAt) }
+                .let { storesDao.addStoreEntities(*it.toTypedArray()) }
         }
     )
 

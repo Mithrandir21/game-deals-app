@@ -10,6 +10,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
+import pm.bam.gamedeals.domain.db.entities.DealEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
@@ -69,17 +71,17 @@ class DealsRepository @Inject internal constructor(
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun storeDealsCache(storeId: Int): CachedResource<Deal> = CachedResource(
+    private fun storeDealsCache(storeId: Int): CachedResource<DealEntity> = CachedResource(
         clock = clock,
-        read = { dealsDao.getStoreDeals(storeId) },
+        read = { dealsDao.getStoreDealEntities(storeId) },
         expiresAtMillis = { it.expires },
         refresh = {
             val expiresAt = clock.nowMillis() + DEALS_TTL_MILLIS
             domainDatabase.withTransaction {
                 dealsDao.clearDealsForStore(storeId)
                 cheapsharkSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
-                    .map { it.copy(expires = expiresAt) }
-                    .let { dealsDao.addDeals(*it.toTypedArray()) }
+                    .map { it.toEntity(expiresAt = expiresAt) }
+                    .let { dealsDao.addDealEntities(*it.toTypedArray()) }
             }
         }
     )

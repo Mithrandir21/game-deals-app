@@ -9,17 +9,28 @@ import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.db.dao.PagingDao
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.db.dao.StoresDao
-import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.DealPage
-import pm.bam.gamedeals.domain.models.Game
-import pm.bam.gamedeals.domain.models.Giveaway
-import pm.bam.gamedeals.domain.models.Release
-import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.db.entities.DealEntity
+import pm.bam.gamedeals.domain.db.entities.DealPageEntity
+import pm.bam.gamedeals.domain.db.entities.GameEntity
+import pm.bam.gamedeals.domain.db.entities.GiveawayEntity
+import pm.bam.gamedeals.domain.db.entities.ReleaseEntity
+import pm.bam.gamedeals.domain.db.entities.StoreEntity
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-@Database(version = 3, entities = [Deal::class, DealPage::class, Game::class, Store::class, Release::class, Giveaway::class], exportSchema = false)
+@Database(
+    version = 3,
+    entities = [
+        DealEntity::class,
+        DealPageEntity::class,
+        GameEntity::class,
+        StoreEntity::class,
+        ReleaseEntity::class,
+        GiveawayEntity::class,
+    ],
+    exportSchema = false,
+)
 @TypeConverters(StoreImagesConverter::class, GiveawayPlatformsConverter::class, LocalDatetimeConverter::class)
 abstract class DomainDatabase : RoomDatabase() {
 

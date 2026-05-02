@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
@@ -55,5 +56,6 @@ class GiveawaysRepository @Inject internal constructor(
 
     suspend fun refreshGiveaways() =
         gamerPowerSource.fetchGiveaways()
-            .let { giveawaysDao.addGiveaways(*it.toTypedArray()) }
+            .map { it.toEntity() }
+            .let { giveawaysDao.addGiveawayEntities(*it.toTypedArray()) }
 }

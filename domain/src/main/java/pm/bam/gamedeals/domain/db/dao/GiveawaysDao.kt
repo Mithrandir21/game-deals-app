@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import pm.bam.gamedeals.domain.db.entities.GiveawayEntity
 import pm.bam.gamedeals.domain.models.Giveaway
 
 @Dao
@@ -14,8 +15,8 @@ internal interface GiveawaysDao {
     @Query("SELECT * FROM Giveaway")
     fun observeAllGiveaways(): Flow<List<Giveaway>>
 
-    /** Adds the [Giveaway] to the database. */
+    /** Adds the [GiveawayEntity] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addGiveaways(vararg genericItem: Giveaway)
+    suspend fun addGiveawayEntities(vararg entities: GiveawayEntity)
 
 }

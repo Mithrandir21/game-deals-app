@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import pm.bam.gamedeals.domain.db.entities.GameEntity
 import pm.bam.gamedeals.domain.models.Game
 
 @Dao
@@ -14,7 +15,7 @@ internal interface GamesDao {
     @Query("SELECT * FROM Game")
     fun observeAllGames(): Flow<List<Game>>
 
-    /** Adds the [Game] to the database. */
+    /** Adds the [GameEntity] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addGames(vararg genericItem: Game)
+    suspend fun addGameEntities(vararg entities: GameEntity)
 }

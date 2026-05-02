@@ -2,16 +2,12 @@ package pm.bam.gamedeals.domain.models
 
 
 import androidx.compose.runtime.Immutable
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Entity(tableName = "Game")
 @Serializable
 data class Game(
-    @PrimaryKey
     @SerialName("gameID")
     val gameID: Int,
     @SerialName("steamAppID")

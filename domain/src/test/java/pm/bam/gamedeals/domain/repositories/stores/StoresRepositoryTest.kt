@@ -6,16 +6,21 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
+import pm.bam.gamedeals.domain.db.entities.StoreEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
@@ -38,13 +43,18 @@ class StoresRepositoryTest {
 
     private val impl = StoresRepository(logger, storesDao, cheapsharkSource, clock)
 
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
 
     @Test
     fun `observe stores - fresh cache - does not refresh`() = runTest {
-        val fresh: Store = mockk { every { expires } returns now + 10_000 }
+        val fresh: StoreEntity = mockk { every { expires } returns now + 10_000 }
 
         coEvery { storesDao.observeAllStores() } returns flowOf(emptyList())
-        coEvery { storesDao.getAllStores() } returns listOf(fresh)
+        coEvery { storesDao.getAllStoreEntities() } returns listOf(fresh)
 
 
         val result = impl.observeStores().first()
@@ -52,64 +62,66 @@ class StoresRepositoryTest {
 
         coVerify(exactly = 0) { cheapsharkSource.fetchStores() }
         coVerify(exactly = 1) { storesDao.observeAllStores() }
-        coVerify(exactly = 1) { storesDao.getAllStores() }
-        coVerify(exactly = 0) { storesDao.addStores(*anyVararg()) }
+        coVerify(exactly = 1) { storesDao.getAllStoreEntities() }
+        coVerify(exactly = 0) { storesDao.addStoreEntities(*anyVararg()) }
     }
 
 
     @Test
     fun `refresh stores - unforced - expired entry - fetches and stamps expires`() = runTest {
-        val expired: Store = mockk { every { expires } returns now - 1 }
+        val expired: StoreEntity = mockk { every { expires } returns now - 1 }
         val fetched: Store = mockk()
-        val stamped: Store = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        val stamped: StoreEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { fetched.toEntity(expiresAt = now + millisInHour * 8) } returns stamped
 
         coEvery { cheapsharkSource.fetchStores() } returns listOf(fetched)
-        coEvery { storesDao.getAllStores() } returns listOf(expired)
-        coEvery { storesDao.addStores(*anyVararg()) } just runs
+        coEvery { storesDao.getAllStoreEntities() } returns listOf(expired)
+        coEvery { storesDao.addStoreEntities(*anyVararg()) } just runs
 
 
         impl.refreshStores()
 
 
         coVerify(exactly = 1) { cheapsharkSource.fetchStores() }
-        coVerify(exactly = 1) { storesDao.getAllStores() }
-        coVerify(exactly = 1) { storesDao.addStores(stamped) }
-        verify(exactly = 1) { fetched.copy(expires = now + millisInHour * 8) }
+        coVerify(exactly = 1) { storesDao.getAllStoreEntities() }
+        coVerify(exactly = 1) { storesDao.addStoreEntities(stamped) }
+        verify(exactly = 1) { fetched.toEntity(expiresAt = now + millisInHour * 8) }
     }
 
 
     @Test
     fun `refresh stores - unforced - all fresh - skips fetch`() = runTest {
-        val fresh: Store = mockk { every { expires } returns now + 10_000 }
+        val fresh: StoreEntity = mockk { every { expires } returns now + 10_000 }
 
-        coEvery { storesDao.getAllStores() } returns listOf(fresh)
+        coEvery { storesDao.getAllStoreEntities() } returns listOf(fresh)
 
 
         impl.refreshStores()
 
 
         coVerify(exactly = 0) { cheapsharkSource.fetchStores() }
-        coVerify(exactly = 1) { storesDao.getAllStores() }
-        coVerify(exactly = 0) { storesDao.addStores(*anyVararg()) }
+        coVerify(exactly = 1) { storesDao.getAllStoreEntities() }
+        coVerify(exactly = 0) { storesDao.addStoreEntities(*anyVararg()) }
     }
 
 
     @Test
     fun `refresh stores - forced - skips freshness check and stamps expires`() = runTest {
         val fetched: Store = mockk()
-        val stamped: Store = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        val stamped: StoreEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { fetched.toEntity(expiresAt = now + millisInHour * 8) } returns stamped
 
         coEvery { cheapsharkSource.fetchStores() } returns listOf(fetched)
-        coEvery { storesDao.addStores(*anyVararg()) } just runs
+        coEvery { storesDao.addStoreEntities(*anyVararg()) } just runs
 
 
         impl.refreshStores(force = true)
 
 
         coVerify(exactly = 1) { cheapsharkSource.fetchStores() }
-        coVerify(exactly = 0) { storesDao.getAllStores() }
-        coVerify(exactly = 1) { storesDao.addStores(stamped) }
+        coVerify(exactly = 0) { storesDao.getAllStoreEntities() }
+        coVerify(exactly = 1) { storesDao.addStoreEntities(stamped) }
     }
 }

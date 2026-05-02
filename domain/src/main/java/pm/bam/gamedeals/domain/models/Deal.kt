@@ -2,22 +2,13 @@ package pm.bam.gamedeals.domain.models
 
 
 import androidx.compose.runtime.Immutable
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@OptIn(ExperimentalSerializationApi::class)
 @Immutable
-@Entity(tableName = "Deal")
 @Serializable
 data class Deal(
-    @PrimaryKey
     @SerialName("dealID")
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
     val dealID: String,
     @SerialName("internalName")
     val internalName: String,
@@ -59,16 +50,6 @@ data class Deal(
     val dealRating: Double,
     @SerialName("thumb")
     val thumb: String,
-
-    /**
-     * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
-     *
-     * The repository stamps this via the injected `Clock` plus the resource's TTL when adding
-     * fetched entities to the DAO; defaults to `0L` (already-expired) so any unstamped entity
-     * is considered stale by the cache.
-     */
-    @SerialName("expires")
-    val expires: Long = 0L
 )
 
 @Serializable
@@ -145,12 +126,3 @@ data class DealDetails(
         val date: String
     )
 }
-
-@Entity(tableName = "DealPage")
-internal data class DealPage(
-    @PrimaryKey
-    @ColumnInfo(name = "storeID", collate = ColumnInfo.NOCASE)
-    val storeID: Int,
-    @SerialName("page")
-    val page: Int
-)

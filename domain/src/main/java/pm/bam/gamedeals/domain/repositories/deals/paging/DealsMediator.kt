@@ -11,8 +11,9 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.db.entities.DealPageEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.DealPage
 import pm.bam.gamedeals.domain.models.DealsSortBy
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.source.CheapsharkSource
@@ -64,11 +65,11 @@ internal class DealsMediator(
                     pagingDao.clearStorePage(storeId)
                 }
 
-                val newDealPage = DealPage(storeId, pageNumber + 1)
+                val newDealPage = DealPageEntity(storeId, pageNumber + 1)
                 debug(logger) { "New DealPage: $newDealPage" }
 
                 pagingDao.insert(newDealPage)
-                dealsDao.addDeals(*deals.toTypedArray())
+                dealsDao.addDealEntities(*deals.map { it.toEntity() }.toTypedArray())
                 debug(logger) { "Stored new Deals" }
             }
 

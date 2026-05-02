@@ -2,8 +2,6 @@ package pm.bam.gamedeals.domain.models
 
 
 import androidx.compose.runtime.Immutable
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -13,10 +11,8 @@ import kotlinx.serialization.properties.Properties
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 import java.time.LocalDateTime
 
-@Entity(tableName = "Giveaway")
 @Serializable
 data class Giveaway(
-    @PrimaryKey
     @SerialName("id")
     val id: Int,
     @SerialName("title")

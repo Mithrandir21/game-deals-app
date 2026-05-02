@@ -15,8 +15,10 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.unmockkAll
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -28,8 +30,10 @@ import org.junit.Test
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.PagingDao
+import pm.bam.gamedeals.domain.db.entities.DealEntity
+import pm.bam.gamedeals.domain.db.entities.DealPageEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.DealPage
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 
@@ -66,6 +70,11 @@ internal class DealsMediatorTest {
         coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
     }
 
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
 
     @Test
     fun `prepend results in Success with EndOfPage equal True`() = runTest {
@@ -83,17 +92,20 @@ internal class DealsMediatorTest {
     @Test
     fun `APPEND results in Success with EndOfPage equal True`() = runTest {
         val page = 0
-        val dealPage = DealPage(defaultStoreId, page)
-        val newDealPage = DealPage(defaultStoreId, page + 1)
+        val dealPage = DealPageEntity(defaultStoreId, page)
+        val newDealPage = DealPageEntity(defaultStoreId, page + 1)
 
         val deal: Deal = mockk()
+        val dealEntity: DealEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { deal.toEntity(expiresAt = 0L) } returns dealEntity
 
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(deal)
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
         coEvery { pagingDao.insert(newDealPage) } just runs
 
-        coEvery { dealsDao.addDeals(any()) } just runs
+        coEvery { dealsDao.addDealEntities(any()) } just runs
 
 
         val result: RemoteMediator.MediatorResult = mediator.load(LoadType.APPEND, state)
@@ -109,14 +121,14 @@ internal class DealsMediatorTest {
         coVerify(exactly = 0) { pagingDao.clearStorePage(any()) }
 
         coVerify(exactly = 1) { pagingDao.insert(eq(newDealPage)) }
-        coVerify(exactly = 1) { dealsDao.addDeals(any()) }
+        coVerify(exactly = 1) { dealsDao.addDealEntities(dealEntity) }
     }
 
 
     @Test
     fun `APPEND results in Error`() = runTest {
         val page = 0
-        val dealPage = DealPage(defaultStoreId, page)
+        val dealPage = DealPageEntity(defaultStoreId, page)
         val exception: Exception = mockk()
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
@@ -137,14 +149,14 @@ internal class DealsMediatorTest {
         coVerify(exactly = 0) { pagingDao.clearStorePage(any()) }
 
         coVerify(exactly = 0) { pagingDao.insert(any()) }
-        coVerify(exactly = 0) { dealsDao.addDeals(any()) }
+        coVerify(exactly = 0) { dealsDao.addDealEntities(*anyVararg()) }
     }
 
 
     @Test
     fun `APPEND rethrows CancellationException instead of returning Error`() = runTest {
         val page = 0
-        val dealPage = DealPage(defaultStoreId, page)
+        val dealPage = DealPageEntity(defaultStoreId, page)
         val cancellation = CancellationException("scope cancelled")
 
         coEvery { pagingDao.getStorePage(defaultStoreId) } returns dealPage
@@ -168,9 +180,12 @@ internal class DealsMediatorTest {
     @Test
     fun `REFRESH results in Success with EndOfPage equal True`() = runTest {
         val page = 0
-        val newDealPage = DealPage(defaultStoreId, page + 1)
+        val newDealPage = DealPageEntity(defaultStoreId, page + 1)
 
         val deal: Deal = mockk()
+        val dealEntity: DealEntity = mockk()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { deal.toEntity(expiresAt = 0L) } returns dealEntity
 
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(deal)
 
@@ -178,7 +193,7 @@ internal class DealsMediatorTest {
         coEvery { pagingDao.insert(newDealPage) } just runs
 
         coEvery { dealsDao.clearDealsForStore(defaultStoreId) } just runs
-        coEvery { dealsDao.addDeals(any()) } just runs
+        coEvery { dealsDao.addDealEntities(any()) } just runs
 
 
         val result: RemoteMediator.MediatorResult = mediator.load(LoadType.REFRESH, state)
@@ -194,6 +209,6 @@ internal class DealsMediatorTest {
         coVerify(exactly = 1) { pagingDao.clearStorePage(defaultStoreId) }
 
         coVerify(exactly = 1) { pagingDao.insert(eq(newDealPage)) }
-        coVerify(exactly = 1) { dealsDao.addDeals(any()) }
+        coVerify(exactly = 1) { dealsDao.addDealEntities(dealEntity) }
     }
 }

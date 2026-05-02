@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
@@ -25,5 +26,6 @@ class ReleasesRepository @Inject internal constructor(
 
     suspend fun refreshReleases() =
         cheapsharkSource.fetchReleases()
-            .let { releasesDao.addReleases(*it.toTypedArray()) }
+            .map { it.toEntity() }
+            .let { releasesDao.addReleaseEntities(*it.toTypedArray()) }
 }

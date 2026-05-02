@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.dao.GamesDao
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -40,5 +41,6 @@ class GamesRepository @Inject internal constructor(
 
     suspend fun refreshGames() =
         cheapsharkSource.fetchGames("")
-            .let { gamesDao.addGames(*it.toTypedArray()) }
+            .map { it.toEntity() }
+            .let { gamesDao.addGameEntities(*it.toTypedArray()) }
 }

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import pm.bam.gamedeals.domain.db.entities.ReleaseEntity
 import pm.bam.gamedeals.domain.models.Release
 
 @Dao
@@ -14,8 +15,8 @@ internal interface ReleasesDao {
     @Query("SELECT * FROM `Release`")
     fun observeAllReleases(): Flow<List<Release>>
 
-    /** Adds the [Release] to the database. */
+    /** Adds the [ReleaseEntity] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addReleases(vararg genericItem: Release)
+    suspend fun addReleaseEntities(vararg entities: ReleaseEntity)
 
 }

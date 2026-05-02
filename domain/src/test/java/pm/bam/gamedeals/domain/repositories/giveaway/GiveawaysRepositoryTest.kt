@@ -7,16 +7,21 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
+import pm.bam.gamedeals.domain.db.entities.GiveawayEntity
+import pm.bam.gamedeals.domain.db.entities.toEntity
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
@@ -39,6 +44,11 @@ class GiveawaysRepositoryTest {
     private val gamerPowerSource: GamerPowerSource = mockk()
 
     private val impl = GiveawaysRepository(logger, giveawaysDao, gamerPowerSource)
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     fun `observe giveaways with descending publishedDate order`() = runTest {
@@ -63,14 +73,17 @@ class GiveawaysRepositoryTest {
     @Test
     fun `refresh giveaways`() = runTest {
         val giveaway = mockk<Giveaway>()
+        val entity = mockk<GiveawayEntity>()
+        mockkStatic("pm.bam.gamedeals.domain.db.entities.MappersKt")
+        every { giveaway.toEntity() } returns entity
 
         coEvery { gamerPowerSource.fetchGiveaways() } returns listOf(giveaway)
-        coEvery { giveawaysDao.addGiveaways(any()) } just Runs
+        coEvery { giveawaysDao.addGiveawayEntities(any()) } just Runs
 
         impl.refreshGiveaways()
 
         coVerify(exactly = 1) { gamerPowerSource.fetchGiveaways() }
-        coVerify(exactly = 1) { giveawaysDao.addGiveaways(any()) }
+        coVerify(exactly = 1) { giveawaysDao.addGiveawayEntities(entity) }
     }
 
     @Test
