@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.material)
 
     implementation(libs.coroutines)
+    implementation(libs.kotlinx.collections.immutable)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
