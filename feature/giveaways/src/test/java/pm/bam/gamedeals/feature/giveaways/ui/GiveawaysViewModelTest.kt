@@ -115,6 +115,70 @@ class GiveawaysViewModelTest {
     }
 
     @Test
+    fun `failed reload sets ERROR`() = runTest {
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        coEvery { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        coEvery { giveawaysRepository.refreshGiveaways() } throws Exception()
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        unfilteredRoom.emit(emptyList())
+
+        viewModel.reloadGiveaways()
+
+        val emissions = observeStates(viewModel)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
+    }
+
+    @Test
+    fun `ERROR from failed reload survives subsequent Room invalidation`() = runTest {
+        val giveaway = mockk<Giveaway>()
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        coEvery { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        coEvery { giveawaysRepository.refreshGiveaways() } throws Exception()
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        unfilteredRoom.emit(emptyList())
+
+        viewModel.reloadGiveaways()
+
+        // Simulate a Room invalidation arriving after the refresh has already failed.
+        unfilteredRoom.emit(listOf(giveaway))
+
+        val emissions = observeStates(viewModel)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
+    }
+
+    @Test
+    fun `successful reload after a failure flips ERROR back to SUCCESS`() = runTest {
+        val giveaway = mockk<Giveaway>()
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        coEvery { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        var refreshCallCount = 0
+        coEvery { giveawaysRepository.refreshGiveaways() } coAnswers {
+            refreshCallCount++
+            if (refreshCallCount == 1) throw Exception()
+        }
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        unfilteredRoom.emit(emptyList())
+
+        viewModel.reloadGiveaways()
+        // Pre-condition: first refresh failed → ERROR.
+        Assert.assertEquals(
+            GiveawaysViewModel.GiveawaysScreenStatus.ERROR,
+            observeStates(viewModel).last().status
+        )
+
+        viewModel.reloadGiveaways()
+        // The successful refresh write triggers a Room invalidation in production; model it here.
+        unfilteredRoom.emit(listOf(giveaway))
+
+        val emissions = observeStates(viewModel)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.last().status)
+        Assert.assertEquals(1, emissions.last().giveaways.size)
+    }
+
+    @Test
     fun `load Giveaways cancels prior unfiltered collector when filter applied`() = runTest {
         val unfilteredOne = mockk<Giveaway>()
         val unfilteredTwo = mockk<Giveaway>()

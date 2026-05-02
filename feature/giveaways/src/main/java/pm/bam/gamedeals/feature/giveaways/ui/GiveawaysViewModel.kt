@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
@@ -37,16 +37,29 @@ internal class GiveawaysViewModel @Inject constructor(
     val uiState: StateFlow<GiveawaysScreenData> = _uiState.asStateFlow()
 
     private val parametersFlow = MutableStateFlow<GiveawaySearchParameters?>(null)
+    private val refreshOutcomeFlow = MutableStateFlow<RefreshOutcome>(RefreshOutcome.Idle)
 
 
     init {
         viewModelScope.launch {
-            parametersFlow
+            val giveawaysFlow = parametersFlow
                 .flatMapLatest { params ->
                     if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
                     else flow { emitAll(giveawaysRepository.observeGiveaways(params)) }
                 }
-                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
+
+            combine(giveawaysFlow, refreshOutcomeFlow) { giveaways, outcome ->
+                when (outcome) {
+                    is RefreshOutcome.Error -> GiveawaysScreenData(
+                        status = GiveawaysScreenStatus.ERROR,
+                        giveaways = giveaways.toImmutableList()
+                    )
+                    RefreshOutcome.Idle -> GiveawaysScreenData(
+                        status = GiveawaysScreenStatus.SUCCESS,
+                        giveaways = giveaways.toImmutableList()
+                    )
+                }
+            }
                 .logFlow(logger)
                 .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
                 .collect { newState -> _uiState.emit(newState) }
@@ -56,11 +69,12 @@ internal class GiveawaysViewModel @Inject constructor(
     fun reloadGiveaways() {
         viewModelScope.launch {
             flow<Unit> {
+                refreshOutcomeFlow.value = RefreshOutcome.Idle
                 _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.LOADING) }
                 giveawaysRepository.refreshGiveaways()
             }
                 .logFlow(logger)
-                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
+                .catch { refreshOutcomeFlow.value = RefreshOutcome.Error }
                 .collect { }
         }
     }
@@ -79,5 +93,10 @@ internal class GiveawaysViewModel @Inject constructor(
 
     internal enum class GiveawaysScreenStatus {
         LOADING, ERROR, SUCCESS
+    }
+
+    private sealed interface RefreshOutcome {
+        data object Idle : RefreshOutcome
+        data object Error : RefreshOutcome
     }
 }
