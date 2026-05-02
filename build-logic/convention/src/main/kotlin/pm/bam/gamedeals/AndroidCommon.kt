@@ -4,7 +4,6 @@ import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
-import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 /**
@@ -18,29 +17,25 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
  * Per project policy this stays purely structural: do not bump SDK levels here without
  * also coordinating an explicit version-bump PR.
  */
-internal fun Project.configureAndroidCommon(extension: CommonExtension<*, *, *, *, *, *>) {
+internal fun Project.configureAndroidCommon(extension: CommonExtension) {
     extension.apply {
         compileSdk = 36
 
-        defaultConfig {
-            minSdk = 26
-        }
+        defaultConfig.minSdk = 26
 
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = JavaVersion.VERSION_21
             targetCompatibility = JavaVersion.VERSION_21
         }
 
-        packaging {
-            resources {
-                excludes += "/META-INF/LICENSE.md"
-                excludes += "/META-INF/LICENSE-notice.md"
-                excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        packaging.resources.apply {
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
 
-                // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and
-                // com.squareup.okhttp3:logging-interceptor:5.2.1
-                excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-            }
+            // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and
+            // com.squareup.okhttp3:logging-interceptor:5.2.1
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 

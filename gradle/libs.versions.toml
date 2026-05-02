@@ -1,7 +1,7 @@
 [versions]
-android-gradle-plugin = "8.13.0"
+android-gradle-plugin = "9.0.1"
 jetbrains-kotlin-plugin = "2.2.21"
-google-ksp-plugin = "2.3.0"
+google-ksp-plugin = "2.3.2"
 google-services-plugin = "4.4.4"
 firebase-crashlytics-plugin = "3.0.6"
 firebase-performance-plugin = "2.0.1"
