@@ -123,9 +123,54 @@ class CheapsharkMappersTest {
         assertEquals(true, deal.isOnSale)
     }
 
+    @Test
+    fun `RemoteDeal isOnSale 0 maps to false`() {
+        val deal = baseDeal(isOnSale = 0).toDomain(ctx)
+        assertEquals(false, deal.isOnSale)
+    }
+
     @Test(expected = Exception::class)
     fun `RemoteDeal isOnSale 2 throws`() {
         baseDeal(isOnSale = 2).toDomain(ctx)
+    }
+
+    @Test
+    fun `RemoteDealDetails toDomain wires gameInfo cheaperStores and cheapestPrice together`() {
+        val details = RemoteDealDetails(
+            gameInfo = baseDealInfo(),
+            cheaperStores = listOf(
+                RemoteDealDetails.RemoteCheaperStore(
+                    dealID = "d1",
+                    storeID = 2,
+                    salePrice = 1.0,
+                    retailPrice = 2.0,
+                ),
+                RemoteDealDetails.RemoteCheaperStore(
+                    dealID = "d2",
+                    storeID = 3,
+                    salePrice = 3.0,
+                    retailPrice = 4.0,
+                ),
+            ),
+            cheapestPrice = RemoteDealDetails.RemoteCheapestPrice(price = 4.99, date = 1234),
+        ).toDomain(ctx)
+
+        assertEquals("Game", details.gameInfo.name)
+        assertEquals(2, details.cheaperStores.size)
+        assertEquals("d1", details.cheaperStores[0].dealID)
+        assertEquals("d2", details.cheaperStores[1].dealID)
+        assertEquals(4.99, details.cheapestPrice?.priceValue!!, 0.0)
+    }
+
+    @Test
+    fun `RemoteDealDetails toDomain propagates null cheapestPrice`() {
+        val details = RemoteDealDetails(
+            gameInfo = baseDealInfo(),
+            cheaperStores = emptyList(),
+            cheapestPrice = RemoteDealDetails.RemoteCheapestPrice(price = null, date = 0),
+        ).toDomain(ctx)
+
+        assertNull(details.cheapestPrice)
     }
 
     @Test
