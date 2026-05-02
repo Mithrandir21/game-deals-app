@@ -179,6 +179,34 @@ class GiveawaysViewModelTest {
     }
 
     @Test
+    fun `upstream collector survives an observeGiveaways failure and processes later emissions`() = runTest {
+        val giveaway = mockk<Giveaway>()
+        val filteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        coEvery { giveawaysRepository.observeGiveaways() } throws Exception()
+        coEvery { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+
+        val emissions = observeStates(viewModel)
+        // The init-time failure must be surfaced as ERROR but must NOT terminate the collector.
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
+
+        // Switching params re-subscribes flatMapLatest. If the outer collector had died (the bug
+        // this fix targets), the new upstream value would never reach _uiState and giveaways
+        // would stay empty.
+        val para = GiveawaySearchParameters(
+            types = persistentListOf(GiveawayType.GAME to true),
+            platforms = persistentListOf(GiveawayPlatform.PC to true),
+            sortBy = GiveawaySortBy.DATE
+        )
+        viewModel.loadGiveaway(para)
+        filteredRoom.emit(listOf(giveaway))
+
+        Assert.assertEquals(1, emissions.last().giveaways.size)
+        Assert.assertEquals(giveaway, emissions.last().giveaways.first())
+    }
+
+    @Test
     fun `load Giveaways cancels prior unfiltered collector when filter applied`() = runTest {
         val unfilteredOne = mockk<Giveaway>()
         val unfilteredTwo = mockk<Giveaway>()
