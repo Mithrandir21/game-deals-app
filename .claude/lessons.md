@@ -8,6 +8,47 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-02-10 · Re-verify findings against `origin/<merge-target>` HEAD before working them
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** workflow, planner-agents, worker-agents, merge-target-drift, github-sync, github-issue-waves
+**Applies to:** Planner/worker sub-agents in `github-issue-waves`; bug-hunt-to-issues filing in `github-sync`; any flow that reads issues filed from a feature/wave branch and acts on them later
+
+Issues filed from a wave/feature branch can become partially or fully obsolete by the time a worker picks them up — `dev` moves between filing and execution. Issue #90 is the canonical example: the `DealDetailsController` portion was already fixed on `dev` (commit `b64307b`) when the worker started; only the `DealDetailsViewModel` portion remained real. Without the planner re-verifying, the worker would have proposed a no-op or duplicated the existing fix.
+
+Discipline at three layers:
+
+- **`github-sync` (filing-time):** Step 2.5 (added 2026-05-02) extracts a signature from each finding's Evidence block and substring-matches it against `git show origin/<merge-target>:<path>`. Findings whose code is already fixed on the merge target default to skip in the triage plan.
+- **`github-issue-waves` planners:** when reporting file lists for a candidate issue, read `origin/<merge-target>:<path>` for each cited path. If the antipattern is gone, narrow the issue's scope or surface a `partially-fixed` flag in the planner's YAML output so the orchestrator can warn the user.
+- **Workers (execution-time):** before editing, diff the issue's cited Evidence against current `dev` HEAD. Narrow scope to portions still real, and call out the narrowing in the PR body so the reviewer doesn't expect changes the issue text implied.
+
+The signature-line check is fuzzy on purpose — exact line matches break under whitespace/refactor drift. Treat the verifier's verdict as advisory; the human's veto on the triage plan is the source of truth.
+
+**Source:** Wave 1 of campaign `2026-05-02-bug-hunt-2` (issue #90 → PR #94); pairs with the `Step 2.5 — Verify each finding against the merge target` section in `.claude/skills/android-bug-hunting-github-sync/SKILL.md`
+
+### L-2026-05-02-09 · Wall-clock time in suspend helpers breaks test virtual time
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** coroutines, test-virtual-time, runtest, dispatchers, common-helpers
+**Applies to:** Any `coroutineScope`-shaped helper in `:common` (or any module) that pads a minimum duration / debounce floor / rate-limit floor; new "minimum loading time" / "settle" / "throttle" utilities
+
+A helper that measures `System.currentTimeMillis()` deltas and pads via `delay(...)` mixes wall-clock and virtual-clock domains. Under `runTest`, `delay` is virtualized but `currentTimeMillis()` is real wall-clock — so `elapsed` reads as ~0 (the test scheduler skipped real time), and the helper pads the *full* duration against real time. Tests slow to wall-clock pace and lose determinism, and any consumer of the helper is impossible to advance past via `testScheduler.advanceTimeBy(...)`.
+
+Fix shape (matches the operators in this codebase already):
+```kotlin
+coroutineScope {
+    val pad = launch { delay(delayMillis) }
+    val result = block()
+    pad.join()
+    result
+}
+```
+
+The pad coroutine and `block()` both run on the same `TestDispatcher` under `runTest`, so the whole thing is virtual. `inline`/`crossinline` semantics survive this rewrite. The user-perceived behaviour is unchanged: `pad.join()` after `block()` returns enforces the same minimum total duration in production.
+
+Audit checklist when adding a new "minimum duration"-style helper:
+1. No `System.currentTimeMillis()`, `Instant.now()`, `Clock.systemDefaultZone()`, or `nanoTime()` inside the suspend body.
+2. All padding uses `delay(...)` directly (or `launch { delay(...) }.join()` when `block()` runs in parallel).
+3. A test using `runTest { }` + `testScheduler.currentTime` reads at least the configured minimum after the helper returns instantly — without taking real wall-clock time to do so.
+
+**Source:** Wave 1 PR #59 (issue #45 — `mapDelayAtLeast` / `flatMapLatestDelayAtLeast`); Wave 1 PR #93 (issue #91 — `withMinimumDuration` was the missed companion in the same pattern)
+
 ### L-2026-05-02-08 · `combine`-with-trigger flows: reason explicitly about write-order between trigger updates and downstream `_uiState` mutations
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** stateflow, combine, viewmodel, race-conditions, ordering, source-of-truth
 **Applies to:** Feature ViewModel handlers that both (a) update an upstream `MutableStateFlow`/`MutableSharedFlow` feeding a `combine(...)` source-of-truth flow, AND (b) directly write `_uiState.update {}` or `_uiState.emit(...)` in the same function body
