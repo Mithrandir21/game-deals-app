@@ -13,6 +13,7 @@ import kotlinx.serialization.properties.Properties
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 import java.time.LocalDateTime
 
+@Immutable
 @Entity(tableName = "Giveaway")
 @Serializable
 data class Giveaway(
