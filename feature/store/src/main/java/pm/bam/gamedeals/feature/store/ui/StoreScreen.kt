@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.wrapContentSize
@@ -79,6 +80,7 @@ internal fun StoreScreen(
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentOnBack by rememberUpdatedState(onBack)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: LazyPagingItems<Deal> = viewModel.deals.collectAsLazyPagingItems()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
@@ -116,7 +118,7 @@ internal fun StoreScreen(
                 actionLabel = context.getString(R.string.store_screen_data_loading_error_retry)
             )
             if (results == SnackbarResult.ActionPerformed) {
-                onBack()
+                currentOnBack()
             }
         }
 
