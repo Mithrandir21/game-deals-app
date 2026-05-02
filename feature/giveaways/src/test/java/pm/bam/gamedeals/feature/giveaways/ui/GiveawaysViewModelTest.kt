@@ -4,6 +4,7 @@ import io.mockk.coEvery
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -94,8 +95,8 @@ class GiveawaysViewModelTest {
 
 
         val para = GiveawaySearchParameters(
-            types = listOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
-            platforms = listOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
+            types = persistentListOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
+            platforms = persistentListOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
             sortBy = GiveawaySortBy.DATE
         )
 

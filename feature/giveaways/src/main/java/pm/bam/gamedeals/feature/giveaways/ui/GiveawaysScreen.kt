@@ -67,6 +67,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.common.ui.PhonePortrait
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -105,11 +106,15 @@ internal fun GiveawaysScreen(
         },
         onPlatformSelection = { platform, selection ->
             existingParameters = existingParameters.copy(
-                platforms = existingParameters.platforms.toMutableList().map { if (it.first == platform) platform to selection else it })
+                platforms = existingParameters.platforms
+                    .map { if (it.first == platform) platform to selection else it }
+                    .toImmutableList())
         },
         onTypeSelection = { type, selection ->
             existingParameters = existingParameters.copy(
-                types = existingParameters.types.toMutableList().map { if (it.first == type) type to selection else it })
+                types = existingParameters.types
+                    .map { if (it.first == type) type to selection else it }
+                    .toImmutableList())
         },
         onSortBySelection = { sortBy ->
             existingParameters = existingParameters.copy(sortBy = sortBy)

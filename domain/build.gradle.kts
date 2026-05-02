@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.material)
 
     implementation(libs.coroutines)
+    implementation(libs.kotlinx.collections.immutable)
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
