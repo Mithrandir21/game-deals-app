@@ -48,7 +48,7 @@ internal class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             searchParametersFlow
                 .flatMapLatest { dealsSearch ->
-                    when (dealsSearch == null || dealsSearch.title == null) {
+                    when (dealsSearch == null || (dealsSearch.title == null && dealsSearch.lowerPrice == null && dealsSearch.upperPrice == null && dealsSearch.steamMinRating == null)) {
                         true -> flowOf(SearchData.Empty)
                         else -> flowOf(dealsSearch)
                             .onEach { _resultState.emit(SearchData.Loading) }
@@ -74,15 +74,15 @@ internal class SearchViewModel @Inject constructor(
         steamMinimum: Int? = null,
         exactMatch: Boolean? = null
     ) {
-        val searchParameters = SearchParameters(
-            title = title?.takeIf { it.isNotBlank() },
-            lowerPrice = lowerPrice,
-            upperPrice = upperPrice,
-            steamMinRating = steamMinimum,
-            exact = exactMatch
-        )
-
         viewModelScope.launch {
+            val current = searchParametersFlow.replayCache.firstOrNull() ?: SearchParameters()
+            val searchParameters = SearchParameters(
+                title = title ?: current.title,
+                lowerPrice = lowerPrice ?: current.lowerPrice,
+                upperPrice = upperPrice ?: current.upperPrice,
+                steamMinRating = steamMinimum ?: current.steamMinRating,
+                exact = exactMatch ?: current.exact
+            )
             searchParametersFlow.emit(searchParameters)
         }
     }
