@@ -30,7 +30,6 @@ import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
 import pm.bam.gamedeals.testing.MainCoroutineRule
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.utils.observeEmissions
-import pm.bam.gamedeals.testing.utils.second
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -150,8 +149,8 @@ class HomeViewModelTest {
         coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }
     }
 
-    @Test(expected = Exception::class)
-    fun `onReleaseGame title exception`() = runTest {
+    @Test
+    fun `onReleaseGame title exception surfaces ERROR without crashing`() = runTest {
         val releaseTitle = "title"
 
         coEvery { storesRepository.observeStores() } returns flowOf(listOf())
@@ -166,9 +165,31 @@ class HomeViewModelTest {
 
         viewModel.onReleaseGame(releaseTitle)
 
-        assertEquals(2, emissions.size)
-        assertNotNull(emissions.second())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.second())
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.last())
+
+        assertNull(events.firstOrNull())
+
+        coVerify(exactly = 1) { storesRepository.observeStores() }
+        coVerify(exactly = 1) { gamesRepository.getReleaseGameId(releaseTitle) }
+    }
+
+    @Test
+    fun `onReleaseGame missing game surfaces ERROR without crashing`() = runTest {
+        val releaseTitle = "title"
+
+        coEvery { storesRepository.observeStores() } returns flowOf(listOf())
+        coEvery { releasesRepository.observeReleases() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.refreshGiveaways() } returns Unit
+        coEvery { gamesRepository.getReleaseGameId(releaseTitle) } returns null
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        val emissions = observeStates()
+        val events = viewModel.events.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+
+        viewModel.onReleaseGame(releaseTitle)
+
+        assertEquals(HomeScreenData(state = HomeScreenStatus.ERROR), emissions.last())
 
         assertNull(events.firstOrNull())
 

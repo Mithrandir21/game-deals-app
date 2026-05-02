@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -92,15 +91,16 @@ internal class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
                 .onStart { _uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
-                .map { gameId -> gameId ?: throw IllegalStateException("Game not found") }
                 .onError { fatal(logger, it) }
-                .onCompletion {
-                    when (it == null) {
-                        true -> _uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
-                        else -> _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
+                .catch { _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) } }
+                .collect { gameId ->
+                    if (gameId == null) {
+                        _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
+                    } else {
+                        _uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
+                        _events.emit(HomeUiEvent.NavigateToGame(gameId))
                     }
                 }
-                .collect { _events.emit(HomeUiEvent.NavigateToGame(it)) }
         }
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
