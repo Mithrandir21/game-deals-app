@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
@@ -80,21 +81,21 @@ internal class HomeViewModel @Inject constructor(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             loadTopStoreDataFlow()
-                .onStart { emit(_uiState.value.copy(state = HomeScreenStatus.LOADING)) }
-                .collect { _uiState.emit(it) }
+                .onStart { _uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
+                .collect { newState -> _uiState.emit(newState) }
         }
     }
 
     fun onReleaseGame(releaseTitle: String) =
         viewModelScope.launch {
             flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
-                .onStart { _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.LOADING)) }
+                .onStart { _uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
                 .map { gameId -> gameId ?: throw IllegalStateException("Game not found") }
                 .onError { fatal(logger, it) }
                 .onCompletion {
                     when (it == null) {
-                        true -> _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.SUCCESS))
-                        else -> _uiState.emit(_uiState.value.copy(state = HomeScreenStatus.ERROR))
+                        true -> _uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
+                        else -> _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
                     }
                 }
                 .collect { _events.emit(HomeUiEvent.NavigateToGame(it)) }

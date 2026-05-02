@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -38,20 +39,20 @@ internal class GiveawaysViewModel @Inject constructor(
             flow { emitAll(giveawaysRepository.observeGiveaways()) }
                 .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
                 .logFlow(logger)
-                .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
-                .collect { _uiState.emit(it) }
+                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
+                .collect { newState -> _uiState.emit(newState) }
         }
     }
 
     fun reloadGiveaways() {
         viewModelScope.launch {
-            flow {
-                emit(_uiState.value.copy(status = GiveawaysScreenStatus.LOADING))
+            flow<Unit> {
+                _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.LOADING) }
                 giveawaysRepository.refreshGiveaways()
             }
                 .logFlow(logger)
-                .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
-                .collect { _uiState.emit(it) }
+                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
+                .collect { }
         }
     }
 
@@ -60,8 +61,8 @@ internal class GiveawaysViewModel @Inject constructor(
             flow { emitAll(giveawaysRepository.observeGiveaways(parameters)) }
                 .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
                 .logFlow(logger)
-                .catch { emit(_uiState.value.copy(status = GiveawaysScreenStatus.ERROR)) }
-                .collect { _uiState.emit(it) }
+                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
+                .collect { newState -> _uiState.emit(newState) }
         }
     }
 
