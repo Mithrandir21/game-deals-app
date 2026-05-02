@@ -11,6 +11,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -115,11 +116,13 @@ internal class HomeViewModel @Inject constructor(
         flow { emitAll(storesRepository.observeStores()) }
             .map { listOfStores -> listOfStores.filter { topStores.contains(it.storeID) } }
             .map { listOfStores ->
-                listOfStores.map { store ->
-                    viewModelScope.async {
-                        store to dealsRepository.getStoreDeals(store.storeID, LIMIT_DEALS)
-                    }
-                }.awaitAll()
+                coroutineScope {
+                    listOfStores.map { store ->
+                        async {
+                            store to dealsRepository.getStoreDeals(store.storeID, LIMIT_DEALS)
+                        }
+                    }.awaitAll()
+                }
             }
             .map {
                 val data = mutableListOf<HomeScreenListData>()
