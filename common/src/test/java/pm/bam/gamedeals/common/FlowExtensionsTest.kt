@@ -90,6 +90,29 @@ class FlowExtensionsTest {
     }
 
     @Test
+    fun `withMinimumDuration pads to delayMillis when block is instant`() = runTest {
+        val start = testScheduler.currentTime
+        val result = withMinimumDuration(DELAY_MILLIS) { 21 * 2 }
+        val elapsed = testScheduler.currentTime - start
+
+        assertEquals(42, result)
+        assertEquals(DELAY_MILLIS, elapsed)
+    }
+
+    @Test
+    fun `withMinimumDuration does not pad when block takes longer than delayMillis`() = runTest {
+        val start = testScheduler.currentTime
+        val result = withMinimumDuration(DELAY_MILLIS) {
+            delay(LONG_WORK_MILLIS)
+            21 * 2
+        }
+        val elapsed = testScheduler.currentTime - start
+
+        assertEquals(42, result)
+        assertEquals(LONG_WORK_MILLIS, elapsed)
+    }
+
+    @Test
     fun `latestDelayAtLeast cancels pending pad when a new value arrives`() = runTest {
         // Emits 1 immediately, then 2 after `delayMillis * 2`. Because
         // `latestDelayAtLeast` uses `transformLatest`, the in-flight pad for

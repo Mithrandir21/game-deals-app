@@ -90,16 +90,20 @@ fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend
 
 
 /**
- * Runs [block] and ensures the total elapsed wall-clock time is at least [delayMillis] before
- * returning the result. If [block] completes faster than [delayMillis], suspends for the remainder.
+ * Runs [block] and ensures the total elapsed time is at least [delayMillis] before returning the
+ * result. If [block] completes faster than [delayMillis], suspends for the remainder.
  *
  * Useful for "minimum loading duration" UX where you want to avoid flashing a loading state too briefly.
+ *
+ * Implementation runs [block] and the [delay] concurrently inside a [coroutineScope] so the elapsed
+ * time is measured by the coroutine's own clock. This makes the function behave identically in
+ * production and under `runTest` with a `TestDispatcher`'s virtual time, instead of relying on
+ * `System.currentTimeMillis()` (which ignores the test's virtual clock).
  */
 suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block: suspend () -> T): T = coroutineScope {
-    val before = System.currentTimeMillis()
+    val pad = launch { delay(delayMillis) }
     val result = block()
-    val elapsed = System.currentTimeMillis() - before
-    if (elapsed < delayMillis) delay(delayMillis - elapsed)
+    pad.join()
     result
 }
 
