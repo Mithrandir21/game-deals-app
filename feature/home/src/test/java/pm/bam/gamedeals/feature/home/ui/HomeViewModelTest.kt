@@ -6,6 +6,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -17,6 +18,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -223,6 +225,59 @@ class HomeViewModelTest {
         runCurrent()
 
         coVerify(exactly = 1) { dealsRepository.getStoreDeals(topStores.first(), LIMIT_DEALS) }
+    }
+
+    @Test
+    fun `loadTopStoresDeals cancellation propagates to in-flight per-store deal fetches`() = runTest {
+        val storeOne: Store = mockk { every { storeID } returns topStores[0] }
+        val storeTwo: Store = mockk { every { storeID } returns topStores[1] }
+        val storesFlow = MutableSharedFlow<List<Store>>(replay = 1)
+
+        // Each per-store fetch suspends on its own gate. The try/finally counter records
+        // how many fetches are still in-flight; when the parent flow is cancelled, structured
+        // concurrency must cancel the children and drop the counter back to zero.
+        val activeFetches = AtomicInteger(0)
+        val gateOne = CompletableDeferred<List<Deal>>()
+        val gateTwo = CompletableDeferred<List<Deal>>()
+
+        coEvery { storesRepository.observeStores() } returns storesFlow
+        coEvery { releasesRepository.observeReleases() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+        coEvery { giveawaysRepository.refreshGiveaways() } returns Unit
+        coEvery { dealsRepository.getStoreDeals(topStores[0], LIMIT_DEALS) } coAnswers {
+            activeFetches.incrementAndGet()
+            try {
+                gateOne.await()
+            } finally {
+                activeFetches.decrementAndGet()
+            }
+        }
+        coEvery { dealsRepository.getStoreDeals(topStores[1], LIMIT_DEALS) } coAnswers {
+            activeFetches.incrementAndGet()
+            try {
+                gateTwo.await()
+            } finally {
+                activeFetches.decrementAndGet()
+            }
+        }
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        runCurrent()
+
+        storesFlow.emit(listOf(storeOne, storeTwo))
+        runCurrent()
+
+        // Both per-store fetches must be in-flight before cancellation.
+        assertEquals(2, activeFetches.get())
+
+        // Re-launch the loader; HomeViewModel cancels the prior loadJob before starting a new one.
+        // With structured concurrency, that cancellation propagates to the per-store async children
+        // and unwinds them through the try/finally above.
+        coEvery { storesRepository.observeStores() } returns flowOf(listOf())
+        viewModel.loadTopStoresDeals()
+        runCurrent()
+
+        assertEquals(0, activeFetches.get())
     }
 
     private fun TestScope.observeStates() = viewModel.uiState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
