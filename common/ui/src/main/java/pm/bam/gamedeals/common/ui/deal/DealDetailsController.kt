@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui.deal
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,8 @@ class DealDetailsController(
                 )
             }
             _dealDetails.emit(data)
+        } catch (t: CancellationException) {
+            throw t
         } catch (t: Throwable) {
             fatal(logger, t)
             try {
@@ -63,6 +66,8 @@ class DealDetailsController(
                         gameSalesPriceDenominated = dealPriceDenominated,
                     )
                 )
+            } catch (inner: CancellationException) {
+                throw inner
             } catch (inner: Throwable) {
                 fatal(logger, inner)
                 _dealDetails.emit(null)
