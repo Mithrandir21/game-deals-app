@@ -1,0 +1,66 @@
+campaign_slug: "2026-05-02-bug-hunt-3"
+labels: ["bug-hunt"]
+created: "2026-05-02"
+status: "in_progress"
+current_wave: 1
+issues:
+  - number: 97
+    title: "Outer .catch terminates upstream collector in SearchViewModel and GiveawaysViewModel"
+    severity: "high"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-3/issue-97-outer-catch-terminates-collector"
+    pr: 106
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/106"
+    status: "open"
+    files:
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/search/src/test/java/pm/bam/gamedeals/feature/search/ui/SearchViewModelTest.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+  - number: 96
+    title: "HomeViewModel.onReleaseGame: rethrowing onError crashes the app on missing game"
+    severity: "high"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-3/issue-96-onreleasegame-crash-fix"
+    pr: 105
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/105"
+    status: "open"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+      - "feature/home/src/test/java/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt"
+  - number: 100
+    title: "StoreScreen error-snackbar LaunchedEffect captures stale onBack"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-3/issue-100-storescreen-stale-onback"
+    pr: 104
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/104"
+    status: "open"
+    files:
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt"
+  - number: 98
+    title: "Giveaway data class missing @Immutable forces giveaway-row recomposition"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-3/issue-98-giveaway-immutable"
+    pr: 103
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/103"
+    status: "open"
+    files:
+      - "domain/src/main/java/pm/bam/gamedeals/domain/models/Giveaway.kt"
+  - number: 99
+    title: "HomeViewModel.loadTopStoreDataFlow orphans viewModelScope.async children on cancel"
+    severity: "medium"
+    wave: null
+    status: "deferred"
+    deferred_reason: "Conflicts with #96 on feature/home/.../HomeViewModel.kt; queued for wave 2"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+  - number: 101
+    title: "WebView loading spinner can wedge when no onPageFinished fires"
+    severity: "low"
+    wave: null
+    status: "deferred"
+    deferred_reason: "No file conflict; deferred only because wave cap is 4 and severity is low"
+    files:
+      - "feature/webview/src/main/java/pm/bam/gamedeals/feature/webview/ui/WebView.kt"
