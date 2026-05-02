@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -99,8 +100,8 @@ class GiveawaysRepositoryTest {
         every { giveawaysDao.observeAllGiveaways() } returns flowOf(listOf(resultOne, resultTwo, resultThree))
 
         val para = GiveawaySearchParameters(
-            types = listOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
-            platforms = listOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
+            types = persistentListOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
+            platforms = persistentListOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
             sortBy = GiveawaySortBy.DATE
         )
 

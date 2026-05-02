@@ -1,8 +1,11 @@
 package pm.bam.gamedeals.domain.models
 
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -125,10 +128,13 @@ enum class GiveawaySortBy {
 
 
 @OptIn(ExperimentalSerializationApi::class)
+@Immutable
 @Serializable
 data class GiveawaySearchParameters(
-    val platforms: List<Pair<GiveawayPlatform, Boolean>> = GiveawayPlatform.entries.map { it to false },
-    val types: List<Pair<GiveawayType, Boolean>> = GiveawayType.entries.map { it to false },
+    val platforms: ImmutableList<Pair<GiveawayPlatform, Boolean>> =
+        GiveawayPlatform.entries.map { it to false }.toImmutableList(),
+    val types: ImmutableList<Pair<GiveawayType, Boolean>> =
+        GiveawayType.entries.map { it to false }.toImmutableList(),
     val sortBy: GiveawaySortBy = GiveawaySortBy.DATE,
 ) {
     /**
