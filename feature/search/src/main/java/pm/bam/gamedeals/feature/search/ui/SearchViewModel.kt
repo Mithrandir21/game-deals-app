@@ -7,6 +7,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +36,10 @@ internal class SearchViewModel @Inject constructor(
 ) : ViewModel() {
 
     // We store and react to the Query changes so that only a single search flow can exists
-    private val searchParametersFlow = MutableStateFlow<SearchParameters?>(null)
+    private val searchParametersFlow = MutableSharedFlow<SearchParameters?>(
+        replay = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     private val _resultState = MutableStateFlow<SearchData>(SearchData.Empty)
     val resultState: StateFlow<SearchData> = _resultState.asStateFlow()

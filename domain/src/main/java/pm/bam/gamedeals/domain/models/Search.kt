@@ -44,12 +44,6 @@ data class SearchParameters(
             map.mapNotNull { (key, value) -> value?.let { key to it } }
                 .toMap())
     }
-
-    /**
-     * Returning `false` to avoid the default implementation of `equals` when attempting to emit a new value in a `StateFlow`.
-     * See "Strong equality-based conflation" in the StateFlow documentation.
-     */
-    override fun equals(other: Any?): Boolean = false
 }
 
 enum class DealsSortBy {
