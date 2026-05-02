@@ -130,4 +130,74 @@ class DealDetailsViewModelTest {
         assertEquals(1, emissions.size)
         assertNull(emissions.first())
     }
+
+    @Test
+    fun `rapid successive loadDealDetails calls only emit the latest deal data`() = runTest {
+        val firstDealId = "First Deal"
+        val firstStoreId = 1
+        val firstDealTitle = "First Title"
+        val firstSalePriceDenominated = "$5"
+        val firstStore: Store = mockk()
+        val firstGameInfo: DealDetails.GameInfo = mockk()
+        val firstCheapestPrice: DealDetails.CheapestPrice = mockk()
+        val firstDealDetails: DealDetails = mockk {
+            every { gameInfo } returns firstGameInfo
+            every { cheapestPrice } returns firstCheapestPrice
+            every { cheaperStores } returns emptyList()
+        }
+
+        val secondDealId = "Second Deal"
+        val secondStoreId = 2
+        val secondDealTitle = "Second Title"
+        val secondSalePriceDenominated = "$10"
+        val secondStore: Store = mockk()
+        val secondGameInfo: DealDetails.GameInfo = mockk()
+        val secondCheapestPrice: DealDetails.CheapestPrice = mockk()
+        val secondDealDetails: DealDetails = mockk {
+            every { gameInfo } returns secondGameInfo
+            every { cheapestPrice } returns secondCheapestPrice
+            every { cheaperStores } returns emptyList()
+        }
+
+        coEvery { dealsRepository.getDeal(firstDealId) } returns firstDealDetails
+        coEvery { dealsRepository.getDeal(secondDealId) } returns secondDealDetails
+        coEvery { storesRepository.getStore(firstStoreId) } returns firstStore
+        coEvery { storesRepository.getStore(secondStoreId) } returns secondStore
+
+        val emissions = viewModel.dealDealDetails.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
+
+        viewModel.loadDealDetails(
+            dealId = firstDealId,
+            dealStoreId = firstStoreId,
+            dealTitle = firstDealTitle,
+            dealPriceDenominated = firstSalePriceDenominated
+        )
+
+        viewModel.loadDealDetails(
+            dealId = secondDealId,
+            dealStoreId = secondStoreId,
+            dealTitle = secondDealTitle,
+            dealPriceDenominated = secondSalePriceDenominated
+        )
+
+        delay(1000) // Past mapDelayAtLeast(750) so the surviving load resolves to DealDetailsData.
+
+        val terminal = emissions.last()
+        assertEquals(
+            DealBottomSheetData.DealDetailsData(
+                store = secondStore,
+                gameName = secondDealTitle,
+                dealId = secondDealId,
+                gameSalesPriceDenominated = secondSalePriceDenominated,
+                gameInfo = secondGameInfo,
+                cheapestPrice = secondCheapestPrice,
+                cheaperStores = emptyList()
+            ), terminal
+        )
+
+        // The first load's DealDetailsData (with firstStore/firstGameInfo) must never appear.
+        val firstDealDataEmissions = emissions.filterIsInstance<DealBottomSheetData.DealDetailsData>()
+            .filter { it.dealId == firstDealId }
+        assertEquals(0, firstDealDataEmissions.size)
+    }
 }
