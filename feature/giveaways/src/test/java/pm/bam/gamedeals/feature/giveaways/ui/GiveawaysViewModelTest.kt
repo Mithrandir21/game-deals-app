@@ -7,6 +7,7 @@ import io.mockk.runs
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -111,6 +112,44 @@ class GiveawaysViewModelTest {
         Assert.assertEquals(2, emissions.first().giveaways.size)
         Assert.assertEquals(resultThree, emissions.first().giveaways.first())
         Assert.assertEquals(resultOne, emissions.first().giveaways.second())
+    }
+
+    @Test
+    fun `load Giveaways cancels prior unfiltered collector when filter applied`() = runTest {
+        val unfilteredOne = mockk<Giveaway>()
+        val unfilteredTwo = mockk<Giveaway>()
+        val filteredOne = mockk<Giveaway>()
+
+        val para = GiveawaySearchParameters(
+            types = persistentListOf(GiveawayType.GAME to true),
+            platforms = persistentListOf(GiveawayPlatform.PC to true),
+            sortBy = GiveawaySortBy.DATE
+        )
+
+        // Model the hot Room Flows: each invalidation re-emits, the flow never completes.
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        val filteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        coEvery { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        coEvery { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+
+        // Initial unfiltered emission seeds the screen with two giveaways.
+        unfilteredRoom.emit(listOf(unfilteredOne, unfilteredTwo))
+
+        // User applies a filter; the active source must switch to the filtered Room flow.
+        viewModel.loadGiveaway(para)
+        filteredRoom.emit(listOf(filteredOne))
+
+        // Simulate a Room invalidation re-emitting on the unfiltered flow (e.g. after refreshGiveaways).
+        // With parallel collectors this would clobber the filtered result; with flatMapLatest the
+        // unfiltered collector is cancelled and this emission is ignored.
+        unfilteredRoom.emit(listOf(unfilteredOne, unfilteredTwo))
+
+        val emissions = observeStates(viewModel)
+        Assert.assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.last().status)
+        Assert.assertEquals(1, emissions.last().giveaways.size)
+        Assert.assertEquals(filteredOne, emissions.last().giveaways.first())
     }
 
 

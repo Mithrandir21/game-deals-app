@@ -7,11 +7,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -24,6 +26,7 @@ import pm.bam.gamedeals.logging.Logger
 import javax.inject.Inject
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 internal class GiveawaysViewModel @Inject constructor(
     private val logger: Logger,
@@ -33,10 +36,16 @@ internal class GiveawaysViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GiveawaysScreenData())
     val uiState: StateFlow<GiveawaysScreenData> = _uiState.asStateFlow()
 
+    private val parametersFlow = MutableStateFlow<GiveawaySearchParameters?>(null)
+
 
     init {
         viewModelScope.launch {
-            flow { emitAll(giveawaysRepository.observeGiveaways()) }
+            parametersFlow
+                .flatMapLatest { params ->
+                    if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
+                    else flow { emitAll(giveawaysRepository.observeGiveaways(params)) }
+                }
                 .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
                 .logFlow(logger)
                 .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
@@ -57,13 +66,7 @@ internal class GiveawaysViewModel @Inject constructor(
     }
 
     fun loadGiveaway(parameters: GiveawaySearchParameters) {
-        viewModelScope.launch {
-            flow { emitAll(giveawaysRepository.observeGiveaways(parameters)) }
-                .map { GiveawaysScreenData(status = GiveawaysScreenStatus.SUCCESS, giveaways = it.toImmutableList()) }
-                .logFlow(logger)
-                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
-                .collect { newState -> _uiState.emit(newState) }
-        }
+        parametersFlow.value = parameters
     }
 
 
