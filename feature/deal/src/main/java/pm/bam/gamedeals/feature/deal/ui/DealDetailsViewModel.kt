@@ -3,6 +3,7 @@ package pm.bam.gamedeals.feature.deal.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,13 +32,16 @@ class DealDetailsViewModel @Inject constructor(
     private val _dealDetails = MutableStateFlow<DealBottomSheetData?>(null)
     val dealDealDetails: StateFlow<DealBottomSheetData?> = _dealDetails.asStateFlow()
 
+    private var loadJob: Job? = null
+
     fun loadDealDetails(
         dealId: String,
         dealStoreId: Int,
         dealTitle: String,
         dealPriceDenominated: String
     ) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             flowOf(true)
                 .mapDelayAtLeast(750) {
                     val dealDetails = dealsRepository.getDeal(dealId)
