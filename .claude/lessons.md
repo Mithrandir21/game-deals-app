@@ -8,6 +8,24 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-03-01 · Module that opts out of the convention plugin silently loses inherited test-runtime deps
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, convention-plugins, build-logic, compose-testing, ui-test-manifest, test-infra
+**Applies to:** Any feature module that does not apply `gamedeals.android.feature` (or whichever convention plugin the rest of the modules use); audits checking whether existing instrumentation/Compose tests are actually runnable
+
+A module that opts out of the project's convention plugin doesn't inherit the shared `debugImplementation` / `androidTestImplementation` deps that *make tests runnable at all*. The classic symptom is silent: code compiles, lint is green, `assembleDebugAndroidTest` succeeds — but `connectedDebugAndroidTest` fails with `IllegalStateException: No compose hierarchies found in the app` because `ui-test-manifest` isn't on the test classpath, so `createComposeRule()` has no `ComponentActivity` to host. Compilation never notices because the test rule's contract is runtime-only.
+
+`feature:webview` is the canonical example in this codebase: it doesn't apply `gamedeals.android.feature` (no Hilt/Paging/Coil to justify the plugin), so it didn't pick up `debugImplementation(libs.androidx.compose.test)`. The pre-existing `WebViewTest` (commit `57c876a`) was technically never runnable as-shipped — only noticed during issue #101 work.
+
+Audit checklist when adding or reviewing tests in a feature module:
+
+1. Does the module apply the convention plugin? If yes, you inherit the test-infra deps and you're fine.
+2. If no, does the module's `build.gradle.kts` explicitly carry `debugImplementation(libs.androidx.compose.test)` (and any other deps the convention plugin would have added)?
+3. Run the actual instrumentation target locally — don't trust `assembleDebugAndroidTest` as a runnability proxy.
+
+Long-term fix shapes: either bring the divergent module under the convention plugin (cleanest, but may pull in unwanted deps), or extract a leaner `gamedeals.android.feature.ui` plugin that only carries Compose + test-infra without Hilt/Paging/Coil. Short-term fix is the explicit one-line dep, as in PR #108.
+
+**Source:** Wave 2 of campaign `2026-05-02-bug-hunt-3` (issue #101 → PR #108); discovered when the wave-2 worker for #101 found `:feature:webview:connectedDebugAndroidTest` failing with `No compose hierarchies found` and traced it to the missing `ui-test-manifest` dep that other feature modules pick up via the convention plugin.
+
 ### L-2026-05-02-10 · Re-verify findings against `origin/<merge-target>` HEAD before working them
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** workflow, planner-agents, worker-agents, merge-target-drift, github-sync, github-issue-waves
 **Applies to:** Planner/worker sub-agents in `github-issue-waves`; bug-hunt-to-issues filing in `github-sync`; any flow that reads issues filed from a feature/wave branch and acts on them later
