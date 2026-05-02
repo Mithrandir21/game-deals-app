@@ -59,10 +59,10 @@ internal class SearchViewModel @Inject constructor(
                                     false -> SearchData.SearchResults(it.toImmutableList())
                                 }
                             }
+                            .catch { emit(SearchData.Error) }
                     }
                 }
                 .logFlow(logger)
-                .catch { emit(SearchData.Error) }
                 .collect { _resultState.emit(it) }
         }
     }

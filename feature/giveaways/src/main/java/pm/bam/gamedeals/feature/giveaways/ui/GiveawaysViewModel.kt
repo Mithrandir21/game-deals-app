@@ -44,8 +44,12 @@ internal class GiveawaysViewModel @Inject constructor(
         viewModelScope.launch {
             val giveawaysFlow = parametersFlow
                 .flatMapLatest { params ->
-                    if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
+                    val source = if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
                     else flow { emitAll(giveawaysRepository.observeGiveaways(params)) }
+                    source.catch {
+                        refreshOutcomeFlow.value = RefreshOutcome.Error
+                        emit(emptyList())
+                    }
                 }
 
             combine(giveawaysFlow, refreshOutcomeFlow) { giveaways, outcome ->
@@ -61,7 +65,6 @@ internal class GiveawaysViewModel @Inject constructor(
                 }
             }
                 .logFlow(logger)
-                .catch { _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.ERROR) } }
                 .collect { newState -> _uiState.emit(newState) }
         }
     }

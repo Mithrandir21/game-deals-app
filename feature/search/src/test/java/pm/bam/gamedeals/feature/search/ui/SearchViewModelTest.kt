@@ -110,6 +110,28 @@ class SearchViewModelTest {
         assertEquals(SearchData.Error, emissions.third())
     }
 
+    @Test
+    fun `subsequent search after error still produces results`() = runTest {
+        val deal: Deal = mockk()
+        val deals = listOf(deal)
+
+        coEvery { gamesRepository.searchGames(searchParameters = any()) } throws Exception() andThen deals
+
+        val emissions = observeStates()
+        assertEquals(1, emissions.size)
+        assertEquals(SearchData.Empty, emissions.first())
+
+        // First search fails — the upstream collector must survive the error.
+        viewModel.searchGames(title = "First")
+        delay(1200)
+        assertEquals(SearchData.Error, emissions.last())
+
+        // Second search after the error should still drive the upstream collector.
+        viewModel.searchGames(title = "Second")
+        delay(1200)
+        assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.last())
+    }
+
 
     private fun TestScope.observeStates() = viewModel.resultState.observeEmissions(this.backgroundScope, mainCoroutineRule.testDispatcher)
 }
