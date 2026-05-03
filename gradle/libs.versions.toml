@@ -166,6 +166,7 @@ kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime",
 coil3 = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil3" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
+coil3-test = { group = "io.coil-kt.coil3", name = "coil-test", version.ref = "coil3" }
 
 # Paging KMP — phase 5 paging swap. AndroidX paging-common is multiplatform-capable
 # at 3.3+, so commonMain uses paging-common; androidMain keeps paging-runtime/-compose.

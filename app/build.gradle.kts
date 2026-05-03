@@ -120,9 +120,10 @@ dependencies {
     implementation(libs.androidx.paging)
     implementation(libs.androidx.paging.compose)
 
-    implementation(libs.coil)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.test)
+    implementation(libs.coil3)
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.network.ktor)
+    implementation(libs.coil3.test)
 
     testImplementation(project(":testing"))
     testImplementation(libs.junit)
