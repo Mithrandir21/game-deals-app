@@ -16,6 +16,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
 
+            implementation(project(":logging"))
             implementation(project(":common"))
             implementation(project(":domain"))
             implementation(libs.kotlinx.collections.immutable)
@@ -23,7 +24,6 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(project(":logging"))
 
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
