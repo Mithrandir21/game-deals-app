@@ -3,8 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.gamedeals.android.application)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -106,11 +104,6 @@ dependencies {
     implementation(composeBom)
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.compose.runtime)
-
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.performance)
 
     implementation(libs.sentry.kotlin.multiplatform)
 

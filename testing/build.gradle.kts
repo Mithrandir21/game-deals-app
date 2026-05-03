@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
     alias(libs.plugins.kotlinx.serialization)
 }
 
@@ -22,13 +21,8 @@ dependencies {
 
     implementation(libs.coroutines)
 
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
     implementation(libs.junit)
     implementation(libs.mockk)
-    implementation(libs.hilt.testing)
     implementation(libs.androidx.runner)
     implementation(libs.coroutines.testing)
 }
