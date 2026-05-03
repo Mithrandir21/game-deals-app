@@ -3,10 +3,9 @@ package pm.bam.gamedeals.common.serializer
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
 
 
-internal class SerializerImpl @Inject constructor(private val json: Json) : Serializer {
+internal class SerializerImpl(private val json: Json) : Serializer {
 
     override fun <T : Any> serialize(deserialized: T, serializationStrategy: SerializationStrategy<T>): String =
         json.encodeToString(serializationStrategy, deserialized)

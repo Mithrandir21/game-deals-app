@@ -5,19 +5,26 @@ import android.content.pm.ApplicationInfo
 import android.os.StrictMode
 import coil.ImageLoader
 import coil.ImageLoaderFactory
-import dagger.hilt.android.HiltAndroidApp
 import io.sentry.kotlin.multiplatform.Sentry
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
+import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.di.appModule
+import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.logging.di.loggingModule
 
-@HiltAndroidApp
 class GameDealsApplication : Application(), ImageLoaderFactory {
 
-    @Inject
-    lateinit var imageLoader: ImageLoader
+    private val imageLoader: ImageLoader by inject()
 
     override fun onCreate() {
         super.onCreate()
         initSentry()
+        startKoin {
+            androidContext(this@GameDealsApplication)
+            modules(loggingModule, commonModule, domainModule, appModule)
+        }
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()

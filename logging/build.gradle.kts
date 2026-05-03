@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
 }
 
 android {
@@ -14,8 +13,5 @@ dependencies {
 
     implementation(libs.sentry.kotlin.multiplatform)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.koin.core)
 }

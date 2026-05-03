@@ -9,9 +9,8 @@ import pm.bam.gamedeals.logging.fatal
 import pm.bam.gamedeals.logging.info
 import pm.bam.gamedeals.logging.verbose
 import pm.bam.gamedeals.logging.warn
-import javax.inject.Inject
 
-internal class SimpleLoggingListener @Inject constructor() : LoggingInterface {
+internal class SimpleLoggingListener : LoggingInterface {
 
     /** Returns a boolean indicating whether this [LoggingInterface] is enabled or not. */
     override fun isEnabled(): Boolean = true

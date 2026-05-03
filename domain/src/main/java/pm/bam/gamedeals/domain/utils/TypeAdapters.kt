@@ -12,10 +12,9 @@ import pm.bam.gamedeals.common.serializer.deserialize
 import pm.bam.gamedeals.common.serializer.serialize
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.Store
-import javax.inject.Inject
 
 @ProvidedTypeConverter
-class StoreImagesConverter @Inject constructor(
+class StoreImagesConverter(
     private val serializer: Serializer
 ) {
     @TypeConverter
@@ -26,7 +25,7 @@ class StoreImagesConverter @Inject constructor(
 }
 
 @ProvidedTypeConverter
-class LocalDatetimeConverter @Inject constructor() {
+class LocalDatetimeConverter {
     @TypeConverter
     fun convertToJsonString(localDateTime: LocalDateTime): Long =
         localDateTime.toInstant(TimeZone.UTC).epochSeconds
@@ -37,7 +36,7 @@ class LocalDatetimeConverter @Inject constructor() {
 }
 
 @ProvidedTypeConverter
-class GiveawayPlatformsConverter @Inject constructor() {
+class GiveawayPlatformsConverter {
     @TypeConverter
     fun convertToJsonString(platforms: List<GiveawayPlatform>): String = platforms.joinToString(separator = ", ")
 

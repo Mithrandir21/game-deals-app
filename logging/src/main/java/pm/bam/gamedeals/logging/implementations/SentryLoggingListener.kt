@@ -5,9 +5,8 @@ import io.sentry.kotlin.multiplatform.SentryLevel
 import io.sentry.kotlin.multiplatform.protocol.Breadcrumb
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.LoggingInterface
-import javax.inject.Inject
 
-internal class SentryLoggingListener @Inject constructor() : LoggingInterface {
+internal class SentryLoggingListener : LoggingInterface {
 
     override fun isEnabled(): Boolean = Sentry.isEnabled()
 

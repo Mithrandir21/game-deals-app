@@ -19,14 +19,11 @@ import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
-import javax.inject.Inject
-import javax.inject.Singleton
 
 internal const val DEAL_PAGE_COUNT = 60
 internal val DEALS_TTL_MILLIS = millisInHour * 8
 
-@Singleton
-class DealsRepository @Inject internal constructor(
+class DealsRepository internal constructor(
     private val logger: Logger,
     private val dealsDao: DealsDao,
     private val domainDatabase: DomainDatabase,

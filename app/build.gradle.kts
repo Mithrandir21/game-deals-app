@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.gamedeals.android.application)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
 }
@@ -115,10 +114,10 @@ dependencies {
 
     implementation(libs.sentry.kotlin.multiplatform)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.compose.viewmodel)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
