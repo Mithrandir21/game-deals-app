@@ -3,7 +3,6 @@ package pm.bam.gamedeals.feature.giveaways.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -23,12 +22,10 @@ import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.logging.Logger
-import javax.inject.Inject
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-internal class GiveawaysViewModel @Inject constructor(
+internal class GiveawaysViewModel(
     private val logger: Logger,
     private val giveawaysRepository: GiveawaysRepository
 ) : ViewModel() {

@@ -12,6 +12,11 @@ import org.koin.core.context.startKoin
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.game.di.gameModule
+import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
+import pm.bam.gamedeals.feature.home.di.homeModule
+import pm.bam.gamedeals.feature.search.di.searchModule
+import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.di.loggingModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
@@ -37,7 +42,12 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
                 cheapsharkRemoteModule,
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
-                appModule
+                appModule,
+                homeModule,
+                gameModule,
+                giveawaysModule,
+                searchModule,
+                storeModule
             )
         }
         if (isDebuggable()) {

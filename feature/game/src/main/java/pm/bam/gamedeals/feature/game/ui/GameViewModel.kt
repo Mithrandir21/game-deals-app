@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,11 +26,9 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-internal class GameViewModel @Inject constructor(
+internal class GameViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,

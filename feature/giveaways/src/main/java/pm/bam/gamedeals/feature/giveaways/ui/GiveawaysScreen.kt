@@ -63,7 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
@@ -83,7 +83,7 @@ import pm.bam.gamedeals.feature.giveaways.R
 internal fun GiveawaysScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: GiveawaysViewModel = hiltViewModel()
+    viewModel: GiveawaysViewModel = koinViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
 

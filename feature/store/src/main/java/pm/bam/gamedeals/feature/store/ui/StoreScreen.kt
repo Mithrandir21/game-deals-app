@@ -47,7 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -76,7 +76,7 @@ import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: StoreViewModel = hiltViewModel()
+    viewModel: StoreViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
