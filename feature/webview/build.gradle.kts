@@ -1,40 +1,60 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.library.compose)
+    alias(libs.plugins.gamedeals.kmp.library)
+    alias(libs.plugins.gamedeals.kmp.library.compose)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.feature.webview"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.materialIconsExtended)
 
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":common:ui"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.material)
+            implementation(libs.androidx.compose.navigation)
+            implementation(libs.androidx.compose.runtime)
+            implementation(libs.androidx.webview)
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.ui)
+            implementation(libs.androidx.ui.graphics)
+            implementation(libs.androidx.ui.tooling)
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+            }
+        }
+
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.androidx.junit)
+                implementation(libs.androidx.espresso.core)
+                implementation(libs.androidx.compose.junit4)
+                implementation(libs.mockk.android)
+            }
+        }
     }
 }
 
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.feature.webview"
+
+    defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+}
+
 dependencies {
-    implementation(project(":logging"))
-    implementation(project(":common"))
-    implementation(project(":common:ui"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.compose.material.icons)
-    implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.webview)
-
-    implementation(libs.androidx.compose.material3)
-
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling)
-
-    testImplementation(libs.junit)
-
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.compose.junit4)
-    androidTestImplementation(libs.mockk.android)
     debugImplementation(libs.androidx.compose.test)
 }
