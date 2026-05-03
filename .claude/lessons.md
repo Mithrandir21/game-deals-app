@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-03 · Two-Koin-module split is the right shape for platform-specific construction in KMP
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, koin, di, room
+**Applies to:** A KMP module that needs platform-specific construction (database Builder, file-path resolution, platform context, native handle) — i.e. a binding that can't live in commonMain because it touches `androidContext()`/`NSHomeDirectory()`/etc.
+
+Prefer two Koin modules over `expect`/`actual` for this case: `xModule` in commonMain owns all portable wiring (converters, DAOs, repositories, the final bound type that customizes a Builder and `.build()`s it), `xAndroidModule` in androidMain owns just the platform seed binding (`single<RoomDatabase.Builder<T>> { Room.databaseBuilder<T>(androidContext(), name) }`). The consumer registers both modules at `startKoin`. iOS later registers its own `xIosModule` providing the same bound type. Avoids `expect`/`actual` ceremony — DI is already a runtime indirection, no need to add a compile-time one. Test overrides target the *final* type (e.g. override `single<DomainDatabase>` with `inMemoryDatabaseBuilder`), bypassing the Builder graph entirely so it doesn't need a test double.
+
+**Source:** Phase 5.16 — `:domain` DI module split.
+
 ### L-2026-05-04-02 · `BoxWithConstraints { maxWidth < 600.dp }` substitutes for `WindowWidthSizeClass` in CMP
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, compose-multiplatform, adaptive-layout
 **Applies to:** Lifting an Android Composable that branches on window size class to commonMain
