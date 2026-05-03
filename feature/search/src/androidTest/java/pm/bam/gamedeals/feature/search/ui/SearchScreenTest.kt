@@ -189,7 +189,7 @@ class SearchScreenTest {
         openAndTestFilters()
 
         composeTestRule.onNodeWithTag(SearchFiltersPriceRangeLabelTag)
-            .assertTextContains(rangeString(SearchFilterMinPrice, SearchFilterMinPrice, SearchFilterMaxPrice))
+            .assertTextContains(rangeString(SearchFilterMinPrice, SearchFilterMaxPrice, SearchFilterMaxPrice))
 
     }
     // TODO - Add tests for Price range change when RangeSlider value change supported with Input action, like SwipeRight.
