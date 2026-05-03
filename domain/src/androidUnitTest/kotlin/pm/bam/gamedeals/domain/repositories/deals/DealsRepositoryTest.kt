@@ -1,7 +1,10 @@
 package pm.bam.gamedeals.domain.repositories.deals
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.room.withTransaction
+import androidx.room.TransactionScope
+import androidx.room.Transactor
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -45,7 +48,30 @@ class DealsRepositoryTest {
     private val now = 1_000_000L
     private val clock = Clock { now }
 
+    private val transactor: Transactor = mockk()
+    private val txScope: TransactionScope<Unit> = mockk()
+
     private val impl = DealsRepository(logger, dealsDao, domainDatabase, cheapsharkSource, clock)
+
+    /**
+     * Wires Room KMP's two-layer transaction API so the body inside
+     * `useWriterConnection { it.immediateTransaction { ... } }` runs in-test
+     * without a real database. Mirrors the pre-Room-KMP `withTransaction` capture
+     * pattern but for the new commonMain shape (Room 2.7+). The inner
+     * `immediateTransaction` block has a `TransactionScope<R>` receiver.
+     */
+    private fun stubTransaction() {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        mockkStatic("androidx.room.TransactorKt")
+        val outer = slot<suspend (Transactor) -> Unit>()
+        val inner = slot<suspend TransactionScope<Unit>.() -> Unit>()
+        coEvery { domainDatabase.useWriterConnection<Unit>(capture(outer)) } coAnswers {
+            outer.captured.invoke(transactor)
+        }
+        coEvery { transactor.immediateTransaction<Unit>(capture(inner)) } coAnswers {
+            inner.captured.invoke(txScope)
+        }
+    }
 
 
     @Test
@@ -81,9 +107,7 @@ class DealsRepositoryTest {
         val stamped: Deal = mockk()
         every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
 
-        mockkStatic("androidx.room.RoomDatabaseKt")
-        val transactionLambda = slot<suspend () -> Unit>()
-        coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
+        stubTransaction()
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
@@ -110,9 +134,7 @@ class DealsRepositoryTest {
 
         coEvery { dealsDao.getStoreDeals(storeId) } returns listOf(expired)
 
-        mockkStatic("androidx.room.RoomDatabaseKt")
-        val transactionLambda = slot<suspend () -> Unit>()
-        coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
+        stubTransaction()
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
         coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
