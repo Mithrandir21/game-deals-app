@@ -17,14 +17,13 @@ kotlin {
 
             implementation(libs.coroutines)
             implementation(libs.room.runtime.multiplatform)
+            implementation(libs.koin.core)
 
             implementation(project(":common"))
+            implementation(project(":logging"))
         }
 
         androidMain.dependencies {
-            implementation(project(":logging"))
-
-            implementation(libs.koin.core)
             implementation(libs.koin.android)
 
             implementation(libs.room.runtime)

@@ -6,7 +6,10 @@ import androidx.paging.LoadType
 import androidx.paging.PagingConfig
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
-import androidx.room.withTransaction
+import androidx.room.TransactionScope
+import androidx.room.Transactor
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -56,14 +59,25 @@ internal class DealsMediatorTest {
     private lateinit var mediator: DealsMediator
     private val state = PagingState<Int, Deal>(listOf(), null, PagingConfig(pageSize), pageSize)
 
+    private val transactor: Transactor = mockk()
+    private val txScope: TransactionScope<Unit> = mockk()
+
     @Before
     fun setup() {
         mediator = DealsMediator(domainDatabase, cheapsharkSource, defaultStoreId, pageSize, logger)
 
-        // Captures and invokes the Lambda for "withTransaction"
+        // Wires Room KMP's two-layer transaction API so the body inside
+        // useWriterConnection { it.immediateTransaction { ... } } runs in-test.
         mockkStatic("androidx.room.RoomDatabaseKt")
-        val transactionLambda = slot<suspend () -> Unit>()
-        coEvery { domainDatabase.withTransaction(capture(transactionLambda)) } coAnswers { transactionLambda.captured.invoke() }
+        mockkStatic("androidx.room.TransactorKt")
+        val outer = slot<suspend (Transactor) -> Unit>()
+        val inner = slot<suspend TransactionScope<Unit>.() -> Unit>()
+        coEvery { domainDatabase.useWriterConnection<Unit>(capture(outer)) } coAnswers {
+            outer.captured.invoke(transactor)
+        }
+        coEvery { transactor.immediateTransaction<Unit>(capture(inner)) } coAnswers {
+            inner.captured.invoke(txScope)
+        }
     }
 
 
@@ -103,7 +117,7 @@ internal class DealsMediatorTest {
 
         coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 1) { domainDatabase.withTransaction(any()) }
+        coVerify(exactly = 1) { domainDatabase.useWriterConnection<Unit>(any()) }
 
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
         coVerify(exactly = 0) { pagingDao.clearStorePage(any()) }
@@ -131,7 +145,7 @@ internal class DealsMediatorTest {
 
         coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 0) { domainDatabase.withTransaction(any()) }
+        coVerify(exactly = 0) { domainDatabase.useWriterConnection<Unit>(any()) }
 
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
         coVerify(exactly = 0) { pagingDao.clearStorePage(any()) }
@@ -160,7 +174,7 @@ internal class DealsMediatorTest {
 
         coVerify(exactly = 1) { pagingDao.getStorePage(defaultStoreId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 0) { domainDatabase.withTransaction(any()) }
+        coVerify(exactly = 0) { domainDatabase.useWriterConnection<Unit>(any()) }
         coVerify(exactly = 0) { logger.fatalThrowable(any(), any()) }
     }
 
@@ -188,7 +202,7 @@ internal class DealsMediatorTest {
 
         coVerify(exactly = 0) { pagingDao.getStorePage(defaultStoreId) }
         coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 1) { domainDatabase.withTransaction(any()) }
+        coVerify(exactly = 1) { domainDatabase.useWriterConnection<Unit>(any()) }
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(defaultStoreId) }
         coVerify(exactly = 1) { pagingDao.clearStorePage(defaultStoreId) }

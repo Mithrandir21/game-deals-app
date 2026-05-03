@@ -7,7 +7,8 @@ import androidx.paging.LoadType.PREPEND
 import androidx.paging.LoadType.REFRESH
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
-import androidx.room.withTransaction
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.domain.db.DomainDatabase
@@ -57,19 +58,21 @@ internal class DealsMediator(
 
             debug(logger) { "deals size: ${deals.size} - ${deals.map { it.gameID }}" }
 
-            domainDatabase.withTransaction {
-                if (loadType == REFRESH) {
-                    debug(logger) { "Domain Refreshing" }
-                    dealsDao.clearDealsForStore(storeId)
-                    pagingDao.clearStorePage(storeId)
+            domainDatabase.useWriterConnection { transactor ->
+                transactor.immediateTransaction {
+                    if (loadType == REFRESH) {
+                        debug(logger) { "Domain Refreshing" }
+                        dealsDao.clearDealsForStore(storeId)
+                        pagingDao.clearStorePage(storeId)
+                    }
+
+                    val newDealPage = DealPage(storeId, pageNumber + 1)
+                    debug(logger) { "New DealPage: $newDealPage" }
+
+                    pagingDao.insert(newDealPage)
+                    dealsDao.addDeals(*deals.toTypedArray())
+                    debug(logger) { "Stored new Deals" }
                 }
-
-                val newDealPage = DealPage(storeId, pageNumber + 1)
-                debug(logger) { "New DealPage: $newDealPage" }
-
-                pagingDao.insert(newDealPage)
-                dealsDao.addDeals(*deals.toTypedArray())
-                debug(logger) { "Stored new Deals" }
             }
 
             return MediatorResult.Success(endOfPaginationReached = deals.isEmpty())

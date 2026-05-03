@@ -4,7 +4,8 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.room.withTransaction
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.time.Clock
@@ -72,11 +73,13 @@ class DealsRepository internal constructor(
         expiresAtMillis = { it.expires },
         refresh = {
             val expiresAt = clock.nowMillis() + DEALS_TTL_MILLIS
-            domainDatabase.withTransaction {
-                dealsDao.clearDealsForStore(storeId)
-                cheapsharkSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
-                    .map { it.copy(expires = expiresAt) }
-                    .let { dealsDao.addDeals(*it.toTypedArray()) }
+            domainDatabase.useWriterConnection { transactor ->
+                transactor.immediateTransaction {
+                    dealsDao.clearDealsForStore(storeId)
+                    cheapsharkSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
+                        .map { it.copy(expires = expiresAt) }
+                        .let { dealsDao.addDeals(*it.toTypedArray()) }
+                }
             }
         }
     )
