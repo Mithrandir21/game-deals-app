@@ -26,6 +26,7 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
 class StoreScreenTest {
 
@@ -51,11 +52,11 @@ class StoreScreenTest {
         every { deal.thumb } returns dealThumb
         val dealPaging: Flow<PagingData<Deal>> = flowOf(PagingData.from(listOf(deal)))
         val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
-        val storeDetails: StateFlow<Store?> = MutableStateFlow(null)
+        val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
 
         every { viewModel.deals } returns dealPaging
         every { viewModel.dealDetails } returns dealDetails
-        every { viewModel.storeDetails } returns storeDetails
+        every { viewModel.uiState } returns uiState
     }
 
 
@@ -87,7 +88,7 @@ class StoreScreenTest {
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.storeDetails }
+        verify(exactly = 1) { viewModel.uiState }
     }
 
     @Test
@@ -104,7 +105,7 @@ class StoreScreenTest {
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.storeDetails }
+        verify(exactly = 1) { viewModel.uiState }
     }
 
     @Test
@@ -126,7 +127,7 @@ class StoreScreenTest {
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.storeDetails }
+        verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any()) }
     }
 
@@ -140,10 +141,9 @@ class StoreScreenTest {
             every { storeName } returns name
         }
 
-        val storeDetails: StateFlow<Store?> = MutableStateFlow(store)
+        val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Data(store))
 
-
-        every { viewModel.storeDetails } returns storeDetails
+        every { viewModel.uiState } returns uiState
 
         composeTestRule.setContent {
             GameDealsTheme {
@@ -163,7 +163,7 @@ class StoreScreenTest {
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.storeDetails }
+        verify(exactly = 1) { viewModel.uiState }
     }
 
     @Test
@@ -187,7 +187,7 @@ class StoreScreenTest {
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.storeDetails }
+        verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { onBack.invoke() }
     }
 }
