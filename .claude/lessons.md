@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-02 · `BoxWithConstraints { maxWidth < 600.dp }` substitutes for `WindowWidthSizeClass` in CMP
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, compose-multiplatform, adaptive-layout
+**Applies to:** Lifting an Android Composable that branches on window size class to commonMain
+
+`androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()` and `WindowWidthSizeClass` are Android-only. For a screen that just needs "is this a phone or wider," wrap the layout in `BoxWithConstraints` and branch on `maxWidth < 600.dp` (or whatever breakpoint matters). It's a literal substitute, no behavior change on Android, works on every CMP target. For multi-breakpoint adaptive layouts the call shape gets uglier — but for the binary compact-vs-not case this is the path of least resistance.
+
+**Source:** Phase 5.10 — `:feature:game` migration.
+
+### L-2026-05-04-01 · `androidx.paging` is split: `paging-common` is KMP, `paging-compose` is not
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, paging, compose-multiplatform
+**Applies to:** Migrating a feature module that uses paging to KMP
+
+When migrating a paging-using feature, `androidx.paging:paging-common` (3.3+) is multiplatform-capable so types like `PagingData`, `LoadState`, and `cachedIn` work in commonMain — a paging-aware ViewModel can move freely. `androidx.paging:paging-compose` (`LazyPagingItems`, `collectAsLazyPagingItems`, `itemKey`) is Android-only; any Composable consuming it stays androidMain. JetBrains maintains a multiplatform fork, but adopt it only when an iOS consumer actually motivates it — until then, the natural cut is "ViewModel commonMain, Screen androidMain" and that has zero design overhead.
+
+**Source:** Phase 5.13 — `:feature:store` migration.
+
 ### L-2026-05-03-06 · Same-named `.kt` files across KMP source sets generate duplicate JVM class names
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** kmp, kotlin, jvm, source-sets, file-naming
 **Applies to:** KMP modules where commonMain and androidMain (or any two source sets reaching the same target) both contain a top-level-functions file with the same filename — typical when splitting a file into a commonMain core + androidMain platform-specific implementation
