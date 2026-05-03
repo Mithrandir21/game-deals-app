@@ -10,7 +10,7 @@ internal class SentryLoggingListener : LoggingInterface {
 
     override fun isEnabled(): Boolean = Sentry.isEnabled()
 
-    override fun getLoggerTag(): String = SentryLoggingListener::class.java.simpleName
+    override fun getLoggerTag(): String = SentryLoggingListener::class.simpleName.orEmpty()
 
     override fun onLog(level: LogLevel, message: String, tag: String?, throwable: Throwable?) {
         when (level) {
