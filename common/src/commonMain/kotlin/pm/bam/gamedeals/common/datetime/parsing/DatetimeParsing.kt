@@ -1,7 +1,7 @@
 package pm.bam.gamedeals.common.datetime.parsing
 
-import java.time.Instant
-import java.time.LocalDateTime
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
 
 interface DatetimeParsing {
 

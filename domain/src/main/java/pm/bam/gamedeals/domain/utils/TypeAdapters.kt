@@ -2,13 +2,16 @@ package pm.bam.gamedeals.domain.utils
 
 import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import pm.bam.gamedeals.common.serializer.Serializer
 import pm.bam.gamedeals.common.serializer.deserialize
 import pm.bam.gamedeals.common.serializer.serialize
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.Store
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import javax.inject.Inject
 
 @ProvidedTypeConverter
@@ -25,10 +28,12 @@ class StoreImagesConverter @Inject constructor(
 @ProvidedTypeConverter
 class LocalDatetimeConverter @Inject constructor() {
     @TypeConverter
-    fun convertToJsonString(localDateTime: LocalDateTime): Long = localDateTime.toEpochSecond(ZoneOffset.UTC)
+    fun convertToJsonString(localDateTime: LocalDateTime): Long =
+        localDateTime.toInstant(TimeZone.UTC).epochSeconds
 
     @TypeConverter
-    fun convertToObject(json: Long): LocalDateTime = LocalDateTime.ofEpochSecond(json, 0, ZoneOffset.UTC)
+    fun convertToObject(json: Long): LocalDateTime =
+        Instant.fromEpochSeconds(json).toLocalDateTime(TimeZone.UTC)
 }
 
 @ProvidedTypeConverter
