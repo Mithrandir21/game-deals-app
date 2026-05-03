@@ -12,17 +12,18 @@ kotlin {
             // Compiler plugin is applied (Phase 0 lesson). CMP's `compose.runtime`
             // resolves to the multiplatform Compose runtime artifact for each target.
             implementation(compose.runtime)
+
+            implementation(project(":common"))
+            implementation(project(":domain"))
+            implementation(libs.kotlinx.collections.immutable)
         }
 
         androidMain.dependencies {
             implementation(project(":logging"))
-            implementation(project(":common"))
-            implementation(project(":domain"))
 
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
-            implementation(libs.kotlinx.collections.immutable)
             implementation(libs.androidx.compose.activity)
             implementation(libs.androidx.compose.navigation)
             implementation(libs.androidx.lifecycle.viewmodel)
