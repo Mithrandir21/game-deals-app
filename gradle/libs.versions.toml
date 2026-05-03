@@ -6,6 +6,16 @@ google-services-plugin = "4.4.4"
 firebase-crashlytics-plugin = "3.0.6"
 firebase-performance-plugin = "2.0.1"
 
+# KMP / CMP migration — registered now, used in subsequent phases.
+compose-multiplatform = "1.10.3"
+ktor = "3.0.3"
+koin = "4.0.0"
+koin-compose = "4.0.0"
+sentry-kmp = "0.13.0"
+kotlinx-datetime = "0.6.1"
+coil3 = "3.0.4"
+sandwich-ktor = "2.1.3"
+
 activity-compose = "1.11.0"
 core-ktx = "1.17.0"
 lifecycle-runtime-ktx = "2.9.4"
@@ -149,6 +159,46 @@ android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", ve
 kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "jetbrains-kotlin-plugin" }
 ksp-gradle-plugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "google-ksp-plugin" }
 compose-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "jetbrains-kotlin-plugin" }
+compose-multiplatform-gradle-plugin = { group = "org.jetbrains.compose", name = "compose-gradle-plugin", version.ref = "compose-multiplatform" }
+
+# KMP / CMP migration — registered now, used in subsequent phases.
+# Ktor — phase 3 networking swap.
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+# Koin — phase 4 DI swap.
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin-compose" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin-compose" }
+koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
+
+# Sentry — phase 4 observability swap (replaces Firebase Crashlytics + Performance).
+sentry-kotlin-multiplatform = { group = "io.sentry", name = "sentry-kotlin-multiplatform", version.ref = "sentry-kmp" }
+
+# kotlinx-datetime — phase 2 date/time swap (replaces java.time).
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
+
+# Coil 3 — phase 5 image-loading swap (replaces Coil 2).
+coil3 = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil3" }
+coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
+coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
+
+# Paging KMP — phase 5 paging swap. AndroidX paging-common is multiplatform-capable
+# at 3.3+, so commonMain uses paging-common; androidMain keeps paging-runtime/-compose.
+androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
+
+# Room KMP — phase 2 storage swap. Room 2.7+ supports KMP via the same artifact;
+# only the build wiring changes. New entries for the KMP-specific glue:
+room-runtime-multiplatform = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+
+# Sandwich-ktor — phase 3 networking swap (replaces sandwich-retrofit).
+sandwich-ktor = { group = "com.github.skydoves", name = "sandwich-ktor", version.ref = "sandwich-ktor" }
 
 
 [plugins]
@@ -171,3 +221,14 @@ gamedeals-android-library-compose = { id = "pm.bam.gamedeals.android.library.com
 gamedeals-android-ksp = { id = "pm.bam.gamedeals.android.ksp" }
 gamedeals-android-feature = { id = "pm.bam.gamedeals.android.feature" }
 gamedeals-android-application = { id = "pm.bam.gamedeals.android.application" }
+
+# KMP convention plugins. Modules migrate from android-only conventions to
+# these one phase at a time; both sets coexist throughout the migration.
+gamedeals-kmp-library = { id = "pm.bam.gamedeals.kmp.library" }
+gamedeals-kmp-library-compose = { id = "pm.bam.gamedeals.kmp.library.compose" }
+gamedeals-kmp-ksp = { id = "pm.bam.gamedeals.kmp.ksp" }
+gamedeals-kmp-feature = { id = "pm.bam.gamedeals.kmp.feature" }
+
+# Compose Multiplatform plugin (applied transitively by the kmp.library.compose
+# convention; aliased here so build-logic can resolve it on the classpath).
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
