@@ -206,10 +206,9 @@ class CheapsharkSourceImplTest {
           }"""
 
         // language=JSON
-        // storeID is a JSON string in the live cheapshark response, not an int.
         private const val STORE_LIST_BODY = """[
             {
-              "storeID": "1",
+              "storeID": 1,
               "storeName": "Steam",
               "isActive": 1,
               "images": {
