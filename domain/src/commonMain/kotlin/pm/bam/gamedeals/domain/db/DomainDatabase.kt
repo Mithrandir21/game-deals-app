@@ -1,7 +1,9 @@
 package pm.bam.gamedeals.domain.db
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
@@ -21,6 +23,7 @@ import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
 @Database(version = 3, entities = [Deal::class, DealPage::class, Game::class, Store::class, Release::class, Giveaway::class], exportSchema = false)
 @TypeConverters(StoreImagesConverter::class, GiveawayPlatformsConverter::class, LocalDatetimeConverter::class)
+@ConstructedBy(DomainDatabaseConstructor::class)
 abstract class DomainDatabase : RoomDatabase() {
 
     internal abstract fun getDealsDao(): DealsDao
@@ -35,4 +38,10 @@ abstract class DomainDatabase : RoomDatabase() {
 
     internal abstract fun getGiveawaysDao(): GiveawaysDao
 
+}
+
+// Room generates the per-platform `actual` implementations from the `@Database` declaration.
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+expect object DomainDatabaseConstructor : RoomDatabaseConstructor<DomainDatabase> {
+    override fun initialize(): DomainDatabase
 }
