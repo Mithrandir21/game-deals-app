@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.remote.cheapshark
 
-import android.util.Log
 import com.skydoves.sandwich.getOrThrow
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.Deal
@@ -99,26 +98,12 @@ internal class CheapsharkSourceImpl @Inject constructor(
             .getOrThrow()
             .map { it.toRelease() }
 
-    override suspend fun fetchStores(): List<Store> {
-        // TEMP DEBUG (phase-3 silent-failure investigation): bracket the suspend call
-        // to discriminate hang ("calling getStores" with no follow-up) vs cancellation
-        // vs exception. Remove once cause is found. Lives in androidMain so Log.d
-        // surfaces under the existing `Ktor` Logcat filter the user is using.
-        Log.d("Ktor", "fetchStores: calling storesApi.getStores")
-        val response = try {
-            storesApi.getStores()
-        } catch (t: Throwable) {
-            Log.d("Ktor", "fetchStores: storesApi.getStores threw ${t::class.simpleName}: ${t.message}")
-            throw t
-        }
-        Log.d("Ktor", "fetchStores: got ApiResponse: $response")
-        return response
+    override suspend fun fetchStores(): List<Store> =
+        storesApi.getStores()
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .map { it.toStore() }
-            .also { Log.d("Ktor", "fetchStores: unwrapped ${it.size} stores") }
-    }
 
     private companion object {
         private val TAG: String = CheapsharkSourceImpl::class.simpleName.orEmpty()

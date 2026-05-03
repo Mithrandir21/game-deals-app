@@ -49,9 +49,15 @@ class RemoteNetworkModule {
             }
 
             when (remoteBuildUtil.buildType()) {
+                // LogLevel.HEADERS instead of BODY: the BODY level reads the response
+                // body to log it, which on the OkHttp engine consumes the one-shot
+                // stream so ContentNegotiation never sees it — the body<T>() call
+                // hangs forever waiting for bytes that have already been read.
+                // HEADERS still logs request + response status lines + headers but
+                // leaves the body intact for ContentNegotiation to deserialise.
                 RemoteBuildType.DEBUG -> install(Logging) {
                     logger = KtorLogcatLogger
-                    level = LogLevel.BODY
+                    level = LogLevel.HEADERS
                 }
                 RemoteBuildType.RELEASE -> Unit
             }
