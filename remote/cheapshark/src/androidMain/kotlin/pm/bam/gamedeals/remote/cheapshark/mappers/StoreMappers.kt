@@ -14,7 +14,7 @@ internal fun RemoteStore.RemoteStoreImages.toStoreImages(): Store.StoreImages =
 
 internal fun RemoteStore.toStore(): Store =
     Store(
-        storeID = storeID,
+        storeID = storeID.toInt(),
         storeName = storeName,
         isActive = isActive.toBooleanStrict(),
         images = images.toStoreImages()
