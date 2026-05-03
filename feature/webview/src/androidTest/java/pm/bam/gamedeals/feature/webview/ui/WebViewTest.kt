@@ -1,29 +1,26 @@
 package pm.bam.gamedeals.feature.webview.ui
 
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.platform.app.InstrumentationRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.hamcrest.Matcher
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.feature.webview.R
@@ -31,7 +28,7 @@ import pm.bam.gamedeals.feature.webview.R
 class WebViewTest {
 
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -96,7 +93,7 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val mainFrameRequest = mockk<WebResourceRequest> {
+        val mainFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns true
         }
         val error = mockk<WebResourceError>(relaxed = true)
@@ -124,7 +121,7 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val mainFrameRequest = mockk<WebResourceRequest> {
+        val mainFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns true
         }
         val errorResponse = mockk<WebResourceResponse>(relaxed = true)
@@ -152,13 +149,19 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val subFrameRequest = mockk<WebResourceRequest> {
+        val subFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns false
         }
         val error = mockk<WebResourceError>(relaxed = true)
         val errorResponse = mockk<WebResourceResponse>(relaxed = true)
 
         invokeOnWebViewClient { client, view ->
+            // Pin `loading = true` before exercising the sub-frame error callbacks. The
+            // real WebView is loading https://example.com on the emulator and may have
+            // already fired onPageFinished (which clears loading) by the time we reach
+            // here — that would mask the actual assertion we want to make: sub-frame
+            // failures themselves do NOT clear loading.
+            client.onPageStarted(view, "https://example.com", null)
             client.onReceivedError(view, subFrameRequest, error)
             client.onReceivedHttpError(view, subFrameRequest, errorResponse)
         }
@@ -171,21 +174,33 @@ class WebViewTest {
     }
 
     /**
-     * Locates the [WebView] inside the composed tree via Espresso and invokes the supplied
-     * action against its [WebViewClient]. The action runs on the main thread, which is the
-     * same thread that the real WebView would use to deliver these callbacks.
+     * Locates the [WebView] inside the activity's view tree and invokes the supplied
+     * action against its [WebViewClient] on the main thread.
+     *
+     * Walks the view hierarchy directly rather than going through Espresso's `onView`,
+     * which races the AndroidView attachment + window-focus gates and fails with
+     * `RootViewWithoutFocusException` against `createComposeRule()` on the Pixel 3 API 35
+     * emulator. `composeTestRule.waitForIdle()` settles the Compose tree first; the WebView
+     * is then guaranteed to be attached as a child of the AndroidView's host view.
      */
     private fun invokeOnWebViewClient(action: (WebViewClient, WebView) -> Unit) {
-        onView(isAssignableFrom(WebView::class.java)).perform(object : ViewAction {
-            override fun getConstraints(): Matcher<View> = isAssignableFrom(WebView::class.java)
+        composeTestRule.waitForIdle()
+        val activity = composeTestRule.activity
+        val webView = activity.window.decorView.findFirstWebView()
+            ?: error("WebView not found in the composed activity")
+        composeTestRule.runOnUiThread {
+            action(webView.webViewClient, webView)
+        }
+        composeTestRule.waitForIdle()
+    }
 
-            override fun getDescription(): String = "Invoke a WebViewClient callback"
-
-            override fun perform(uiController: UiController, view: View) {
-                val webView = view as WebView
-                action(webView.webViewClient, webView)
-                uiController.loopMainThreadUntilIdle()
+    private fun View.findFirstWebView(): WebView? {
+        if (this is WebView) return this
+        if (this is ViewGroup) {
+            for (i in 0 until childCount) {
+                getChildAt(i).findFirstWebView()?.let { return it }
             }
-        })
+        }
+        return null
     }
 }

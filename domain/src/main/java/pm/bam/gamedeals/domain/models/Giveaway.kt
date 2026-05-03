@@ -1,3 +1,5 @@
+@file:UseSerializers(ImmutableListSerializer::class)
+
 package pm.bam.gamedeals.domain.models
 
 
@@ -9,8 +11,10 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.properties.Properties
 import kotlinx.datetime.LocalDateTime
+import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 
 @Immutable

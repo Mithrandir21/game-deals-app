@@ -28,12 +28,6 @@ material = "1.13.0"
 
 paging = "3.3.6"
 
-hilt-core = "2.57.2"
-hilt-plugin = "2.57.2"
-hilt-compiler = "1.3.0"
-hilt-navigation = "1.3.0"
-hilt-testing = "2.57.2"
-
 okio = "3.16.2"
 okhttp = "5.2.1"
 okhttp-logging = "5.2.1"
@@ -88,12 +82,6 @@ material = { group = "com.google.android.material", name = "material", version.r
 
 androidx-paging = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
-
-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt-core" }
-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt-core" }
-hilt-androidx-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hilt-compiler" }
-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation" }
-hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt-testing" }
 
 coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 

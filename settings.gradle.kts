@@ -21,7 +21,6 @@ dependencyResolutionManagement {
 rootProject.name = "Game Deals"
 
 include(":app")
-include(":base")
 include(":common")
 include(":common:ui")
 include(":logging")

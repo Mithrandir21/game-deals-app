@@ -59,7 +59,7 @@ android {
         versionCode = 9
         versionName = "1.0.6"
 
-        testInstrumentationRunner = "pm.bam.gamedeals.HiltTestRunner"
+        testInstrumentationRunner = "pm.bam.gamedeals.KoinTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -77,13 +77,12 @@ android {
 
 dependencies {
 
-    implementation(project(":base"))
     implementation(project(":logging"))
     implementation(project(":common"))
     implementation(project(":common:ui"))
     implementation(project(":domain"))
 
-    // Remote source adapters — wired into Hilt at the app boundary so :domain
+    // Remote source adapters — wired in Koin at the app boundary so :domain
     // stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
     implementation(project(":remote:cheapshark"))
     implementation(project(":remote:gamerpower"))
@@ -135,20 +134,15 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.compose.junit4)
-    androidTestImplementation(libs.hilt.testing)
     androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.kotlinx)
-    androidTestImplementation(libs.kotlinx.retrofit)
-    androidTestImplementation(libs.okhttp)
-    androidTestImplementation(libs.retrofit)
-    androidTestImplementation(libs.sandwich)
+    androidTestImplementation(libs.koin.test)
+    androidTestImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.room)
     androidTestImplementation(libs.room.runtime)
     androidTestImplementation(project(":remote:cheapshark"))
     androidTestImplementation(project(":remote:gamerpower"))
-    kspAndroidTest(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.compose.test)

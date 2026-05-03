@@ -32,7 +32,7 @@
 - **Sentry DSN deferred.** `SENTRY_DSN` constant in `GameDealsApplication` is `""` until a project is provisioned. `initSentry()` early-returns; `Sentry.isEnabled()` returns false; `SentryLoggingListener.isEnabled()` returns false; the listener is wired but no events flow. Provisioning a DSN is a one-line change.
 - **`LoggingBaseActivity` + `LoggingBaseFragment` deleted.** Per the plan. Single-activity Compose app — `LoggingBaseActivity`'s ~30 lifecycle log calls were the entire reason for the inheritance, and they were debug-noise rather than load-bearing instrumentation.
 - **Firebase Analytics call sites already gone after 4.2.** PLAN.md scheduled a separate 4.5 audit step but the only call sites in production code were one injected-but-unused field on `MainActivity` and its provider — both fell out of the `MainActivity` rewrite. Folded 4.5 into 4.6 cleanup.
-- **androidTest rewrite deferred to Phase 4.7.** `:app/src/androidTest/` still uses `@HiltAndroidTest`, `HiltAndroidRule`, `TestCheapSharkNetworkModule`, etc. The androidTest sources compile (Hilt androidTest deps preserved in `:app/build.gradle.kts`), but actual test runs would fail at runtime since Hilt has no `@HiltAndroidApp` to wire against. Follow-up will rewrite to `KoinTestRule` + `declareMock`.
+- **androidTest rewrite deferred initially to a follow-up "Phase 4 tidy" PR.** `:app/src/androidTest/` was not just runtime-broken but also compile-broken (the `Test*NetworkModule.kt` files still used Retrofit's `retrofit.create(DealsApi::class.java)` against API classes that became Ktor wrappers in Phase 3, plus referenced the `@CheapShark`/`@GamerPower`/`@Domain` qualifiers that were deleted in Phase 4.2/4.3, plus pulled in mockwebserver:5.2.1 which conflicts with Ktor's transitive okhttp 4.12.0). Resolved in the tidy PR by rewriting the androidTest infra to Koin + Ktor MockEngine — see commits below.
 
 ### Mid-stream bug fix — DealsApi 404 from double URL-encoding
 After 4.4 restored runtime, the user's smoke test caught a 404 when tapping any deal card. CheapShark's `/deals` list endpoint returns dealIDs already percent-encoded (e.g. `…%3D`); the original Retrofit code used `@Query("id", encoded = true)` to pass the value through verbatim. Phase 3's `DealsApi.getDeal` port to Ktor's `parameter("id", id)` lost the `encoded = true` semantic — Ktor re-encoded `%` → `%25`, producing `…%253D` on the wire, and the lookup 404'd. Fix: `url { encodedParameters.append("id", id) }`. Regression test added at `remote/cheapshark/src/androidUnitTest/.../api/DealsApiTest.kt`. Captured as `L-2026-05-03-03`.
@@ -57,11 +57,18 @@ After 4.4 restored runtime, the user's smoke test caught a 404 when tapping any 
 
 Both confirmed; no supersessions.
 
-## Deferred follow-ups
+## Phase 4 tidy PR
 
-- **Phase 4.7 — androidTest rewrite to Koin.** The 6 Hilt-using files under `:app/src/androidTest/` need rewriting (`@HiltAndroidTest`, `HiltAndroidRule`, `TestCheapSharkNetworkModule`, etc.). Will let us drop the remaining Hilt catalog entries.
-- **`:base` module fate.** Empty after `LoggingBase*.kt` deletion. Either drop from `settings.gradle.kts` or repurpose.
-- **`google-services.json` removal.** Still present in `:app/`; harmless without the plugins applied. Drop with the `:base` cleanup.
+Bundled three deferred items into one follow-up branch (`feature/kmp-migration-phase-4-tidy`):
+
+- **androidTest rewrite to Koin + Ktor MockEngine.** New `KoinTestRunner` swaps in a `TestGameDealsApplication` that loads the production Koin graph with two test-override modules layered on top: `testNetworkOverridesModule` redefines the `cheapshark`/`gamerpower` `HttpClient` bindings to use `MockEngine` backed by `FixtureRequestHandler` (a Ktor port of the old `FixtureMockDispatcher`); `testDatabaseOverridesModule` swaps the production Room DB for an in-memory one. `HomeToStoreToDealJourneyTest` body is unchanged from a Compose-assertion perspective — only the test-infra wiring around it changed. JSON fixtures preserved verbatim under `androidTest/assets/fixtures/`.
+- **`:base` module deleted.** No production sources after `LoggingBase*.kt` deletion. Removed from `settings.gradle.kts`; `implementation(project(":base"))` removed from `:app/build.gradle.kts`; `base/` directory deleted.
+- **`google-services.json` removed** from `:app/`.
+
+After this, all Hilt catalog entries (`hilt-core`/`hilt-plugin`/`hilt-compiler`/`hilt-navigation`/`hilt-testing` versions and 5 Hilt libraries) were dropped — nothing in the project references them.
+
+## Remaining follow-ups
+
 - **Sentry DSN provisioning.** When a Sentry project is set up, set `SENTRY_DSN` in `GameDealsApplication`.
 
 ## Next phase
