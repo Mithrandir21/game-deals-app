@@ -12,8 +12,6 @@ kotlin {
             api(libs.kotlinx)
             implementation(libs.coroutines)
 
-            // Ktor — phase 3 networking swap. Transitional state: Retrofit (androidMain) and
-            // Ktor (commonMain) coexist while :remote:cheapshark / :remote:gamerpower migrate.
             api(libs.ktor.client.core)
             api(libs.ktor.client.content.negotiation)
             api(libs.ktor.client.logging)
@@ -35,16 +33,6 @@ kotlin {
             // cross-module variant mismatch on iOS targets.
             implementation(project(":logging"))
             implementation(project(":common"))
-
-            // Retrofit/Sandwich kept on androidMain during the transition. The exception
-            // transformer handles both Retrofit and Ktor exceptions until 3.3 finishes.
-            implementation(libs.okio)
-            implementation(libs.okhttp)
-            implementation(libs.okhttp.logging)
-            implementation(libs.retrofit)
-            implementation(libs.kotlinx.retrofit)
-            implementation(libs.sandwich)
-            implementation(libs.sandwich.serializer)
         }
 
         iosMain.dependencies {
@@ -56,6 +44,7 @@ kotlin {
                 implementation(libs.junit)
                 implementation(libs.mockk)
                 implementation(libs.coroutines.testing)
+                implementation(libs.ktor.client.mock)
             }
         }
     }

@@ -1,10 +1,48 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
+    alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
 }
 
-android {
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx)
+            implementation(libs.coroutines)
+            implementation(libs.kotlinx.collections.immutable)
+
+            // :remote api-exposes ktor-client-core + content-negotiation + logging +
+            // ktor-serialization-kotlinx-json + sandwich-ktor for downstream use.
+            api(project(":remote"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.material)
+
+            implementation(libs.hilt.android)
+
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":domain"))
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(project(":testing"))
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.coroutines.testing)
+                implementation(libs.ktor.client.mock)
+            }
+        }
+    }
+}
+
+extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.remote.cheapshark"
 
     buildFeatures {
@@ -13,35 +51,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":remote"))
-    implementation(project(":logging"))
-    implementation(project(":common"))
-    implementation(project(":domain"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.coroutines)
-    implementation(libs.kotlinx.collections.immutable)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.okio)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.retrofit)
-    implementation(libs.kotlinx.retrofit)
-    implementation(libs.sandwich)
-    implementation(libs.sandwich.serializer)
-
-    testImplementation(project(":testing"))
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
-    testImplementation(libs.mockwebserver)
-    testImplementation(libs.okhttp)
-    testImplementation(libs.kotlinx)
+    add("kspAndroid", libs.hilt.compiler)
+    add("kspAndroid", libs.hilt.androidx.compiler)
 }

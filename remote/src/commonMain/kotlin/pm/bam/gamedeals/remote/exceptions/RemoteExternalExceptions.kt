@@ -7,15 +7,10 @@ import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_FOR
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_METHOD_NOT_ALLOWED
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_NOT_FOUND
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_UNAUTHORIZED
-import retrofit2.HttpException
 
 /*
- * Internal Note: This class is specifically created so that HttpExceptions produced by Retrofit can be propagated to other modules
- * without needing those modules to include the Retrofit library just to be able to receive Retrofit specific exceptions.
- *
- * Phase 3 transitional: handles both Retrofit `HttpException` and Ktor `ResponseException` while
- * `:remote:cheapshark` and `:remote:gamerpower` migrate from Retrofit to Ktor. The Retrofit
- * extension goes away when phase 3.3 finishes.
+ * Internal Note: This file represents HTTP exceptions in a transport-agnostic way so that
+ * other modules don't have to know whether the underlying client is Ktor or anything else.
  */
 
 /**
@@ -38,9 +33,6 @@ sealed class RemoteHttpException(open val code: Int) : RuntimeException() {
         internal const val CODE_METHOD_NOT_ALLOWED = 405
     }
 }
-
-
-internal fun HttpException.toRemoteHttpException(): RemoteHttpException = code().toRemoteHttpException()
 
 
 internal fun ResponseException.toRemoteHttpException(): RemoteHttpException =

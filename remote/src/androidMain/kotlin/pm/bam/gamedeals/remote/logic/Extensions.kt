@@ -4,18 +4,22 @@ import com.skydoves.sandwich.ApiResponse
 import com.skydoves.sandwich.onError
 import com.skydoves.sandwich.onException
 import com.skydoves.sandwich.onSuccess
-import com.skydoves.sandwich.retrofit.statusCode
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.remote.exceptions.toRemoteHttpException
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 
 /**
- * Maps [Any] type of the [ApiResponse.Failure.Error] or [ApiResponse.Failure.Exception] to
- * [ApiResponse.Failure.Exception] containing either a [Throwable] produced by the [transformer].
+ * Maps any [ApiResponse.Failure.Exception] to another [ApiResponse.Failure.Exception]
+ * containing a [Throwable] produced by the [transformer].
+ *
+ * After the Phase 3 Ktor swap, every API failure (HTTP-status or transport-level)
+ * arrives as `Failure.Exception` because the API classes wrap calls in try/catch
+ * and Ktor's `expectSuccess = true` turns 4xx/5xx into `ResponseException`s. The
+ * `Failure.Error` shape (status code without an exception) was a sandwich-retrofit
+ * artefact and is no longer produced.
  *
  * @param transformer A transformer that receives [Throwable] and returns [Throwable].
  *
@@ -26,7 +30,6 @@ fun <T> ApiResponse<T>.mapAnyFailure(transformer: Throwable.() -> Throwable): Ap
     contract { callsInPlace(transformer, InvocationKind.AT_MOST_ONCE) }
 
     return when (this) {
-        is ApiResponse.Failure.Error -> ApiResponse.exception(ex = statusCode.code.toRemoteHttpException())
         is ApiResponse.Failure.Exception -> ApiResponse.exception(ex = transformer.invoke(throwable))
         else -> this
     }
