@@ -6,6 +6,7 @@ import android.os.StrictMode
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.kotlin.multiplatform.Sentry
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -16,8 +17,8 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        initSentry()
         if (isDebuggable()) {
-            // Surface accidental disk / network I/O on the main thread during development.
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
                     .detectAll()
@@ -31,4 +32,16 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
 
     private fun isDebuggable(): Boolean =
         (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    private fun initSentry() {
+        if (SENTRY_DSN.isEmpty()) return
+        Sentry.init { options ->
+            options.dsn = SENTRY_DSN
+            options.debug = isDebuggable()
+        }
+    }
+
+    private companion object {
+        const val SENTRY_DSN = ""
+    }
 }

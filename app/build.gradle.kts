@@ -113,6 +113,8 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.performance)
 
+    implementation(libs.sentry.kotlin.multiplatform)
+
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
