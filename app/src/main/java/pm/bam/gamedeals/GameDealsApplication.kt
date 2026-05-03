@@ -3,8 +3,9 @@ package pm.bam.gamedeals
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
-import coil.ImageLoader
-import coil.ImageLoaderFactory
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import io.sentry.kotlin.multiplatform.Sentry
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -24,7 +25,7 @@ import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 
-class GameDealsApplication : Application(), ImageLoaderFactory {
+class GameDealsApplication : Application(), SingletonImageLoader.Factory {
 
     private val imageLoader: ImageLoader by inject()
 
@@ -60,7 +61,7 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
         }
     }
 
-    override fun newImageLoader(): ImageLoader = imageLoader
+    override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader
 
     private fun isDebuggable(): Boolean =
         (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0

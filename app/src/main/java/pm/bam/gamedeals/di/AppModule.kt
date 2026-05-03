@@ -1,22 +1,24 @@
 package pm.bam.gamedeals.di
 
-import android.util.Log
-import coil.ImageLoader
+import coil3.ImageLoader
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
+import coil3.util.Logger as CoilLogger
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.toLogLevel
 
 val appModule = module {
     single<Clock> { Clock { System.currentTimeMillis() } }
 
-    single<coil.util.Logger> {
+    single<CoilLogger> {
         val logger: Logger = get()
-        object : coil.util.Logger {
-            override var level: Int = Log.DEBUG
-            override fun log(tag: String, priority: Int, message: String?, throwable: Throwable?) {
-                logger.log(priority.toLogLevel(), "CoilLogging", throwable = throwable) { message ?: "Coil Log Message" }
+        object : CoilLogger {
+            override var minLevel: CoilLogger.Level = CoilLogger.Level.Debug
+            override fun log(tag: String, level: CoilLogger.Level, message: String?, throwable: Throwable?) {
+                logger.log(level.toAppLogLevel(), "CoilLogging", throwable = throwable) { message ?: "Coil Log Message" }
             }
         }
     }
@@ -25,6 +27,15 @@ val appModule = module {
         ImageLoader.Builder(androidContext())
             .crossfade(true)
             .logger(get())
+            .components { add(KtorNetworkFetcherFactory()) }
             .build()
     }
+}
+
+private fun CoilLogger.Level.toAppLogLevel(): LogLevel = when (this) {
+    CoilLogger.Level.Verbose -> LogLevel.VERBOSE
+    CoilLogger.Level.Debug -> LogLevel.DEBUG
+    CoilLogger.Level.Info -> LogLevel.INFO
+    CoilLogger.Level.Warn -> LogLevel.WARN
+    CoilLogger.Level.Error -> LogLevel.ERROR
 }

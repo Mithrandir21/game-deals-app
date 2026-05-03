@@ -54,7 +54,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.flowOf
 import pm.bam.gamedeals.common.ui.FoldableLandscape
 import pm.bam.gamedeals.common.ui.FoldablePortrait

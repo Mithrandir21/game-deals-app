@@ -48,7 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.ui.FoldableLandscape
 import pm.bam.gamedeals.common.ui.SingleEventEffect

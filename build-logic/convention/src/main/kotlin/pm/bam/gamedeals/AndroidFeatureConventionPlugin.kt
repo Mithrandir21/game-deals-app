@@ -58,9 +58,10 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
 
             add("implementation", libs.findLibrary("androidx-paging").get())
             add("implementation", libs.findLibrary("androidx-paging-compose").get())
-            add("implementation", libs.findLibrary("coil").get())
-            add("implementation", libs.findLibrary("coil-compose").get())
-            add("implementation", libs.findLibrary("coil-test").get())
+            add("implementation", libs.findLibrary("coil3").get())
+            add("implementation", libs.findLibrary("coil3-compose").get())
+            add("implementation", libs.findLibrary("coil3-network-ktor").get())
+            add("implementation", libs.findLibrary("coil3-test").get())
 
             add("testImplementation", libs.findLibrary("junit").get())
             add("testImplementation", libs.findLibrary("mockk").get())
