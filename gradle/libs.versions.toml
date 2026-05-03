@@ -154,6 +154,7 @@ compose-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compil
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
 jetbrains-kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrains-kotlin-plugin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin-plugin" }
 androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt-plugin" }

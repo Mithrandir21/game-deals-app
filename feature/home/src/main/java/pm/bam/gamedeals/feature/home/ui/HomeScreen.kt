@@ -50,8 +50,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
-import pm.bam.gamedeals.common.SingleEventEffect
 import pm.bam.gamedeals.common.ui.FoldableLandscape
+import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.FoldablePortrait
 import pm.bam.gamedeals.common.ui.PhoneLandscape
 import pm.bam.gamedeals.common.ui.PhonePortrait
