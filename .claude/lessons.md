@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-03-06 · Same-named `.kt` files across KMP source sets generate duplicate JVM class names
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** kmp, kotlin, jvm, source-sets, file-naming
+**Applies to:** KMP modules where commonMain and androidMain (or any two source sets reaching the same target) both contain a top-level-functions file with the same filename — typical when splitting a file into a commonMain core + androidMain platform-specific implementation
+
+Kotlin generates one `<FileName>Kt` JVM class per top-level-functions file. When `Theme.kt` exists in both `commonMain/.../theme/` and `androidMain/.../theme/`, both compile to `ThemeKt.class` on the Android target → `Duplicate JVM class name 'pm/bam/gamedeals/common/ui/theme/ThemeKt' generated from: ThemeKt, ThemeKt`. Add `@file:JvmName("AndroidTheme")` (or rename the file `Theme.android.kt` if you prefer the convention) to one side. Doesn't trip when the file contains only classes/objects (those have per-class JVM names) or when using `expect/actual` (those merge to one JVM class on resolution). Watch for it during file-splits where one half stays androidMain because of platform deps.
+
+**Source:** Phase 5.4e — Theme.kt split (schemes/locals to commonMain; `GameDealsTheme` Composable stays androidMain).
+
+### L-2026-05-03-05 · `pluginManager.apply()` in precompiled convention plugins requires `implementation` deps, not `compileOnly`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, build-logic, convention-plugins, kmp, compose-multiplatform
+**Applies to:** Precompiled convention plugins in `:build-logic:convention` that call `pluginManager.apply("third.party.id")` from inside `Plugin<Project>.apply()`
+
+A `compileOnly(libs.foo.gradle.plugin)` in build-logic is enough for the convention's Kotlin source to compile against the plugin's APIs (configuring `ComposeExtension`, etc.), but at apply-time on a consuming module Gradle fails with `Plugin with id 'foo' not found`. The runtime classpath of the *convention plugin* needs the third-party plugin's classes, so switch to `implementation(...)`. `kotlin-gradle-plugin` and `compose-compiler-gradle-plugin` slip past this trap because they're already on the build's classpath via the project-level plugins block — third-party plugins like `org.jetbrains.compose` are not, and need the explicit `implementation`. Symptom catches you the *first* time a module applies the convention; build-logic's own compile is green so you don't spot it until consumer-build failure.
+
+**Source:** Phase 5.4a — `:common:ui` first module to apply `kmp.library.compose`; build-logic had `compose-multiplatform-gradle-plugin` as `compileOnly`.
+
 ### L-2026-05-03-04 · Removing a Hilt module (esp. `hilt-navigation-compose`) silently strips Compose runtime from KSP classpath
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ksp, room, hilt-removal, compose-runtime, transitive-deps, kmp
 **Applies to:** Modules removing `androidx.hilt:hilt-navigation-compose` (or any Hilt-navigation dep) that contain Room `@Entity` classes annotated with Compose stability annotations like `@Immutable`.
