@@ -78,7 +78,30 @@ Also dropped `androidx-ktx`, `appcompat`, `material`, and
 `androidx-compose-runtime` (= `lifecycle-runtime-compose`) deps from `:domain` —
 all unused after the `@Immutable` removal.
 
-## Build verification (5.1)
+### 5.1d — Fix paged-deals fixture termination (test-only)
+
+`HomeToStoreToDealJourneyTest` started failing with `ComposeNotIdleException` at
+the `StoreTopBar` waitUntil. Logcat showed `DealsMediator` was firing
+`Loading: APPEND` on a tight loop, reaching page ~248 within the first 6 seconds
+of test runtime — Compose couldn't reach idle.
+
+Root cause: latent fixture bug. `deals_storeid_1_paged.json` returns the same
+two deals (Portal 2 + Half-Life 2) on every paged request. `DealsMediator.load`
+returns `Success(endOfPaginationReached = deals.isEmpty())` — never trips since
+the mock is non-empty. The fixture has been broken since it was added; Phase 4
+tidy passed by timing luck (Compose found idle moments between paging
+emissions), Phase 5's downstream timing changes (paging-common-only resolution
+in `:domain` + entity stability after `@Immutable` removal) closed those
+moments.
+
+`git diff kmp-pre-phase-5..HEAD -- app/src/androidTest/` was empty before this
+commit — production code was untouched, fix is purely in the fixture handler.
+
+`FixtureRequestHandler.handle` now returns `[]` for paged Cheapshark deals
+where `pageNumber != "0"` (modelling real API end-of-pagination). Page 0 still
+serves the populated fixture so the test finds `DealRowabc123` and proceeds.
+
+### 5.1 build + connected-test verification
 
 | Task | Result |
 |---|---|
@@ -87,3 +110,5 @@ all unused after the `@Immutable` removal.
 | `:domain:testDebugUnitTest` | ✅ (8 test files, all pass) |
 | `:app:assembleDebug` | ✅ |
 | `./gradlew test` (whole project) | ✅ |
+| `:app:connectedDebugAndroidTest` (HomeToStoreToDealJourney) | ✅ (after 5.1d) |
+| All other module connectedAndroidTest | ✅ |

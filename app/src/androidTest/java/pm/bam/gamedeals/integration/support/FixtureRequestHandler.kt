@@ -24,6 +24,23 @@ object FixtureRequestHandler {
         val path = request.url.encodedPath
         val params = request.url.parameters
 
+        // Inline empty-page response for paged Cheapshark deals beyond page 0 — models the
+        // real API's end-of-pagination behaviour. Without this, DealsMediator's
+        // `endOfPaginationReached = deals.isEmpty()` never trips, paging loops indefinitely
+        // and Compose never reaches idle in the journey test.
+        val pagedDealsBeyondFirst = path.startsWith("/api/1.0/deals")
+            && params["storeID"] == "1"
+            && params["pageSize"] != "10"
+            && params["pageNumber"] != null
+            && params["pageNumber"] != "0"
+        if (pagedDealsBeyondFirst) {
+            return respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
         val fixture = when {
             path.startsWith("/api/1.0/stores") -> "stores.json"
             path.startsWith("/api/1.0/deals") && params["id"] != null -> "deal_${params["id"]}.json"
