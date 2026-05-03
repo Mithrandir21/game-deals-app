@@ -15,16 +15,20 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
 
             implementation(project(":logging"))
             implementation(project(":common"))
             implementation(project(":domain"))
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.androidx.lifecycle.runtime.compose)
+
+            implementation(libs.coil3)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.ktor)
         }
 
         androidMain.dependencies {
-
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
@@ -40,10 +44,6 @@ kotlin {
             implementation(libs.androidx.compose.material3)
             implementation(libs.androidx.compose.material3.window)
             implementation(libs.androidx.compose.material3.adaptive)
-
-            implementation(libs.coil3)
-            implementation(libs.coil3.compose)
-            implementation(libs.coil3.network.ktor)
         }
 
         val androidUnitTest by getting {
@@ -69,6 +69,12 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.common.ui"
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "pm.bam.gamedeals.common.ui.generated.resources"
+    generateResClass = org.jetbrains.compose.resources.ResourcesExtension.ResourceClassGeneration.Auto
 }
 
 dependencies {

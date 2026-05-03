@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.common.ui.deal
 
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -13,9 +12,16 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
-import pm.bam.gamedeals.common.ui.R
+import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_on_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_store_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -48,7 +54,7 @@ class DealBottomSheetTest {
         var expectedGameData = ""
 
         composeTestRule.setContent {
-            expectedGameData = stringResource(id = R.string.deal_details_title_label, mockStoreName, gamePrice)
+            expectedGameData = stringResource(Res.string.deal_details_title_label, mockStoreName, gamePrice)
 
             GameDealsTheme {
                 DealBottomSheet(
@@ -87,8 +93,8 @@ class DealBottomSheetTest {
         var expectedBtnText = ""
 
         composeTestRule.setContent {
-            expectedMessage = stringResource(id = R.string.deal_details_data_loading_error_msg)
-            expectedBtnText = stringResource(id = R.string.deal_details_data_loading_error_retry)
+            expectedMessage = stringResource(Res.string.deal_details_data_loading_error_msg)
+            expectedBtnText = stringResource(Res.string.deal_details_data_loading_error_retry)
 
             GameDealsTheme {
                 DealBottomSheet(
@@ -175,10 +181,10 @@ class DealBottomSheetTest {
         var expectedCheapestPrice = ""
 
         composeTestRule.setContent {
-            expectedGameData = stringResource(id = R.string.deal_details_title_label, mockStoreName, gamePrice)
-            expectedCheapestStore = stringResource(id = R.string.deal_details_cheapest_store_label)
-                .plus(stringResource(id = R.string.deal_details_cheapest_no))
-            expectedCheapestPrice = stringResource(id = R.string.deal_details_cheapest_on_label, cheapestPriceDenominated, cheapestPriceDate)
+            expectedGameData = stringResource(Res.string.deal_details_title_label, mockStoreName, gamePrice)
+            expectedCheapestStore = stringResource(Res.string.deal_details_cheapest_store_label)
+                .plus(stringResource(Res.string.deal_details_cheapest_no))
+            expectedCheapestPrice = stringResource(Res.string.deal_details_cheapest_on_label, cheapestPriceDenominated, cheapestPriceDate)
 
             GameDealsTheme {
                 DealBottomSheet(
