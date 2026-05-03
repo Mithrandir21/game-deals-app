@@ -10,9 +10,8 @@ import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.remote.gamerpower.mappers.toGiveaway
 import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
-import javax.inject.Inject
 
-internal class GamerPowerSourceImpl @Inject constructor(
+internal class GamerPowerSourceImpl(
     private val logger: Logger,
     private val gamesApi: GamesApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,

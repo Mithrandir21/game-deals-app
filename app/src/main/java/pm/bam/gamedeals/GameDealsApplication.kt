@@ -13,6 +13,11 @@ import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.logging.di.loggingModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
+import pm.bam.gamedeals.remote.di.remoteModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 
 class GameDealsApplication : Application(), ImageLoaderFactory {
 
@@ -23,7 +28,17 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
         initSentry()
         startKoin {
             androidContext(this@GameDealsApplication)
-            modules(loggingModule, commonModule, domainModule, appModule)
+            modules(
+                loggingModule,
+                commonModule,
+                domainModule,
+                remoteModule,
+                cheapsharkNetworkModule,
+                cheapsharkRemoteModule,
+                gamerpowerNetworkModule,
+                gamerpowerRemoteModule,
+                appModule
+            )
         }
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(

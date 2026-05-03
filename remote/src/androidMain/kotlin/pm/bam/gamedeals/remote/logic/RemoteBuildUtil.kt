@@ -1,14 +1,13 @@
 package pm.bam.gamedeals.remote.logic
 
 import pm.bam.gamedeals.remote.BuildConfig
-import javax.inject.Inject
 
 fun interface RemoteBuildUtil {
     /** Get an enum representing the [RemoteBuildType] of this class. */
     fun buildType(): RemoteBuildType
 }
 
-internal class RemoteBuildUtilImpl @Inject constructor() : RemoteBuildUtil {
+internal class RemoteBuildUtilImpl : RemoteBuildUtil {
 
     /** Get an enum representing the [RemoteBuildType] of this class. */
     override fun buildType(): RemoteBuildType =
