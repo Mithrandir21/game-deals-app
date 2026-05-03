@@ -11,7 +11,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import javax.inject.Inject
 
 /**
  * Encodes a [LocalDateTime] as a UTC epoch-second long. The previous implementation used
@@ -19,7 +18,7 @@ import javax.inject.Inject
  * annotation requires the target class to live in the same module — `kotlinx.datetime.LocalDateTime`
  * doesn't, so the descriptor is declared explicitly.
  */
-internal class LocalDateSerializer @Inject constructor() : KSerializer<LocalDateTime> {
+internal class LocalDateSerializer : KSerializer<LocalDateTime> {
 
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.LONG)

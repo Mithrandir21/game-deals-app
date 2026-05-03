@@ -10,13 +10,10 @@ import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
-import javax.inject.Inject
-import javax.inject.Singleton
 
 internal val STORES_TTL_MILLIS = millisInHour * 8
 
-@Singleton
-class StoresRepository @Inject internal constructor(
+class StoresRepository internal constructor(
     private val logger: Logger,
     private val storesDao: StoresDao,
     private val cheapsharkSource: CheapsharkSource,

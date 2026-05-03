@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-03-04 · Removing a Hilt module (esp. `hilt-navigation-compose`) silently strips Compose runtime from KSP classpath
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ksp, room, hilt-removal, compose-runtime, transitive-deps, kmp
+**Applies to:** Modules removing `androidx.hilt:hilt-navigation-compose` (or any Hilt-navigation dep) that contain Room `@Entity` classes annotated with Compose stability annotations like `@Immutable`.
+
+`hilt-navigation-compose` transitively brings `androidx.compose.runtime:runtime`. Modules that never explicitly declared a Compose runtime dep — e.g. `:domain`, which only uses `@Immutable` for stability hints on Room entities — were getting it for free through the Hilt chain. When you drop Hilt during a DI migration, the Compose runtime dep disappears from compile classpath; **Room's KSP processor then fails with `[MissingType]: Element 'pm.bam.gamedeals.domain.models.Deal' references a type that is not present` on every entity** — a misleading message that points at the entity, not at the missing annotation. Fix shape: add `implementation(libs.androidx.compose.runtime)` (i.e. `androidx.lifecycle:lifecycle-runtime-compose`, which brings the actual Compose runtime transitively) to any non-feature module that uses `@Immutable` and previously inherited Compose runtime through Hilt. **Audit checklist when removing Hilt from a module:** `gradle :module:dependencies | grep compose.runtime` *before* the removal; if any Compose-runtime artifact appears via a Hilt path, declare it explicitly on the module before dropping Hilt.
+
+**Source:** Phase 4.2 of the KMP migration; `:domain` → Koin; bisected during Hilt removal.
+
+### L-2026-05-03-03 · Ktor `parameter()` always encodes — use `encodedParameters` for already-encoded values
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, retrofit-migration, url-encoding, networking, kmp
+**Applies to:** Any Retrofit `@Query("name", encoded = true)` — or any other API surface where a query/path value is supplied already percent-encoded — being ported to Ktor `HttpRequestBuilder.parameter(...)`.
+
+Ktor's `parameter("name", value)` always URL-encodes the value, with no opt-out flag. For values that arrive already percent-encoded (e.g. CheapShark serves dealIDs as `…%3D`), this re-encodes `%` → `%25` and produces `…%253D` on the wire, which servers decode to a literal `%3D` and reject as a 404. The Ktor equivalent of Retrofit's `@Query("id", encoded = true)` is `url { encodedParameters.append("id", id) }` — `URLBuilder.encodedParameters` is the pre-encoded sibling of `URLBuilder.parameters` and is part of the multiplatform URL builder, so it works on iOS too. **Migration audit:** during a Retrofit → Ktor port, grep for every `@Query(...encoded = true)` and `@Path(...encoded = true)` in the pre-migration tree and convert each to `encodedParameters.append`/`encodedPathSegments`. The default `parameter()`/`path()` lookalikes silently drop the semantic.
+
+**Source:** Phase 4 smoke-test catch on `DealsApi.getDeal` (commit `012d27b`); pre-Phase-3 had `@Query("id", encoded = true)` (verified at `git show a8bacbd^`); regression test in `DealsApiTest`.
+
 ### L-2026-05-03-02 · Ktor `Logging { level = LogLevel.BODY }` + OkHttp engine hangs `body<T>()`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, ktor-logging, okhttp-engine, content-negotiation, networking, kmp
 **Applies to:** Any HttpClient that installs both `Logging` at `LogLevel.BODY` and `ContentNegotiation`, on the OkHttp engine

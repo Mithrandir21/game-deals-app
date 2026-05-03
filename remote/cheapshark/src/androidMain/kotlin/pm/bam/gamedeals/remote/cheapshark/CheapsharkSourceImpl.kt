@@ -26,9 +26,8 @@ import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
-import javax.inject.Inject
 
-internal class CheapsharkSourceImpl @Inject constructor(
+internal class CheapsharkSourceImpl(
     private val logger: Logger,
     private val dealsApi: DealsApi,
     private val gamesApi: GamesApi,

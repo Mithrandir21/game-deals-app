@@ -20,10 +20,10 @@ dependencies {
     implementation(libs.coroutines)
     implementation(libs.kotlinx.collections.immutable)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+
+    implementation(libs.androidx.compose.runtime)
 
     implementation(libs.room)
     implementation(libs.room.runtime)

@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
@@ -84,7 +84,7 @@ internal fun HomeScreen(
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()

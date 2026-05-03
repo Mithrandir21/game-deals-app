@@ -3,7 +3,6 @@ package pm.bam.gamedeals.feature.search.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,12 +24,10 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.logging.Logger
-import javax.inject.Inject
 
 @Suppress("NullChecksToSafeCall")
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalSerializationApi::class)
-@HiltViewModel
-internal class SearchViewModel @Inject constructor(
+internal class SearchViewModel(
     private val logger: Logger,
     private val gamesRepository: GamesRepository
 ) : ViewModel() {

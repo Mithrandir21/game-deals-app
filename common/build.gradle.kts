@@ -2,7 +2,6 @@ import com.android.build.api.dsl.LibraryExtension
 
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
-    alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
 }
 
@@ -13,6 +12,7 @@ kotlin {
             api(libs.kotlinx.properties)
             api(libs.kotlinx.datetime)
             implementation(libs.coroutines)
+            implementation(libs.koin.core)
         }
 
         androidMain.dependencies {
@@ -20,8 +20,7 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
 
-            implementation(libs.hilt.android)
-            implementation(libs.hilt.navigation.compose)
+            implementation(libs.koin.android)
 
             implementation(project(":logging"))
         }
@@ -38,9 +37,4 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.common"
-}
-
-dependencies {
-    add("kspAndroid", libs.hilt.compiler)
-    add("kspAndroid", libs.hilt.androidx.compiler)
 }

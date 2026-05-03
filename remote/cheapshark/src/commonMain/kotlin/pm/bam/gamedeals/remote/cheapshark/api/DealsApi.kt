@@ -71,7 +71,10 @@ class DealsApi(private val httpClient: HttpClient) {
 
     suspend fun getDeal(id: String): ApiResponse<RemoteDealDetails> = try {
         ApiResponse.Success(
-            httpClient.get("/api/1.0/deals") { parameter("id", id) }
+            // Cheapshark serves dealIDs already percent-encoded ("...%3D"). `parameter()`
+            // would encode again ("...%253D") so the lookup 404s. Mirrors the pre-Ktor
+            // `@Query("id", encoded = true)` semantic.
+            httpClient.get("/api/1.0/deals") { url { encodedParameters.append("id", id) } }
                 .body<RemoteDealDetails>()
         )
     } catch (e: CancellationException) {

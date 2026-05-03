@@ -3,7 +3,6 @@ package pm.bam.gamedeals.feature.home.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -43,15 +42,13 @@ import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import javax.inject.Inject
 
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
 internal val topStores = listOf(1, 11, 3, 23, 15, 27, 7, 21, 2)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-internal class HomeViewModel @Inject constructor(
+internal class HomeViewModel(
     private val storesRepository: StoresRepository,
     private val dealsRepository: DealsRepository,
     private val gamesRepository: GamesRepository,

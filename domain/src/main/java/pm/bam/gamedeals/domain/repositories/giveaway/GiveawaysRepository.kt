@@ -10,11 +10,8 @@ import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class GiveawaysRepository @Inject internal constructor(
+class GiveawaysRepository internal constructor(
     private val logger: Logger,
     private val giveawaysDao: GiveawaysDao,
     private val gamerPowerSource: GamerPowerSource

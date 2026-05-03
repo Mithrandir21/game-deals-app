@@ -1,8 +1,6 @@
 package pm.bam.gamedeals.logging
 
-import javax.inject.Inject
-
-internal class LoggerImpl @Inject constructor(private val loggers: MutableSet<LoggingInterface>) : Logger {
+internal class LoggerImpl(private val loggers: MutableSet<LoggingInterface>) : Logger {
 
     /**
      * Method used to log a specific message and possible [Throwable].

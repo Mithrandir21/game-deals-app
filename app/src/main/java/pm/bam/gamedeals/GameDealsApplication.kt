@@ -5,19 +5,52 @@ import android.content.pm.ApplicationInfo
 import android.os.StrictMode
 import coil.ImageLoader
 import coil.ImageLoaderFactory
-import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
+import io.sentry.kotlin.multiplatform.Sentry
+import org.koin.android.ext.android.inject
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
+import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.di.appModule
+import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.game.di.gameModule
+import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
+import pm.bam.gamedeals.feature.home.di.homeModule
+import pm.bam.gamedeals.feature.search.di.searchModule
+import pm.bam.gamedeals.feature.store.di.storeModule
+import pm.bam.gamedeals.logging.di.loggingModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
+import pm.bam.gamedeals.remote.di.remoteModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 
-@HiltAndroidApp
 class GameDealsApplication : Application(), ImageLoaderFactory {
 
-    @Inject
-    lateinit var imageLoader: ImageLoader
+    private val imageLoader: ImageLoader by inject()
 
     override fun onCreate() {
         super.onCreate()
+        initSentry()
+        startKoin {
+            androidContext(this@GameDealsApplication)
+            modules(
+                loggingModule,
+                commonModule,
+                domainModule,
+                remoteModule,
+                cheapsharkNetworkModule,
+                cheapsharkRemoteModule,
+                gamerpowerNetworkModule,
+                gamerpowerRemoteModule,
+                appModule,
+                homeModule,
+                gameModule,
+                giveawaysModule,
+                searchModule,
+                storeModule
+            )
+        }
         if (isDebuggable()) {
-            // Surface accidental disk / network I/O on the main thread during development.
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
                     .detectAll()
@@ -31,4 +64,16 @@ class GameDealsApplication : Application(), ImageLoaderFactory {
 
     private fun isDebuggable(): Boolean =
         (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    private fun initSentry() {
+        if (SENTRY_DSN.isEmpty()) return
+        Sentry.init { options ->
+            options.dsn = SENTRY_DSN
+            options.debug = isDebuggable()
+        }
+    }
+
+    private companion object {
+        const val SENTRY_DSN = ""
+    }
 }

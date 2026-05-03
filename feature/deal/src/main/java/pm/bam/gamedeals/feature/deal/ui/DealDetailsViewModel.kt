@@ -2,7 +2,6 @@ package pm.bam.gamedeals.feature.deal.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +18,8 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
-import javax.inject.Inject
 
-@HiltViewModel
-class DealDetailsViewModel @Inject constructor(
+class DealDetailsViewModel(
     private val logger: Logger,
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository,

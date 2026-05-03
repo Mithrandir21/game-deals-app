@@ -2,9 +2,6 @@
 android-gradle-plugin = "9.0.1"
 jetbrains-kotlin-plugin = "2.2.21"
 google-ksp-plugin = "2.3.2"
-google-services-plugin = "4.4.4"
-firebase-crashlytics-plugin = "3.0.6"
-firebase-performance-plugin = "2.0.1"
 
 # KMP / CMP migration — registered now, used in subsequent phases.
 compose-multiplatform = "1.10.3"
@@ -28,8 +25,6 @@ material3 = "1.4.0"
 material3-adaptive = "1.0.0-alpha06"
 appcompat = "1.7.1"
 material = "1.13.0"
-
-firebase-bom = "34.4.0"
 
 paging = "3.3.6"
 
@@ -90,11 +85,6 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-tracing = { group = "androidx.tracing", name = "tracing", version.ref = "tracing" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-
-firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
-firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
-firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
-firebase-performance = { group = "com.google.firebase", name = "firebase-perf" }
 
 androidx-paging = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
@@ -207,13 +197,9 @@ jetbrains-kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrai
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin-plugin" }
 androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt-plugin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "jetbrains-kotlin-plugin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin-plugin" }
-firebase-performance = { id = "com.google.firebase.firebase-perf", version.ref = "firebase-performance-plugin" }
-google-services = { id = "com.google.gms.google-services", version.ref = "google-services-plugin" }
-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
 
 # Convention plugins (registered by the build-logic included build).
 gamedeals-android-library = { id = "pm.bam.gamedeals.android.library" }

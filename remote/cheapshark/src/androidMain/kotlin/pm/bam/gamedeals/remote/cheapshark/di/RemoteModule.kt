@@ -1,61 +1,33 @@
 package pm.bam.gamedeals.remote.cheapshark.di
 
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
+import org.koin.core.qualifier.named
+import org.koin.dsl.module
 import pm.bam.gamedeals.domain.source.CheapsharkSource
-import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.cheapshark.CheapsharkSourceImpl
-import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
-import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
-import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
-import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformationImpl
-import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
-import javax.inject.Singleton
 
-@Module(includes = [RemoteNetworkModule::class, InternalRemoteModule::class])
-@InstallIn(SingletonComponent::class)
-class RemoteModule
+val CHEAPSHARK_QUALIFIER = named("cheapshark")
 
+private val CURRENCY_DENOMINATION_QUALIFIER = named("cheapshark.currencyDenomination")
 
-@Module
-@InstallIn(SingletonComponent::class)
-internal class InternalRemoteModule {
+val cheapsharkRemoteModule = module {
+    single<String>(CURRENCY_DENOMINATION_QUALIFIER) { "$" }
 
-    @Provides
-    @Singleton
-    @CurrencyDenomination
-    fun provideCurrencyDenomination(): String = "$"
+    single<CurrencyTransformation> {
+        CurrencyTransformationImpl(get(CURRENCY_DENOMINATION_QUALIFIER))
+    }
 
-    @Provides
-    @Singleton
-    fun provideCurrencyTransformation(@CurrencyDenomination currencySymbol: String): CurrencyTransformation =
-        CurrencyTransformationImpl(currencySymbol)
-
-    @Provides
-    @Singleton
-    fun provideCheapsharkSource(
-        logger: Logger,
-        dealsApi: DealsApi,
-        gamesApi: GamesApi,
-        releaseApi: ReleaseApi,
-        storesApi: StoresApi,
-        remoteExceptionTransformer: RemoteExceptionTransformer,
-        currencyTransformation: CurrencyTransformation,
-        datetimeFormatter: DateTimeFormatter
-    ): CheapsharkSource =
+    single<CheapsharkSource> {
         CheapsharkSourceImpl(
-            logger,
-            dealsApi,
-            gamesApi,
-            releaseApi,
-            storesApi,
-            remoteExceptionTransformer,
-            currencyTransformation,
-            datetimeFormatter
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get()
         )
+    }
 }

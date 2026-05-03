@@ -9,11 +9,8 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.source.CheapsharkSource
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class GamesRepository @Inject internal constructor(
+class GamesRepository internal constructor(
     private val gamesDao: GamesDao,
     private val cheapsharkSource: CheapsharkSource
 ) {

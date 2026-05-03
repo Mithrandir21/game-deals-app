@@ -2,7 +2,6 @@ import com.android.build.api.dsl.LibraryExtension
 
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
-    alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
 }
 
@@ -16,6 +15,8 @@ kotlin {
             // :remote api-exposes ktor-client-core + content-negotiation + logging +
             // ktor-serialization-kotlinx-json + sandwich-ktor for downstream use.
             api(project(":remote"))
+
+            implementation(libs.koin.core)
         }
 
         androidMain.dependencies {
@@ -23,7 +24,7 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
 
-            implementation(libs.hilt.android)
+            implementation(libs.koin.android)
 
             implementation(project(":logging"))
             implementation(project(":common"))
@@ -48,9 +49,4 @@ extensions.configure<LibraryExtension> {
     buildFeatures {
         buildConfig = true
     }
-}
-
-dependencies {
-    add("kspAndroid", libs.hilt.compiler)
-    add("kspAndroid", libs.hilt.androidx.compiler)
 }

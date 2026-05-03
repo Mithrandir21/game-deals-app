@@ -6,15 +6,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
-import pm.bam.gamedeals.common.di.Settings
 import pm.bam.gamedeals.common.exceptions.DataExistsException
 import pm.bam.gamedeals.common.exceptions.DataNotFoundException
 import pm.bam.gamedeals.common.serializer.Serializer
-import javax.inject.Inject
 
-internal class SettingStorage @Inject constructor(
+internal class SettingStorage(
     private val serializer: Serializer,
-    @Settings val sharedPreferences: SharedPreferences,
+    val sharedPreferences: SharedPreferences,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Storage {
 
