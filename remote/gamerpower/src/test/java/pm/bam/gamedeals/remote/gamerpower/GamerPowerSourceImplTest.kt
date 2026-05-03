@@ -20,8 +20,8 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import kotlinx.datetime.LocalDateTime
 import retrofit2.Retrofit
-import java.time.LocalDateTime
 
 /**
  * HTTP-level coverage for the [GamerPowerSourceImpl] facade. Stands a real
@@ -37,7 +37,7 @@ class GamerPowerSourceImplTest {
     private lateinit var impl: GamerPowerSourceImpl
 
     private val datetimeParsing: DatetimeParsing = mockk {
-        every { parseDatetime(any()) } returns LocalDateTime.of(2026, 1, 1, 0, 0)
+        every { parseDatetime(any()) } returns LocalDateTime(2026, 1, 1, 0, 0)
     }
 
     @OptIn(ExperimentalSerializationApi::class)

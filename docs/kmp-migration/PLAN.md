@@ -115,15 +115,30 @@ The risk control: do not start a phase before the previous phase's tests pass on
 - `gradle/libs.versions.toml`: add CMP, Ktor, Koin, Sentry, kotlinx-datetime, Coil 3, Room KMP, paging-multiplatform, sandwich-ktor.
 - Output: every existing module compiles under the new conventions, source still in `src/main/java/`.
 
-### Phase 2 — `:domain` storage + datetime swap (~2 weeks)
-- Move `:domain` source to `commonMain`.
+### Phase 2 — datetime swap (~3-4 days, scope reduced from original)
+**Scope reduction (locked in 2026-05-03 during Phase 2 execution):** Original
+Phase 2 had two halves: (A) datetime swap, (B) `:domain` → KMP module + Room
+KMP. Only (A) is in Phase 2 now; (B) folds into Phase 5.
+
+**Why the deferral**: Room source-in-commonMain depends on Paging
+Multiplatform being wired (because `androidx.room:room-paging` is Android-only,
+and `:domain`'s `PagingDao` would otherwise have to leak Paging types into the
+common surface ahead of schedule). Phase 5 already has to migrate `:domain`
+content for the Paging swap. A `:domain` build-shell-only move in Phase 2 is
+busywork that gets re-done in Phase 5.
+
+**What Phase 2 does:**
 - Migrate `pm.bam.gamedeals.common.datetime.*` (currently `java.time`) to `kotlinx-datetime`.
-  - Keep `Clock` interface in `:common` (already an abstraction — survives well).
-  - Implement `expect class DateTimeFormatter` with Android (`java.time`) and iOS (`NSDateFormatter`) actuals.
-- Migrate Room → Room KMP. DAOs (Games/Deals/Stores/Giveaways/Releases/Paging + custom) keep their bodies; only build wiring + driver creation changes.
-  - `domain/src/main/java/pm/bam/gamedeals/domain/db/DomainDatabase.kt` — switch to `RoomDatabase.Builder` KMP API; expose driver factory via `expect`.
-- Type converters (`LocalDatetimeConverter`, `StoreImagesConverter`) stay — pure Kotlin already.
-- Output: domain compiles for both targets; Android runtime still passes existing unit + integration tests.
+- Move datetime interfaces + impls from `:common`'s androidMain to commonMain.
+- Implement `expect fun formatLocaleAwareDate(Instant): String` with Android (`java.time.DateTimeFormatter`) and iOS (`NSDateFormatter`) actuals — kotlinx-datetime's format builder cannot yet produce locale-aware month abbreviations.
+- Keep `Clock` interface in `:common` (already an abstraction — survives well).
+- Ripple: `:domain` (TypeAdapters, TypeSerializers, Giveaway model), `:common:ui` (PreviewData), tests in `:common`/`:domain`/`:remote:gamerpower`.
+- Output: every `java.time.*` import swapped to `kotlinx.datetime.*`. Android runtime tests pass; iOS targets compile.
+
+**Deferred to Phase 5:**
+- `:domain` becomes a KMP module (apply `gamedeals.kmp.library` convention).
+- Room source migration to commonMain (`RoomDatabase.Builder` KMP API; `expect` driver factory).
+- Source-set restructure: `src/main/java/` → `src/androidMain/kotlin/` and (selectively) `src/commonMain/kotlin/`.
 
 ### Phase 3 — `:remote:*` networking swap (~2 weeks)
 - Replace Retrofit APIs in `remote/cheapshark/` and `remote/gamerpower/` with Ktor Client.
@@ -147,8 +162,16 @@ The risk control: do not start a phase before the previous phase's tests pass on
 - This is the most disruptive phase. Android will be unbuildable for hours-to-days inside this phase. **Cut a tag before starting** so you can diff later.
 - Output: Android app launches, navigates, shows data, crashes/perf reach Sentry. No functional regressions verified manually screen-by-screen.
 
-### Phase 5 — Feature modules to KMP one at a time (~3–4 weeks)
-Order: home → search → game → store → giveaways → deal → webview. Each move:
+### Phase 5 — `:domain` to KMP + feature modules to KMP (~4–5 weeks)
+**Inherited from Phase 2 deferral:** before any feature work, migrate `:domain`
+to a KMP module (apply `gamedeals.kmp.library` convention), wire Room KMP
+(`RoomDatabase.Builder` KMP API + `expect` driver factory), and move Room
+entities/DAOs/database to commonMain. Paging migrates concurrently:
+`androidx.paging:paging-runtime` → `androidx.paging:paging-common`
+(multiplatform-capable). `room-paging` is Android-only — affected DAO methods
+either get `expect/actual` shape or stay androidMain.
+
+Then feature modules. Order: home → search → game → store → giveaways → deal → webview. Each move:
 - Migrate sources from `src/main/java` to `src/commonMain/kotlin`.
 - Migrate `R.string.*` / `R.drawable.*` to `compose.resources` (`Res.string.*`, `Res.drawable.*`).
 - Migrate `androidx.lifecycle.ViewModel` import to `androidx.lifecycle.viewmodel` multiplatform.

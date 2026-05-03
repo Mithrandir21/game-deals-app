@@ -2,13 +2,12 @@ package pm.bam.gamedeals.common.datetime.formatting
 
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
-import java.time.Instant
-import java.time.ZoneId
 import java.util.Locale
 import java.util.TimeZone
 
@@ -19,17 +18,18 @@ class DateTimeFormatterImplTest {
 
     @Before
     fun setUp() {
-        // Set fixed locale and timezone for predictable tests
+        // Set fixed locale and timezone for predictable tests — the Android actual of
+        // `formatLocaleAwareDate` reads `Locale.getDefault()` and `ZoneId.systemDefault()`.
         Locale.setDefault(Locale.US)
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-        
+
         dateTimeFormatter = DateTimeFormatterImpl(datetimeParsing)
     }
 
     @Test
     fun `formatToISODate formats valid seconds correctly`() {
         val seconds = 1767225600L // 2026-01-01 00:00:00 UTC
-        every { datetimeParsing.parseLocalDateTime(seconds) } returns Instant.ofEpochSecond(seconds)
+        every { datetimeParsing.parseLocalDateTime(seconds) } returns Instant.fromEpochSeconds(seconds)
 
         val result = dateTimeFormatter.formatToISODate(seconds)
 
@@ -45,7 +45,7 @@ class DateTimeFormatterImplTest {
     @Test
     fun `formatToISODateNullable returns formatted date for positive seconds`() {
         val seconds = 1767225600L
-        every { datetimeParsing.parseLocalDateTime(seconds) } returns Instant.ofEpochSecond(seconds)
+        every { datetimeParsing.parseLocalDateTime(seconds) } returns Instant.fromEpochSeconds(seconds)
 
         val result = dateTimeFormatter.formatToISODateNullable(seconds)
 

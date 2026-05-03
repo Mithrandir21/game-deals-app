@@ -11,6 +11,7 @@ kotlin {
         commonMain.dependencies {
             api(libs.kotlinx)
             api(libs.kotlinx.properties)
+            api(libs.kotlinx.datetime)
             implementation(libs.coroutines)
         }
 

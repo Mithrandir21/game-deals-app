@@ -10,8 +10,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.properties.Properties
+import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
-import java.time.LocalDateTime
 
 @Immutable
 @Entity(tableName = "Giveaway")

@@ -24,8 +24,11 @@ import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
+import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.testing.TestingLoggingListener
-import java.time.LocalDateTime
+
+private val MIN_DATETIME = LocalDateTime(1970, 1, 1, 0, 0)
+private val MAX_DATETIME = LocalDateTime(9999, 12, 31, 23, 59, 59)
 
 class GiveawaysRepositoryTest {
 
@@ -43,10 +46,10 @@ class GiveawaysRepositoryTest {
     @Test
     fun `observe giveaways with descending publishedDate order`() = runTest {
         val resultOne = mockk<Giveaway> {
-            every { publishedDate } returns LocalDateTime.MIN
+            every { publishedDate } returns MIN_DATETIME
         }
         val resultTwo = mockk<Giveaway> {
-            every { publishedDate } returns LocalDateTime.MAX
+            every { publishedDate } returns MAX_DATETIME
         }
 
         every { giveawaysDao.observeAllGiveaways() } returns flowOf(listOf(resultOne, resultTwo))
@@ -78,21 +81,21 @@ class GiveawaysRepositoryTest {
         val resultOne = mockk<Giveaway> {
             every { type } returns GiveawayType.GAME
             every { platforms } returns listOf(GiveawayPlatform.PC)
-            every { publishedDate } returns LocalDateTime.MIN
+            every { publishedDate } returns MIN_DATETIME
             every { users } returns 1
             every { worth } returns 1.0
         }
         val resultTwo = mockk<Giveaway> {
             every { type } returns GiveawayType.DLC
             every { platforms } returns listOf(GiveawayPlatform.PS5)
-            every { publishedDate } returns LocalDateTime.MAX
+            every { publishedDate } returns MAX_DATETIME
             every { users } returns 2
             every { worth } returns 2.0
         }
         val resultThree = mockk<Giveaway> {
             every { type } returns GiveawayType.BETA
             every { platforms } returns listOf(GiveawayPlatform.NINTENDO_SWITCH)
-            every { publishedDate } returns LocalDateTime.MAX
+            every { publishedDate } returns MAX_DATETIME
             every { users } returns 3
             every { worth } returns 3.0
         }
