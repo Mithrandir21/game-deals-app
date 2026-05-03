@@ -6,6 +6,7 @@
 - 3.2 — `:remote:gamerpower` Retrofit→Ktor (1 API)
 - 3.3 — `:remote:cheapshark` Retrofit→Ktor (4 APIs)
 - 3.4 — Cleanup: drop Retrofit/Sandwich-Retrofit, simplify transformer, move `RemoteExceptionTransformer` + `RemoteHttpException` to commonMain
+- 3.5 — Post-build runtime fixes: route Ktor `Logging` to Logcat (`KtorLogcatLogger`); drop `LogLevel.BODY` to `LogLevel.HEADERS`; add `requestTimeoutMillis = 30_000` defensive setting
 
 ## What was done
 
@@ -27,6 +28,15 @@
 - **`RemoteDealsSortBy` enum query encoding.** Retrofit + kotlinx-serialization-converter previously emitted `@SerialName` values (e.g. `"DealRating"`). Ktor's `parameter()` calls `toString()` (returns `"DEALRATING"`). Hardcoded `RemoteDealsSortBy.toApiString()` mapping in `DealsApi.kt` keeps the wire format identical to the Retrofit era. Worth verifying with a manual smoke test that the sort filters still work.
 - **`RemoteExceptionTransformerImplTest` rewrite.** The old test mocked Retrofit's `HttpException` (had a `code()` method, easy to mock). Ktor's `ResponseException` has a non-public constructor and wraps an `HttpResponse`. Cheapest way to obtain a real one is to let Ktor produce one naturally via `MockEngine` returning an error status while `expectSuccess = true`. The test file does this.
 - **iOS targets only `compileKotlinIos*` is verified, not full link.** The framework itself isn't built/linked because nothing yet exports it (Phase 6's job). Compile coverage is enough to prove the source compiles for K/N.
+
+### Post-build runtime fixes (3.5)
+The build was green and the unit tests passed at the end of 3.4, but the app silently fetched no data on first device run. Three sequential gotchas, all Ktor-on-Android specific:
+
+1. **No networking logs in Logcat at all.** Ktor's `Logger.DEFAULT` is SLF4J-based; on Android with no SLF4J binding it writes nowhere. Fixed with `KtorLogcatLogger` — a tiny `Logger` impl that hands every line to `android.util.Log.d("Ktor", ...)`. Wired into both `RemoteNetworkModule`s (commit `5198c1b`).
+2. **`body<T>()` hung indefinitely.** REQUEST log fired, no RESPONSE, no exception, no timeout. Cause: Ktor's `Logging` plugin at `LogLevel.BODY` reads the response body to log it; on the OkHttp engine that body is a one-shot stream. `ContentNegotiation` then waits forever for bytes that have already been consumed. Fixed by dropping to `LogLevel.HEADERS` (commit `eb0a4be`). Captured as `L-2026-05-03-02` in `.claude/lessons.md`.
+3. **`requestTimeoutMillis` was unset.** Ktor's `HttpTimeout` plugin doesn't set a default request timeout — only `connectTimeoutMillis` was configured (10s). After connection, reads could hang forever. Added `requestTimeoutMillis = 30_000` as a defensive setting (commit `b2c4aa3`). Wasn't load-bearing for the actual bug (#2 was) but is the right defensive shape now that we're on Ktor.
+
+A misdirection along the way: an early hypothesis (commit `2fad740`) blamed a `RemoteStore.storeID` Int-vs-String type mismatch — cheapshark returns `"storeID": "1"` as a JSON string. The fix would have been wrong (the storeID type mismatch hadn't actually been reached because `body<T>()` never returned). Reverted in `8440d14` after the user used breakpoints to confirm the call hangs at `body<>()`. Worth knowing for future debugging: **a hung `body<T>()` masks every downstream issue**, so resolve the hang before chasing parser-shaped hypotheses.
 
 ## Build verification
 

@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-03-02 · Ktor `Logging { level = LogLevel.BODY }` + OkHttp engine hangs `body<T>()`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, ktor-logging, okhttp-engine, content-negotiation, networking, kmp
+**Applies to:** Any HttpClient that installs both `Logging` at `LogLevel.BODY` and `ContentNegotiation`, on the OkHttp engine
+
+The Logging plugin at `LogLevel.BODY` reads the response body to log it; on OkHttp's engine that body is a one-shot stream and the read consumes it. `ContentNegotiation`'s subsequent `body<T>()` then waits indefinitely for bytes that have already been read. Symptom is exact: the `Ktor REQUEST: ...` line logs, then nothing — no `RESPONSE`, no exception, no timeout, no parse error. Use `LogLevel.HEADERS` as the default — same diagnostic value (request line, response status, headers) without consuming the body. If you genuinely need bodies in logs, use Ktor's `observeRequest`/`observeResponse` callbacks which don't consume the stream.
+
+**Source:** Phase 3 of the KMP migration, swapping Retrofit → Ktor in `:remote:*` modules.
+
 ### L-2026-05-03-01 · Module that opts out of the convention plugin silently loses inherited test-runtime deps
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, convention-plugins, build-logic, compose-testing, ui-test-manifest, test-infra
 **Applies to:** Any feature module that does not apply `gamedeals.android.feature` (or whichever convention plugin the rest of the modules use); audits checking whether existing instrumentation/Compose tests are actually runnable
