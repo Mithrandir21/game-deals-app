@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.domain.di
 
-import androidx.room.Room
-import org.koin.android.ext.koin.androidContext
+import androidx.room.RoomDatabase
 import org.koin.dsl.module
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -13,9 +12,6 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
-import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.verbose
-import java.util.concurrent.Executors
 
 val domainModule = module {
     single { StoreImagesConverter(get()) }
@@ -24,19 +20,11 @@ val domainModule = module {
     single { LocalDateSerializer() }
 
     single<DomainDatabase> {
-        val logger = get<Logger>()
-        Room.databaseBuilder(
-            androidContext(),
-            DomainDatabase::class.java,
-            "${DomainDatabase::class.java.simpleName}.db"
-        )
+        get<RoomDatabase.Builder<DomainDatabase>>()
             .fallbackToDestructiveMigration()
             .addTypeConverter(get<StoreImagesConverter>())
             .addTypeConverter(get<GiveawayPlatformsConverter>())
             .addTypeConverter(get<LocalDatetimeConverter>())
-            .setQueryCallback({ sqlQuery, bindArgs ->
-                verbose(logger) { "SQL Query: $sqlQuery SQL Args: $bindArgs" }
-            }, Executors.newSingleThreadExecutor())
             .build()
     }
 
