@@ -19,35 +19,42 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import pm.bam.gamedeals.common.ui.PreviewDeal
-import pm.bam.gamedeals.common.ui.PreviewDealCheaperStore
-import pm.bam.gamedeals.common.ui.PreviewDealCheapestPrice
-import pm.bam.gamedeals.common.ui.PreviewDealDetails
-import pm.bam.gamedeals.common.ui.PreviewDealGameInfo
-import pm.bam.gamedeals.common.ui.PreviewStore
-import pm.bam.gamedeals.common.ui.R
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_on_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_store_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_yes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_game_image
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_metacritic_score_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_release_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steam_reviews_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_no
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_yes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_store_thumbnail
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
-import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.domain.models.DealDetails
-import pm.bam.gamedeals.domain.models.Store
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,8 +92,8 @@ private fun DealContent(
         Row(modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small)) {
             AsyncImage(
                 model = data.store.images.logo,
-                contentDescription = stringResource(R.string.deal_details_store_thumbnail, data.store.storeName),
-                error = painterResource(id = R.drawable.videogame_thumb),
+                contentDescription = stringResource(Res.string.deal_details_store_thumbnail, data.store.storeName),
+                error = painterResource(Res.drawable.videogame_thumb),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(48.dp)
@@ -99,7 +106,7 @@ private fun DealContent(
                         .fillMaxWidth()
                         .padding(horizontal = GameDealsCustomTheme.spacing.small)
                         .testTag(StoreDataGameDataTag),
-                    text = stringResource(id = R.string.deal_details_title_label, data.store.storeName, data.gameSalesPriceDenominated),
+                    text = stringResource(Res.string.deal_details_title_label, data.store.storeName, data.gameSalesPriceDenominated),
                 )
                 Text(
                     modifier = Modifier
@@ -157,14 +164,14 @@ private fun GameDetails(
                         .fillMaxWidth()
                         .testTag(DealCheapestTag),
                     text = buildAnnotatedString {
-                        append(stringResource(id = R.string.deal_details_cheapest_store_label))
+                        append(stringResource(Res.string.deal_details_cheapest_store_label))
                         when (data.cheaperStores.isEmpty()) {
                             true -> withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
-                                append(stringResource(id = R.string.deal_details_cheapest_yes))
+                                append(stringResource(Res.string.deal_details_cheapest_yes))
                             }
 
                             false -> withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)) {
-                                append(stringResource(id = R.string.deal_details_cheapest_no))
+                                append(stringResource(Res.string.deal_details_cheapest_no))
                             }
                         }
                     }
@@ -179,8 +186,8 @@ private fun GameDetails(
                     ) {
                         AsyncImage(
                             model = it.first.images.logo,
-                            contentDescription = stringResource(R.string.deal_details_cheaper_store_thumbnail, data.store.storeName),
-                            error = painterResource(id = R.drawable.videogame_thumb),
+                            contentDescription = stringResource(Res.string.deal_details_cheaper_store_thumbnail, data.store.storeName),
+                            error = painterResource(Res.drawable.videogame_thumb),
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .size(32.dp)
@@ -201,14 +208,14 @@ private fun GameDetails(
                         .fillMaxWidth()
                         .padding(vertical = GameDealsCustomTheme.spacing.small),
                     text = buildAnnotatedString {
-                        append(stringResource(id = R.string.deal_details_cheapest_ever_label))
+                        append(stringResource(Res.string.deal_details_cheapest_ever_label))
                         when (data.cheapestPrice == null) {
                             true -> withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
-                                append(stringResource(id = R.string.deal_details_cheapest_yes))
+                                append(stringResource(Res.string.deal_details_cheapest_yes))
                             }
 
                             false -> withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)) {
-                                append(stringResource(id = R.string.deal_details_cheapest_no))
+                                append(stringResource(Res.string.deal_details_cheapest_no))
                             }
                         }
                     }
@@ -219,7 +226,7 @@ private fun GameDetails(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag(CheapestPriceTag),
-                        text = stringResource(id = R.string.deal_details_cheapest_on_label, it.priceDenominated, it.date)
+                        text = stringResource(Res.string.deal_details_cheapest_on_label, it.priceDenominated, it.date)
                     )
                 }
             }
@@ -232,8 +239,8 @@ private fun GameDetails(
             ) {
                 AsyncImage(
                     model = data.gameInfo.thumb,
-                    contentDescription = stringResource(R.string.deal_details_game_image, data.gameName),
-                    error = painterResource(id = R.drawable.videogame_thumb),
+                    contentDescription = stringResource(Res.string.deal_details_game_image, data.gameName),
+                    error = painterResource(Res.drawable.videogame_thumb),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -247,17 +254,17 @@ private fun GameDetails(
                         .align(Alignment.CenterHorizontally)
                         .testTag(GoToDealBtnTag),
                     onClick = { goToWeb("$DEAL_URL${data.dealId}", data.gameName) }) {
-                    Text(text = stringResource(id = R.string.deal_details_go_to_deal_label))
+                    Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }
-                data.gameInfo.metacriticScore?.let { Text(text = stringResource(id = R.string.deal_details_metacritic_score_label, it)) }
-                data.gameInfo.steamRatingPercent?.let { Text(text = stringResource(id = R.string.deal_details_steam_reviews_label, it)) }
-                data.gameInfo.releaseDate?.let { Text(text = stringResource(id = R.string.deal_details_release_label, it)) }
-                data.gameInfo.steamAppID?.let { Text(text = stringResource(id = R.string.deal_details_wiki_label, it)) }
+                data.gameInfo.metacriticScore?.let { Text(text = stringResource(Res.string.deal_details_metacritic_score_label, it)) }
+                data.gameInfo.steamRatingPercent?.let { Text(text = stringResource(Res.string.deal_details_steam_reviews_label, it)) }
+                data.gameInfo.releaseDate?.let { Text(text = stringResource(Res.string.deal_details_release_label, it)) }
+                data.gameInfo.steamAppID?.let { Text(text = stringResource(Res.string.deal_details_wiki_label, it)) }
                 data.gameInfo.steamworks?.let {
                     Text(
                         text = when (it) {
-                            true -> stringResource(id = R.string.deal_details_steamworks_label_yes)
-                            false -> stringResource(id = R.string.deal_details_steamworks_label_no)
+                            true -> stringResource(Res.string.deal_details_steamworks_label_yes)
+                            false -> stringResource(Res.string.deal_details_steamworks_label_no)
                         }
                     )
                 }
@@ -287,7 +294,7 @@ private fun GameDetailsError(
                     .align(Alignment.CenterHorizontally)
                     .wrapContentSize()
                     .testTag(DataErrorMsgTag),
-                text = stringResource(id = R.string.deal_details_data_loading_error_msg)
+                text = stringResource(Res.string.deal_details_data_loading_error_msg)
             )
             Button(
                 modifier = Modifier
@@ -295,68 +302,8 @@ private fun GameDetailsError(
                     .padding(vertical = GameDealsCustomTheme.spacing.large)
                     .testTag(DataErrorBtnTag),
                 onClick = { retry() }) {
-                Text(text = stringResource(id = R.string.deal_details_data_loading_error_retry))
+                Text(text = stringResource(Res.string.deal_details_data_loading_error_retry))
             }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun DealBottomLoadingPreview() {
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            DealContent(
-                data = DealBottomSheetData.DealDetailsLoading(
-                    PreviewStore,
-                    PreviewDealDetails.gameInfo.name,
-                    PreviewDeal.dealID,
-                    PreviewDealDetails.gameInfo.salePriceDenominated
-                ),
-                goToWeb = { _, _ -> },
-                retry = { }
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun DealBottomDataPreview() {
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            DealContent(
-                data = DealBottomSheetData.DealDetailsData(
-                    PreviewStore,
-                    PreviewDealDetails.gameInfo.name,
-                    PreviewDeal.dealID,
-                    PreviewDealDetails.gameInfo.salePriceDenominated,
-                    PreviewDealGameInfo,
-                    listOf(PreviewStore to PreviewDealCheaperStore, PreviewStore to PreviewDealCheaperStore),
-                    PreviewDealCheapestPrice
-                ),
-                goToWeb = { _, _ -> },
-                retry = { }
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun DealBottomErrorPreview() {
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            DealContent(
-                data = DealBottomSheetData.DealDetailsError(
-                    PreviewStore,
-                    PreviewDealDetails.gameInfo.name,
-                    PreviewDeal.dealID,
-                    PreviewDealDetails.gameInfo.salePriceDenominated
-                ),
-                goToWeb = { _, _ -> },
-                retry = { }
-            )
         }
     }
 }
