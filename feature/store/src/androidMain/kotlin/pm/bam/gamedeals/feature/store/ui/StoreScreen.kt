@@ -40,13 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -66,10 +65,17 @@ import pm.bam.gamedeals.common.ui.TabletLandscape
 import pm.bam.gamedeals.common.ui.TabletPortrait
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.store.R
+import pm.bam.gamedeals.feature.store.generated.resources.Res
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_game_image
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_store_banner
 import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
 @Composable
@@ -78,12 +84,13 @@ internal fun StoreScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val currentOnBack by rememberUpdatedState(onBack)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: LazyPagingItems<Deal> = viewModel.deals.collectAsLazyPagingItems()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
+    val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
+    val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
 
     val store = (uiState as? StoreScreenData.Data)?.store
 
@@ -114,8 +121,8 @@ internal fun StoreScreen(
 
         StoreScreenData.Error -> LaunchedEffect(snackbarHostState) {
             val results = snackbarHostState.showSnackbar(
-                message = context.getString(R.string.store_screen_data_loading_error_msg),
-                actionLabel = context.getString(R.string.store_screen_data_loading_error_retry)
+                message = errorMessage,
+                actionLabel = errorRetry
             )
             if (results == SnackbarResult.ActionPerformed) {
                 currentOnBack()
@@ -147,8 +154,8 @@ private fun DealRow(
         ) {
             AsyncImage(
                 model = deal.thumb,
-                contentDescription = stringResource(R.string.store_screen_game_image, deal.title),
-                error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                contentDescription = stringResource(Res.string.store_screen_game_image, deal.title),
+                error = painterResource(CommonRes.drawable.videogame_thumb),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .height(60.dp)
@@ -248,8 +255,8 @@ private fun StoreToolbar(
             ) {
                 AsyncImage(
                     model = storeDetails?.images?.banner,
-                    contentDescription = stringResource(R.string.store_screen_store_banner, storeDetails?.storeName ?: ""),
-                    error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                    contentDescription = stringResource(Res.string.store_screen_store_banner, storeDetails?.storeName ?: ""),
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .height(60.dp)
@@ -271,7 +278,7 @@ private fun StoreToolbar(
             ) {
                 Icon(
                     imageVector = Icons.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.store_screen_navigation_back_icon)
+                    contentDescription = stringResource(Res.string.store_screen_navigation_back_icon)
                 )
             }
         },
