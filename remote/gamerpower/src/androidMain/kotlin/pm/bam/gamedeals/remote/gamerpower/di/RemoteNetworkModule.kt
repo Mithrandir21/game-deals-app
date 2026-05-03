@@ -14,6 +14,7 @@ import io.ktor.client.request.url
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
+import pm.bam.gamedeals.remote.logic.KtorLogcatLogger
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
 import pm.bam.gamedeals.remote.logic.httpClient
@@ -41,7 +42,10 @@ class RemoteNetworkModule {
             }
 
             when (remoteBuildUtil.buildType()) {
-                RemoteBuildType.DEBUG -> install(Logging) { level = LogLevel.BODY }
+                RemoteBuildType.DEBUG -> install(Logging) {
+                    logger = KtorLogcatLogger
+                    level = LogLevel.BODY
+                }
                 RemoteBuildType.RELEASE -> Unit
             }
 
