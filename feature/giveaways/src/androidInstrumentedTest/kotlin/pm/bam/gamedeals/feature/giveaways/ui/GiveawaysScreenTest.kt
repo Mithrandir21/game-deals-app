@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,11 +12,14 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
-import pm.bam.gamedeals.feature.giveaways.R
+import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
 
 class GiveawaysScreenTest {
 
@@ -56,8 +58,8 @@ class GiveawaysScreenTest {
         var snackRetry = ""
 
         composeTestRule.setContent {
-            snackText = stringResource(id = R.string.giveaway_screen_data_loading_error_msg)
-            snackRetry = stringResource(id = R.string.giveaway_screen_data_loading_error_retry)
+            snackText = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
+            snackRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
 
             GameDealsTheme {
                 GiveawaysScreen(

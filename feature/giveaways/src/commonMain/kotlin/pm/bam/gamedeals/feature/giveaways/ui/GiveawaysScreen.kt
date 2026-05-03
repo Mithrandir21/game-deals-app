@@ -52,32 +52,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import pm.bam.gamedeals.common.ui.PhonePortrait
-import pm.bam.gamedeals.common.ui.PreviewGiveaway
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
-import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
-import pm.bam.gamedeals.feature.giveaways.R
+import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_ascending_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_descending_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_type_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_game_image
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_navigation_back_button
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun GiveawaysScreen(
@@ -137,13 +146,14 @@ private fun ScreenScaffold(
     onTypeSelection: (type: GiveawayType, selection: Boolean) -> Unit,
     onSortBySelection: (sortBy: GiveawaySortBy) -> Unit
 ) {
-    val context = LocalContext.current
     val scrollState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val currentOnReload by rememberUpdatedState(onReload)
 
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
+    val errorMessage = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
+    val errorRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
+
+    Surface(color = MaterialTheme.colorScheme.background) {
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -160,7 +170,7 @@ private fun ScreenScaffold(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.giveaway_screen_navigation_back_button)
+                                    contentDescription = stringResource(Res.string.giveaway_screen_navigation_back_button)
                                 )
                             }
                         },
@@ -168,7 +178,7 @@ private fun ScreenScaffold(
                             IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
                                 Icon(
                                     imageVector = Icons.Default.Settings,
-                                    stringResource(R.string.giveaway_screen_filters_icon),
+                                    stringResource(Res.string.giveaway_screen_filters_icon),
                                     modifier = Modifier.testTag(GiveawayFiltersIconTag)
                                 )
                             }
@@ -201,8 +211,8 @@ private fun ScreenScaffold(
 
                     GiveawaysViewModel.GiveawaysScreenStatus.ERROR -> LaunchedEffect(snackbarHostState) {
                         val results = snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.giveaway_screen_data_loading_error_msg),
-                            actionLabel = context.getString(R.string.giveaway_screen_data_loading_error_retry)
+                            message = errorMessage,
+                            actionLabel = errorRetry
                         )
                         if (results == SnackbarResult.ActionPerformed) {
                             currentOnReload()
@@ -220,7 +230,6 @@ private fun ScreenScaffold(
                 )
             }
         }
-    }
 }
 
 @Composable
@@ -239,20 +248,20 @@ private fun GiveawayListItem(
             giveaway.worthDenominated?.let {
                 Text(text = buildAnnotatedString {
                     withStyle(style = MaterialTheme.typography.bodyLarge.toSpanStyle()) {
-                        append(stringResource(id = R.string.giveaway_screen_list_item_free_label))
+                        append(stringResource(Res.string.giveaway_screen_list_item_free_label))
                     }
                     append(" ")
                     withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                        append(stringResource(id = R.string.giveaway_screen_list_item_worth_label, it))
+                        append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
                     }
                 })
-            } ?: Text(stringResource(id = R.string.giveaway_screen_list_item_free_label))
+            } ?: Text(stringResource(Res.string.giveaway_screen_list_item_free_label))
         },
         leadingContent = {
             AsyncImage(
                 model = giveaway.thumbnail,
-                contentDescription = stringResource(R.string.giveaway_screen_game_image, giveaway.title),
-                error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+                contentDescription = stringResource(Res.string.giveaway_screen_game_image, giveaway.title),
+                error = painterResource(CommonRes.drawable.videogame_thumb),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .height(60.dp)
@@ -305,7 +314,7 @@ private fun Filters(
     ) {
         Text(
             modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium),
-            text = stringResource(R.string.giveaway_screen_filters_platform_label)
+            text = stringResource(Res.string.giveaway_screen_filters_platform_label)
         )
         FlowRow(
             modifier = Modifier.padding(GameDealsCustomTheme.spacing.small),
@@ -327,7 +336,7 @@ private fun Filters(
 
         Text(
             modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-            text = stringResource(R.string.giveaway_screen_filters_type_label)
+            text = stringResource(Res.string.giveaway_screen_filters_type_label)
         )
         FlowRow(
             modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small),
@@ -349,7 +358,7 @@ private fun Filters(
 
         Text(
             modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-            text = stringResource(R.string.giveaway_screen_filters_sort_by_label)
+            text = stringResource(Res.string.giveaway_screen_filters_sort_by_label)
         )
         GiveawaySortByOptions(existingParameters, onSortBySelection)
     }
@@ -397,79 +406,6 @@ private val parametersSaver = run {
     mapSaver(
         save = { it.asMap() },
         restore = { GiveawaySearchParameters.from(it) }
-    )
-}
-
-
-@Preview
-@Composable
-private fun SortOptionsPreview() {
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            GiveawaySortByOptions(
-                existingParameters = GiveawaySearchParameters(),
-                onSortBySelection = { }
-            )
-        }
-    }
-}
-
-
-@Preview
-@Composable
-private fun FiltersPreview() {
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Filters(
-                existingParameters = GiveawaySearchParameters(),
-                onPlatformSelection = { _, _ -> },
-                onTypeSelection = { _, _ -> },
-                onSortBySelection = { }
-            )
-        }
-    }
-}
-
-@PhonePortrait
-@Composable
-private fun PreviewLoading() {
-    ScreenScaffold(
-        data = GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING),
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onReload = {},
-        existingParameters = GiveawaySearchParameters(),
-        showFilters = false,
-        onShowFiltersChanged = {},
-        onPlatformSelection = { _, _ -> },
-        onTypeSelection = { _, _ -> },
-        onSortBySelection = {}
-    )
-}
-
-@PhonePortrait
-@Composable
-private fun PreviewData() {
-    ScreenScaffold(
-        data = GiveawaysViewModel.GiveawaysScreenData(
-            status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
-            giveaways = persistentListOf(
-                PreviewGiveaway.copy(id = 1),
-                PreviewGiveaway.copy(id = 2).copy(worthDenominated = null),
-                PreviewGiveaway.copy(id = 3),
-                PreviewGiveaway.copy(id = 4).copy(worthDenominated = null),
-                PreviewGiveaway.copy(id = 5).copy(worthDenominated = null),
-            )
-        ),
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onReload = {},
-        existingParameters = GiveawaySearchParameters(),
-        showFilters = false,
-        onShowFiltersChanged = {},
-        onPlatformSelection = { _, _ -> },
-        onTypeSelection = { _, _ -> },
-        onSortBySelection = {}
     )
 }
 
