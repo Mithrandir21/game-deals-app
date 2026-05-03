@@ -39,6 +39,10 @@ class RemoteNetworkModule {
 
             install(HttpTimeout) {
                 connectTimeoutMillis = 10_000
+                // Without `requestTimeoutMillis`, Ktor waits indefinitely for the response
+                // after the connection is established — different from OkHttp's default of
+                // 10s. A silent hang on the read side was the symptom we're guarding against.
+                requestTimeoutMillis = 30_000
             }
 
             when (remoteBuildUtil.buildType()) {
