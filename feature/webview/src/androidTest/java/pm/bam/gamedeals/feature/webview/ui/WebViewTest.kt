@@ -96,7 +96,7 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val mainFrameRequest = mockk<WebResourceRequest> {
+        val mainFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns true
         }
         val error = mockk<WebResourceError>(relaxed = true)
@@ -124,7 +124,7 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val mainFrameRequest = mockk<WebResourceRequest> {
+        val mainFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns true
         }
         val errorResponse = mockk<WebResourceResponse>(relaxed = true)
@@ -152,7 +152,7 @@ class WebViewTest {
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
-        val subFrameRequest = mockk<WebResourceRequest> {
+        val subFrameRequest = mockk<WebResourceRequest>(relaxed = true) {
             every { isForMainFrame } returns false
         }
         val error = mockk<WebResourceError>(relaxed = true)
@@ -174,8 +174,13 @@ class WebViewTest {
      * Locates the [WebView] inside the composed tree via Espresso and invokes the supplied
      * action against its [WebViewClient]. The action runs on the main thread, which is the
      * same thread that the real WebView would use to deliver these callbacks.
+     *
+     * `composeTestRule.waitForIdle()` is called first to give the AndroidView wrapping the
+     * WebView time to attach and gain window focus — without it, Espresso's `onView` racing
+     * the Compose layout occasionally fails with `RootViewWithoutFocusException`.
      */
     private fun invokeOnWebViewClient(action: (WebViewClient, WebView) -> Unit) {
+        composeTestRule.waitForIdle()
         onView(isAssignableFrom(WebView::class.java)).perform(object : ViewAction {
             override fun getConstraints(): Matcher<View> = isAssignableFrom(WebView::class.java)
 

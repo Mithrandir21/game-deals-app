@@ -6,6 +6,7 @@ import org.koin.core.context.startKoin
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.di.testDatabaseOverridesModule
+import pm.bam.gamedeals.di.testImageLoaderOverridesModule
 import pm.bam.gamedeals.di.testNetworkOverridesModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.game.di.gameModule
@@ -49,6 +50,7 @@ class TestGameDealsApplication : Application() {
                 storeModule,
                 testNetworkOverridesModule,
                 testDatabaseOverridesModule,
+                testImageLoaderOverridesModule,
             )
         }
     }
