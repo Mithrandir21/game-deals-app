@@ -4,31 +4,31 @@ plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.androidx.room)
 }
 
 kotlin {
     sourceSets {
-        androidMain.dependencies {
-            implementation(project(":logging"))
-            implementation(project(":common"))
-
-            implementation(libs.androidx.ktx)
-            implementation(libs.androidx.appcompat)
-            implementation(libs.material)
+        commonMain.dependencies {
+            api(libs.kotlinx)
+            api(libs.kotlinx.collections.immutable)
+            api(libs.kotlinx.datetime)
+            api(libs.androidx.paging.common)
 
             implementation(libs.coroutines)
-            implementation(libs.kotlinx.collections.immutable)
+            implementation(libs.room.runtime.multiplatform)
+
+            implementation(project(":common"))
+        }
+
+        androidMain.dependencies {
+            implementation(project(":logging"))
 
             implementation(libs.koin.core)
             implementation(libs.koin.android)
 
-            implementation(libs.androidx.compose.runtime)
-
-            implementation(libs.room)
             implementation(libs.room.runtime)
             implementation(libs.room.paging)
-
-            implementation(libs.androidx.paging.common)
         }
 
         val androidUnitTest by getting {
@@ -42,6 +42,10 @@ kotlin {
             }
         }
     }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {

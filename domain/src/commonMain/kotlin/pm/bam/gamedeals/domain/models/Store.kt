@@ -1,13 +1,11 @@
 package pm.bam.gamedeals.domain.models
 
 
-import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Immutable
 @Entity(tableName = "Store")
 @Serializable
 data class Store(
@@ -31,7 +29,6 @@ data class Store(
     @SerialName("expires")
     val expires: Long = 0L
 ) {
-    @Immutable
     @Serializable
     data class StoreImages(
         @SerialName("banner")

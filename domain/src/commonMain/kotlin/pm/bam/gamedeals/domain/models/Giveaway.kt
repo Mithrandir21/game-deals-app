@@ -3,7 +3,6 @@
 package pm.bam.gamedeals.domain.models
 
 
-import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -17,7 +16,6 @@ import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 
-@Immutable
 @Entity(tableName = "Giveaway")
 @Serializable
 data class Giveaway(
@@ -133,7 +131,6 @@ enum class GiveawaySortBy {
 
 
 @OptIn(ExperimentalSerializationApi::class)
-@Immutable
 @Serializable
 data class GiveawaySearchParameters(
     val platforms: ImmutableList<Pair<GiveawayPlatform, Boolean>> =

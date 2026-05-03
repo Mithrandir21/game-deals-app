@@ -22,8 +22,68 @@ home → search → game → store → giveaways → deal → webview. One featu
 
 ## Sub-commits
 
-(populated as work proceeds)
+### 5.1a — `:domain` to KMP convention (commit `0e035d3`)
 
-## Build verification
+Build wiring only — `pm.bam.gamedeals.kmp.library` + `kmp.ksp`. Sources moved
+`src/main/java` → `src/androidMain/kotlin`, tests → `src/androidUnitTest/kotlin`,
+manifest → `src/androidMain/AndroidManifest.xml`. Dropped the
+`gamedeals.android.library.compose` convention from `:domain` — `:domain` only
+used Compose for the `@Immutable` marker annotation, so the Compose compiler
+plugin was unnecessary. iOS targets compile to empty klibs trivially.
 
-(populated as work proceeds)
+### 5.1b — Paging swap to multiplatform (commit `e3d886e`)
+
+`libs.androidx.paging` (`paging-runtime-ktx`, Android-only) →
+`libs.androidx.paging.common`. All `:domain` paging usages (`RemoteMediator`,
+`PagingState`, `LoadType`, `Pager`, `PagingData`, `PagingConfig`,
+`PagingSource`) live in `paging-common`. `paging-runtime-ktx`'s extras
+(`LivePagedListBuilder`, `PagingDataAdapter`, RxJava bridges) are unused.
+
+### 5.1c — Room → Room KMP (this commit)
+
+Applied the `androidx.room` Gradle plugin to `:domain` and added a new
+`androidx-room` plugin alias to `gradle/libs.versions.toml`. Wired
+`libs.room.runtime.multiplatform` (= `androidx.room:room-runtime`) in
+commonMain; kept `libs.room.runtime` (= `room-ktx`) and `libs.room.paging`
+in androidMain because `withTransaction` and the room-paging integration
+are still Android-only. `room { schemaDirectory("$projectDir/schemas") }`
+configured (Room plugin requires it).
+
+Moved to commonMain:
+- `db/DomainDatabase.kt` + all `db/dao/*.kt`
+- `models/*.kt` (entities + UI models)
+- `utils/{Constants,TypeAdapters,TypeSerializers,ImmutableListSerializer}.kt`
+
+Stayed in androidMain (use Android/JVM-only APIs):
+- `di/DomainModule.kt` — `androidContext()`, `Executors.newSingleThreadExecutor()`,
+  Android-style `Room.databaseBuilder(context, klass, name)`.
+- `repositories/**` — use `androidx.room.withTransaction` (room-ktx, Android).
+- `source/**` — interfaces stay next to their consumers.
+
+`@Immutable` annotations dropped from all entities + UI models. Compose-
+stability inference handles data classes with stable field types fine; the
+`@Immutable` hint is optimisation-only, not load-bearing semantics. Worth
+revisiting once features actually move to commonMain and recomposition
+profiling tells us whether explicit hints are needed; `org.jetbrains.compose.runtime.Immutable`
+becomes available on commonMain via CMP at that point.
+
+`@ConstructedBy(DomainDatabaseConstructor::class)` added to the database;
+`expect object DomainDatabaseConstructor : RoomDatabaseConstructor<DomainDatabase>`
+declared with `@Suppress("NO_ACTUAL_FOR_EXPECT")` — Room's KSP processor
+generates the per-target `actual`s. Only `kspAndroid` is wired (no iOS-side
+KSP); the iOS klib type-checks the abstract declaration but no DB instantiation
+exists for iOS yet. Phase 6 will wire iOS-side KSP + `BundledSQLiteDriver`.
+
+Also dropped `androidx-ktx`, `appcompat`, `material`, and
+`androidx-compose-runtime` (= `lifecycle-runtime-compose`) deps from `:domain` —
+all unused after the `@Immutable` removal.
+
+## Build verification (5.1)
+
+| Task | Result |
+|---|---|
+| `:domain:compileDebugKotlinAndroid` | ✅ |
+| `:domain:compileKotlinIosSimulatorArm64` | ✅ (clean rebuild after `:domain:clean`) |
+| `:domain:testDebugUnitTest` | ✅ (8 test files, all pass) |
+| `:app:assembleDebug` | ✅ |
+| `./gradlew test` (whole project) | ✅ |

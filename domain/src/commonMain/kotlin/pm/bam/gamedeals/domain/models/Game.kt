@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.domain.models
 
 
-import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -30,7 +29,6 @@ data class Game(
     val thumb: String
 )
 
-@Immutable
 @Serializable
 data class GameDetails(
     @SerialName("info")

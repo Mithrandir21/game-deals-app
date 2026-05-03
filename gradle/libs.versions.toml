@@ -188,6 +188,7 @@ androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plu
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "jetbrains-kotlin-plugin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin-plugin" }
+androidx-room = { id = "androidx.room", version.ref = "room" }
 
 # Convention plugins (registered by the build-logic included build).
 gamedeals-android-library = { id = "pm.bam.gamedeals.android.library" }
