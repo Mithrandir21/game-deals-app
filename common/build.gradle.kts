@@ -13,6 +13,8 @@ kotlin {
             api(libs.kotlinx.datetime)
             implementation(libs.coroutines)
             implementation(libs.koin.core)
+
+            implementation(project(":logging"))
         }
 
         androidMain.dependencies {
@@ -21,8 +23,6 @@ kotlin {
             implementation(libs.material)
 
             implementation(libs.koin.android)
-
-            implementation(project(":logging"))
         }
 
         val androidUnitTest by getting {

@@ -1,6 +1,6 @@
 package pm.bam.gamedeals.feature.home.ui
 
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,7 +21,9 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.home.R
+import pm.bam.gamedeals.feature.home.generated.resources.Res
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
@@ -116,8 +118,8 @@ class HomeScreenTest {
         var snackRetry = ""
 
         composeTestRule.setContent {
-            snackText = stringResource(id = R.string.home_screen_data_loading_error_msg)
-            snackRetry = stringResource(id = R.string.home_screen_data_loading_error_retry)
+            snackText = stringResource(Res.string.home_screen_data_loading_error_msg)
+            snackRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
 
             HomeScreen(
                 onSearch = {},
