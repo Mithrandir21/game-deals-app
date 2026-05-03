@@ -156,6 +156,12 @@ class WebViewTest {
         val errorResponse = mockk<WebResourceResponse>(relaxed = true)
 
         invokeOnWebViewClient { client, view ->
+            // Pin `loading = true` before exercising the sub-frame error callbacks. The
+            // real WebView is loading https://example.com on the emulator and may have
+            // already fired onPageFinished (which clears loading) by the time we reach
+            // here — that would mask the actual assertion we want to make: sub-frame
+            // failures themselves do NOT clear loading.
+            client.onPageStarted(view, "https://example.com", null)
             client.onReceivedError(view, subFrameRequest, error)
             client.onReceivedHttpError(view, subFrameRequest, errorResponse)
         }
