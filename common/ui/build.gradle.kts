@@ -12,6 +12,9 @@ kotlin {
             // Compiler plugin is applied (Phase 0 lesson). CMP's `compose.runtime`
             // resolves to the multiplatform Compose runtime artifact for each target.
             implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
 
             implementation(project(":common"))
             implementation(project(":domain"))
