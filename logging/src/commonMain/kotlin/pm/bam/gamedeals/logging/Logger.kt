@@ -40,22 +40,22 @@ interface Logger {
 
 
 fun Any.verbose(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.VERBOSE, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.VERBOSE, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.debug(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.DEBUG, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.DEBUG, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.info(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.INFO, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.INFO, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.warn(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.WARN, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.WARN, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.error(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.ERROR, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.ERROR, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.fatal(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
-    logger.log(LogLevel.FATAL, tag ?: this.javaClass.simpleName, throwable, messageProvider)
+    logger.log(LogLevel.FATAL, tag ?: this::class.simpleName, throwable, messageProvider)
 
 fun Any.fatal(logger: Logger, throwable: Throwable, tag: String? = null) =
-    logger.fatalThrowable(throwable, tag ?: this.javaClass.simpleName)
+    logger.fatalThrowable(throwable, tag ?: this::class.simpleName)
