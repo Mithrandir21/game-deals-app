@@ -1,16 +1,19 @@
 package pm.bam.gamedeals.remote.gamerpower
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.skydoves.sandwich.retrofit.adapters.ApiResponseCallAdapterFactory
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestData
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -20,65 +23,66 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.testing.TestingLoggingListener
-import kotlinx.datetime.LocalDateTime
-import retrofit2.Retrofit
 
 /**
- * HTTP-level coverage for the [GamerPowerSourceImpl] facade. Stands a real
- * Retrofit + the [GamesApi] up against [MockWebServer] so the wiring
- * (path, JSON decoding) is exercised end-to-end inside the module that
- * owns it.
+ * HTTP-level coverage for the [GamerPowerSourceImpl] facade. Stands a Ktor [GamesApi]
+ * up against a [MockEngine] so the wiring (path, JSON decoding) is exercised end-to-end
+ * inside the module that owns it.
  */
 class GamerPowerSourceImplTest {
 
     private val logger: Logger = TestingLoggingListener()
 
-    private lateinit var mockWebServer: MockWebServer
+    private val recordedRequests = mutableListOf<HttpRequestData>()
     private lateinit var impl: GamerPowerSourceImpl
 
     private val datetimeParsing: DatetimeParsing = mockk {
         every { parseDatetime(any()) } returns LocalDateTime(2026, 1, 1, 0, 0)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     @Before
     fun setUp() {
-        mockWebServer = MockWebServer().apply { start() }
+        recordedRequests.clear()
 
         val json = Json {
             encodeDefaults = true
             ignoreUnknownKeys = true
         }
-        val retrofit = Retrofit.Builder()
-            .baseUrl(mockWebServer.url("/").toString())
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .addCallAdapterFactory(ApiResponseCallAdapterFactory.create())
-            .build()
+
+        val mockEngine = MockEngine { request ->
+            recordedRequests += request
+            when (request.url.encodedPath) {
+                "/api/giveaways" -> respond(
+                    content = GIVEAWAY_LIST_BODY,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json")
+                )
+                else -> respond("", HttpStatusCode.NotFound)
+            }
+        }
+
+        val httpClient = HttpClient(mockEngine) {
+            expectSuccess = true
+            install(ContentNegotiation) { json(json) }
+        }
 
         impl = GamerPowerSourceImpl(
             logger = logger,
-            gamesApi = retrofit.create(GamesApi::class.java),
+            gamesApi = GamesApi(httpClient),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
             datetimeParsing = datetimeParsing
         )
     }
 
-    @After
-    fun tearDown() {
-        mockWebServer.shutdown()
-    }
-
     @Test
     fun `fetchGiveaways hits giveaways endpoint and decodes response`() = runTest {
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(GIVEAWAY_LIST_BODY))
-
         val result = impl.fetchGiveaways()
         assertEquals(1, result.size)
         assertEquals("Free Game", result.first().title)
         assertEquals(GiveawayType.GAME, result.first().type)
 
-        val recorded = mockWebServer.takeRequest()
-        assertEquals("/api/giveaways", recorded.path)
+        assertEquals(1, recordedRequests.size)
+        assertEquals("/api/giveaways", recordedRequests.first().url.encodedPath)
     }
 
     private companion object {
