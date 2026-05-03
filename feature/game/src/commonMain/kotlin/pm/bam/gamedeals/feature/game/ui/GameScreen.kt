@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,11 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.WindowAdaptiveInfo
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,34 +43,34 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import kotlinx.collections.immutable.toImmutableList
-import pm.bam.gamedeals.common.ui.FoldableLandscape
-import pm.bam.gamedeals.common.ui.FoldablePortrait
-import pm.bam.gamedeals.common.ui.PhoneLandscape
-import pm.bam.gamedeals.common.ui.PhonePortrait
-import pm.bam.gamedeals.common.ui.PreviewGameDeal
-import pm.bam.gamedeals.common.ui.PreviewGameDetails
-import pm.bam.gamedeals.common.ui.PreviewStore
-import pm.bam.gamedeals.common.ui.TabletLandscape
-import pm.bam.gamedeals.common.ui.TabletPortrait
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
-import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.game.R
+import pm.bam.gamedeals.feature.game.generated.resources.Res
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_on_date_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_value_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_thumbnail
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.store
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 internal fun GameScreen(
     onBack: () -> Unit,
@@ -81,17 +78,20 @@ internal fun GameScreen(
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
-    val windowInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo()
-
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
 
-    ScreenScaffold(
-        windowWidth = windowInfo.windowSizeClass.widthSizeClass,
-        data = data.value,
-        onBack = onBack,
-        goToWeb = goToWeb,
-        onRetry = onRetry
-    )
+    // BoxWithConstraints is multiplatform — replaces the Android-only
+    // currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches
+    // the Material3 Compact-vs-Medium boundary.
+    BoxWithConstraints {
+        ScreenScaffold(
+            isCompact = maxWidth < 600.dp,
+            data = data.value,
+            onBack = onBack,
+            goToWeb = goToWeb,
+            onRetry = onRetry
+        )
+    }
 }
 
 @Composable
@@ -154,8 +154,8 @@ private fun CompactGameDetail(
     ) {
         AsyncImage(
             model = gameDetails.info.thumb,
-            contentDescription = stringResource(R.string.game_screen_game_image, gameDetails.info.title),
-            error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+            contentDescription = stringResource(Res.string.game_screen_game_image, gameDetails.info.title),
+            error = painterResource(CommonRes.drawable.videogame_thumb),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.secondaryContainer)
@@ -171,15 +171,15 @@ private fun CompactGameDetail(
                 text = gameDetails.info.title)
             Text(
                 modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.small),
-                text = stringResource(R.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated)
+                text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated)
             )
             Text(
                 modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.medium),
-                text = stringResource(R.string.game_screen_cheapest_ever_label)
+                text = stringResource(Res.string.game_screen_cheapest_ever_label)
             )
             Text(
                 text = stringResource(
-                    R.string.game_screen_cheapest_ever_on_date_label,
+                    Res.string.game_screen_cheapest_ever_on_date_label,
                     gameDetails.cheapestPriceEver.priceDenominated,
                     gameDetails.cheapestPriceEver.date
                 )
@@ -200,8 +200,8 @@ private fun WideGameDetail(
     ) {
         AsyncImage(
             model = gameDetails.info.thumb,
-            contentDescription = stringResource(R.string.game_screen_game_image, gameDetails.info.title),
-            error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.videogame_thumb),
+            contentDescription = stringResource(Res.string.game_screen_game_image, gameDetails.info.title),
+            error = painterResource(CommonRes.drawable.videogame_thumb),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.secondaryContainer)
@@ -222,18 +222,18 @@ private fun WideGameDetail(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = GameDealsCustomTheme.spacing.small),
-                text = stringResource(R.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated)
+                text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated)
             )
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = GameDealsCustomTheme.spacing.medium),
-                text = stringResource(R.string.game_screen_cheapest_ever_label)
+                text = stringResource(Res.string.game_screen_cheapest_ever_label)
             )
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = stringResource(
-                    R.string.game_screen_cheapest_ever_on_date_label,
+                    Res.string.game_screen_cheapest_ever_on_date_label,
                     gameDetails.cheapestPriceEver.priceDenominated,
                     gameDetails.cheapestPriceEver.date
                 )
@@ -259,8 +259,8 @@ private fun StoreGameDealRow(
         ) {
             AsyncImage(
                 model = store.images.icon,
-                contentDescription = stringResource(R.string.game_screen_store_thumbnail, store.storeName),
-                error = painterResource(id = pm.bam.gamedeals.common.ui.R.drawable.store),
+                contentDescription = stringResource(Res.string.game_screen_store_thumbnail, store.storeName),
+                error = painterResource(CommonRes.drawable.store),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(GameDealsCustomTheme.spacing.large)
             )
@@ -274,7 +274,7 @@ private fun StoreGameDealRow(
             )
             Text(
                 modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-                text = stringResource(R.string.game_screen_list_item_savings_label, deal.savings),
+                text = stringResource(Res.string.game_screen_list_item_savings_label, deal.savings),
                 style = MaterialTheme.typography.labelSmall
             )
             Text(
@@ -290,24 +290,25 @@ private fun StoreGameDealRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScreenScaffold(
-    windowWidth: WindowWidthSizeClass,
+    isCompact: Boolean,
     data: GameScreenData,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit
 ) {
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val currentOnRetry by rememberUpdatedState(onRetry)
 
+    val errorMessage = stringResource(Res.string.game_screen_data_loading_error_msg)
+    val errorRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
+
     val title = when (data) {
-        GameScreenData.Loading, GameScreenData.Error -> stringResource(R.string.game_screen_toolbar_title_loading)
+        GameScreenData.Loading, GameScreenData.Error -> stringResource(Res.string.game_screen_toolbar_title_loading)
         is GameScreenData.Data -> data.gameDetails.info.title
     }
 
-    GameDealsTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
+    Surface(color = MaterialTheme.colorScheme.background) {
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -324,7 +325,7 @@ private fun ScreenScaffold(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.game_screen_navigation_back_button)
+                                    contentDescription = stringResource(Res.string.game_screen_navigation_back_button)
                                 )
                             }
                         },
@@ -344,8 +345,8 @@ private fun ScreenScaffold(
 
                     GameScreenData.Error -> LaunchedEffect(snackbarHostState) {
                         val results = snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.game_screen_data_loading_error_msg),
-                            actionLabel = context.getString(R.string.game_screen_data_loading_error_retry)
+                            message = errorMessage,
+                            actionLabel = errorRetry
                         )
                         if (results == SnackbarResult.ActionPerformed) {
                             currentOnRetry()
@@ -353,89 +354,16 @@ private fun ScreenScaffold(
                     }
 
                     is GameScreenData.Data -> {
-                        when (windowWidth) {
-                            WindowWidthSizeClass.Compact -> CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
-                            else -> WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
+                        if (isCompact) {
+                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
+                        } else {
+                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
                         }
                     }
 
                 }
             }
         }
-    }
-}
-
-
-@PhonePortrait
-@Composable
-private fun PreviewLoading() {
-    ScreenScaffold(
-        windowWidth = WindowWidthSizeClass.Compact,
-        data = GameScreenData.Loading,
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onRetry = {}
-    )
-}
-
-@PhonePortrait
-@Composable
-private fun PreviewError() {
-    ScreenScaffold(
-        windowWidth = WindowWidthSizeClass.Compact,
-        data = GameScreenData.Error,
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onRetry = {}
-    )
-}
-
-@PhonePortrait
-@Composable
-private fun PreviewCompact() {
-    ScreenScaffold(
-        windowWidth = WindowWidthSizeClass.Compact,
-        data = GameScreenData.Data(
-            gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
-        ),
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onRetry = {}
-    )
-}
-
-@PhoneLandscape
-@TabletPortrait
-@Composable
-private fun PreviewMedium() {
-    ScreenScaffold(
-        windowWidth = WindowWidthSizeClass.Medium,
-        data = GameScreenData.Data(
-            gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
-        ),
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onRetry = {}
-    )
-}
-
-@FoldablePortrait
-@FoldableLandscape
-@TabletLandscape
-@Composable
-private fun PreviewExpanded() {
-    ScreenScaffold(
-        windowWidth = WindowWidthSizeClass.Expanded,
-        data = GameScreenData.Data(
-            gameDetails = PreviewGameDetails,
-            dealDetails = List(19) { PreviewStore to PreviewGameDeal }.toImmutableList()
-        ),
-        onBack = {},
-        goToWeb = { _, _ -> },
-        onRetry = {}
-    )
 }
 
 

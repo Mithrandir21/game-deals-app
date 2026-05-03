@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.feature.game.ui
 
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -18,13 +17,16 @@ import io.mockk.runs
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.feature.game.R
+import pm.bam.gamedeals.feature.game.generated.resources.Res
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 
 class GameScreenTest {
 
@@ -108,8 +110,8 @@ class GameScreenTest {
         var snackRetry = ""
 
         composeTestRule.setContent {
-            snackText = stringResource(id = R.string.game_screen_data_loading_error_msg)
-            snackRetry = stringResource(id = R.string.game_screen_data_loading_error_retry)
+            snackText = stringResource(Res.string.game_screen_data_loading_error_msg)
+            snackRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
 
             GameDealsTheme {
                 GameScreen(
