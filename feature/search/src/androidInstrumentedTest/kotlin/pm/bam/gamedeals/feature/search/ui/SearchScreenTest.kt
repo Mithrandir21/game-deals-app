@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.feature.search.ui
 
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -21,11 +20,14 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.feature.search.R
+import pm.bam.gamedeals.feature.search.generated.resources.Res
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_retry
 
 class SearchScreenTest {
 
@@ -107,8 +109,8 @@ class SearchScreenTest {
         var snackRetry = ""
 
         composeTestRule.setContent {
-            snackText = stringResource(id = R.string.search_screen_data_loading_error_msg)
-            snackRetry = stringResource(id = R.string.search_screen_data_loading_error_retry)
+            snackText = stringResource(Res.string.search_screen_data_loading_error_msg)
+            snackRetry = stringResource(Res.string.search_screen_data_loading_error_retry)
 
             GameDealsTheme {
                 SearchScreen(
