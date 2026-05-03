@@ -44,7 +44,7 @@ The migration runs on a long-lived feature branch with one child branch per phas
 
 - **Feature branch**: `feature/kmp-migration` (off `dev`).
 - **Plan doc location on the branch**: `docs/kmp-migration/PLAN.md` — a copy of this plan, committed to the feature branch as the immutable blueprint. Lives in-repo so every phase branch sees it.
-- **Per-phase branches**: `feature/kmp-migration/phase-0-toolchain`, `feature/kmp-migration/phase-1-conventions`, `feature/kmp-migration/phase-2-domain`, `feature/kmp-migration/phase-3-remote`, `feature/kmp-migration/phase-4-di-observability`, `feature/kmp-migration/phase-5-features`, `feature/kmp-migration/phase-6-iosapp`, `feature/kmp-migration/phase-7-longtail`. Each is cut from the feature branch (or from the previous phase branch when sequential dependency requires it).
+- **Per-phase branches**: `feature/kmp-migration-phase-0-toolchain`, `feature/kmp-migration-phase-1-conventions`, `feature/kmp-migration-phase-2-domain`, `feature/kmp-migration-phase-3-remote`, `feature/kmp-migration-phase-4-di-observability`, `feature/kmp-migration-phase-5-features`, `feature/kmp-migration-phase-6-iosapp`, `feature/kmp-migration-phase-7-longtail`. (Hyphen-separated, not slash-nested, because git refuses to create a branch under another branch's name.) Each is cut from the feature branch.
 - **Recovery tags**: `kmp-pre-phase-0` … `kmp-pre-phase-7` cut at the start of each phase on the feature branch, per the regression-evidence section.
 - **Merge cadence**: phase branches merge back into the feature branch with `--no-ff` after their golden-journey smoke pass and behavior diff. The feature branch is *not* merged to `dev` until Phase 7 completes and the full verification checklist passes.
 - **Phase notes**: each phase keeps a running log at `.claude/notes/kmp-migration/phase-N.md` (created on the phase branch, merged back) capturing decisions, deviations from this plan, and golden-journey results.
@@ -54,7 +54,7 @@ The bootstrap sequence (executed immediately after plan approval):
 1. Create `feature/kmp-migration` from `dev`.
 2. Copy this plan to `docs/kmp-migration/PLAN.md` on that branch and commit it.
 3. Cut tag `kmp-pre-phase-0`.
-4. Create `feature/kmp-migration/phase-0-toolchain` from the feature branch — Phase 0 work begins there.
+4. Create `feature/kmp-migration-phase-0-toolchain` from the feature branch — Phase 0 work begins there.
 
 ## Tech swaps (one-line summary)
 
