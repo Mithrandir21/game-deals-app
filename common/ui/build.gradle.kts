@@ -19,6 +19,7 @@ kotlin {
             implementation(project(":common"))
             implementation(project(":domain"))
             implementation(libs.kotlinx.collections.immutable)
+            implementation(libs.androidx.lifecycle.runtime.compose)
         }
 
         androidMain.dependencies {
