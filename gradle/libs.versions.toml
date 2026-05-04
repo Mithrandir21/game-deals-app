@@ -70,7 +70,7 @@ compose-material-icons = { group = "androidx.compose.material", name = "material
 
 androidx-webview = { group = "androidx.webkit", name = "webkit", version.ref = "webview" }
 
-androidx-compose-navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "compose-navigation" }
+androidx-compose-navigation = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version = "2.9.0-beta01" }
 androidx-compose-activity = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-window = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }

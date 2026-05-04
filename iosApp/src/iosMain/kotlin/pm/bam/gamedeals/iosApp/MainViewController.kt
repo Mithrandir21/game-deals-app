@@ -1,7 +1,17 @@
 package pm.bam.gamedeals.iosApp
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -11,19 +21,26 @@ import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
+import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.game.di.gameModule
+import pm.bam.gamedeals.feature.game.navigation.gameScreen
+import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
+import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
-import pm.bam.gamedeals.feature.home.ui.HomeRoute
+import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.search.di.searchModule
+import pm.bam.gamedeals.feature.search.navigation.searchScreen
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
-import platform.UIKit.UIViewController
 
 @Suppress("FunctionName", "unused")
 fun MainViewController(): UIViewController {
@@ -37,10 +54,7 @@ private fun bootstrapKoin() {
     if (koinStarted) return
     koinStarted = true
     val iosAppModule = module {
-        // iOS counterpart of the Android `appModule` Clock binding.
         single<Clock> { Clock { (NSDate().timeIntervalSince1970 * 1000.0).toLong() } }
-
-        // Coil 3 ImageLoader for iOS — uses Ktor (already in graph) for fetching.
         single<ImageLoader> {
             ImageLoader.Builder(PlatformContext.INSTANCE)
                 .crossfade(true)
@@ -61,26 +75,62 @@ private fun bootstrapKoin() {
             gamerpowerNetworkModule,
             gamerpowerRemoteModule,
             homeModule,
+            searchModule,
+            gameModule,
+            giveawaysModule,
             iosAppModule,
         )
     }
 
-    // Wire Coil's singleton image loader to the Koin-bound one so AsyncImage
-    // can resolve images without per-call configuration.
-    SingletonImageLoader.setSafe { context ->
-        // Koin lookup is safe here — bootstrapKoin runs before MainViewController()
-        // returns, so the graph is ready by the time Compose first composes.
+    SingletonImageLoader.setSafe { _ ->
         org.koin.mp.KoinPlatform.getKoin().get()
     }
 }
 
 @Composable
 private fun App() {
-    HomeRoute(
-        onSearch = {},
-        goToGame = {},
-        onViewStoreDeals = {},
-        onViewGiveaways = {},
-        goToWeb = { _, _ -> },
-    )
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = Destination.Home,
+    ) {
+        homeScreen(
+            goToSearch = { navController.navigate(Destination.Search) },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+            goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
+            goToGiveaway = { navController.navigate(Destination.Giveaways) },
+            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+        )
+        searchScreen(
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+        )
+        gameScreen(
+            navController = navController,
+            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+        )
+        giveawaysScreen(
+            navController = navController,
+            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+        )
+        composable<Destination.Store> { entry ->
+            val args = entry.toRoute<Destination.Store>()
+            IosPlaceholder("Store ${args.storeId}\niOS port pending (paging-compose KMP)")
+        }
+        composable<Destination.WebView> { entry ->
+            val args = entry.toRoute<Destination.WebView>()
+            IosPlaceholder("WebView pending\n${args.url}")
+        }
+    }
+}
+
+@Composable
+private fun IosPlaceholder(message: String) {
+    MaterialTheme {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(message)
+        }
+    }
 }
