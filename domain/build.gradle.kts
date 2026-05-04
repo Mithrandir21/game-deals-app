@@ -30,6 +30,10 @@ kotlin {
             implementation(libs.room.runtime)
         }
 
+        iosMain.dependencies {
+            implementation(libs.androidx.sqlite.bundled)
+        }
+
         val androidUnitTest by getting {
             dependencies {
                 implementation(project(":testing"))

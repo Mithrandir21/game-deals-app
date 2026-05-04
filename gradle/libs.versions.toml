@@ -39,6 +39,7 @@ kotlinx-retrofit = "1.0.0"
 kotlinx-collections-immutable = "0.4.0"
 
 room = '2.8.3'
+androidx-sqlite = '2.6.1'
 
 coroutines = '1.10.2'
 
@@ -181,6 +182,7 @@ androidx-paging-common = { group = "androidx.paging", name = "paging-common", ve
 # Room KMP — phase 2 storage swap. Room 2.7+ supports KMP via the same artifact;
 # only the build wiring changes. New entries for the KMP-specific glue:
 room-runtime-multiplatform = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidx-sqlite" }
 
 # Sandwich-ktor — phase 3 networking swap (replaces sandwich-retrofit).
 sandwich-ktor = { group = "com.github.skydoves", name = "sandwich-ktor", version.ref = "sandwich-ktor" }
