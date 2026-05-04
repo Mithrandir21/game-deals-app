@@ -18,6 +18,9 @@ kotlin {
             api(libs.sandwich.ktor)
 
             implementation(libs.koin.core)
+
+            implementation(project(":logging"))
+            implementation(project(":common"))
         }
 
         androidMain.dependencies {
@@ -28,12 +31,6 @@ kotlin {
             implementation(libs.koin.android)
 
             implementation(libs.ktor.client.okhttp)
-
-            // :logging is still an Android-only module. :common is KMP but unused by
-            // :remote/commonMain; keeping both dependencies on the Android side avoids
-            // cross-module variant mismatch on iOS targets.
-            implementation(project(":logging"))
-            implementation(project(":common"))
         }
 
         iosMain.dependencies {

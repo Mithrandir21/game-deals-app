@@ -14,6 +14,11 @@ import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.logging.di.loggingIosModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
+import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
+import pm.bam.gamedeals.remote.di.remoteModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
+import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 import platform.UIKit.UIViewController
 
 @Suppress("FunctionName", "unused")
@@ -33,6 +38,11 @@ private fun bootstrapKoin() {
             commonModule,
             domainModule,
             domainIosModule,
+            remoteModule,
+            cheapsharkNetworkModule,
+            cheapsharkRemoteModule,
+            gamerpowerNetworkModule,
+            gamerpowerRemoteModule,
         )
     }
 }
