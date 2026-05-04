@@ -26,6 +26,7 @@ kotlin {
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose.viewmodel)
+            implementation(libs.androidx.compose.navigation)
 
             implementation(libs.coil3)
             implementation(libs.coil3.compose)
@@ -35,7 +36,6 @@ kotlin {
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
-            implementation(libs.androidx.compose.navigation)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.ui)
             implementation(libs.androidx.ui.graphics)

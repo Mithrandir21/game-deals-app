@@ -17,13 +17,14 @@ kotlin {
             implementation(project(":logging"))
             implementation(project(":common"))
             implementation(project(":common:ui"))
+
+            implementation(libs.androidx.compose.navigation)
         }
 
         androidMain.dependencies {
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
-            implementation(libs.androidx.compose.navigation)
             implementation(libs.androidx.compose.runtime)
             implementation(libs.androidx.webview)
             implementation(libs.androidx.compose.material3)
