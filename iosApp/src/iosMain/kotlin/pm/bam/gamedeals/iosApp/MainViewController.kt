@@ -28,11 +28,7 @@ import platform.UIKit.UIViewController
 @Suppress("FunctionName", "unused")
 fun MainViewController(): UIViewController {
     bootstrapKoin()
-    // `enforceStrictPlistSanityCheck = false` skips Compose Multiplatform's
-    // requirement for `CADisableMinimumFrameDurationOnPhone` in Info.plist.
-    // Phase 7 polish: emit a real Info.plist with the key set so high-refresh-
-    // rate iPhones get full performance.
-    return ComposeUIViewController(configure = { enforceStrictPlistSanityCheck = false }) { App() }
+    return ComposeUIViewController { App() }
 }
 
 private var koinStarted = false
