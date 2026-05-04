@@ -31,6 +31,11 @@ kotlin {
 
             implementation(libs.koin.core)
             api(project(":domain"))
+            implementation(project(":common"))
+            implementation(project(":logging"))
+            implementation(project(":remote"))
+            implementation(project(":remote:cheapshark"))
+            implementation(project(":remote:gamerpower"))
         }
     }
 }

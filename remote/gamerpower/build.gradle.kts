@@ -16,6 +16,10 @@ kotlin {
             api(project(":remote"))
 
             implementation(libs.koin.core)
+
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":domain"))
         }
 
         androidMain.dependencies {
@@ -24,10 +28,6 @@ kotlin {
             implementation(libs.material)
 
             implementation(libs.koin.android)
-
-            implementation(project(":logging"))
-            implementation(project(":common"))
-            implementation(project(":domain"))
         }
 
         val androidUnitTest by getting {

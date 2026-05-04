@@ -1,4 +1,4 @@
-package pm.bam.gamedeals.remote.cheapshark.di
+package pm.bam.gamedeals.remote.gamerpower.di
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
@@ -9,16 +9,14 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.url
 import io.ktor.serialization.kotlinx.json.json
 import org.koin.dsl.module
-import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
-import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
-import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
-import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
-import pm.bam.gamedeals.remote.logic.KtorLogcatLogger
+import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
+import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
 import pm.bam.gamedeals.remote.logic.httpClient
+import pm.bam.gamedeals.remote.logic.ktorPlatformLogger
 
-val cheapsharkNetworkModule = module {
-    single<HttpClient>(CHEAPSHARK_QUALIFIER) {
+val gamerpowerNetworkModule = module {
+    single<HttpClient>(GAMERPOWER_QUALIFIER) {
         httpClient {
             expectSuccess = true
 
@@ -31,20 +29,17 @@ val cheapsharkNetworkModule = module {
                 requestTimeoutMillis = 30_000
             }
 
-            when (get<pm.bam.gamedeals.remote.logic.RemoteBuildUtil>().buildType()) {
+            when (get<RemoteBuildUtil>().buildType()) {
                 RemoteBuildType.DEBUG -> install(Logging) {
-                    logger = KtorLogcatLogger
+                    logger = ktorPlatformLogger
                     level = LogLevel.HEADERS
                 }
                 RemoteBuildType.RELEASE -> Unit
             }
 
-            defaultRequest { url("https://www.cheapshark.com") }
+            defaultRequest { url("https://www.gamerpower.com") }
         }
     }
 
-    single { DealsApi(get(CHEAPSHARK_QUALIFIER)) }
-    single { GamesApi(get(CHEAPSHARK_QUALIFIER)) }
-    single { StoresApi(get(CHEAPSHARK_QUALIFIER)) }
-    single { ReleaseApi(get(CHEAPSHARK_QUALIFIER)) }
+    single { GamesApi(get(GAMERPOWER_QUALIFIER)) }
 }
