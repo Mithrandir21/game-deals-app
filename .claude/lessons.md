@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-07 · Pick JetBrains-AndroidX-fork versions by reading the iOS dep tree first
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, kotlin-native, jetbrains-androidx-fork, version-skew, gradle
+**Applies to:** Adding any `org.jetbrains.androidx.*` artifact (navigation-compose, lifecycle-viewmodel, savedstate, etc.) to a KMP project that already has them transitively
+
+The JetBrains AndroidX KMP forks publish dozens of alpha/beta versions, most of which crash at runtime on Native with `IrLinkageError` if the fork's pinned transitive (e.g., `org.jetbrains.androidx.savedstate`) doesn't match the version your other deps already pull in. Don't pick by latest-Maven or by guessing; run `./gradlew :iosApp:dependencies --configuration iosSimulatorArm64CompileKlibraries | grep -E '<artifact-prefix>' | sort -u` first, identify the existing transitive version (e.g., `lifecycle-viewmodel:2.9.0-beta01 -> 2.9.6`), then declare the new artifact at *that* version. Skipping this step cost me three abandoned alphas in 7.6 before the working `2.9.0-beta01` (matched lifecycle's own published lineage).
+
+**Source:** Phase 7.6 retry — JetBrains nav-compose fork. Same lesson applies to any future `org.jetbrains.androidx.*` adoption.
+
 ### L-2026-05-04-06 · `NSLog` from Kotlin/Native must use the single-arg pattern — varargs don't bridge
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kotlin-native, ios, nslog, foundation, interop
 **Applies to:** Any Kotlin/Native iOS code calling `platform.Foundation.NSLog` with format-and-args style
