@@ -3,6 +3,7 @@ package pm.bam.gamedeals
 import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.di.testDatabaseOverridesModule
@@ -37,6 +38,7 @@ class TestGameDealsApplication : Application() {
             modules(
                 loggingModule,
                 commonModule,
+                commonAndroidModule,
                 domainModule,
                 domainAndroidModule,
                 remoteModule,
