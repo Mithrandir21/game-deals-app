@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package pm.bam.gamedeals.common.datetime.formatting
 
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing

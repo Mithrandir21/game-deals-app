@@ -2,7 +2,8 @@ package pm.bam.gamedeals.domain.utils
 
 import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
-import kotlinx.datetime.Instant
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -24,6 +25,7 @@ class StoreImagesConverter(
     fun convertToObject(json: String): Store.StoreImages = serializer.deserialize(json)
 }
 
+@OptIn(ExperimentalTime::class)
 @ProvidedTypeConverter
 class LocalDatetimeConverter {
     @TypeConverter

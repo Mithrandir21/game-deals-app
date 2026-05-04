@@ -1,7 +1,9 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package pm.bam.gamedeals.common.datetime.formatting
 
-import kotlinx.datetime.Instant
-import kotlinx.datetime.toJavaInstant
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 import java.time.ZoneId
 import java.util.Locale
 
