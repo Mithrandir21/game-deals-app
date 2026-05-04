@@ -1,7 +1,7 @@
 package pm.bam.gamedeals.remote.cheapshark.transformations
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class CurrencyTransformationImplTest {
 
@@ -10,7 +10,7 @@ class CurrencyTransformationImplTest {
     private val impl = CurrencyTransformationImpl(denomination)
 
     @Test
-    fun `NaN value`() {
+    fun nan_value() {
         val value = Double.NaN
         val result = impl.valueToDenominated(value)
 
@@ -18,7 +18,7 @@ class CurrencyTransformationImplTest {
     }
 
     @Test
-    fun `zero value`() {
+    fun zero_value() {
         val value = 0.0
         val result = impl.valueToDenominated(value)
 
@@ -26,7 +26,7 @@ class CurrencyTransformationImplTest {
     }
 
     @Test
-    fun `positive value`() {
+    fun positive_value() {
         val value = 1.99
         val result = impl.valueToDenominated(value)
 
@@ -34,7 +34,7 @@ class CurrencyTransformationImplTest {
     }
 
     @Test
-    fun `negative value`() {
+    fun negative_value() {
         val value = -1.99
         val result = impl.valueToDenominated(value)
 
