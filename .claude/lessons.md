@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-04 · Ktor version skew silently breaks Native, silently works on JVM
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** ktor, kmp, kotlin-native, version-skew, irlinkageerror
+**Applies to:** Any KMP project pulling Ktor in alongside transitives (sandwich-ktor, coil3-network-ktor3, etc.) that may force a Ktor version higher than the BOM in `libs.versions.toml`
+
+JVM resolves missing/changed symbols at link time per-class, so a transitive forcing `ktor-client-core` from 3.0.3 → 3.3.0 while `ktor-client-darwin:3.0.3` stays pinned is invisible on Android. Kotlin/Native klibs carry exact symbol fingerprints — the same skew turns into `kotlin.internal.IrLinkageError` at runtime as soon as the affected code path runs (e.g., the first HTTP response body). Manifested for us as `Function 'dropCompressionHeaders' can not be called: No function found for symbol ...`. Fix: align the BOM (`ktor = "3.3.0"`) so all Ktor artifacts agree. Watch for this on every Ktor major version bump and any new dep that Ktor-uses internally.
+
+**Source:** Phase 6.7c — first iOS network round-trip surfaced the skew.
+
 ### L-2026-05-04-03 · Two-Koin-module split is the right shape for platform-specific construction in KMP
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, koin, di, room
 **Applies to:** A KMP module that needs platform-specific construction (database Builder, file-path resolution, platform context, native handle) — i.e. a binding that can't live in commonMain because it touches `androidContext()`/`NSHomeDirectory()`/etc.
