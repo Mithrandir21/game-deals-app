@@ -3,7 +3,9 @@ package pm.bam.gamedeals.feature.store.ui
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.cachedIn
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
+import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -58,12 +61,17 @@ internal class StoreViewModel(
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val deals = storeIdFlow
+    val deals: StateFlow<ImmutableList<Deal>> = storeIdFlow
         .filterNotNull() // Skip our initial null value
         .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
-        .flatMapLatest { dealsRepository.getPagingStoreDeals(it) }
-        .cachedIn(viewModelScope)
+        .flatMapLatest { dealsRepository.observeStoreDeals(it) }
+        .map { it.toImmutableList() }
         .logFlow(logger)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = persistentListOf()
+        )
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealTitle, dealPriceDenominated)

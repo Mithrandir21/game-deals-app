@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.domain.db.dao
 
-import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -24,9 +23,9 @@ internal interface DealsDao {
     @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY dealRating DESC LIMIT :limit")
     suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
 
-    /** Returns all the [Deal]s in the database with [storeId], ordered by their [Deal.dealRating] in descending order. */
+    /** Live stream of all the [Deal]s for [storeId], ordered by [Deal.dealRating] descending. */
     @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY dealRating DESC")
-    fun getPagingStoreDeals(storeId: Int): PagingSource<Int, Deal>
+    fun observeStoreDeals(storeId: Int): Flow<List<Deal>>
 
     /** Adds the [Deal] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
