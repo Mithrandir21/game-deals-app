@@ -1,12 +1,15 @@
 package pm.bam.gamedeals.logging.implementations
 
+import platform.Foundation.NSLog
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.LoggingInterface
 
 /**
- * iOS counterpart to the Android `SimpleLoggingListener` — routes log lines to
- * stdout via `println`, which Xcode's debug console captures. Stays in iosMain
- * because Sentry-Cocoa isn't yet wired into the Xcode project (Phase 7 polish).
+ * iOS counterpart to the Android `SimpleLoggingListener` — routes log lines via
+ * `NSLog`, which writes to both the Apple System Log (visible in Console.app
+ * with subsystem filtering) and stderr (visible in Xcode's debug console).
+ * `println` would only hit stdout, missing the system log integration. Sentry-
+ * Cocoa is still deferred until SPM wiring (Phase 7.7).
  */
 internal class IosConsoleLoggingListener : LoggingInterface {
 
@@ -16,18 +19,19 @@ internal class IosConsoleLoggingListener : LoggingInterface {
 
     override fun onLog(level: LogLevel, message: String, tag: String?, throwable: Throwable?) {
         val effectiveTag = tag ?: getLoggerTag()
-        val prefix = "[${level.name}] $effectiveTag:"
+        val line = "[${level.name}] $effectiveTag: $message"
+        // NSLog's first arg is a printf format string. Pre-formatted text must be
+        // routed through `%@` to avoid the system interpreting `%` characters in
+        // application messages.
+        NSLog("%@", line)
         if (throwable != null) {
-            println("$prefix $message")
-            println(throwable.stackTraceToString())
-        } else {
-            println("$prefix $message")
+            NSLog("%@", throwable.stackTraceToString())
         }
     }
 
     override fun onFatalThrowable(tag: String?, throwable: Throwable) {
         val effectiveTag = tag ?: getLoggerTag()
-        println("[FATAL] $effectiveTag: ${throwable.message}")
-        println(throwable.stackTraceToString())
+        NSLog("%@", "[FATAL] $effectiveTag: ${throwable.message}")
+        NSLog("%@", throwable.stackTraceToString())
     }
 }
