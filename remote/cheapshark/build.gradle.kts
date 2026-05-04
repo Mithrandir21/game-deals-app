@@ -31,6 +31,10 @@ kotlin {
             implementation(libs.koin.android)
         }
 
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+
         val androidUnitTest by getting {
             dependencies {
                 implementation(project(":testing"))
