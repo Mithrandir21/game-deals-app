@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-06 · `NSLog` from Kotlin/Native must use the single-arg pattern — varargs don't bridge
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kotlin-native, ios, nslog, foundation, interop
+**Applies to:** Any Kotlin/Native iOS code calling `platform.Foundation.NSLog` with format-and-args style
+
+`NSLog("%@", line)` from Kotlin/Native crashes at runtime with `EXC_BAD_ACCESS` the first time a log line lands. Kotlin/Native's Foundation binding types `NSLog` as `fun NSLog(format: String, vararg args: Any?)` but doesn't bridge Kotlin `String` to Objective-C `NSString *` through the C variadic ABI, so the slot for `%@` receives a garbage pointer. Use the single-arg form: pass the application content as the format string itself, pre-escape `%` characters (`line.replace("%", "%%")`) so user content can't be reinterpreted as format specifiers. Doesn't surface during compile/link — only at runtime when the affected code path actually logs.
+
+**Source:** Phase 7.2 — first iOS log line through `IosConsoleLoggingListener` after HomeScreen wired up.
+
 ### L-2026-05-04-05 · Koin 4.0 references Android-only AndroidX lifecycle symbols on iOS
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** koin, kmp, kotlin-native, lifecycle, irlinkageerror, koin-compose-viewmodel
 **Applies to:** Any KMP project using `koin-compose-viewmodel` to call `koinViewModel()` from a Composable that runs on iOS
