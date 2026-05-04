@@ -13,11 +13,9 @@ kotlin {
             api(libs.kotlinx)
             api(libs.kotlinx.collections.immutable)
             api(libs.kotlinx.datetime)
-            api(libs.androidx.paging.common)
 
             implementation(libs.coroutines)
             implementation(libs.room.runtime.multiplatform)
-            implementation(libs.room.paging)
             implementation(libs.koin.core)
 
             implementation(project(":common"))

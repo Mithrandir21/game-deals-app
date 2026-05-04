@@ -1,12 +1,9 @@
 package pm.bam.gamedeals.domain.repositories.deals
 
-import androidx.paging.ExperimentalPagingApi
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.DomainDatabase
@@ -15,7 +12,6 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
-import pm.bam.gamedeals.domain.repositories.deals.paging.DealsMediator
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
@@ -35,16 +31,19 @@ class DealsRepository internal constructor(
     fun observeAllDeals(): Flow<List<Deal>> =
         dealsDao.observeAllDeals()
 
-    @OptIn(ExperimentalPagingApi::class)
-    fun getPagingStoreDeals(storeId: Int): Flow<PagingData<Deal>> = Pager(
-        config = PagingConfig(
-            pageSize = DEAL_PAGE_COUNT,
-            enablePlaceholders = false
-        ),
-        remoteMediator = DealsMediator(domainDatabase, cheapsharkSource, storeId, DEAL_PAGE_COUNT, logger)
-    ) {
-        dealsDao.getPagingStoreDeals(storeId)
-    }.flow
+    /**
+     * Live stream of deals for [storeId]. Triggers a TTL-aware refresh against
+     * CheapShark on subscribe; subsequent emissions follow Room's change-tracking
+     * as the cache row turns over. Replaces the previous Paging 3 `Pager` +
+     * `RemoteMediator` flow that didn't have a working multiplatform compose
+     * binding (paging-compose is Android-only; Cash App's
+     * `paging-compose-common` shim ran into runtime klib symbol mismatches on
+     * Native). Pagination can be reintroduced when AndroidX ships
+     * multiplatform paging-compose.
+     */
+    fun observeStoreDeals(storeId: Int): Flow<List<Deal>> =
+        dealsDao.observeStoreDeals(storeId)
+            .onStart { refreshDeals(storeId) }
 
 
     suspend fun getStoreDeals(storeId: Int): List<Deal> {

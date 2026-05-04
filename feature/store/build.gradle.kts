@@ -44,10 +44,6 @@ kotlin {
             implementation(libs.androidx.compose.material3.window)
             implementation(libs.androidx.compose.material3.adaptive)
 
-            // paging-compose is Android-only (LazyPagingItems / collectAsLazyPagingItems);
-            // StoreScreen.kt stays androidMain because of it.
-            implementation(libs.androidx.paging.compose)
-
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
 

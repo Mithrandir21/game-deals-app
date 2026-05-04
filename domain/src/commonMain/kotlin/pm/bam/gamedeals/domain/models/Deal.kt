@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.domain.models
 
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.EncodeDefault
@@ -144,11 +143,3 @@ data class DealDetails(
     )
 }
 
-@Entity(tableName = "DealPage")
-internal data class DealPage(
-    @PrimaryKey
-    @ColumnInfo(name = "storeID", collate = ColumnInfo.NOCASE)
-    val storeID: Int,
-    @SerialName("page")
-    val page: Int
-)

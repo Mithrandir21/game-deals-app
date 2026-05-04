@@ -7,18 +7,15 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.paging.LoadState
-import androidx.paging.LoadStates
-import androidx.paging.PagingData
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import kotlinx.coroutines.flow.Flow
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -50,46 +47,15 @@ class StoreScreenTest {
         every { deal.title } returns dealTitle
         every { deal.salePriceDenominated } returns dealPrice
         every { deal.thumb } returns dealThumb
-        val dealPaging: Flow<PagingData<Deal>> = flowOf(PagingData.from(listOf(deal)))
+        val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
         val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
 
-        every { viewModel.deals } returns dealPaging
+        every { viewModel.deals } returns deals
         every { viewModel.dealDetails } returns dealDetails
         every { viewModel.uiState } returns uiState
     }
 
-
-    @Test
-    fun loadingScreen() {
-        val pagingData = PagingData.from<Deal>(
-            data = listOf(),
-            sourceLoadStates = LoadStates(
-                refresh = LoadState.NotLoading(true),
-                prepend = LoadState.NotLoading(true),
-                append = LoadState.Loading
-            )
-        )
-
-        every { viewModel.deals } returns flowOf(pagingData)
-
-        composeTestRule.setContent {
-            GameDealsTheme {
-                StoreScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(LoadingRowTag)
-            .assertIsDisplayed()
-
-        verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { viewModel.dealDetails }
-        verify(exactly = 1) { viewModel.uiState }
-    }
 
     @Test
     fun loadSingleDeal() {
@@ -102,6 +68,9 @@ class StoreScreenTest {
                 )
             }
         }
+
+        composeTestRule.onNodeWithTag(DealRowTag.plus(deal.dealID))
+            .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }

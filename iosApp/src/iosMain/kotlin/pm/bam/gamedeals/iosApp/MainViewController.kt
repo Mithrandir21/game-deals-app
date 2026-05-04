@@ -38,6 +38,8 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
+import pm.bam.gamedeals.feature.store.di.storeModule
+import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
@@ -81,6 +83,7 @@ private fun bootstrapKoin() {
             searchModule,
             gameModule,
             giveawaysModule,
+            storeModule,
             iosAppModule,
         )
     }
@@ -124,10 +127,10 @@ private fun AppNavHost() {
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
         )
-        composable<Destination.Store> { entry ->
-            val args = entry.toRoute<Destination.Store>()
-            IosPlaceholder("Store ${args.storeId}\niOS port pending (paging-compose KMP)")
-        }
+        storeScreen(
+            navController = navController,
+            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+        )
         composable<Destination.WebView> { entry ->
             val args = entry.toRoute<Destination.WebView>()
             IosPlaceholder("WebView pending\n${args.url}")
