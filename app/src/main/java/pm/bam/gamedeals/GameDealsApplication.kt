@@ -10,6 +10,7 @@ import io.sentry.kotlin.multiplatform.Sentry
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.di.domainAndroidModule
@@ -38,6 +39,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             modules(
                 loggingModule,
                 commonModule,
+                commonAndroidModule,
                 domainModule,
                 domainAndroidModule,
                 remoteModule,

@@ -10,8 +10,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
 import org.koin.core.context.startKoin
+import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.logging.di.loggingIosModule
 import platform.UIKit.UIViewController
 
 @Suppress("FunctionName", "unused")
@@ -27,6 +29,8 @@ private fun bootstrapKoin() {
     koinStarted = true
     startKoin {
         modules(
+            loggingIosModule,
+            commonModule,
             domainModule,
             domainIosModule,
         )
