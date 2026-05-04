@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-04-05 · Koin 4.0 references Android-only AndroidX lifecycle symbols on iOS
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** koin, kmp, kotlin-native, lifecycle, irlinkageerror, koin-compose-viewmodel
+**Applies to:** Any KMP project using `koin-compose-viewmodel` to call `koinViewModel()` from a Composable that runs on iOS
+
+Koin 4.0.0's `AndroidParametersHolder` references `androidx.lifecycle.SavedStateHandle` (Google's Android-only artifact) directly. On iOS the classpath has the JetBrains fork `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:*` instead, so first invocation of `koinViewModel()` from any Composable rendered on iOS throws `IrLinkageError: No class found for symbol 'androidx.lifecycle/SavedStateHandle|null[0]'`. Compile/link succeeds; the failure only appears when the affected code path runs (Composable rendering an `internal viewModel: T = koinViewModel()` default). Bump Koin to 4.1.0+, which dropped the direct AndroidX reference. Same family of failure as L-2026-05-04-04 (Ktor skew) — JVM resolves per-class at link time and silently muddles through; Native carries klib symbol fingerprints and crashes hard at runtime.
+
+**Source:** Phase 6.7d — first iOS render of a real feature Composable.
+
 ### L-2026-05-04-04 · Ktor version skew silently breaks Native, silently works on JVM
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** ktor, kmp, kotlin-native, version-skew, irlinkageerror
 **Applies to:** Any KMP project pulling Ktor in alongside transitives (sandwich-ktor, coil3-network-ktor3, etc.) that may force a Ktor version higher than the BOM in `libs.versions.toml`
