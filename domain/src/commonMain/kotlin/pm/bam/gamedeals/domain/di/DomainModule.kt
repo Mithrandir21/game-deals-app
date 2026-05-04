@@ -21,7 +21,7 @@ val domainModule = module {
 
     single<DomainDatabase> {
         get<RoomDatabase.Builder<DomainDatabase>>()
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .addTypeConverter(get<StoreImagesConverter>())
             .addTypeConverter(get<GiveawayPlatformsConverter>())
             .addTypeConverter(get<LocalDatetimeConverter>())
