@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.iosApp
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +26,8 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.common.ui.theme.darkScheme
+import pm.bam.gamedeals.common.ui.theme.lightScheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.game.di.gameModule
@@ -89,6 +92,15 @@ private fun bootstrapKoin() {
 
 @Composable
 private fun App() {
+    MaterialTheme(
+        colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme,
+    ) {
+        AppNavHost()
+    }
+}
+
+@Composable
+private fun AppNavHost() {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
@@ -125,12 +137,10 @@ private fun App() {
 
 @Composable
 private fun IosPlaceholder(message: String) {
-    MaterialTheme {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(message)
-        }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(message)
     }
 }
