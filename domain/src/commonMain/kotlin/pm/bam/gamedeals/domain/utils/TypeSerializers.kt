@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.utils
 
-import kotlinx.datetime.Instant
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -18,6 +19,7 @@ import kotlinx.serialization.encoding.Encoder
  * annotation requires the target class to live in the same module — `kotlinx.datetime.LocalDateTime`
  * doesn't, so the descriptor is declared explicitly.
  */
+@OptIn(ExperimentalTime::class)
 internal class LocalDateSerializer : KSerializer<LocalDateTime> {
 
     override val descriptor: SerialDescriptor =

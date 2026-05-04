@@ -1,6 +1,8 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package pm.bam.gamedeals.common.datetime.formatting
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Locale-aware date formatter producing strings of the form `"MMM dd, yyyy"` (e.g. "Jan 15, 2026")
