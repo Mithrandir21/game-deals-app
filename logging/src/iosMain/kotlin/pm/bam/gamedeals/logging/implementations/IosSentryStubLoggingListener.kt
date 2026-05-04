@@ -29,14 +29,14 @@ internal class IosSentryStubLoggingListener : LoggingInterface {
             LogLevel.VERBOSE,
             LogLevel.DEBUG,
             LogLevel.INFO,
-            LogLevel.WARN -> NSLog("%@", "[Sentry stub] breadcrumb [${level.name}] $effectiveTag: $message")
+            LogLevel.WARN -> nsLog("[Sentry stub] breadcrumb [${level.name}] $effectiveTag: $message")
             LogLevel.ERROR,
             LogLevel.FATAL -> {
                 if (throwable != null) {
-                    NSLog("%@", "[Sentry stub] captureException [${level.name}] $effectiveTag: ${throwable.message}")
-                    NSLog("%@", throwable.stackTraceToString())
+                    nsLog("[Sentry stub] captureException [${level.name}] $effectiveTag: ${throwable.message}")
+                    nsLog(throwable.stackTraceToString())
                 } else {
-                    NSLog("%@", "[Sentry stub] captureMessage [${level.name}] $effectiveTag: $message")
+                    nsLog("[Sentry stub] captureMessage [${level.name}] $effectiveTag: $message")
                 }
             }
         }
@@ -44,7 +44,12 @@ internal class IosSentryStubLoggingListener : LoggingInterface {
 
     override fun onFatalThrowable(tag: String?, throwable: Throwable) {
         val effectiveTag = tag ?: getLoggerTag()
-        NSLog("%@", "[Sentry stub] captureException [FATAL] $effectiveTag: ${throwable.message}")
-        NSLog("%@", throwable.stackTraceToString())
+        nsLog("[Sentry stub] captureException [FATAL] $effectiveTag: ${throwable.message}")
+        nsLog(throwable.stackTraceToString())
+    }
+
+    // See IosConsoleLoggingListener.nsLog for why we don't pass varargs.
+    private fun nsLog(line: String) {
+        NSLog(line.replace("%", "%%"))
     }
 }
