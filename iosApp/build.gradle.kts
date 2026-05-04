@@ -30,12 +30,18 @@ kotlin {
             implementation(compose.components.resources)
 
             implementation(libs.koin.core)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.coil3)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.ktor)
             api(project(":domain"))
             implementation(project(":common"))
+            implementation(project(":common:ui"))
             implementation(project(":logging"))
             implementation(project(":remote"))
             implementation(project(":remote:cheapshark"))
             implementation(project(":remote:gamerpower"))
+            implementation(project(":feature:home"))
         }
     }
 }
