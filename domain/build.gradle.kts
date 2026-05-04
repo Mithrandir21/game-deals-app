@@ -17,6 +17,7 @@ kotlin {
 
             implementation(libs.coroutines)
             implementation(libs.room.runtime.multiplatform)
+            implementation(libs.room.paging)
             implementation(libs.koin.core)
 
             implementation(project(":common"))
@@ -27,7 +28,6 @@ kotlin {
             implementation(libs.koin.android)
 
             implementation(libs.room.runtime)
-            implementation(libs.room.paging)
         }
 
         val androidUnitTest by getting {
@@ -49,6 +49,9 @@ room {
 
 dependencies {
     add("kspAndroid", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
 }
 
 extensions.configure<LibraryExtension> {
