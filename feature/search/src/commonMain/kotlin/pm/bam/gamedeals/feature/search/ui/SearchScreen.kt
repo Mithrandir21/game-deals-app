@@ -285,6 +285,7 @@ private fun SearchField(
             .testTag(SearchFieldTag),
         value = title,
         onValueChange = { title = it },
+        singleLine = true,
         maxLines = 1,
         leadingIcon = {
             Icon(

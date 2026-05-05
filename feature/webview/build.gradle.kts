@@ -13,6 +13,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.materialIconsExtended)
+            implementation(compose.components.resources)
 
             implementation(project(":logging"))
             implementation(project(":common"))
@@ -54,6 +55,12 @@ extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.feature.webview"
 
     defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "pm.bam.gamedeals.feature.webview.generated.resources"
+    generateResClass = org.jetbrains.compose.resources.ResourcesExtension.ResourceClassGeneration.Auto
 }
 
 dependencies {

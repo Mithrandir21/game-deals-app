@@ -17,20 +17,23 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.platform.app.InstrumentationRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Rule
 import org.junit.Test
-import pm.bam.gamedeals.feature.webview.R
 
 class WebViewTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    // Strings used in content-description assertions. Mirror the values declared in
+    // commonMain composeResources (`feature/webview/src/commonMain/composeResources/
+    // values/strings.xml`); kept hardcoded here to avoid the suspending `getString(
+    // Res.string.X)` API in test setup.
+    private val backDescription = "Back"
+    private val openInBrowserDescription = "Open in browser"
 
     @Test
     fun webView_displaysTitleAndHandlesBack() {
@@ -49,7 +52,6 @@ class WebViewTest {
         composeTestRule.onNodeWithText(gameTitle).assertIsDisplayed()
 
         // Verify back button works
-        val backDescription = context.getString(R.string.webview_screen_navigation_back_button)
         composeTestRule.onNodeWithContentDescription(backDescription).performClick()
         assert(backClicked)
     }
@@ -72,7 +74,6 @@ class WebViewTest {
         }
 
         // Click "Open in Browser" button
-        val openInBrowserDescription = context.getString(R.string.webview_screen_navigation_open_in_browser)
         composeTestRule.onNodeWithContentDescription(openInBrowserDescription).performClick()
 
         // Verify URI handler was called
