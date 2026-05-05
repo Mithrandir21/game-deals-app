@@ -5,9 +5,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestDispatcher
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import pm.bam.gamedeals.testing.MainCoroutineRule
 
 
 private fun <T> List<T>.getOrException(index: Int) = this.getOrElse(index) { idx ->
@@ -28,14 +25,16 @@ fun <T> List<T>.ninth() = this.getOrException(8)
 fun <T> List<T>.tenth() = this.getOrException(9)
 
 /**
- * Returns a [List] of [T] that continuously gets the emissions of the any updates to the [Flow].
+ * Returns a [List] of [T] that continuously gets the emissions of the [Flow].
  *
- * This will allow a different thread than the one running the main unit test to emit the returned [List] with updates from the [Flow], without
- * blocking, and also automatically cancelling the updating job if [TestScope.backgroundScope] for [coroutineScope].
+ * Allows a different coroutine than the one running the main unit test to emit into the returned
+ * list as the [Flow] updates, without blocking, and to be automatically cancelled when
+ * `TestScope.backgroundScope` is passed as [coroutineScope].
  *
- *
- * @param coroutineScope For suspend functions to not be blocked during testing, use [TestScope.backgroundScope] for [coroutineScope].
- * @param testDispatcher Use [MainCoroutineRule.testDispatcher] or [UnconfinedTestDispatcher] to allow of greedy collections.
+ * @param coroutineScope For suspend functions to not be blocked during testing, use
+ * `TestScope.backgroundScope`.
+ * @param testDispatcher Use `UnconfinedTestDispatcher` (or the dispatcher you've installed via
+ * `Dispatchers.setMain`) to allow greedy collections.
  */
 @Suppress("kotlin:S6311")
 fun <T> Flow<T>.observeEmissions(coroutineScope: CoroutineScope, testDispatcher: TestDispatcher): List<T> {
