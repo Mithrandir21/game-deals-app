@@ -8,6 +8,16 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-05-03 · `sentry-kotlin-multiplatform` via Sentry-Cocoa SPM needs an exact version pin and the `Sentry-Dynamic` product
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, xcode-26, version-skew
+**Applies to:** A KMP project integrating `sentry-kotlin-multiplatform` on iOS by adding `https://github.com/getsentry/sentry-cocoa` as a Swift Package Manager dependency in `iosApp.xcodeproj` (rather than via CocoaPods)
+
+`sentry-kotlin-multiplatform`'s cinterop layer references specific Objective-C class symbols (`_OBJC_CLASS_$_SentrySDK`, `_OBJC_CLASS_$_SentryEnvelope`, `_OBJC_CLASS_$_SentryDependencyContainer`, etc.). Those symbols only exist in narrow Sentry-Cocoa version windows: Sentry-Cocoa 9.x rewrote them as Swift classes (mangled `__TtC6Sentry…` symbols), and even within 8.x successive patches keep deprecating more public surface to Swift. SPM rules like "Up to Next Major" silently pick a too-new patch and break the link with `Undefined symbols for architecture arm64: _OBJC_CLASS_$_Sentry…`. Pin to **Exact Version** matching the sentry-kotlin-multiplatform release's CocoaPods Podfile.lock — for `sentry-kotlin-multiplatform:0.13.0` that is **`8.36.0`**.
+
+Two more SPM gotchas worth knowing up front: (1) pick the **Sentry-Dynamic** SPM product, not `Sentry`. Xcode 26's SwiftBuild treats the static `Sentry` product as a "codeless framework", strips its Mach-O during embedding, and replaces it with a stub binary — so the linker has no symbols to resolve even when search paths are correct. The build log gives this away with `Injecting stub binary into codeless framework`. (2) Confirm the actual binary on disk with `nm -gU …/Build/Products/Debug-iphonesimulator/Sentry.framework/Sentry | grep <expected class>`; a missing symbol there is the difference between "wrong product variant" and "wrong upstream version" — the former produces no symbols, the latter produces *different* symbols (Swift-mangled).
+
+**Source:** Phase-7e iOS Sentry wire-up — three rounds of unresolved-symbol errors before isolating the dynamic product and the exact 8.36.0 pin.
+
 ### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
 **Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
