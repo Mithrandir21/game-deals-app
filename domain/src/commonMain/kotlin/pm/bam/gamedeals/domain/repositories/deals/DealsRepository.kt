@@ -20,15 +20,24 @@ import pm.bam.gamedeals.logging.debug
 internal const val DEAL_PAGE_COUNT = 60
 internal val DEALS_TTL_MILLIS = millisInHour * 8
 
-class DealsRepository internal constructor(
+interface DealsRepository {
+    fun observeAllDeals(): Flow<List<Deal>>
+    fun observeStoreDeals(storeId: Int): Flow<List<Deal>>
+    suspend fun getStoreDeals(storeId: Int): List<Deal>
+    suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
+    suspend fun getDeal(dealId: String): DealDetails
+    suspend fun refreshDeals(storeId: Int, force: Boolean = false)
+}
+
+internal class DealsRepositoryImpl(
     private val logger: Logger,
     private val dealsDao: DealsDao,
     private val domainDatabase: DomainDatabase,
     private val cheapsharkSource: CheapsharkSource,
     private val clock: Clock,
-) {
+) : DealsRepository {
 
-    fun observeAllDeals(): Flow<List<Deal>> =
+    override fun observeAllDeals(): Flow<List<Deal>> =
         dealsDao.observeAllDeals()
 
     /**
@@ -41,26 +50,26 @@ class DealsRepository internal constructor(
      * Native). Pagination can be reintroduced when AndroidX ships
      * multiplatform paging-compose.
      */
-    fun observeStoreDeals(storeId: Int): Flow<List<Deal>> =
+    override fun observeStoreDeals(storeId: Int): Flow<List<Deal>> =
         dealsDao.observeStoreDeals(storeId)
             .onStart { refreshDeals(storeId) }
 
 
-    suspend fun getStoreDeals(storeId: Int): List<Deal> {
+    override suspend fun getStoreDeals(storeId: Int): List<Deal> {
         refreshDeals(storeId)
         return dealsDao.getStoreDeals(storeId)
     }
 
-    suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal> {
+    override suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal> {
         refreshDeals(storeId)
         return dealsDao.getStoreDeals(storeId, limit)
     }
 
-    suspend fun getDeal(dealId: String): DealDetails =
+    override suspend fun getDeal(dealId: String): DealDetails =
         cheapsharkSource.fetchDealDetails(dealId)
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun refreshDeals(storeId: Int, force: Boolean = false) {
+    override suspend fun refreshDeals(storeId: Int, force: Boolean) {
         val refreshed = storeDealsCache(storeId).refreshIfNeeded(force)
         debug(logger) { "Store($storeId) Deals refresh needed: $refreshed" }
     }

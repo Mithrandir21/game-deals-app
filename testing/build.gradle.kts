@@ -9,6 +9,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.coroutines)
+            implementation(libs.coroutines.testing)
 
             implementation(project(":logging"))
             implementation(project(":common"))
@@ -18,7 +19,6 @@ kotlin {
             implementation(libs.junit)
             implementation(libs.mockk)
             implementation(libs.androidx.runner)
-            implementation(libs.coroutines.testing)
         }
     }
 }

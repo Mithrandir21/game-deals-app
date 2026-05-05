@@ -39,7 +39,7 @@ class StoresRepositoryTest {
     private val now = 1_000_000L
     private val clock = Clock { now }
 
-    private val impl = StoresRepository(logger, storesDao, cheapsharkSource, clock)
+    private val impl = StoresRepositoryImpl(logger, storesDao, cheapsharkSource, clock)
 
     @Test
     fun observe_stores_fresh_cache_does_not_refresh() = runTest {

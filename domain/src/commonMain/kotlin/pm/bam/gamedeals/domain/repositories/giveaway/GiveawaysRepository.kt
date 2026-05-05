@@ -11,18 +11,24 @@ import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
-class GiveawaysRepository internal constructor(
+interface GiveawaysRepository {
+    fun observeGiveaways(): Flow<List<Giveaway>>
+    fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>>
+    suspend fun refreshGiveaways()
+}
+
+internal class GiveawaysRepositoryImpl(
     private val logger: Logger,
     private val giveawaysDao: GiveawaysDao,
     private val gamerPowerSource: GamerPowerSource
-) {
+) : GiveawaysRepository {
 
-    fun observeGiveaways(): Flow<List<Giveaway>> =
+    override fun observeGiveaways(): Flow<List<Giveaway>> =
         giveawaysDao.observeAllGiveaways()
             .map { items -> items.sortedByDescending { it.publishedDate } }
             .onError { fatal(logger, it) }
 
-    fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>> {
+    override fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>> {
         val typeValues = giveawaySearchParameters.types
             .filter { it.second }
             .map { it.first }
@@ -50,7 +56,8 @@ class GiveawaysRepository internal constructor(
             .onError { fatal(logger, it) }
     }
 
-    suspend fun refreshGiveaways() =
+    override suspend fun refreshGiveaways() {
         gamerPowerSource.fetchGiveaways()
             .let { giveawaysDao.addGiveaways(*it.toTypedArray()) }
+    }
 }

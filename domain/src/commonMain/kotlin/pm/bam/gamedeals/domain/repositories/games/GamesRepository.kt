@@ -10,32 +10,47 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 
-class GamesRepository internal constructor(
+interface GamesRepository {
+    fun observeGames(): Flow<List<Game>>
+    suspend fun searchGames(query: String): List<Game>
+
+    @ExperimentalSerializationApi
+    suspend fun searchGames(searchParameters: SearchParameters): List<Deal>
+
+    @ExperimentalSerializationApi
+    suspend fun getReleaseGameId(gameTitle: String): Int?
+
+    suspend fun getGameDetails(dealId: Int): GameDetails
+    suspend fun refreshGames()
+}
+
+internal class GamesRepositoryImpl(
     private val gamesDao: GamesDao,
     private val cheapsharkSource: CheapsharkSource
-) {
+) : GamesRepository {
 
-    fun observeGames(): Flow<List<Game>> =
+    override fun observeGames(): Flow<List<Game>> =
         gamesDao.observeAllGames()
             .onStart { refreshGames() }
 
-    suspend fun searchGames(query: String): List<Game> =
+    override suspend fun searchGames(query: String): List<Game> =
         cheapsharkSource.fetchGames(query)
 
     @ExperimentalSerializationApi
-    suspend fun searchGames(searchParameters: SearchParameters): List<Deal> =
+    override suspend fun searchGames(searchParameters: SearchParameters): List<Deal> =
         cheapsharkSource.fetchDealsForStore(searchParameters)
 
     @ExperimentalSerializationApi
-    suspend fun getReleaseGameId(gameTitle: String): Int? =
+    override suspend fun getReleaseGameId(gameTitle: String): Int? =
         cheapsharkSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
             .firstOrNull()
             ?.gameID
 
-    suspend fun getGameDetails(dealId: Int): GameDetails =
+    override suspend fun getGameDetails(dealId: Int): GameDetails =
         cheapsharkSource.fetchGameDetails(dealId.toString())
 
-    suspend fun refreshGames() =
+    override suspend fun refreshGames() {
         cheapsharkSource.fetchGames("")
             .let { gamesDao.addGames(*it.toTypedArray()) }
+    }
 }

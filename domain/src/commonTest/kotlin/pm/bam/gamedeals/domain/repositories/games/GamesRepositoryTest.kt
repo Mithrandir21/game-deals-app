@@ -30,7 +30,7 @@ class GamesRepositoryTest {
 
     private val gamesDao: GamesDao = mock(MockMode.autoUnit)
     private val cheapsharkSource: CheapsharkSource = mock(MockMode.autoUnit)
-    private val impl = GamesRepository(gamesDao, cheapsharkSource)
+    private val impl = GamesRepositoryImpl(gamesDao, cheapsharkSource)
 
     @Test
     fun observe_games_with_refresh_called() = runTest {

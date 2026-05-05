@@ -13,12 +13,18 @@ import pm.bam.gamedeals.logging.debug
 
 internal val STORES_TTL_MILLIS = millisInHour * 8
 
-class StoresRepository internal constructor(
+interface StoresRepository {
+    fun observeStores(): Flow<List<Store>>
+    suspend fun getStore(storeId: Int): Store
+    suspend fun refreshStores(force: Boolean = false)
+}
+
+internal class StoresRepositoryImpl(
     private val logger: Logger,
     private val storesDao: StoresDao,
     private val cheapsharkSource: CheapsharkSource,
     private val clock: Clock,
-) {
+) : StoresRepository {
 
     private val cache = CachedResource(
         clock = clock,
@@ -32,14 +38,14 @@ class StoresRepository internal constructor(
         }
     )
 
-    fun observeStores(): Flow<List<Store>> =
+    override fun observeStores(): Flow<List<Store>> =
         storesDao.observeAllStores()
             .onStart { refreshStores() }
 
-    suspend fun getStore(storeId: Int): Store =
+    override suspend fun getStore(storeId: Int): Store =
         storesDao.getStore(storeId)
 
-    suspend fun refreshStores(force: Boolean = false) {
+    override suspend fun refreshStores(force: Boolean) {
         val refreshed = cache.refreshIfNeeded(force)
         debug(logger) { "Stores refresh needed: $refreshed" }
     }

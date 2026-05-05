@@ -9,18 +9,24 @@ import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
-class ReleasesRepository internal constructor(
+interface ReleasesRepository {
+    fun observeReleases(): Flow<List<Release>>
+    suspend fun refreshReleases()
+}
+
+internal class ReleasesRepositoryImpl(
     private val logger: Logger,
     private val releasesDao: ReleasesDao,
     private val cheapsharkSource: CheapsharkSource
-) {
+) : ReleasesRepository {
 
-    fun observeReleases(): Flow<List<Release>> =
+    override fun observeReleases(): Flow<List<Release>> =
         releasesDao.observeAllReleases()
             .onStart { refreshReleases() }
             .onError { fatal(logger, it) }
 
-    suspend fun refreshReleases() =
+    override suspend fun refreshReleases() {
         cheapsharkSource.fetchReleases()
             .let { releasesDao.addReleases(*it.toTypedArray()) }
+    }
 }

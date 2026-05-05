@@ -3,6 +3,7 @@ import com.android.build.api.dsl.LibraryExtension
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.gamedeals.kmp.library.compose)
+    alias(libs.plugins.mokkery)
 }
 
 kotlin {
@@ -52,12 +53,16 @@ kotlin {
             implementation(libs.androidx.tracing)
         }
 
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(project(":testing"))
+            implementation(libs.coroutines.testing)
+        }
+
         val androidUnitTest by getting {
             dependencies {
-                implementation(project(":testing"))
                 implementation(libs.junit)
                 implementation(libs.mockk)
-                implementation(libs.coroutines.testing)
             }
         }
 
