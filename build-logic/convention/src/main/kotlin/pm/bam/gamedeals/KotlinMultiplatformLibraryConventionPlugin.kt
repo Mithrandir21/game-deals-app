@@ -12,20 +12,14 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 /**
  * Convention plugin for Kotlin Multiplatform library modules with an Android target.
  *
- * Mirrors the per-module wiring proven in Phase 0 on `:common`:
  * - Applies `kotlin.multiplatform` and `com.android.library`.
- * - Registers Android + iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64` — the
- *   "Standard" set chosen for this migration).
- * - jvmToolchain(21), Android compileSdk=36, minSdk=26, JDK 21 source/target.
- * - Packaging excludes carried over from the Android-only convention.
- * - Mockk's `-XX:+EnableDynamicAgentLoading` JVM arg for unit tests on JDK 21+.
+ * - Registers Android + iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64`).
+ * - `jvmToolchain(21)`, Android `compileSdk=36`, `minSdk=26`, JDK 21 source/target.
+ * - Mockk needs `-XX:+EnableDynamicAgentLoading` for inline-mock byte-buddy
+ *   agent attach on JDK 21+ — applied to every `Test` task.
  *
- * Notably does NOT apply Compose. Modules that need Compose should also apply
- * `pm.bam.gamedeals.kmp.library.compose`. Modules that need KSP should apply
- * `pm.bam.gamedeals.kmp.ksp`.
- *
- * Coexists with the legacy `pm.bam.gamedeals.android.library` convention. Modules
- * migrate from the Android-only convention to this one as part of phases 2/3/5.
+ * Does NOT apply Compose or KSP. Modules opt into those by also applying
+ * `pm.bam.gamedeals.kmp.library.compose` and/or `pm.bam.gamedeals.kmp.ksp`.
  */
 class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {

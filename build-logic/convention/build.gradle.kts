@@ -23,22 +23,6 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        register("androidLibrary") {
-            id = "pm.bam.gamedeals.android.library"
-            implementationClass = "pm.bam.gamedeals.AndroidLibraryConventionPlugin"
-        }
-        register("androidLibraryCompose") {
-            id = "pm.bam.gamedeals.android.library.compose"
-            implementationClass = "pm.bam.gamedeals.AndroidLibraryComposeConventionPlugin"
-        }
-        register("androidKsp") {
-            id = "pm.bam.gamedeals.android.ksp"
-            implementationClass = "pm.bam.gamedeals.AndroidKspConventionPlugin"
-        }
-        register("androidFeature") {
-            id = "pm.bam.gamedeals.android.feature"
-            implementationClass = "pm.bam.gamedeals.AndroidFeatureConventionPlugin"
-        }
         register("androidApplication") {
             id = "pm.bam.gamedeals.android.application"
             implementationClass = "pm.bam.gamedeals.AndroidApplicationConventionPlugin"

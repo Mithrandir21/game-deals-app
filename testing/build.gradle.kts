@@ -27,8 +27,4 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.testing"
-
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
 }

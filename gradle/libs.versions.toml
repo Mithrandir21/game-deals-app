@@ -190,14 +190,9 @@ kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", vers
 androidx-room = { id = "androidx.room", version.ref = "room" }
 
 # Convention plugins (registered by the build-logic included build).
-gamedeals-android-library = { id = "pm.bam.gamedeals.android.library" }
-gamedeals-android-library-compose = { id = "pm.bam.gamedeals.android.library.compose" }
-gamedeals-android-ksp = { id = "pm.bam.gamedeals.android.ksp" }
-gamedeals-android-feature = { id = "pm.bam.gamedeals.android.feature" }
+# All library/feature modules use the KMP plugins; only :app uses the
+# Android-application plugin since :app stays Android-only.
 gamedeals-android-application = { id = "pm.bam.gamedeals.android.application" }
-
-# KMP convention plugins. Modules migrate from android-only conventions to
-# these one phase at a time; both sets coexist throughout the migration.
 gamedeals-kmp-library = { id = "pm.bam.gamedeals.kmp.library" }
 gamedeals-kmp-library-compose = { id = "pm.bam.gamedeals.kmp.library.compose" }
 gamedeals-kmp-ksp = { id = "pm.bam.gamedeals.kmp.ksp" }

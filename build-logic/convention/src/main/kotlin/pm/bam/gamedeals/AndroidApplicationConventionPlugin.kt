@@ -8,11 +8,10 @@ import org.gradle.kotlin.dsl.configure
 /**
  * Convention plugin for the single `:app` Android application module.
  *
- * Mirrors [AndroidLibraryConventionPlugin] but for `com.android.application`,
- * and additionally applies the Compose compiler plugin and KSP because the app
- * always needs both. Hilt / Firebase / signing-config / version metadata stay
- * in `:app/build.gradle.kts` because they are inherently single-module
- * concerns.
+ * Applies `com.android.application`, the Kotlin Android plugin, the Compose
+ * compiler plugin, and KSP — the app always needs all four. Per-app concerns
+ * (signing config, version metadata, dependency wiring) stay in
+ * `:app/build.gradle.kts`.
  */
 class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
