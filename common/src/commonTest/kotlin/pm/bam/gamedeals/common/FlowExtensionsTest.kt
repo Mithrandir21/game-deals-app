@@ -2,11 +2,12 @@ package pm.bam.gamedeals.common
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Verifies the virtual-time correctness of the `*DelayAtLeast` Flow operators.
@@ -24,7 +25,7 @@ import org.junit.Test
 class FlowExtensionsTest {
 
     @Test
-    fun `mapDelayAtLeast pads to delayMillis when transform is instant`() = runTest {
+    fun mapDelayAtLeast_pads_to_delayMillis_when_transform_is_instant() = runTest {
         val start = testScheduler.currentTime
         val results = flowOf(1)
             .mapDelayAtLeast(DELAY_MILLIS) { it * 2 }
@@ -36,7 +37,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `mapDelayAtLeast does not pad when transform takes longer than delayMillis`() = runTest {
+    fun mapDelayAtLeast_does_not_pad_when_transform_takes_longer_than_delayMillis() = runTest {
         val start = testScheduler.currentTime
         val results = flowOf(1)
             .mapDelayAtLeast(DELAY_MILLIS) { value ->
@@ -51,7 +52,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `flatMapLatestDelayAtLeast pads to delayMillis when transform is instant`() = runTest {
+    fun flatMapLatestDelayAtLeast_pads_to_delayMillis_when_transform_is_instant() = runTest {
         val start = testScheduler.currentTime
         val results = flowOf(1)
             .flatMapLatestDelayAtLeast(DELAY_MILLIS) { it * 2 }
@@ -63,7 +64,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `flatMapLatestDelayAtLeast does not pad when transform takes longer than delayMillis`() = runTest {
+    fun flatMapLatestDelayAtLeast_does_not_pad_when_transform_takes_longer_than_delayMillis() = runTest {
         val start = testScheduler.currentTime
         val results = flowOf(1)
             .flatMapLatestDelayAtLeast(DELAY_MILLIS) { value ->
@@ -78,7 +79,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `latestDelayAtLeast emits after delayMillis virtual time`() = runTest {
+    fun latestDelayAtLeast_emits_after_delayMillis_virtual_time() = runTest {
         val start = testScheduler.currentTime
         val results = flowOf(42)
             .latestDelayAtLeast(DELAY_MILLIS)
@@ -90,7 +91,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `withMinimumDuration pads to delayMillis when block is instant`() = runTest {
+    fun withMinimumDuration_pads_to_delayMillis_when_block_is_instant() = runTest {
         val start = testScheduler.currentTime
         val result = withMinimumDuration(DELAY_MILLIS) { 21 * 2 }
         val elapsed = testScheduler.currentTime - start
@@ -100,7 +101,7 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `withMinimumDuration does not pad when block takes longer than delayMillis`() = runTest {
+    fun withMinimumDuration_does_not_pad_when_block_takes_longer_than_delayMillis() = runTest {
         val start = testScheduler.currentTime
         val result = withMinimumDuration(DELAY_MILLIS) {
             delay(LONG_WORK_MILLIS)
@@ -113,13 +114,13 @@ class FlowExtensionsTest {
     }
 
     @Test
-    fun `latestDelayAtLeast cancels pending pad when a new value arrives`() = runTest {
+    fun latestDelayAtLeast_cancels_pending_pad_when_a_new_value_arrives() = runTest {
         // Emits 1 immediately, then 2 after `delayMillis * 2`. Because
         // `latestDelayAtLeast` uses `transformLatest`, the in-flight pad for
         // value 1 should be cancelled when value 2 arrives, so only value 2 is
         // emitted (after its own pad).
         val start = testScheduler.currentTime
-        val results = kotlinx.coroutines.flow.flow {
+        val results = flow {
             emit(1)
             delay(DELAY_MILLIS / 2)
             emit(2)

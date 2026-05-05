@@ -32,6 +32,11 @@ kotlin {
             implementation(libs.androidx.sqlite.bundled)
         }
 
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.coroutines.testing)
+        }
+
         val androidUnitTest by getting {
             dependencies {
                 implementation(project(":testing"))

@@ -1,18 +1,18 @@
 package pm.bam.gamedeals.domain.repositories.cache
 
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import pm.bam.gamedeals.common.time.Clock
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Boundary test for [CachedResource]: a fake [Clock] proves that an expired entry triggers
- * refresh and a fresh entry does not, without touching Room or any Android API.
+ * refresh and a fresh entry does not, without touching Room or any platform API.
  *
- * Picks a JVM unit test (over `androidTest` + in-memory Room) on purpose: [CachedResource] is
- * Flow-/Room-free, so a JVM test is faster, deterministic, and avoids pulling in Robolectric.
+ * Pure-Kotlin unit test (Flow-/Room-free), so it lives in commonTest and runs on Android,
+ * JVM, and iOS targets identically.
  */
 class CachedResourceTest {
 
@@ -24,7 +24,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `empty cache - refreshIfNeeded - invokes refresh once and returns true`() = runTest {
+    fun empty_cache_refreshIfNeeded_invokes_refresh_once_and_returns_true() = runTest {
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
         val cache = CachedResource(
@@ -41,7 +41,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `fresh cache - refreshIfNeeded - skips refresh and returns false`() = runTest {
+    fun fresh_cache_refreshIfNeeded_skips_refresh_and_returns_false() = runTest {
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
         val cache = CachedResource(
@@ -58,7 +58,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `expired entry - refreshIfNeeded - invokes refresh and returns true`() = runTest {
+    fun expired_entry_refreshIfNeeded_invokes_refresh_and_returns_true() = runTest {
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
         val cache = CachedResource(
@@ -76,7 +76,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `mixed entries - any expired triggers refresh`() = runTest {
+    fun mixed_entries_any_expired_triggers_refresh() = runTest {
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
         val cache = CachedResource(
@@ -98,7 +98,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `boundary - entry whose expires equals now is still fresh`() = runTest {
+    fun boundary_entry_whose_expires_equals_now_is_still_fresh() = runTest {
         // Matches original `expires < currentTimeMillis()` semantics — equality is not yet expired.
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
@@ -116,7 +116,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `same cache - clock advances past expiry - second call refreshes`() = runTest {
+    fun same_cache_clock_advances_past_expiry_second_call_refreshes() = runTest {
         val clock = MutableClock(initial = 1_000)
         val expiresAt = 5_000L
         var refreshCount = 0
@@ -139,7 +139,7 @@ class CachedResourceTest {
     }
 
     @Test
-    fun `force - true - bypasses freshness check and always refreshes`() = runTest {
+    fun force_true_bypasses_freshness_check_and_always_refreshes() = runTest {
         val clock = MutableClock(initial = 1_000)
         var refreshCount = 0
         var readCount = 0

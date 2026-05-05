@@ -27,6 +27,7 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.coroutines.testing)
         }
 
         val androidUnitTest by getting {
