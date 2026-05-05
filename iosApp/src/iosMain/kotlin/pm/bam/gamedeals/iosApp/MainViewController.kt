@@ -1,18 +1,11 @@
 package pm.bam.gamedeals.iosApp
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -40,6 +33,7 @@ import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
+import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
@@ -131,19 +125,9 @@ private fun AppNavHost() {
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
         )
-        composable<Destination.WebView> { entry ->
-            val args = entry.toRoute<Destination.WebView>()
-            IosPlaceholder("WebView pending\n${args.url}")
-        }
+        webViewScreen(
+            onBack = { navController.popBackStack() },
+        )
     }
 }
 
-@Composable
-private fun IosPlaceholder(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(message)
-    }
-}
