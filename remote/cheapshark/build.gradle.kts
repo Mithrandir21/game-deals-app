@@ -33,15 +33,15 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(project(":testing"))
+            implementation(libs.coroutines.testing)
+            implementation(libs.ktor.client.mock)
         }
 
         val androidUnitTest by getting {
             dependencies {
-                implementation(project(":testing"))
                 implementation(libs.junit)
                 implementation(libs.mockk)
-                implementation(libs.coroutines.testing)
-                implementation(libs.ktor.client.mock)
             }
         }
     }

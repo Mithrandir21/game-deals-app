@@ -1,8 +1,8 @@
 package pm.bam.gamedeals.domain.models
 
 import kotlinx.collections.immutable.persistentListOf
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Regression coverage for the `Properties.encodeToMap` / `decodeFromMap` round-trip on
@@ -17,7 +17,7 @@ import org.junit.Test
 class GiveawaySearchParametersTest {
 
     @Test
-    fun `default parameters round-trip via asMap and from`() {
+    fun default_parameters_round_trip_via_asMap_and_from() {
         val original = GiveawaySearchParameters()
 
         val restored = GiveawaySearchParameters.from(original.asMap())
@@ -26,7 +26,7 @@ class GiveawaySearchParametersTest {
     }
 
     @Test
-    fun `customised parameters round-trip via asMap and from`() {
+    fun customised_parameters_round_trip_via_asMap_and_from() {
         val original = GiveawaySearchParameters(
             platforms = persistentListOf(
                 GiveawayPlatform.PC to true,

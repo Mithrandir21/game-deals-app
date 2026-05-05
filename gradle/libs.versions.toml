@@ -49,6 +49,7 @@ tracing = '1.3.0'
 
 junit = "4.13.2"
 mockk = "1.14.6"
+mokkery = "3.3.0"
 coroutines-testing = "1.10.2"
 core-testing = "2.2.0"
 
@@ -216,3 +217,8 @@ gamedeals-kmp-feature = { id = "pm.bam.gamedeals.kmp.feature" }
 # Compose Multiplatform plugin (applied transitively by the kmp.library.compose
 # convention; aliased here so build-logic can resolve it on the classpath).
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+
+# KMP-friendly mocking plugin. MockK stays for androidUnitTest; Mokkery is
+# applied to test source sets in modules that participate in commonTest
+# (compiler-plugin codegen makes mocks usable on Kotlin/Native).
+mokkery = { id = "dev.mokkery", version.ref = "mokkery" }

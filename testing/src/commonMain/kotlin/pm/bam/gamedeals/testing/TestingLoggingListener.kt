@@ -12,7 +12,7 @@ class TestingLoggingListener : Logger {
     }
 
     override fun fatalThrowable(throwable: Throwable, tag: String?) =
-        println("${tag ?: this.javaClass.simpleName} - Throwable: ${throwable.printStackTrace()}")
+        println("${tag ?: this::class.simpleName} - Throwable: ${throwable.printStackTrace()}")
 
     override fun addLoggerListener(loggingInterface: LoggingInterface) = Unit
 
