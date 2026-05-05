@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
+**Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
+
+`--max-workers=1` works as a workaround but throttles the entire build. Better: register a marker `BuildService` with `maxParallelUsages.set(1)` at the project level (in a convention plugin so every consuming module hooks in), then `tasks.withType(<TaskType>::class.java).configureEach { usesService(svc) }`. Gradle permits only one of those tasks to run at a time across the build while leaving every other task free to parallelize. Same pattern works for any cross-module serialization need (shared simulator slots, exclusive emulators, native code-signing).
+
+**Source:** Phase-7b iOS polish — eliminating the `--max-workers=1` workaround we kept passing for `iosSimulatorArm64Test` runs.
+
 ### L-2026-05-05-01 · `kotlin.test` annotations don't resolve in `commonMain` of a non-test KMP fixtures module
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** kmp, kotlin-test, source-sets, testing, fixtures-module
 **Applies to:** A KMP "test fixtures" module (e.g. `:testing`) that publishes test helpers via its `commonMain` (consumed by other modules as `commonTestImplementation(project(":testing"))`) — specifically attempts to put `@BeforeTest`/`@AfterTest`-annotated methods on a superclass in that `commonMain`.
