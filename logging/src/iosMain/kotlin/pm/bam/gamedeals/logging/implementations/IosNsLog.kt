@@ -11,6 +11,6 @@ import platform.Foundation.NSLog
  * `%` characters so application content can't be reinterpreted as format
  * specifiers.
  */
-internal fun iosLog(line: String) {
+fun iosLog(line: String) {
     NSLog(line.replace("%", "%%"))
 }

@@ -20,6 +20,7 @@ import platform.WebKit.WKNavigation
 import platform.WebKit.WKNavigationDelegateProtocol
 import platform.WebKit.WKWebView
 import platform.darwin.NSObject
+import pm.bam.gamedeals.logging.implementations.iosLog
 
 /**
  * iOS counterpart of the Android `WebView` `AndroidView` host. Uses Compose
@@ -66,8 +67,12 @@ internal actual fun PlatformWebView(
         },
         update = { webView ->
             if (lastLoadedUrl != url) {
-                NSURL.URLWithString(url)?.let { nsUrl ->
+                val nsUrl = NSURL.URLWithString(url)
+                if (nsUrl != null) {
                     webView.loadRequest(NSURLRequest.requestWithURL(nsUrl))
+                } else {
+                    iosLog("[WebView] NSURL.URLWithString returned nil for url=$url — skipping load")
+                    currentOnLoadingChange(false)
                 }
                 lastLoadedUrl = url
             }
