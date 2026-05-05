@@ -17,11 +17,6 @@ kotlin {
             implementation(project(":domain"))
         }
 
-        androidMain.dependencies {
-            implementation(libs.junit)
-            implementation(libs.mockk)
-            implementation(libs.androidx.runner)
-        }
     }
 }
 

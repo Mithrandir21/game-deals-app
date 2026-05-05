@@ -5,16 +5,14 @@ import pm.bam.gamedeals.logging.LoggingInterface
 
 /**
  * Placeholder for the iOS Sentry path while sentry-kotlin-multiplatform's
- * Cocoa underpinning isn't yet wired into the Xcode project (Phase 7.7 will
- * add Sentry-Cocoa via SPM). Mirrors the role Android's `SentryLoggingListener`
- * plays — captures breadcrumbs for VERBOSE/DEBUG/INFO/WARN and exception
- * captures for ERROR/FATAL — but routes everything to NSLog with a `[Sentry
- * stub]` prefix so downstream developers can see what the real Sentry path
- * *would* have received without ever silently dropping signal.
+ * Cocoa underpinning isn't yet wired into the Xcode project via SPM. Mirrors
+ * Android's `SentryLoggingListener` — captures breadcrumbs for
+ * VERBOSE/DEBUG/INFO/WARN and exception captures for ERROR/FATAL — but routes
+ * everything to NSLog with a `[Sentry stub]` prefix so what the real Sentry
+ * path would have received is visible instead of silently dropped.
  *
- * Logger registration on iOS pairs this stub alongside [IosConsoleLoggingListener];
- * the symmetry with Android's two-listener Logger means swapping in real Sentry
- * later is one constructor edit in `loggingIosModule`.
+ * Paired with [IosConsoleLoggingListener] in `loggingIosModule`; swapping in
+ * real Sentry later is one constructor edit.
  */
 internal class IosSentryStubLoggingListener : LoggingInterface {
 

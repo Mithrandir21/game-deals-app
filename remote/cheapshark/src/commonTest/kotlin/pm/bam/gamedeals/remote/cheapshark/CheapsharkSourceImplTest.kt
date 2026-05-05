@@ -32,12 +32,9 @@ import kotlin.test.assertNotNull
  * decoding) is exercised end-to-end inside the module that owns it.
  *
  * MockEngine routes by path; the recorded requests list is asserted at the end of each
- * test to verify path + query-parameter wiring identical to the prior MockWebServer setup.
- *
- * Lifted to commonTest in phase-A3b. Tiny inline fakes replace the previous `mockk { ... }`
- * blocks for [CurrencyTransformation] and [DateTimeFormatter] — MockK doesn't run on
- * Kotlin/Native, and these collaborators have one or two methods each, so a fake is cheaper
- * than a mocking-library swap for this slice.
+ * test to verify path + query-parameter wiring. Inline fakes replace mocking for
+ * [CurrencyTransformation] and [DateTimeFormatter] — MockK doesn't run on Kotlin/Native
+ * and the collaborators have one or two methods each, so a hand-rolled fake is cheaper.
  */
 class CheapsharkSourceImplTest {
 

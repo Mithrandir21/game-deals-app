@@ -34,8 +34,6 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(project(":feature:deal"))
-
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)

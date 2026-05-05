@@ -48,8 +48,4 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.remote.gamerpower"
-
-    buildFeatures {
-        buildConfig = true
-    }
 }

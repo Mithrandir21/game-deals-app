@@ -11,6 +11,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import platform.Foundation.NSDate
@@ -47,11 +48,8 @@ fun MainViewController(): UIViewController {
     return ComposeUIViewController { App() }
 }
 
-private var koinStarted = false
-
 private fun bootstrapKoin() {
-    if (koinStarted) return
-    koinStarted = true
+    if (GlobalContext.getKoinApplicationOrNull() != null) return
     val iosAppModule = module {
         single<Clock> { Clock { (NSDate().timeIntervalSince1970 * 1000.0).toLong() } }
         single<ImageLoader> {

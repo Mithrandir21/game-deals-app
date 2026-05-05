@@ -43,12 +43,8 @@ internal class DealsRepositoryImpl(
     /**
      * Live stream of deals for [storeId]. Triggers a TTL-aware refresh against
      * CheapShark on subscribe; subsequent emissions follow Room's change-tracking
-     * as the cache row turns over. Replaces the previous Paging 3 `Pager` +
-     * `RemoteMediator` flow that didn't have a working multiplatform compose
-     * binding (paging-compose is Android-only; Cash App's
-     * `paging-compose-common` shim ran into runtime klib symbol mismatches on
-     * Native). Pagination can be reintroduced when AndroidX ships
-     * multiplatform paging-compose.
+     * as the cache row turns over. Pagination is intentionally out of scope until
+     * AndroidX ships a multiplatform `paging-compose`.
      */
     override fun observeStoreDeals(storeId: Int): Flow<List<Deal>> =
         dealsDao.observeStoreDeals(storeId)

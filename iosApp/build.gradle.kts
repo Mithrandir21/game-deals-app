@@ -46,7 +46,6 @@ kotlin {
             implementation(project(":feature:search"))
             implementation(project(":feature:game"))
             implementation(project(":feature:giveaways"))
-            implementation(project(":feature:deal"))
             implementation(project(":feature:store"))
             implementation(project(":feature:webview"))
         }

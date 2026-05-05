@@ -15,11 +15,9 @@ import kotlin.contracts.contract
  * Maps any [ApiResponse.Failure.Exception] to another [ApiResponse.Failure.Exception]
  * containing a [Throwable] produced by the [transformer].
  *
- * After the Phase 3 Ktor swap, every API failure (HTTP-status or transport-level)
- * arrives as `Failure.Exception` because the API classes wrap calls in try/catch
- * and Ktor's `expectSuccess = true` turns 4xx/5xx into `ResponseException`s. The
- * `Failure.Error` shape (status code without an exception) was a sandwich-retrofit
- * artefact and is no longer produced.
+ * Every API failure (HTTP-status or transport-level) arrives as
+ * `Failure.Exception` because the API classes wrap calls in try/catch and
+ * Ktor's `expectSuccess = true` turns 4xx/5xx into `ResponseException`s.
  *
  * @param transformer A transformer that receives [Throwable] and returns [Throwable].
  *

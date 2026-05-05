@@ -10,8 +10,8 @@ val loggingIosModule = module {
     single<Logger> {
         // Mirrors Android's two-listener Logger: NSLog-based general logger
         // plus a Sentry stub that prints what real Sentry would have captured.
-        // When Phase 7.7 wires Sentry-Cocoa via SPM, swap the stub for a real
-        // SentryLoggingListener — same constructor shape, no other changes.
+        // Swap the stub for a real SentryLoggingListener once Sentry-Cocoa is
+        // wired via SPM — same constructor shape, no other changes.
         LoggerImpl(
             mutableSetOf(
                 IosConsoleLoggingListener(),

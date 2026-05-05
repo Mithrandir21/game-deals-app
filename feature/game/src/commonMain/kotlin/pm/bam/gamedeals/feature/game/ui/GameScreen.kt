@@ -51,6 +51,7 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.deal.DEAL_URL
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -249,7 +250,7 @@ private fun StoreGameDealRow(
     deal: GameDetails.GameDeal,
     goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
-    Card(onClick = { goToWeb("https://www.cheapshark.com/redirect?dealID=${deal.dealID}", gameInfo.title) }) {
+    Card(onClick = { goToWeb("$DEAL_URL${deal.dealID}", gameInfo.title) }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

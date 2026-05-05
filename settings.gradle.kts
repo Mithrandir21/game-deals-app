@@ -32,7 +32,6 @@ include(":remote:cheapshark")
 include(":domain")
 
 include(":feature:store")
-include(":feature:deal")
 include(":feature:game")
 include(":feature:search")
 include(":feature:home")

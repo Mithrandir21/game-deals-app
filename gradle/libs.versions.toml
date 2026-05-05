@@ -26,22 +26,13 @@ material3-adaptive = "1.0.0-alpha06"
 appcompat = "1.7.1"
 material = "1.13.0"
 
-okio = "3.16.2"
-okhttp = "5.2.1"
-okhttp-logging = "5.2.1"
-retrofit = "3.0.0"
-sandwich = "2.1.3"
-
 kotlinx = '1.9.0'
-kotlinx-retrofit = "1.0.0"
 kotlinx-collections-immutable = "0.4.0"
 
 room = '2.8.3'
 androidx-sqlite = '2.6.1'
 
 coroutines = '1.10.2'
-
-coil = '2.7.0'
 
 tracing = '1.3.0'
 
@@ -65,7 +56,6 @@ androidx-ktx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecyc
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose-ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "compose-ui" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose-ui" }
-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
 
 androidx-webview = { group = "androidx.webkit", name = "webkit", version.ref = "webview" }
 
@@ -88,24 +78,8 @@ material = { group = "com.google.android.material", name = "material", version.r
 
 coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 
-coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
-coil-test = { group = "io.coil-kt", name = "coil-test", version.ref = "coil" }
-
-
-
-# Retrofit
-okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
-okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp-logging" }
-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
-retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
-sandwich = { group = "com.github.skydoves", name = "sandwich-retrofit", version.ref = "sandwich" }
-sandwich-serializer = { group = "com.github.skydoves", name = "sandwich-retrofit-serialization", version.ref = "sandwich" }
-
 kotlinx = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx" }
 kotlinx-properties = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-properties", version.ref = "kotlinx" }
-kotlinx-retrofit = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "kotlinx-retrofit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 
 # Room
@@ -129,7 +103,6 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 androidx-espresso-device = { group = "androidx.test.espresso", name = "espresso-device", version.ref = "espresso-device" }
 androidx-compose-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "ui-test-junit4" }
 androidx-compose-test = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "ui-test-junit4" }
-okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 
 # Build-logic convention-plugin classpath deps.
 # These resolve the Gradle plugin artifacts so precompiled convention plugins

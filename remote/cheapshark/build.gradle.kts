@@ -49,8 +49,4 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.remote.cheapshark"
-
-    buildFeatures {
-        buildConfig = true
-    }
 }

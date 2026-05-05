@@ -7,8 +7,7 @@ import pm.bam.gamedeals.logging.LoggingInterface
  * iOS counterpart to the Android `SimpleLoggingListener` — routes log lines via
  * `NSLog`, which writes to both the Apple System Log (visible in Console.app
  * with subsystem filtering) and stderr (visible in Xcode's debug console).
- * `println` would only hit stdout, missing the system log integration. Sentry-
- * Cocoa is still deferred until SPM wiring (Phase 7.7).
+ * `println` would only hit stdout, missing the system log integration.
  */
 internal class IosConsoleLoggingListener : LoggingInterface {
 

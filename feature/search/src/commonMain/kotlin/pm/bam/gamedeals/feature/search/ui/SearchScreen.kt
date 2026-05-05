@@ -135,7 +135,6 @@ internal fun SearchScreen(
 }
 
 
-@OptIn(ExperimentalSerializationApi::class)
 @Composable
 private fun Screen(
     showFilters: Boolean,
@@ -332,7 +331,6 @@ private fun SearchFilters(
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
 @Composable
 private fun Filters(
     existingSearchParameters: SearchParameters,

@@ -30,10 +30,8 @@ import kotlin.time.Instant
  * up against a [MockEngine] so the wiring (path, JSON decoding) is exercised end-to-end
  * inside the module that owns it.
  *
- * Lifted to commonTest in phase-A3b. The previous `mockk<DatetimeParsing>` block is
- * replaced by an inline [FakeDatetimeParsing] — the test only exercises one method on
- * that interface, so a hand-rolled fake is cheaper than a Kotlin/Native-capable mocking
- * library for this slice.
+ * Inline [FakeDatetimeParsing] replaces mocking — the test exercises one method on that
+ * interface, so a hand-rolled fake is cheaper than a Kotlin/Native-capable mocking lib.
  */
 class GamerPowerSourceImplTest {
 
