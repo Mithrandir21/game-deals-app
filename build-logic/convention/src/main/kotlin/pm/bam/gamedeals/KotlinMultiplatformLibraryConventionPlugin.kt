@@ -4,10 +4,24 @@ import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.registerIfAbsent
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
+
+/**
+ * Marker [BuildService] used to serialize Kotlin/Native iOS-simulator test
+ * tasks across modules. With Gradle 9.1 + Kotlin 2.2.21, running multiple
+ * `iosSimulatorArm64Test` tasks in parallel races on the test-result XML
+ * writer and randomly fails one task's report. Holding a single permit on
+ * this service forces sequential execution for those tasks while leaving
+ * everything else free to parallelize.
+ */
+abstract class IosSimulatorTestSerializer : BuildService<BuildServiceParameters.None>
 
 /**
  * Convention plugin for Kotlin Multiplatform library modules with an Android target.
@@ -65,6 +79,16 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
         // Required by Mockk's inline mock-maker / byte-buddy agent attach on JDK 21+.
         tasks.withType(Test::class.java).configureEach {
             jvmArgs("-XX:+EnableDynamicAgentLoading")
+        }
+
+        val iosTestSerializer = gradle.sharedServices.registerIfAbsent(
+            "iosSimulatorTestSerializer",
+            IosSimulatorTestSerializer::class.java,
+        ) {
+            maxParallelUsages.set(1)
+        }
+        tasks.withType(KotlinNativeHostTest::class.java).configureEach {
+            usesService(iosTestSerializer)
         }
     }
 }
