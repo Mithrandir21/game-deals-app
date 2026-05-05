@@ -8,6 +8,14 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-05-01 · `kotlin.test` annotations don't resolve in `commonMain` of a non-test KMP fixtures module
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** kmp, kotlin-test, source-sets, testing, fixtures-module
+**Applies to:** A KMP "test fixtures" module (e.g. `:testing`) that publishes test helpers via its `commonMain` (consumed by other modules as `commonTestImplementation(project(":testing"))`) — specifically attempts to put `@BeforeTest`/`@AfterTest`-annotated methods on a superclass in that `commonMain`.
+
+Adding `implementation(kotlin("test"))` to the fixtures module's `commonMain.dependencies` puts the artifact on the classpath, but `kotlin.test.BeforeTest`/`AfterTest` are `expect annotation class` decls that only resolve through platform-specific variants (`kotlin-test-junit`, `kotlin-test-junit5`, `kotlin-test-native`), which `kotlin("test")` pulls in only when declared in a *test* source set — not commonMain. Symptom: `Unresolved reference 'BeforeTest'` at `:fixtures-module:compileDebugKotlinAndroid` even after the dep is declared. Workaround: keep the superclass in commonMain providing plain helper methods (`protected fun installMainDispatcher() = Dispatchers.setMain(testDispatcher)`); subclasses in their consuming modules' commonTest carry the `@BeforeTest`/`@AfterTest` annotations themselves. Two annotated one-liners per subclass is the modest cost for not fighting source-set semantics.
+
+**Source:** Phase-A6 simplify pass — attempted to lift `@BeforeTest`/`@AfterTest` into `:testing/commonMain/.../MainDispatcherTest.kt` for 6 feature ViewModel tests.
+
 ### L-2026-05-04-07 · Pick JetBrains-AndroidX-fork versions by reading the iOS dep tree first
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, kotlin-native, jetbrains-androidx-fork, version-skew, gradle
 **Applies to:** Adding any `org.jetbrains.androidx.*` artifact (navigation-compose, lifecycle-viewmodel, savedstate, etc.) to a KMP project that already has them transitively
