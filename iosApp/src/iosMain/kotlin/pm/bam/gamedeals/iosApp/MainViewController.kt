@@ -11,6 +11,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import io.sentry.kotlin.multiplatform.Sentry
+import kotlin.native.Platform
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import platform.Foundation.NSDate
@@ -43,15 +45,20 @@ import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 
 @Suppress("FunctionName", "unused")
 fun MainViewController(): UIViewController {
-    bootstrapKoin()
+    bootstrap()
     return ComposeUIViewController { App() }
 }
 
-private var koinStarted = false
+private var bootstrapped = false
 
-private fun bootstrapKoin() {
-    if (koinStarted) return
-    koinStarted = true
+private const val SENTRY_DSN = ""
+
+private fun bootstrap() {
+    if (bootstrapped) return
+    bootstrapped = true
+
+    initSentry()
+
     val iosAppModule = module {
         single<Clock> { Clock { (NSDate().timeIntervalSince1970 * 1000.0).toLong() } }
         single<ImageLoader> {
@@ -84,6 +91,15 @@ private fun bootstrapKoin() {
 
     SingletonImageLoader.setSafe { _ ->
         org.koin.mp.KoinPlatform.getKoin().get()
+    }
+}
+
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+private fun initSentry() {
+    if (SENTRY_DSN.isEmpty()) return
+    Sentry.init { options ->
+        options.dsn = SENTRY_DSN
+        options.debug = Platform.isDebugBinary
     }
 }
 
