@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.mokkery)
 }
 
 kotlin {
@@ -35,6 +36,7 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.coroutines.testing)
+            implementation(project(":testing"))
         }
 
         val androidUnitTest by getting {
