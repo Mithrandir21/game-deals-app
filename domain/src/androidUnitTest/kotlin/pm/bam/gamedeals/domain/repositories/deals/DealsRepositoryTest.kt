@@ -51,7 +51,7 @@ class DealsRepositoryTest {
     private val transactor: Transactor = mockk()
     private val txScope: TransactionScope<Unit> = mockk()
 
-    private val impl = DealsRepository(logger, dealsDao, domainDatabase, cheapsharkSource, clock)
+    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, cheapsharkSource, clock)
 
     /**
      * Wires Room KMP's two-layer transaction API so the body inside

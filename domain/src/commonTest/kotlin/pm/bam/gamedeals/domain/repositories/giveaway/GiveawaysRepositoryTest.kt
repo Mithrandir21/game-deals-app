@@ -40,7 +40,7 @@ class GiveawaysRepositoryTest {
     private val logger: Logger = TestingLoggingListener()
     private val giveawaysDao: GiveawaysDao = mock(MockMode.autoUnit)
     private val gamerPowerSource: GamerPowerSource = mock(MockMode.autoUnit)
-    private val impl = GiveawaysRepository(logger, giveawaysDao, gamerPowerSource)
+    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource)
 
     @Test
     fun observe_giveaways_with_descending_publishedDate_order() = runTest {

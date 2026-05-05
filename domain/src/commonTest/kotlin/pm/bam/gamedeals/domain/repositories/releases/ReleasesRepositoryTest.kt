@@ -38,7 +38,7 @@ class ReleasesRepositoryTest {
     private val logger: Logger = TestingLoggingListener()
     private val releasesDao: ReleasesDao = mock(MockMode.autoUnit)
     private val cheapsharkSource: CheapsharkSource = mock(MockMode.autoUnit)
-    private val impl = ReleasesRepository(logger, releasesDao, cheapsharkSource)
+    private val impl = ReleasesRepositoryImpl(logger, releasesDao, cheapsharkSource)
 
     @Test
     fun observe_releases_with_refresh_called() = runTest {
