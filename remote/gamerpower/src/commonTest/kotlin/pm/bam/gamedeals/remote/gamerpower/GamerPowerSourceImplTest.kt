@@ -2,15 +2,11 @@
 
 package pm.bam.gamedeals.remote.gamerpower
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
@@ -20,6 +16,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,7 +48,7 @@ class GamerPowerSourceImplTest {
             ignoreUnknownKeys = true
         }
 
-        val mockEngine = MockEngine { request ->
+        val httpClient = mockHttpClient(json) { request ->
             recordedRequests += request
             when (request.url.encodedPath) {
                 "/api/giveaways" -> respond(
@@ -61,11 +58,6 @@ class GamerPowerSourceImplTest {
                 )
                 else -> respond("", HttpStatusCode.NotFound)
             }
-        }
-
-        val httpClient = HttpClient(mockEngine) {
-            expectSuccess = true
-            install(ContentNegotiation) { json(json) }
         }
 
         impl = GamerPowerSourceImpl(

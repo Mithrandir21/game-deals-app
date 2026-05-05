@@ -1,19 +1,16 @@
 package pm.bam.gamedeals.remote.cheapshark.api
 
 import com.skydoves.sandwich.getOrThrow
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import pm.bam.gamedeals.testing.mockHttpClient
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Regression coverage for the dealID encoding contract: Cheapshark's `/deals` list endpoint
@@ -25,7 +22,7 @@ import org.junit.Test
 class DealsApiTest {
 
     @Test
-    fun `getDeal preserves single-encoded id on the wire (does not re-encode)`() = runTest {
+    fun getDeal_preserves_single_encoded_id_on_the_wire_and_does_not_re_encode() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val client = mockClient(recorded)
         val api = DealsApi(client)
@@ -41,7 +38,7 @@ class DealsApiTest {
     }
 
     @Test
-    fun `getDeals encodes raw query parameters once (sanity check for the non-encoded path)`() = runTest {
+    fun getDeals_encodes_raw_query_parameters_once() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val client = mockClient(recorded, listResponse = true)
         val api = DealsApi(client)
@@ -56,21 +53,13 @@ class DealsApiTest {
     private fun mockClient(
         recorded: MutableList<HttpRequestData>,
         listResponse: Boolean = false,
-    ): HttpClient {
-        val engine = MockEngine { request ->
-            recorded += request
-            respond(
-                content = if (listResponse) "[]" else DEAL_DETAILS_BODY,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
-            )
-        }
-        return HttpClient(engine) {
-            expectSuccess = true
-            install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
-            }
-        }
+    ) = mockHttpClient(Json { ignoreUnknownKeys = true }) { request ->
+        recorded += request
+        respond(
+            content = if (listResponse) "[]" else DEAL_DETAILS_BODY,
+            status = HttpStatusCode.OK,
+            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+        )
     }
 
     private companion object {

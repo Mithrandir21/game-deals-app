@@ -1,14 +1,10 @@
 package pm.bam.gamedeals.remote.cheapshark
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
@@ -21,6 +17,7 @@ import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,7 +52,7 @@ class CheapsharkSourceImplTest {
             ignoreUnknownKeys = true
         }
 
-        val mockEngine = MockEngine { request ->
+        val httpClient = mockHttpClient(json) { request ->
             recordedRequests += request
             val path = request.url.encodedPath
             val body = when {
@@ -71,11 +68,6 @@ class CheapsharkSourceImplTest {
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
-        }
-
-        val httpClient = HttpClient(mockEngine) {
-            expectSuccess = true
-            install(ContentNegotiation) { json(json) }
         }
 
         impl = CheapsharkSourceImpl(

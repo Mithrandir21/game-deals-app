@@ -35,7 +35,6 @@ kotlin {
             implementation(kotlin("test"))
             implementation(project(":testing"))
             implementation(libs.coroutines.testing)
-            implementation(libs.ktor.client.mock)
         }
 
         val androidUnitTest by getting {
