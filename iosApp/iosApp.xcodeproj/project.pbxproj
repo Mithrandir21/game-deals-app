@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3121BD212FAA9CDB003A55F4 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 3121BD202FAA9CDB003A55F4 /* Sentry-Dynamic */; settings = {ATTRIBUTES = (Required, ); }; };
 		B100000000000000000000B1 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A1 /* iOSApp.swift */; };
 		B100000000000000000000B2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* ContentView.swift */; };
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
@@ -27,25 +26,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3121BD212FAA9CDB003A55F4 /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3121BD1F2FAA9CDB003A55F4 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		G100000000000000000000C1 = {
+		G100000000000000000000C1 /* (root) */ = {
 			isa = PBXGroup;
 			children = (
 				G100000000000000000000C2 /* iosApp */,
-				3121BD1F2FAA9CDB003A55F4 /* Frameworks */,
 				G100000000000000000000C3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -122,9 +112,6 @@
 				Base,
 			);
 			mainGroup = G100000000000000000000C1;
-			packageReferences = (
-				3121BD1C2FAA9987003A55F4 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-			);
 			productRefGroup = G100000000000000000000C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -390,25 +377,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		3121BD1C2FAA9987003A55F4 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
-			requirement = {
-				kind = exactVersion;
-				version = 8.36.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		3121BD202FAA9CDB003A55F4 /* Sentry-Dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 3121BD1C2FAA9987003A55F4 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = "Sentry-Dynamic";
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = R100000000000000000000A1 /* Project object */;
 }
