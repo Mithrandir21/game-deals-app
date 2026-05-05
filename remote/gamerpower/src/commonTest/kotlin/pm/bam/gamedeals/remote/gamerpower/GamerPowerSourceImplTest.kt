@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package pm.bam.gamedeals.remote.gamerpower
 
 import io.ktor.client.HttpClient
@@ -9,25 +11,29 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.gamerpower.api.GamesApi
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.time.Instant
 
 /**
  * HTTP-level coverage for the [GamerPowerSourceImpl] facade. Stands a Ktor [GamesApi]
  * up against a [MockEngine] so the wiring (path, JSON decoding) is exercised end-to-end
  * inside the module that owns it.
+ *
+ * Lifted to commonTest in phase-A3b. The previous `mockk<DatetimeParsing>` block is
+ * replaced by an inline [FakeDatetimeParsing] — the test only exercises one method on
+ * that interface, so a hand-rolled fake is cheaper than a Kotlin/Native-capable mocking
+ * library for this slice.
  */
 class GamerPowerSourceImplTest {
 
@@ -36,11 +42,9 @@ class GamerPowerSourceImplTest {
     private val recordedRequests = mutableListOf<HttpRequestData>()
     private lateinit var impl: GamerPowerSourceImpl
 
-    private val datetimeParsing: DatetimeParsing = mockk {
-        every { parseDatetime(any()) } returns LocalDateTime(2026, 1, 1, 0, 0)
-    }
+    private val datetimeParsing: DatetimeParsing = FakeDatetimeParsing()
 
-    @Before
+    @BeforeTest
     fun setUp() {
         recordedRequests.clear()
 
@@ -75,7 +79,7 @@ class GamerPowerSourceImplTest {
     }
 
     @Test
-    fun `fetchGiveaways hits giveaways endpoint and decodes response`() = runTest {
+    fun fetchGiveaways_hits_giveaways_endpoint_and_decodes_response() = runTest {
         val result = impl.fetchGiveaways()
         assertEquals(1, result.size)
         assertEquals("Free Game", result.first().title)
@@ -108,4 +112,10 @@ class GamerPowerSourceImplTest {
             }
           ]"""
     }
+}
+
+private class FakeDatetimeParsing : DatetimeParsing {
+    override fun parseLocalDateTime(seconds: Long): Instant = error("not stubbed")
+    override fun parseDatetime(value: String): LocalDateTime = LocalDateTime(2026, 1, 1, 0, 0)
+    override fun datetimeToString(localDateTime: LocalDateTime): String = error("not stubbed")
 }

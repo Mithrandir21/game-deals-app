@@ -9,14 +9,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Before
-import org.junit.Test
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.logging.Logger
@@ -27,6 +21,10 @@ import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 /**
  * HTTP-level coverage for the [CheapsharkSourceImpl] facade. Stands the four `*Api`
@@ -35,6 +33,11 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
  *
  * MockEngine routes by path; the recorded requests list is asserted at the end of each
  * test to verify path + query-parameter wiring identical to the prior MockWebServer setup.
+ *
+ * Lifted to commonTest in phase-A3b. Tiny inline fakes replace the previous `mockk { ... }`
+ * blocks for [CurrencyTransformation] and [DateTimeFormatter] — MockK doesn't run on
+ * Kotlin/Native, and these collaborators have one or two methods each, so a fake is cheaper
+ * than a mocking-library swap for this slice.
  */
 class CheapsharkSourceImplTest {
 
@@ -43,16 +46,10 @@ class CheapsharkSourceImplTest {
     private val recordedRequests = mutableListOf<HttpRequestData>()
     private lateinit var impl: CheapsharkSourceImpl
 
-    private val currencyTransformation: CurrencyTransformation = mockk {
-        every { valueToDenominated(any()) } answers { "$${firstArg<Double>()}" }
-    }
+    private val currencyTransformation: CurrencyTransformation = FakeCurrencyTransformation()
+    private val datetimeFormatter: DateTimeFormatter = FakeDateTimeFormatter()
 
-    private val datetimeFormatter: DateTimeFormatter = mockk {
-        every { formatToISODate(any<Long>()) } returns "2020-01-01"
-        every { formatToISODateNullable(any<Long>()) } returns "2020-01-01"
-    }
-
-    @Before
+    @BeforeTest
     fun setUp() {
         recordedRequests.clear()
 
@@ -97,7 +94,7 @@ class CheapsharkSourceImplTest {
     }
 
     @Test
-    fun `fetchDealDetails hits deals endpoint with id and decodes response`() = runTest {
+    fun fetchDealDetails_hits_deals_endpoint_with_id_and_decodes_response() = runTest {
         val dealId = "abc123"
 
         val result = impl.fetchDealDetails(dealId)
@@ -111,7 +108,7 @@ class CheapsharkSourceImplTest {
     }
 
     @Test
-    fun `fetchDealsForStore forwards storeID and pageSize as query parameters`() = runTest {
+    fun fetchDealsForStore_forwards_storeID_and_pageSize_as_query_parameters() = runTest {
         val storeId = 1
         val pageSize = 60
 
@@ -127,7 +124,7 @@ class CheapsharkSourceImplTest {
     }
 
     @Test
-    fun `fetchStores hits stores endpoint and decodes response`() = runTest {
+    fun fetchStores_hits_stores_endpoint_and_decodes_response() = runTest {
         val result = impl.fetchStores()
         assertEquals(1, result.size)
         assertEquals("Steam", result.first().storeName)
@@ -137,7 +134,7 @@ class CheapsharkSourceImplTest {
     }
 
     @Test
-    fun `fetchReleases hits releases endpoint and decodes response`() = runTest {
+    fun fetchReleases_hits_releases_endpoint_and_decodes_response() = runTest {
         val result = impl.fetchReleases()
         assertEquals(1, result.size)
         assertEquals("Upcoming Game", result.first().title)
@@ -147,7 +144,7 @@ class CheapsharkSourceImplTest {
     }
 
     @Test
-    fun `fetchGames forwards title query parameter`() = runTest {
+    fun fetchGames_forwards_title_query_parameter() = runTest {
         val title = "halo"
 
         val result = impl.fetchGames(title = title)
@@ -241,4 +238,13 @@ class CheapsharkSourceImplTest {
             }
           ]"""
     }
+}
+
+private class FakeCurrencyTransformation : CurrencyTransformation {
+    override fun valueToDenominated(value: Double): String = "$$value"
+}
+
+private class FakeDateTimeFormatter : DateTimeFormatter {
+    override fun formatToISODate(seconds: Long): String = "2020-01-01"
+    override fun formatToISODateNullable(seconds: Long): String? = "2020-01-01"
 }
