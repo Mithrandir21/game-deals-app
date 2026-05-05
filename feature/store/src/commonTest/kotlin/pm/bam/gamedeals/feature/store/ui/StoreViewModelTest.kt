@@ -8,38 +8,26 @@ import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class StoreViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
+class StoreViewModelTest : MainDispatcherTest() {
 
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
 
-    @BeforeTest
-    fun setup() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @AfterTest
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    @BeforeTest fun setUp() = installMainDispatcher()
+    @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun createViewModel(storeId: Int?): StoreViewModel = StoreViewModel(
         savedStateHandle = if (storeId == null) SavedStateHandle() else SavedStateHandle(mapOf("storeId" to storeId)),
@@ -86,11 +74,3 @@ class StoreViewModelTest {
         assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
     }
 }
-
-private fun store(
-    storeID: Int = 1,
-    storeName: String = "Test Store",
-    isActive: Boolean = true,
-    images: Store.StoreImages = Store.StoreImages(banner = "banner", logo = "logo", icon = "icon"),
-    expires: Long = 0L,
-) = Store(storeID, storeName, isActive, images, expires)

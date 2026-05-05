@@ -16,12 +16,12 @@ import org.gradle.kotlin.dsl.getByType
  * test option.
  *
  * Wires the dependencies that *every one of those six* modules needs
- * (Koin + Compose + Material3 + Paging + Coil + tracing + the standard test
- * stack). Module-specific deps stay in each module's build.gradle.kts.
+ * (Koin + Compose + Material3 + Coil + tracing + the standard test stack).
+ * Module-specific deps stay in each module's build.gradle.kts.
  *
  * `:feature:webview` deliberately does NOT use this convention — it has no
- * Koin, no Paging and no Coil, so forcing the feature convention onto it
- * would either add unused deps or splinter the convention's contract.
+ * Koin and no Coil, so forcing the feature convention onto it would either
+ * add unused deps or splinter the convention's contract.
  */
 class AndroidFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
@@ -58,8 +58,6 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             add("implementation", libs.findLibrary("koin-androidx-compose").get())
             add("implementation", libs.findLibrary("koin-compose-viewmodel").get())
 
-            add("implementation", libs.findLibrary("androidx-paging").get())
-            add("implementation", libs.findLibrary("androidx-paging-compose").get())
             add("implementation", libs.findLibrary("coil3").get())
             add("implementation", libs.findLibrary("coil3-compose").get())
             add("implementation", libs.findLibrary("coil3-network-ktor").get())

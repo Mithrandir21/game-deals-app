@@ -20,7 +20,7 @@ import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.store.di.storeModule
-import pm.bam.gamedeals.logging.di.loggingModule
+import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
 import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
@@ -37,7 +37,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         startKoin {
             androidContext(this@GameDealsApplication)
             modules(
-                loggingModule,
+                loggingAndroidModule,
                 commonModule,
                 commonAndroidModule,
                 domainModule,

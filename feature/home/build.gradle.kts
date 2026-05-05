@@ -84,14 +84,6 @@ extensions.configure<LibraryExtension> {
 
     @Suppress("UnstableApiUsage")
     testOptions.emulatorControl.enable = true
-
-    defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-}
-
-compose.resources {
-    publicResClass = true
-    packageOfResClass = "pm.bam.gamedeals.feature.home.generated.resources"
-    generateResClass = org.jetbrains.compose.resources.ResourcesExtension.ResourceClassGeneration.Auto
 }
 
 dependencies {

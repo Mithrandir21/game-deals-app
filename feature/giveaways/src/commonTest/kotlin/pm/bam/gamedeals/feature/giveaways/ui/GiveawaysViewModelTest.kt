@@ -12,23 +12,20 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.giveaway
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
 import kotlin.test.AfterTest
@@ -36,21 +33,12 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class GiveawaysViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
+class GiveawaysViewModelTest : MainDispatcherTest() {
 
     private val giveawaysRepository: GiveawaysRepository = mock(MockMode.autoUnit)
 
-    @BeforeTest
-    fun setup() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @AfterTest
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    @BeforeTest fun setUp() = installMainDispatcher()
+    @AfterTest fun tearDown() = resetMainDispatcher()
 
     @Test
     fun initially_loading() = runTest {
@@ -250,28 +238,3 @@ class GiveawaysViewModelTest {
     private fun TestScope.observeStates(viewModel: GiveawaysViewModel) =
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
 }
-
-private val MIN_DATETIME = LocalDateTime(1970, 1, 1, 0, 0)
-
-private fun giveaway(
-    id: Int = 1,
-    title: String = "Test Giveaway",
-    worthDenominated: String? = "$0",
-    worth: Double? = 0.0,
-    thumbnail: String = "thumb.png",
-    image: String = "image.png",
-    description: String = "desc",
-    instructions: String = "instructions",
-    openGiveawayUrl: String = "https://example.com/open",
-    publishedDate: LocalDateTime = MIN_DATETIME,
-    type: GiveawayType = GiveawayType.GAME,
-    platforms: List<GiveawayPlatform> = listOf(GiveawayPlatform.PC),
-    endDate: String? = null,
-    users: Int = 0,
-    status: String = "Active",
-    gamerpowerUrl: String = "https://example.com",
-    openGiveaway: String = "https://example.com/giveaway",
-) = Giveaway(
-    id, title, worthDenominated, worth, thumbnail, image, description, instructions,
-    openGiveawayUrl, publishedDate, type, platforms, endDate, users, status, gamerpowerUrl, openGiveaway,
-)

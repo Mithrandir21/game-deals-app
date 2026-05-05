@@ -19,20 +19,6 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/**
- * Lifted to commonTest in phase-A4a as the Mokkery proof-of-concept.
- *
- * The previous Android-only version used MockK + `InstantTaskExecutorRule`; the rule
- * was a holdover (this test uses `Flow` + `runTest`, never `LiveData`) and is dropped.
- * `mockk<Release>()` for the value object becomes a real constructed [Release] — Mokkery
- * cannot mock final classes anyway, and the test never invoked methods on it.
- *
- * Mokkery API mapping vs the prior MockK shape:
- * - `mockk<T>()` → `mock<T>(MockMode.autoUnit)` (autoUnit replaces `coEvery { ... } just Runs`)
- * - `coEvery { suspendFn() } returns x` → `everySuspend { suspendFn() } returns x`
- * - `coEvery { plainFn() }` → `every { plainFn() }` (Mokkery is strict about suspend vs not)
- * - `coVerify(exactly = N) { ... }` → `verifySuspend(exactly(N)) { ... }`
- */
 class ReleasesRepositoryTest {
 
     private val logger: Logger = TestingLoggingListener()

@@ -12,9 +12,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
-import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
@@ -22,19 +20,13 @@ import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.MAX_DATETIME
+import pm.bam.gamedeals.testing.fixtures.MIN_DATETIME
+import pm.bam.gamedeals.testing.fixtures.giveaway
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-private val MIN_DATETIME = LocalDateTime(1970, 1, 1, 0, 0)
-private val MAX_DATETIME = LocalDateTime(9999, 12, 31, 23, 59, 59)
-
-/**
- * Lifted to commonTest in phase-A4b. Replaces `mockk<Giveaway> { every { type } returns ... }`
- * (mock-each-property pattern) with constructed [Giveaway] values via a `giveaway(...)` helper
- * with sensible defaults — Mokkery cannot mock final classes, and constructing the data class
- * reads better than stubbing 5 properties separately anyway.
- */
 class GiveawaysRepositoryTest {
 
     private val logger: Logger = TestingLoggingListener()
@@ -125,26 +117,3 @@ class GiveawaysRepositoryTest {
         verify(exactly(3)) { giveawaysDao.observeAllGiveaways() }
     }
 }
-
-private fun giveaway(
-    id: Int = 1,
-    title: String = "Test Giveaway",
-    worthDenominated: String? = "$0",
-    worth: Double? = 0.0,
-    thumbnail: String = "thumb.png",
-    image: String = "image.png",
-    description: String = "desc",
-    instructions: String = "instructions",
-    openGiveawayUrl: String = "https://example.com/open",
-    publishedDate: LocalDateTime = MIN_DATETIME,
-    type: GiveawayType = GiveawayType.GAME,
-    platforms: List<GiveawayPlatform> = listOf(GiveawayPlatform.PC),
-    endDate: String? = null,
-    users: Int = 0,
-    status: String = "Active",
-    gamerpowerUrl: String = "https://example.com",
-    openGiveaway: String = "https://example.com/giveaway",
-) = Giveaway(
-    id, title, worthDenominated, worth, thumbnail, image, description, instructions,
-    openGiveawayUrl, publishedDate, type, platforms, endDate, users, status, gamerpowerUrl, openGiveaway,
-)

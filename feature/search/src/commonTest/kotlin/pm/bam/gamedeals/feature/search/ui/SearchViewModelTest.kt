@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalCoroutinesApi::class, ExperimentalSerializationApi::class)
+@file:OptIn(ExperimentalCoroutinesApi::class)
 
 package pm.bam.gamedeals.feature.search.ui
 
@@ -10,19 +10,15 @@ import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import kotlinx.serialization.ExperimentalSerializationApi
-import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.feature.search.ui.SearchViewModel.SearchData
+import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.deal
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
 import pm.bam.gamedeals.testing.utils.third
@@ -31,18 +27,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * Lifted to commonTest in phase-A5c. The previous Android-only version used
- * MockK + JUnit's `@get:Rule MainCoroutineRule()`. Mokkery replaces MockK; the
- * `MainCoroutineRule` JUnit-`TestWatcher` shape doesn't have a KMP equivalent,
- * so the per-test `Dispatchers.setMain` / `resetMain` is inlined into
- * `@BeforeTest` / `@AfterTest`. `mockk<Deal>()` becomes a constructed real
- * Deal — Mokkery cannot mock final classes, and the previous mock was an
- * opaque pass-through value with no method calls on it.
- */
-class SearchViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
+class SearchViewModelTest : MainDispatcherTest() {
 
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
 
@@ -50,14 +35,11 @@ class SearchViewModelTest {
 
     @BeforeTest
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
+        installMainDispatcher()
         viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository)
     }
 
-    @AfterTest
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    @AfterTest fun tearDown() = resetMainDispatcher()
 
     @Test
     fun initially_empty() = runTest {
@@ -158,43 +140,3 @@ class SearchViewModelTest {
     private fun TestScope.observeStates() =
         viewModel.resultState.observeEmissions(this.backgroundScope, testDispatcher)
 }
-
-private fun deal(
-    dealID: String = "deal-1",
-    internalName: String = "TEST",
-    title: String = "Test Deal",
-    storeID: Int = 1,
-    gameID: Int = 100,
-    salePriceValue: Double = 9.99,
-    salePriceDenominated: String = "$9.99",
-    normalPriceValue: Double = 19.99,
-    normalPriceDenominated: String = "$19.99",
-    isOnSale: Boolean = true,
-    savings: Double = 50.0,
-    metacriticScore: Int = 80,
-    steamRatingPercent: Int = 90,
-    steamRatingCount: String = "100",
-    releaseDate: Int = 0,
-    lastChange: Int = 0,
-    dealRating: Double = 9.0,
-    thumb: String = "thumb",
-) = Deal(
-    dealID = dealID,
-    internalName = internalName,
-    title = title,
-    storeID = storeID,
-    gameID = gameID,
-    salePriceValue = salePriceValue,
-    salePriceDenominated = salePriceDenominated,
-    normalPriceValue = normalPriceValue,
-    normalPriceDenominated = normalPriceDenominated,
-    isOnSale = isOnSale,
-    savings = savings,
-    metacriticScore = metacriticScore,
-    steamRatingPercent = steamRatingPercent,
-    steamRatingCount = steamRatingCount,
-    releaseDate = releaseDate,
-    lastChange = lastChange,
-    dealRating = dealRating,
-    thumb = thumb,
-)

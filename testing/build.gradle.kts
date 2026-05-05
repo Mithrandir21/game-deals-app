@@ -10,9 +10,11 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.coroutines)
             implementation(libs.coroutines.testing)
+            implementation(libs.kotlinx.collections.immutable)
 
             implementation(project(":logging"))
             implementation(project(":common"))
+            implementation(project(":domain"))
         }
 
         androidMain.dependencies {

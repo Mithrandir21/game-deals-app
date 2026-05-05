@@ -6,7 +6,7 @@ import pm.bam.gamedeals.logging.LoggerImpl
 import pm.bam.gamedeals.logging.implementations.SentryLoggingListener
 import pm.bam.gamedeals.logging.implementations.SimpleLoggingListener
 
-val loggingModule = module {
+val loggingAndroidModule = module {
     single<Logger> {
         LoggerImpl(mutableSetOf(SimpleLoggingListener(), SentryLoggingListener()))
     }

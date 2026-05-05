@@ -19,17 +19,10 @@ import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.store
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/**
- * Lifted to commonTest in phase-A4b.
- *
- * Replaces `mockk<Store> { every { expires } returns ... }` with constructed [Store] values
- * (Mokkery cannot mock final classes). The previous `every { fetched.copy(expires = X) } returns
- * stamped` mock-the-copy pattern becomes a real `Store.copy(...)` call inside the verify block —
- * data classes have value equality, so the verify still pins the impl's stamping behavior.
- */
 class StoresRepositoryTest {
 
     private val logger: Logger = TestingLoggingListener()
@@ -104,11 +97,3 @@ class StoresRepositoryTest {
         }
     }
 }
-
-private fun store(
-    storeID: Int = 1,
-    storeName: String = "Test Store",
-    isActive: Boolean = true,
-    images: Store.StoreImages = Store.StoreImages(banner = "banner", logo = "logo", icon = "icon"),
-    expires: Long = 0L,
-) = Store(storeID, storeName, isActive, images, expires)

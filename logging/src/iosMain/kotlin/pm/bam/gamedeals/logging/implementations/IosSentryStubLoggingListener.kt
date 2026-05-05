@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.logging.implementations
 
-import platform.Foundation.NSLog
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.LoggingInterface
 
@@ -29,14 +28,14 @@ internal class IosSentryStubLoggingListener : LoggingInterface {
             LogLevel.VERBOSE,
             LogLevel.DEBUG,
             LogLevel.INFO,
-            LogLevel.WARN -> nsLog("[Sentry stub] breadcrumb [${level.name}] $effectiveTag: $message")
+            LogLevel.WARN -> iosLog("[Sentry stub] breadcrumb [${level.name}] $effectiveTag: $message")
             LogLevel.ERROR,
             LogLevel.FATAL -> {
                 if (throwable != null) {
-                    nsLog("[Sentry stub] captureException [${level.name}] $effectiveTag: ${throwable.message}")
-                    nsLog(throwable.stackTraceToString())
+                    iosLog("[Sentry stub] captureException [${level.name}] $effectiveTag: ${throwable.message}")
+                    iosLog(throwable.stackTraceToString())
                 } else {
-                    nsLog("[Sentry stub] captureMessage [${level.name}] $effectiveTag: $message")
+                    iosLog("[Sentry stub] captureMessage [${level.name}] $effectiveTag: $message")
                 }
             }
         }
@@ -44,12 +43,7 @@ internal class IosSentryStubLoggingListener : LoggingInterface {
 
     override fun onFatalThrowable(tag: String?, throwable: Throwable) {
         val effectiveTag = tag ?: getLoggerTag()
-        nsLog("[Sentry stub] captureException [FATAL] $effectiveTag: ${throwable.message}")
-        nsLog(throwable.stackTraceToString())
-    }
-
-    // See IosConsoleLoggingListener.nsLog for why we don't pass varargs.
-    private fun nsLog(line: String) {
-        NSLog(line.replace("%", "%%"))
+        iosLog("[Sentry stub] captureException [FATAL] $effectiveTag: ${throwable.message}")
+        iosLog(throwable.stackTraceToString())
     }
 }

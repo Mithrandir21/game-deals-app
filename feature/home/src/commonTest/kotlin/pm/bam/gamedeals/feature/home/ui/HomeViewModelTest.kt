@@ -15,16 +15,12 @@ import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -35,7 +31,10 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
+import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.deal
+import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -44,9 +43,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-class HomeViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
+class HomeViewModelTest : MainDispatcherTest() {
 
     private lateinit var viewModel: HomeViewModel
 
@@ -58,15 +55,8 @@ class HomeViewModelTest {
 
     private val logger: TestingLoggingListener = TestingLoggingListener()
 
-    @BeforeTest
-    fun setup() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @AfterTest
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    @BeforeTest fun setUp() = installMainDispatcher()
+    @AfterTest fun tearDown() = resetMainDispatcher()
 
     @Test
     fun initially_loading_state() = runTest {
@@ -276,37 +266,3 @@ class HomeViewModelTest {
     private fun TestScope.observeStates() =
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
 }
-
-private fun store(
-    storeID: Int = 1,
-    storeName: String = "Test Store",
-    isActive: Boolean = true,
-    images: Store.StoreImages = Store.StoreImages(banner = "banner", logo = "logo", icon = "icon"),
-    expires: Long = 0L,
-) = Store(storeID, storeName, isActive, images, expires)
-
-private fun deal(
-    dealID: String = "deal-1",
-    storeID: Int = 1,
-    title: String = "Test Deal",
-    salePriceDenominated: String = "$9.99",
-) = Deal(
-    dealID = dealID,
-    internalName = "TEST",
-    title = title,
-    storeID = storeID,
-    gameID = 100,
-    salePriceValue = 9.99,
-    salePriceDenominated = salePriceDenominated,
-    normalPriceValue = 19.99,
-    normalPriceDenominated = "$19.99",
-    isOnSale = true,
-    savings = 50.0,
-    metacriticScore = 80,
-    steamRatingPercent = 90,
-    steamRatingCount = "100",
-    releaseDate = 0,
-    lastChange = 0,
-    dealRating = 9.0,
-    thumb = "thumb",
-)

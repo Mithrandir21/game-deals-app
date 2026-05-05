@@ -8,24 +8,17 @@ import dev.mokkery.mock
 import dev.mokkery.verify
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.db.dao.GamesDao
-import pm.bam.gamedeals.domain.models.Game
-import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.testing.fixtures.game
+import pm.bam.gamedeals.testing.fixtures.gameDetails
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Lifted to commonTest in phase-A4b. Mokkery for the two collaborator interfaces
- * ([GamesDao], [CheapsharkSource]); real constructed [Game] / [GameDetails] for the
- * value objects that the previous `mockk<Game>()`/`mockk<GameDetails>()` was used for
- * (those mocks were opaque pass-through values — no method calls on them).
- */
 class GamesRepositoryTest {
 
     private val gamesDao: GamesDao = mock(MockMode.autoUnit)
@@ -73,20 +66,3 @@ class GamesRepositoryTest {
         verifySuspend(exactly(1)) { gamesDao.addGames(game) }
     }
 }
-
-private fun game(
-    gameID: Int = 1,
-    steamAppID: Int? = null,
-    cheapestValue: Double = 0.0,
-    cheapestDenominated: String = "$0",
-    cheapestDealID: String = "deal-1",
-    title: String = "Test Game",
-    internalName: String = "TEST_GAME",
-    thumb: String = "thumb",
-) = Game(gameID, steamAppID, cheapestValue, cheapestDenominated, cheapestDealID, title, internalName, thumb)
-
-private fun gameDetails() = GameDetails(
-    info = GameDetails.GameInfo(title = "Test Game", steamAppID = null, thumb = "thumb"),
-    cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = 0.0, priceDenominated = "$0", date = "2026-01-01"),
-    deals = persistentListOf(),
-)

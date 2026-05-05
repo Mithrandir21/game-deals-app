@@ -1,0 +1,43 @@
+package pm.bam.gamedeals.testing.fixtures
+
+import pm.bam.gamedeals.domain.models.Deal
+
+fun deal(
+    dealID: String = "deal-1",
+    internalName: String = "TEST",
+    title: String = "Test Deal",
+    storeID: Int = 1,
+    gameID: Int = 100,
+    salePriceValue: Double = 9.99,
+    salePriceDenominated: String = "$9.99",
+    normalPriceValue: Double = 19.99,
+    normalPriceDenominated: String = "$19.99",
+    isOnSale: Boolean = true,
+    savings: Double = 50.0,
+    metacriticScore: Int = 80,
+    steamRatingPercent: Int = 90,
+    steamRatingCount: String = "100",
+    releaseDate: Int = 0,
+    lastChange: Int = 0,
+    dealRating: Double = 9.0,
+    thumb: String = "thumb",
+) = Deal(
+    dealID = dealID,
+    internalName = internalName,
+    title = title,
+    storeID = storeID,
+    gameID = gameID,
+    salePriceValue = salePriceValue,
+    salePriceDenominated = salePriceDenominated,
+    normalPriceValue = normalPriceValue,
+    normalPriceDenominated = normalPriceDenominated,
+    isOnSale = isOnSale,
+    savings = savings,
+    metacriticScore = metacriticScore,
+    steamRatingPercent = steamRatingPercent,
+    steamRatingCount = steamRatingCount,
+    releaseDate = releaseDate,
+    lastChange = lastChange,
+    dealRating = dealRating,
+    thumb = thumb,
+)

@@ -71,12 +71,6 @@ extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.common.ui"
 }
 
-compose.resources {
-    publicResClass = true
-    packageOfResClass = "pm.bam.gamedeals.common.ui.generated.resources"
-    generateResClass = org.jetbrains.compose.resources.ResourcesExtension.ResourceClassGeneration.Auto
-}
-
 dependencies {
     debugImplementation(libs.androidx.compose.test)
 }

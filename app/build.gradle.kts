@@ -117,9 +117,6 @@ dependencies {
     implementation(libs.androidx.compose.material3.window)
     implementation(libs.androidx.compose.material3.adaptive)
 
-    implementation(libs.androidx.paging)
-    implementation(libs.androidx.paging.compose)
-
     implementation(libs.coil3)
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.ktor)
@@ -129,7 +126,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
-    testImplementation(libs.androidx.paging.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

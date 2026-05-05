@@ -6,20 +6,19 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
-import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.DealDetails
-import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.cheaperStore
+import pm.bam.gamedeals.testing.fixtures.cheapestPrice
+import pm.bam.gamedeals.testing.fixtures.dealDetails
+import pm.bam.gamedeals.testing.fixtures.gameInfo
+import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.utils.second
 import pm.bam.gamedeals.testing.utils.third
@@ -29,9 +28,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class DealDetailsViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
+class DealDetailsViewModelTest : MainDispatcherTest() {
 
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
@@ -40,14 +37,11 @@ class DealDetailsViewModelTest {
 
     @BeforeTest
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
+        installMainDispatcher()
         viewModel = DealDetailsViewModel(TestingLoggingListener(), dealsRepository, storesRepository)
     }
 
-    @AfterTest
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    @AfterTest fun tearDown() = resetMainDispatcher()
 
     @Test
     fun initially_deal_details_is_null() = runTest {
@@ -198,89 +192,3 @@ class DealDetailsViewModelTest {
         assertEquals(0, firstDealDataEmissions.size)
     }
 }
-
-private fun store(
-    storeID: Int = 1,
-    storeName: String = "Test Store",
-    isActive: Boolean = true,
-    images: Store.StoreImages = Store.StoreImages(banner = "banner", logo = "logo", icon = "icon"),
-    expires: Long = 0L,
-) = Store(storeID, storeName, isActive, images, expires)
-
-private fun deal(
-    dealID: String = "deal-1",
-    storeID: Int = 1,
-    title: String = "Test Deal",
-    salePriceDenominated: String = "$9.99",
-) = Deal(
-    dealID = dealID,
-    internalName = "TEST",
-    title = title,
-    storeID = storeID,
-    gameID = 100,
-    salePriceValue = 9.99,
-    salePriceDenominated = salePriceDenominated,
-    normalPriceValue = 19.99,
-    normalPriceDenominated = "$19.99",
-    isOnSale = true,
-    savings = 50.0,
-    metacriticScore = 80,
-    steamRatingPercent = 90,
-    steamRatingCount = "100",
-    releaseDate = 0,
-    lastChange = 0,
-    dealRating = 9.0,
-    thumb = "thumb",
-)
-
-private fun dealDetails(
-    gameInfo: DealDetails.GameInfo = gameInfo(),
-    cheaperStores: List<DealDetails.CheaperStore> = emptyList(),
-    cheapestPrice: DealDetails.CheapestPrice? = cheapestPrice(),
-) = DealDetails(gameInfo, cheaperStores, cheapestPrice)
-
-private fun gameInfo(
-    storeID: Int = 1,
-    gameID: Int = 100,
-    name: String = "Test Game",
-    salePriceValue: Double = 9.99,
-    salePriceDenominated: String = "$9.99",
-    retailPriceValue: Double = 19.99,
-    retailPriceDenominated: String = "$19.99",
-    steamRatingCount: String = "100",
-    publisher: String = "ACME",
-    thumb: String = "thumb",
-) = DealDetails.GameInfo(
-    storeID = storeID,
-    gameID = gameID,
-    name = name,
-    salePriceValue = salePriceValue,
-    salePriceDenominated = salePriceDenominated,
-    retailPriceValue = retailPriceValue,
-    retailPriceDenominated = retailPriceDenominated,
-    steamRatingCount = steamRatingCount,
-    publisher = publisher,
-    thumb = thumb,
-)
-
-private fun cheaperStore(
-    dealID: String = "cheaper-deal",
-    storeID: Int = 1,
-    salePriceValue: Double = 4.99,
-    salePriceDenominated: String = "$4.99",
-    retailPriceValue: Double = 19.99,
-    retailPriceDenominated: String = "$19.99",
-) = DealDetails.CheaperStore(
-    dealID = dealID,
-    storeID = storeID,
-    salePriceValue = salePriceValue,
-    salePriceDenominated = salePriceDenominated,
-    retailPriceValue = retailPriceValue,
-    retailPriceDenominated = retailPriceDenominated,
-)
-
-private fun cheapestPrice(
-    priceValue: Double = 4.99,
-    priceDenominated: String = "$4.99",
-    date: String = "2026-01-01",
-) = DealDetails.CheapestPrice(priceValue, priceDenominated, date)

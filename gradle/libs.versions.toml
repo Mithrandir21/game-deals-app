@@ -26,8 +26,6 @@ material3-adaptive = "1.0.0-alpha06"
 appcompat = "1.7.1"
 material = "1.13.0"
 
-paging = "3.3.6"
-
 okio = "3.16.2"
 okhttp = "5.2.1"
 okhttp-logging = "5.2.1"
@@ -88,9 +86,6 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-tracing = { group = "androidx.tracing", name = "tracing", version.ref = "tracing" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
-androidx-paging = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
-androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
-
 coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 
 coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
@@ -116,7 +111,6 @@ kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotli
 # Room
 room = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 
@@ -125,7 +119,6 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 coroutines-testing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines-testing" }
 core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "core-testing" }
-androidx-paging-testing = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
 
 
 # INSTRUMENTATION TESTING
@@ -175,10 +168,6 @@ coil3 = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil3" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
 coil3-test = { group = "io.coil-kt.coil3", name = "coil-test", version.ref = "coil3" }
-
-# Paging KMP — phase 5 paging swap. AndroidX paging-common is multiplatform-capable
-# at 3.3+, so commonMain uses paging-common; androidMain keeps paging-runtime/-compose.
-androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
 
 # Room KMP — phase 2 storage swap. Room 2.7+ supports KMP via the same artifact;
 # only the build wiring changes. New entries for the KMP-specific glue:

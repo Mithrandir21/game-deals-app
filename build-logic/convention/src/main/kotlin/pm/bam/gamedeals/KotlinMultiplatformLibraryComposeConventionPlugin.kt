@@ -3,29 +3,20 @@ package pm.bam.gamedeals
 import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.getByType
+import org.jetbrains.compose.ComposeExtension
+import org.jetbrains.compose.resources.ResourcesExtension
 
 /**
  * Adds Compose Multiplatform to a Kotlin Multiplatform library that already
- * applies `pm.bam.gamedeals.kmp.library` (or the underlying KMP + Android-library
- * plugins).
+ * applies `pm.bam.gamedeals.kmp.library`.
  *
- * Applies:
- * - `org.jetbrains.kotlin.plugin.compose` — the Kotlin Compose Compiler plugin.
- *   Required for `@Composable` processing on every target. Note: applying this
- *   to a multiplatform module requires Compose runtime on every target's
- *   classpath (proven the hard way during Phase 0). The CMP plugin below pulls
- *   that in via the `compose.runtime` shorthand.
- * - `org.jetbrains.compose` — the JetBrains Compose Multiplatform Gradle plugin.
- *   Exposes `compose.runtime`, `compose.material3`, `compose.foundation`, etc.
- *   for use in commonMain `dependencies { implementation(compose.runtime) }`.
- *
- * Also flips `buildFeatures.compose = true` on the Android library extension so
- * Android-side previews / tooling pick up Compose.
- *
- * Compose runtime / Material3 / Coil / etc. coordinates are NOT auto-added
- * here — modules pick the surface area they want, the same way the legacy
- * `AndroidLibraryComposeConventionPlugin` worked.
+ * Applies the Kotlin Compose Compiler plugin and the JetBrains Compose
+ * Multiplatform Gradle plugin, flips Android `buildFeatures.compose = true`,
+ * and configures `compose.resources` to derive `packageOfResClass` from each
+ * module's Android namespace (`<namespace>.generated.resources`).
  */
 class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -34,6 +25,17 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
 
         extensions.configure<LibraryExtension> {
             buildFeatures.compose = true
+        }
+
+        afterEvaluate {
+            val androidNamespace = extensions.getByType<LibraryExtension>().namespace
+                ?: error("$path: android namespace must be set before compose.resources can derive packageOfResClass")
+            val compose = extensions.getByType<ComposeExtension>() as ExtensionAware
+            compose.extensions.configure<ResourcesExtension> {
+                publicResClass = true
+                packageOfResClass = "$androidNamespace.generated.resources"
+                generateResClass = ResourcesExtension.ResourceClassGeneration.Auto
+            }
         }
     }
 }
