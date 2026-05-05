@@ -2,6 +2,7 @@ package pm.bam.gamedeals.common.storage
 
 import pm.bam.gamedeals.common.exceptions.DataExistsException
 import pm.bam.gamedeals.common.exceptions.DataNotFoundException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 
@@ -14,7 +15,7 @@ interface Storage {
      *
      * @throws DataNotFoundException if no data found for given [storageKey] and no [defaultValue] is given.
      */
-    @Throws(DataNotFoundException::class)
+    @Throws(DataNotFoundException::class, CancellationException::class)
     suspend fun <T : Any> get(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T? = null): T
 
     /**
@@ -29,7 +30,7 @@ interface Storage {
      *
      * @throws DataExistsException if [overwrite] is true and data exists for the given [storageKey].
      */
-    @Throws(DataExistsException::class)
+    @Throws(DataExistsException::class, CancellationException::class)
     suspend fun <T : Any> save(storageKey: String, data: T, serializationStrategy: SerializationStrategy<T>, overwrite: Boolean = true): Boolean
 
     /** Returns a boolean indicating whether the storage contains data for the given [storageKey]. */
