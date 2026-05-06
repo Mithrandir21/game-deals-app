@@ -298,7 +298,9 @@ private fun ScreenScaffold(
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val topAppBarState = rememberTopAppBarState()
+    val canScroll = remember { { true } }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, canScroll)
     val currentOnRetry by rememberUpdatedState(onRetry)
 
     val errorMessage = stringResource(Res.string.game_screen_data_loading_error_msg)

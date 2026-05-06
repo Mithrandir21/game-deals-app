@@ -216,7 +216,10 @@ private fun StoreToolbar(
     onBack: () -> Unit,
     storeDetails: Store? = null
 ) {
-    val scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val topAppBarState = rememberTopAppBarState()
+    val canScroll = remember { { true } }
+    val scrollBehavior: TopAppBarScrollBehavior =
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, canScroll)
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
