@@ -6,6 +6,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.CancellationException
+import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsSortBy
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteDeal
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteDealDetails
@@ -24,43 +25,25 @@ import pm.bam.gamedeals.remote.cheapshark.models.RemoteDealDetails
  */
 class DealsApi(private val httpClient: HttpClient) {
 
-    @Suppress("LongParameterList")
-    suspend fun getDeals(
-        storeID: Int? = null,
-        pageNumber: Int? = null,
-        pageSize: Int? = null,
-        sortBy: RemoteDealsSortBy? = null,
-        desc: Int? = null,
-        lowerPrice: Int? = null,
-        upperPrice: Int? = null,
-        metacritic: Int? = null,
-        steamRating: Int? = null,
-        maxAge: Int? = null,
-        steamAppID: Int? = null,
-        title: String? = null,
-        exact: Int? = null,
-        aaa: Int? = null,
-        steamworks: Int? = null,
-        onSale: Int? = null
-    ): ApiResponse<List<RemoteDeal>> = try {
+    suspend fun getDeals(query: RemoteDealsQuery = RemoteDealsQuery()): ApiResponse<List<RemoteDeal>> = try {
         ApiResponse.Success(
             httpClient.get("/api/1.0/deals") {
-                parameter("storeID", storeID)
-                parameter("pageNumber", pageNumber)
-                parameter("pageSize", pageSize)
-                parameter("sortBy", sortBy?.toApiString())
-                parameter("desc", desc)
-                parameter("lowerPrice", lowerPrice)
-                parameter("upperPrice", upperPrice)
-                parameter("metacritic", metacritic)
-                parameter("steamRating", steamRating)
-                parameter("maxAge", maxAge)
-                parameter("steamAppID", steamAppID)
-                parameter("title", title)
-                parameter("exact", exact)
-                parameter("AAA", aaa)
-                parameter("steamworks", steamworks)
-                parameter("onSale", onSale)
+                parameter("storeID", query.storeID)
+                parameter("pageNumber", query.pageNumber)
+                parameter("pageSize", query.pageSize)
+                parameter("sortBy", query.sortBy?.toApiString())
+                parameter("desc", query.desc)
+                parameter("lowerPrice", query.lowerPrice)
+                parameter("upperPrice", query.upperPrice)
+                parameter("metacritic", query.metacritic)
+                parameter("steamRating", query.steamRating)
+                parameter("maxAge", query.maxAge)
+                parameter("steamAppID", query.steamAppID)
+                parameter("title", query.title)
+                parameter("exact", query.exact)
+                parameter("AAA", query.aaa)
+                parameter("steamworks", query.steamworks)
+                parameter("onSale", query.onSale)
             }.body<List<RemoteDeal>>()
         )
     } catch (e: CancellationException) {

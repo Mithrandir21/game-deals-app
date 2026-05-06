@@ -8,6 +8,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,7 +44,7 @@ class DealsApiTest {
         val client = mockClient(recorded, listResponse = true)
         val api = DealsApi(client)
 
-        api.getDeals(storeID = 1, pageSize = 10).getOrThrow()
+        api.getDeals(RemoteDealsQuery(storeID = 1, pageSize = 10)).getOrThrow()
 
         assertEquals(1, recorded.size)
         val query = recorded.single().url.encodedQuery

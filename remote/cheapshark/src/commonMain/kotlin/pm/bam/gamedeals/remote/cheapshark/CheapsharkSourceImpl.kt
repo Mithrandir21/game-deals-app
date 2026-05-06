@@ -15,6 +15,7 @@ import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
 import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
+import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import pm.bam.gamedeals.remote.cheapshark.mappers.toDeal
 import pm.bam.gamedeals.remote.cheapshark.mappers.toDealDetails
 import pm.bam.gamedeals.remote.cheapshark.mappers.toGame
@@ -38,31 +39,12 @@ internal class CheapsharkSourceImpl(
     private val datetimeFormatter: DateTimeFormatter
 ) : CheapsharkSource {
 
-    override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> {
-        val remoteQuery = query?.toRemoteDealsQuery()
-        return dealsApi.getDeals(
-            storeID = remoteQuery?.storeID,
-            pageNumber = remoteQuery?.pageNumber,
-            pageSize = remoteQuery?.pageSize,
-            sortBy = remoteQuery?.sortBy,
-            desc = remoteQuery?.desc,
-            lowerPrice = remoteQuery?.lowerPrice,
-            upperPrice = remoteQuery?.upperPrice,
-            metacritic = remoteQuery?.metacritic,
-            steamRating = remoteQuery?.steamRating,
-            maxAge = remoteQuery?.maxAge,
-            steamAppID = remoteQuery?.steamAppID,
-            title = remoteQuery?.title,
-            exact = remoteQuery?.exact,
-            aaa = remoteQuery?.aaa,
-            steamworks = remoteQuery?.steamworks,
-            onSale = remoteQuery?.onSale
-        )
+    override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> =
+        dealsApi.getDeals(query?.toRemoteDealsQuery() ?: RemoteDealsQuery())
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .map { it.toDeal(currencyTransformation) }
-    }
 
     override suspend fun fetchDealDetails(id: String): DealDetails =
         dealsApi.getDeal(id)

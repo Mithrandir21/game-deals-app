@@ -6,7 +6,7 @@ data class RemoteDealsQuery(
     val storeID: Int? = null,
     val pageNumber: Int? = null,
     val pageSize: Int? = null,
-    val sortBy: RemoteDealsSortBy? = RemoteDealsSortBy.DEALRATING,
+    val sortBy: RemoteDealsSortBy? = null,
     val desc: Int? = null,
     val lowerPrice: Int? = null,
     val upperPrice: Int? = null,
