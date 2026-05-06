@@ -8,12 +8,6 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-
             implementation(project(":logging"))
             implementation(project(":common"))
             implementation(project(":domain"))

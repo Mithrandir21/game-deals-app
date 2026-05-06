@@ -7,7 +7,9 @@ import org.gradle.api.plugins.ExtensionAware
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.compose.ComposeExtension
+import org.jetbrains.compose.ComposePlugin
 import org.jetbrains.compose.resources.ResourcesExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
  * Adds Compose Multiplatform to a Kotlin Multiplatform library that already
@@ -15,8 +17,10 @@ import org.jetbrains.compose.resources.ResourcesExtension
  *
  * Applies the Kotlin Compose Compiler plugin and the JetBrains Compose
  * Multiplatform Gradle plugin, flips Android `buildFeatures.compose = true`,
- * and configures `compose.resources` to derive `packageOfResClass` from each
- * module's Android namespace (`<namespace>.generated.resources`).
+ * wires the universal Compose runtime quartet (runtime / foundation /
+ * material3 / ui) plus components.resources into commonMain, and configures
+ * `compose.resources` to derive `packageOfResClass` from each module's
+ * Android namespace (`<namespace>.generated.resources`).
  */
 class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -25,6 +29,24 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
 
         extensions.configure<LibraryExtension> {
             buildFeatures.compose = true
+        }
+
+        extensions.configure<KotlinMultiplatformExtension> {
+            val compose = ComposePlugin.Dependencies(target)
+            sourceSets.commonMain.dependencies {
+                @Suppress("DEPRECATION")
+                implementation(compose.runtime)
+                @Suppress("DEPRECATION")
+                implementation(compose.foundation)
+                @Suppress("DEPRECATION")
+                implementation(compose.material3)
+                @Suppress("DEPRECATION")
+                implementation(compose.ui)
+                @Suppress("DEPRECATION")
+                implementation(compose.materialIconsExtended)
+                @Suppress("DEPRECATION")
+                implementation(compose.components.resources)
+            }
         }
 
         afterEvaluate {

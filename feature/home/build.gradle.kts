@@ -7,15 +7,6 @@ plugins {
 
 kotlin {
     sourceSets {
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.components.resources)
-        }
-
         androidMain.dependencies {
             // Pulled in by libs.androidx.espresso.device — see
             // https://github.com/android/android-test/issues/1755#issuecomment-1523810698

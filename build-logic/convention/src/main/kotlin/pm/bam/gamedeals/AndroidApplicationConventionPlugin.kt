@@ -4,6 +4,7 @@ import com.android.build.api.dsl.ApplicationExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 /**
  * Convention plugin for the single `:app` Android application module.
@@ -23,6 +24,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         extensions.configure<ApplicationExtension> {
             configureAndroidCommon(this)
             buildFeatures.compose = true
+        }
+
+        extensions.configure<KotlinAndroidProjectExtension> {
+            jvmToolchain(21)
         }
     }
 }

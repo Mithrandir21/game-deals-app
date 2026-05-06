@@ -1,12 +1,10 @@
 package pm.bam.gamedeals
 
 import com.android.build.api.dsl.LibraryExtension
-import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
-import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.registerIfAbsent
 import org.gradle.kotlin.dsl.withType
@@ -50,35 +48,14 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
         }
 
         extensions.configure<LibraryExtension> {
-            compileSdk = 36
-            defaultConfig {
-                minSdk = 26
-                testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-            }
+            configureAndroidCommon(this)
 
-            compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_21
-                targetCompatibility = JavaVersion.VERSION_21
-            }
+            defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
             buildTypes.named("release").configure {
                 isMinifyEnabled = false
                 proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             }
-
-            packaging.resources.apply {
-                excludes += "/META-INF/LICENSE.md"
-                excludes += "/META-INF/LICENSE-notice.md"
-                excludes += "/META-INF/{AL2.0,LGPL2.1}"
-                // Temporary fix for OSGi issue with org.jspecify:jspecify:1.0.0
-                // and com.squareup.okhttp3:logging-interceptor:5.2.1
-                excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-            }
-        }
-
-        // Required by Mockk's inline mock-maker / byte-buddy agent attach on JDK 21+.
-        tasks.withType(Test::class.java).configureEach {
-            jvmArgs("-XX:+EnableDynamicAgentLoading")
         }
 
         val iosTestSerializer = gradle.sharedServices.registerIfAbsent(
