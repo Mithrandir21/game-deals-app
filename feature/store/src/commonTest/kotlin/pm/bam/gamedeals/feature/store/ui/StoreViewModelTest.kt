@@ -6,9 +6,12 @@ import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -72,5 +75,23 @@ class StoreViewModelTest : MainDispatcherTest() {
         assertEquals(2, emissions.size, "Expected Loading and Error")
         assertEquals(StoreViewModel.StoreScreenData.Loading, emissions.first())
         assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun deals_StateFlow_does_not_tombstone_when_refresh_fails() = runTest {
+        val storeId = 1
+        val store = store(storeID = storeId)
+
+        everySuspend { storesRepository.getStore(storeId) } returns store
+        every { dealsRepository.observeStoreDeals(storeId) } returns flow { throw RuntimeException("boom") }
+
+        val viewModel = createViewModel(storeId)
+        val emissions = viewModel.deals.observeEmissions(this.backgroundScope, testDispatcher)
+
+        assertEquals(persistentListOf(), viewModel.deals.value)
+        assertEquals(persistentListOf(), emissions.last())
+
+        val uiEmissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        assertEquals(StoreViewModel.StoreScreenData.Data(store), uiEmissions.last())
     }
 }
