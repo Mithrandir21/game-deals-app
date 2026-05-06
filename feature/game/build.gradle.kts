@@ -13,12 +13,6 @@ kotlin {
             implementation(libs.androidx.tracing)
         }
 
-        val androidUnitTest by getting {
-            dependencies {
-                implementation(libs.core.testing)
-            }
-        }
-
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(libs.androidx.espresso.device)

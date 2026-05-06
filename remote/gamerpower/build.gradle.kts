@@ -22,25 +22,10 @@ kotlin {
             implementation(project(":domain"))
         }
 
-        androidMain.dependencies {
-            implementation(libs.androidx.ktx)
-            implementation(libs.androidx.appcompat)
-            implementation(libs.material)
-
-            implementation(libs.koin.android)
-        }
-
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(project(":testing"))
             implementation(libs.coroutines.testing)
-        }
-
-        val androidUnitTest by getting {
-            dependencies {
-                implementation(libs.junit)
-                implementation(libs.mockk)
-            }
         }
     }
 }

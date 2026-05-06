@@ -19,7 +19,7 @@ kotlin {
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
-            implementation(libs.androidx.compose.runtime)
+            implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.webview)
             implementation(libs.androidx.compose.material3)
             implementation(libs.androidx.ui)

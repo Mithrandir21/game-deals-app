@@ -102,7 +102,7 @@ dependencies {
     implementation(libs.androidx.compose.activity)
     implementation(composeBom)
     implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     implementation(libs.sentry.kotlin.multiplatform)
 

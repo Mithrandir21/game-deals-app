@@ -19,7 +19,6 @@ lifecycle-runtime-ktx = "2.9.4"
 compose-ui = "1.9.4"
 webview = "1.14.0"
 compose-bom = "2025.10.01"
-compose-runtime = "2.9.4"
 compose-navigation = "2.9.5"
 material3 = "1.4.0"
 material3-adaptive = "1.0.0-alpha06"
@@ -64,7 +63,6 @@ androidx-compose-activity = { group = "androidx.activity", name = "activity-comp
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-window = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }
 androidx-compose-material3-adaptive = { group = "androidx.compose.material3", name = "material3-adaptive", version.ref = "material3-adaptive" }
-androidx-compose-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "compose-runtime" }
 # Lifecycle / ViewModel — phase 5.3. AndroidX 2.8+ publishes these as multiplatform
 # artifacts; package paths (androidx.lifecycle.ViewModel, viewModelScope,
 # SavedStateHandle, collectAsStateWithLifecycle) are stable across the migration.
@@ -157,7 +155,6 @@ jetbrains-kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrai
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin-plugin" }
 androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "jetbrains-kotlin-plugin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin-plugin" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
