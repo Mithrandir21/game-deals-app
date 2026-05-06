@@ -9,15 +9,6 @@ import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.compose.ComposeExtension
 import org.jetbrains.compose.resources.ResourcesExtension
 
-/**
- * Adds Compose Multiplatform to a Kotlin Multiplatform library that already
- * applies `pm.bam.gamedeals.kmp.library`.
- *
- * Applies the Kotlin Compose Compiler plugin and the JetBrains Compose
- * Multiplatform Gradle plugin, flips Android `buildFeatures.compose = true`,
- * and configures `compose.resources` to derive `packageOfResClass` from each
- * module's Android namespace (`<namespace>.generated.resources`).
- */
 class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")

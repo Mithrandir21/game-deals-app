@@ -81,9 +81,6 @@ internal fun GameScreen(
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
 
-    // BoxWithConstraints is multiplatform — replaces the Android-only
-    // currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches
-    // the Material3 Compact-vs-Medium boundary.
     BoxWithConstraints {
         ScreenScaffold(
             isCompact = maxWidth < 600.dp,

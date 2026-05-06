@@ -14,9 +14,6 @@ kotlin {
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
             implementation(libs.material)
-            // Sentry KMP iOS auto-links against Sentry-Cocoa. Until the Xcode
-            // project wires that via SPM, keep Sentry on androidMain so the
-            // iOS framework doesn't pull in unresolvable framework references.
             implementation(libs.sentry.kotlin.multiplatform)
         }
     }

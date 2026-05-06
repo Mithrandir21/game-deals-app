@@ -22,19 +22,8 @@ import platform.WebKit.WKWebView
 import platform.darwin.NSObject
 import pm.bam.gamedeals.logging.implementations.iosLog
 
-/**
- * iOS counterpart of the Android `WebView` `AndroidView` host. Uses Compose
- * Multiplatform's `UIKitView` to bridge a `WKWebView` into the composition,
- * with a `WKNavigationDelegate` that surfaces main-frame load events through
- * [onLoadingChange]. Sub-frame errors do NOT clear loading — matches the
- * Android side's `request?.isForMainFrame == true` check.
- *
- * `loadRequest` runs in `update` (not `factory`) so the WKWebView is in the
- * UIKit hierarchy with a non-zero frame before the navigation kicks off —
- * loading into a freshly-allocated zero-frame WKWebView paints nothing on
- * iOS even after the frame is later assigned. `lastLoadedUrl` mirrors the
- * Android-side guard so recompositions don't redundantly reload.
- */
+// `loadRequest` runs in `update`, not `factory`: WKWebView paints nothing if the navigation
+// kicks off before it has a non-zero frame.
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 internal actual fun PlatformWebView(
@@ -42,7 +31,6 @@ internal actual fun PlatformWebView(
     onLoadingChange: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
-    // Stable callback reference — the WKWebViewDelegate holds it across recompositions.
     val currentOnLoadingChange by rememberUpdatedState(onLoadingChange)
 
     var lastLoadedUrl by remember { mutableStateOf<String?>(null) }
@@ -56,11 +44,6 @@ internal actual fun PlatformWebView(
         factory = {
             WKWebView().apply {
                 this.navigationDelegate = navigationDelegate
-                // Keep the view opaque (default) and force a white background so
-                // there's no dark flash before the page paints. The previous
-                // `setOpaque(false)` workaround inverted this — it made the
-                // WKWebView's layer transparent, so the dark Compose host bled
-                // through and the page never appeared to render.
                 setBackgroundColor(UIColor.whiteColor)
                 scrollView.setBackgroundColor(UIColor.whiteColor)
             }
@@ -84,13 +67,6 @@ internal actual fun PlatformWebView(
     )
 }
 
-/**
- * Bridges WKWebView's main-frame navigation lifecycle to the Compose
- * `loading` state. WKWebView only delivers main-frame navigation events
- * to the delegate (sub-frame loads use a separate decision-handler API
- * we don't override), so the Android `isForMainFrame` filter is implicit
- * in iOS — every callback here is main-frame.
- */
 @OptIn(ExperimentalForeignApi::class)
 private class WebViewNavigationDelegate(
     private val onLoadingChange: (Boolean) -> Unit,

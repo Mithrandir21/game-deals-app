@@ -8,16 +8,6 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
-/**
- * Convention plugin for KMP feature modules. Composes the KMP library + Compose
- * conventions and applies KSP, then wires the dependency surface area every
- * feature module needs (Koin + lifecycle + Coil + nav + the standard test
- * stack).
- *
- * `compose.*` runtime declarations and the module-level mokkery plugin stay in
- * each module's build.gradle.kts — the compose accessor isn't available from a
- * precompiled plugin, and mokkery is already declared per-module.
- */
 class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("pm.bam.gamedeals.kmp.library")

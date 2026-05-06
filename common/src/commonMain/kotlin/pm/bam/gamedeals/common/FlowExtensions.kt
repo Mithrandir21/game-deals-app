@@ -20,63 +20,31 @@ import kotlinx.coroutines.flow.transformLatest
 
 fun <T : Any> T.toFlow(): Flow<T> = flow { emit(this@toFlow) }
 
-/** Catches and re-throws any [Throwable] that happen upstream after performing [action] on the caught [Throwable]. */
 inline fun <T> Flow<T>.onError(crossinline action: suspend FlowCollector<T>.(cause: Throwable) -> Unit): Flow<T> =
     catch {
         action(it)
         emitAll(flow { throw it })
     }
 
-/**
- * This catch prevents the Flow from being cancelled if an error occurs upstream.
- *
- * Catches and performs some action on the [Throwable] that happen upstream before emitting the [defaultValue] and continuing the flow.
- */
 inline fun <T> Flow<T>.catchAndContinue(defaultValue: T, crossinline action: suspend FlowCollector<T>.(cause: Throwable) -> Unit): Flow<T> =
     catch {
         action(it)
         emit(defaultValue)
     }
 
-/** Maps each item in the [Flow] using the provided [transformation] function. */
 inline fun <T, R> Flow<List<T>>.mapEach(crossinline transformation: (T) -> R): Flow<List<R>> =
     map { list -> list.map { transformation(it) } }
 
-
-/**
- * Performs provided [successAction] if the [Flow] completes successfully, when no [Throwable] is thrown [Flow] upstream or downstream.
- *
- * @param successAction The action to perform when the [Flow] completes successfully.
- * @see onCompletion
- */
 inline fun <T> Flow<T>.onCompletionSuccess(crossinline successAction: suspend FlowCollector<T>.() -> Unit): Flow<T> =
     onCompletion { cause -> if (cause == null) successAction() }
 
-
-/**
- * Performs provided [failureAction] if the [Flow] completes successfully, when a [Throwable] is thrown [Flow] upstream or downstream.
- *
- * @param failureAction The action to perform when the [Flow] completes with a [Throwable].
- * @see onCompletion
- */
 inline fun <T> Flow<T>.onCompletionFailure(crossinline failureAction: suspend FlowCollector<T>.(cause: Throwable) -> Unit): Flow<T> =
     onCompletion { cause -> if (cause != null) failureAction(cause) }
 
-/**
- * Returns a flow that delays the given [delayMillis] **before** this flow starts to be collected.
- */
 fun <T> Flow<T>.delayOnStart(delayMillis: Long): Flow<T> = onStart { delay(delayMillis) }
 
-/**
- * Returns a flow containing the results of applying the given [transformFunction] to each value of the original flow
- * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
- * or because the suspend function was delayed for the remaining time.
- *
- * Implementation runs the transformation and the [delay] concurrently inside a [coroutineScope]
- * so the elapsed time is measured by the coroutine's own clock. This makes the operator behave
- * identically in production and under `runTest` with a `TestDispatcher`'s virtual time, instead
- * of relying on `System.currentTimeMillis()` (which ignores the test's virtual clock).
- */
+// Time is measured via `delay` inside `coroutineScope` so the operator honours `TestDispatcher`'s
+// virtual clock under `runTest` (vs. wall-clock `System.currentTimeMillis`).
 fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend (value: T) -> R): Flow<R> =
     transform { value ->
         coroutineScope {
@@ -88,18 +56,7 @@ fun <T, R> Flow<T>.mapDelayAtLeast(delayMillis: Long, transformFunction: suspend
         }
     }
 
-
-/**
- * Runs [block] and ensures the total elapsed time is at least [delayMillis] before returning the
- * result. If [block] completes faster than [delayMillis], suspends for the remainder.
- *
- * Useful for "minimum loading duration" UX where you want to avoid flashing a loading state too briefly.
- *
- * Implementation runs [block] and the [delay] concurrently inside a [coroutineScope] so the elapsed
- * time is measured by the coroutine's own clock. This makes the function behave identically in
- * production and under `runTest` with a `TestDispatcher`'s virtual time, instead of relying on
- * `System.currentTimeMillis()` (which ignores the test's virtual clock).
- */
+// Pad runs concurrently with [block] so virtual time under `runTest` is honoured.
 suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block: suspend () -> T): T = coroutineScope {
     val pad = launch { delay(delayMillis) }
     val result = block()
@@ -107,16 +64,6 @@ suspend inline fun <T> withMinimumDuration(delayMillis: Long, crossinline block:
     result
 }
 
-
-/**
- * Returns a flow containing the results of applying the given [transformFunction] to each value of the original flow
- * only after given [delayMillis] has passed, either because the transformation took more or equal amount of time as the [delayMillis],
- * or because the suspend function was delayed for the remaining time.
- *
- * Like [mapDelayAtLeast] but using `transformLatest` so a new upstream value cancels any in-flight
- * transformation. Time is measured via [delay] inside [coroutineScope] for virtual-time correctness
- * under `runTest`.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 inline fun <T, R> Flow<T>.flatMapLatestDelayAtLeast(delayMillis: Long, crossinline transformFunction: suspend (value: T) -> R): Flow<R> =
     transformLatest { value ->
@@ -129,14 +76,6 @@ inline fun <T, R> Flow<T>.flatMapLatestDelayAtLeast(delayMillis: Long, crossinli
         }
     }
 
-
-/**
- * Returns a flow that emits each value of the original flow only after given [delayMillis] has
- * passed since that value arrived. Uses `transformLatest`, so a new upstream value cancels any
- * pending pad before it emits.
- *
- * Time is measured via [delay] for virtual-time correctness under `runTest`.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T> Flow<T>.latestDelayAtLeast(delayMillis: Long): Flow<T> =
     transformLatest { value ->
@@ -144,21 +83,6 @@ fun <T> Flow<T>.latestDelayAtLeast(delayMillis: Long): Flow<T> =
         emit(value)
     }
 
-/**
- * Retries collection of the given flow when an exception occurs in the upstream flow and the
- * [predicate] returns true ***after*** delaying for [delayMillis] milliseconds. The predicate also
- * receives an `attempt` number as parameter, starting from zero on the initial call. This operator is
- * *transparent* to exceptions that occur in downstream flow and does not retry on exceptions that are thrown to cancel the flow.
- *
- * On each retry, the [onRetry] lambda is called with the cause of the exception and the attempt number.
- * If the [predicate] returns false, the [onNotRetry] lambda is called with the cause of the exception and the attempt number.
- *
- * @param delayMillis The delay in milliseconds to wait before retrying.
- * @param predicate The predicate to determine if the flow should be retried. The predicate receives the cause of the exception and the attempt number.
- * @return A flow that retries collection of the given flow when an exception occurs in the upstream flow and the [predicate] returns true.
- *
- * @see retryWhen
- */
 fun <T> Flow<T>.retryWhenDelay(
     delayMillis: Long,
     onRetry: (suspend (cause: Throwable, attempt: Long) -> Unit)? = null,
