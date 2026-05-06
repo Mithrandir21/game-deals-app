@@ -10,11 +10,11 @@ import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.systemTimeZone
 
-private val iosFormatter = NSDateFormatter().apply {
-    dateFormat = "MMM dd, yyyy"
-    locale = NSLocale.currentLocale
-    timeZone = NSTimeZone.systemTimeZone
+internal actual fun formatLocaleAwareDate(instant: Instant): String {
+    val formatter = NSDateFormatter().apply {
+        dateFormat = "MMM dd, yyyy"
+        locale = NSLocale.currentLocale
+        timeZone = NSTimeZone.systemTimeZone
+    }
+    return formatter.stringFromDate(instant.toNSDate())
 }
-
-internal actual fun formatLocaleAwareDate(instant: Instant): String =
-    iosFormatter.stringFromDate(instant.toNSDate())
