@@ -349,9 +349,9 @@ private fun Filters(
     val steamRange = SearchFilterMinRate..SearchFilterMaxRate
     val existingMin = existingSearchParameters.steamMinRating?.toFloat() ?: SearchFilterMinRate
 
-    var priceSliderValue by rememberSaveable(stateSaver = floatRangeSaver) { mutableStateOf(existingPriceRange) }
-    var steamSliderValue by rememberSaveable { mutableFloatStateOf(existingMin) }
-    var exactMatch by rememberSaveable { mutableStateOf(existingSearchParameters.exact ?: false) }
+    var priceSliderValue by rememberSaveable(existingPriceRange, stateSaver = floatRangeSaver) { mutableStateOf(existingPriceRange) }
+    var steamSliderValue by rememberSaveable(existingMin) { mutableFloatStateOf(existingMin) }
+    var exactMatch by rememberSaveable(existingSearchParameters.exact) { mutableStateOf(existingSearchParameters.exact ?: false) }
 
     Column(
         modifier = Modifier
