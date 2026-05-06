@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,6 +70,8 @@ internal class GiveawaysViewModel(
             refreshOutcomeFlow.value = RefreshOutcome.Idle
             try {
                 giveawaysRepository.refreshGiveaways()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {
                 refreshOutcomeFlow.value = RefreshOutcome.Error
             }
