@@ -9,7 +9,7 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.registerIfAbsent
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 /**
  * Marker [BuildService] used to serialize Kotlin/Native iOS-simulator test
@@ -64,7 +64,7 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
         ) {
             maxParallelUsages.set(1)
         }
-        tasks.withType(KotlinNativeHostTest::class.java).configureEach {
+        tasks.withType(KotlinNativeTest::class.java).configureEach {
             usesService(iosTestSerializer)
         }
     }
