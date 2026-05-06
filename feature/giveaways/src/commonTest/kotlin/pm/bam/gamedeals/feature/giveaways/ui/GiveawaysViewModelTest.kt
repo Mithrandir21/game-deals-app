@@ -11,6 +11,7 @@ import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,6 +33,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class GiveawaysViewModelTest : MainDispatcherTest() {
 
@@ -126,6 +128,27 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
         val emissions = observeStates(viewModel)
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
+    }
+
+    @Test
+    fun cancelled_reload_does_not_set_ERROR() = runTest {
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        // Simulate an in-flight reload being cancelled (e.g. viewModelScope cleared while
+        // refreshGiveaways() is suspended). The CancellationException must propagate, not be
+        // swallowed into a RefreshOutcome.Error.
+        everySuspend { giveawaysRepository.refreshGiveaways() } throws CancellationException("scope cleared")
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        unfilteredRoom.emit(emptyList())
+
+        viewModel.reloadGiveaways()
+
+        val emissions = observeStates(viewModel)
+        // Pre-fix this would be ERROR (the bare catch swallowed the CE and wrote
+        // RefreshOutcome.Error). After the fix the CE is rethrown and refreshOutcomeFlow
+        // stays Idle, so the surviving status must not be ERROR.
+        assertNotEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
     }
 
     @Test
