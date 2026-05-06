@@ -67,6 +67,7 @@ internal class StoreViewModel(
         .flatMapLatest { dealsRepository.observeStoreDeals(it) }
         .map { it.toImmutableList() }
         .logFlow(logger)
+        .catch { emit(persistentListOf()) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
