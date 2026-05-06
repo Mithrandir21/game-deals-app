@@ -1,8 +1,6 @@
 package pm.bam.gamedeals.common.storage
 
-import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
@@ -10,10 +8,10 @@ import pm.bam.gamedeals.common.exceptions.DataExistsException
 import pm.bam.gamedeals.common.exceptions.DataNotFoundException
 import pm.bam.gamedeals.common.serializer.Serializer
 
-internal class SettingStorage(
+internal class StorageImpl(
     private val serializer: Serializer,
-    val sharedPreferences: SharedPreferences,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val backend: KeyValueBackend,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : Storage {
 
     override suspend fun <T : Any> get(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T?): T =
@@ -21,28 +19,24 @@ internal class SettingStorage(
 
     override suspend fun <T : Any> getNullable(storageKey: String, deserializationStrategy: DeserializationStrategy<T>, defaultValue: T?): T? =
         withContext(ioDispatcher) {
-            sharedPreferences.getString(storageKey, null)
-                ?.let { serializedData -> serializer.deserialize(serializedData, deserializationStrategy) }
-                .let { data -> data ?: defaultValue }
+            backend.readString(storageKey)
+                ?.let { serializer.deserialize(it, deserializationStrategy) }
+                .let { it ?: defaultValue }
         }
 
     override suspend fun <T : Any> save(storageKey: String, data: T, serializationStrategy: SerializationStrategy<T>, overwrite: Boolean): Boolean =
         withContext(ioDispatcher) {
-            if (!overwrite && sharedPreferences.contains(storageKey)) {
+            if (!overwrite && backend.contains(storageKey)) {
                 throw DataExistsException(storageKey)
             }
-
-            // commit() is intentionally retained over apply(): we are already off the main thread
-            // inside withContext(Dispatchers.IO), and callers that suspend on save() expect a
-            // truthful Boolean result reflecting whether the write actually succeeded.
-            sharedPreferences.edit().putString(storageKey, serializer.serialize(data, serializationStrategy)).commit()
+            backend.writeString(storageKey, serializer.serialize(data, serializationStrategy))
         }
 
     override suspend fun containsKey(storageKey: String): Boolean = withContext(ioDispatcher) {
-        sharedPreferences.contains(storageKey)
+        backend.contains(storageKey)
     }
 
     override suspend fun remove(storageKey: String): Boolean = withContext(ioDispatcher) {
-        sharedPreferences.edit().remove(storageKey).commit()
+        backend.remove(storageKey)
     }
 }

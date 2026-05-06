@@ -4,12 +4,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import platform.Foundation.NSUserDefaults
 import pm.bam.gamedeals.common.exceptions.DataExistsException
 import pm.bam.gamedeals.common.exceptions.DataNotFoundException
 import pm.bam.gamedeals.common.serializer.SerializerImpl
-import kotlin.random.Random
-import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,36 +15,19 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Boundary test for [NSUserDefaultsStorage] using a real `NSUserDefaults` suite. Each test gets
- * its own randomly-named suite so state doesn't leak between cases (and never touches the
- * standard user defaults of the simulator host process).
- *
- * Mokkery isn't applied to `:common`, so we use the real `SerializerImpl` rather than a mock —
- * tests stay boundary-shaped because the only behaviour exercised is the round-trip of a String
- * payload through NSUserDefaults.
- */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class NSUserDefaultsStorageTest {
+class StorageImplTest {
 
     private val key = "test-key"
-    private val serializer = SerializerImpl(Json)
     private val stringStrategy = String.serializer()
 
-    private lateinit var suiteName: String
-    private lateinit var defaults: NSUserDefaults
-    private lateinit var storage: NSUserDefaultsStorage
+    private lateinit var backend: FakeKeyValueBackend
+    private lateinit var storage: StorageImpl
 
     @BeforeTest
     fun setUp() {
-        suiteName = "ns-user-defaults-storage-test-${Random.nextLong()}"
-        defaults = NSUserDefaults(suiteName = suiteName)!!
-        storage = NSUserDefaultsStorage(serializer, defaults, UnconfinedTestDispatcher())
-    }
-
-    @AfterTest
-    fun tearDown() {
-        defaults.removePersistentDomainForName(suiteName)
+        backend = FakeKeyValueBackend()
+        storage = StorageImpl(SerializerImpl(Json), backend, UnconfinedTestDispatcher())
     }
 
     @Test
@@ -80,7 +60,6 @@ class NSUserDefaultsStorageTest {
         assertFails { storage.save(key, "second", stringStrategy, overwrite = false) }.also {
             assertTrue(it is DataExistsException)
         }
-        // First write must remain untouched.
         assertEquals("first", storage.get(key, stringStrategy))
     }
 
@@ -107,5 +86,20 @@ class NSUserDefaultsStorageTest {
 
         assertTrue(storage.remove(key))
         assertNull(storage.getNullable(key, stringStrategy))
+    }
+
+    private class FakeKeyValueBackend : KeyValueBackend {
+        private val store = mutableMapOf<String, String>()
+
+        override fun readString(key: String): String? = store[key]
+
+        override fun writeString(key: String, value: String): Boolean {
+            store[key] = value
+            return true
+        }
+
+        override fun contains(key: String): Boolean = store.containsKey(key)
+
+        override fun remove(key: String): Boolean = store.remove(key) != null
     }
 }
