@@ -8,14 +8,15 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -30,52 +31,47 @@ internal class GiveawaysViewModel(
     private val giveawaysRepository: GiveawaysRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(GiveawaysScreenData())
-    val uiState: StateFlow<GiveawaysScreenData> = _uiState.asStateFlow()
-
     private val parametersFlow = MutableStateFlow<GiveawaySearchParameters?>(null)
     private val refreshOutcomeFlow = MutableStateFlow<RefreshOutcome>(RefreshOutcome.Idle)
+    private val loadingFlow = MutableStateFlow(false)
 
-
-    init {
-        viewModelScope.launch {
-            val giveawaysFlow = parametersFlow
-                .flatMapLatest { params ->
-                    val source = if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
-                    else flow { emitAll(giveawaysRepository.observeGiveaways(params)) }
-                    source.catch {
-                        refreshOutcomeFlow.value = RefreshOutcome.Error
-                        emit(emptyList())
-                    }
-                }
-
-            combine(giveawaysFlow, refreshOutcomeFlow) { giveaways, outcome ->
-                when (outcome) {
-                    is RefreshOutcome.Error -> GiveawaysScreenData(
-                        status = GiveawaysScreenStatus.ERROR,
-                        giveaways = giveaways.toImmutableList()
-                    )
-                    RefreshOutcome.Idle -> GiveawaysScreenData(
-                        status = GiveawaysScreenStatus.SUCCESS,
-                        giveaways = giveaways.toImmutableList()
-                    )
-                }
+    private val giveawaysFlow = parametersFlow
+        .flatMapLatest { params ->
+            val source = if (params == null) flow { emitAll(giveawaysRepository.observeGiveaways()) }
+            else flow { emitAll(giveawaysRepository.observeGiveaways(params)) }
+            source.catch {
+                refreshOutcomeFlow.value = RefreshOutcome.Error
+                emit(emptyList())
             }
-                .logFlow(logger)
-                .collect { newState -> _uiState.emit(newState) }
         }
+        // Any Room emission means fresh data has arrived — clear the in-flight reload gate.
+        // Errors are preserved separately on refreshOutcomeFlow.
+        .onEach { loadingFlow.value = false }
+
+    val uiState: StateFlow<GiveawaysScreenData> = combine(
+        giveawaysFlow,
+        refreshOutcomeFlow,
+        loadingFlow,
+    ) { giveaways, outcome, loading ->
+        val status = when {
+            outcome is RefreshOutcome.Error -> GiveawaysScreenStatus.ERROR
+            loading -> GiveawaysScreenStatus.LOADING
+            else -> GiveawaysScreenStatus.SUCCESS
+        }
+        GiveawaysScreenData(status = status, giveaways = giveaways.toImmutableList())
     }
+        .logFlow(logger)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, GiveawaysScreenData())
 
     fun reloadGiveaways() {
         viewModelScope.launch {
-            flow<Unit> {
-                refreshOutcomeFlow.value = RefreshOutcome.Idle
-                _uiState.update { current -> current.copy(status = GiveawaysScreenStatus.LOADING) }
+            loadingFlow.value = true
+            refreshOutcomeFlow.value = RefreshOutcome.Idle
+            try {
                 giveawaysRepository.refreshGiveaways()
+            } catch (_: Throwable) {
+                refreshOutcomeFlow.value = RefreshOutcome.Error
             }
-                .logFlow(logger)
-                .catch { refreshOutcomeFlow.value = RefreshOutcome.Error }
-                .collect { }
         }
     }
 
