@@ -27,6 +27,12 @@ interface Logger {
      * Add the provided [loggingInterface] to the [Set] of loggers that will receive log events.
      *
      * No exception will be thrown if the provided [loggingInterface] is already found in the existing set.
+     *
+     * **Thread-safety:** Listener registration is **not** thread-safe. Callers must register and
+     * unregister listeners during DI bootstrap, *before* any consumer calls [log] or
+     * [fatalThrowable]. Concurrent registration with active logging is a race against the
+     * underlying [MutableSet]. If a future requirement needs runtime registration, swap the
+     * backing set for a thread-safe (e.g. copy-on-write) variant first.
      */
     fun addLoggerListener(loggingInterface: LoggingInterface)
 
@@ -34,6 +40,8 @@ interface Logger {
      * Remove the provided [loggingInterface] from the [Set] of loggers that will receive log events.
      *
      * No exception will be thrown if the provided [loggingInterface] is not found in the existing set.
+     *
+     * **Thread-safety:** See [addLoggerListener]; the same DI-bootstrap-only contract applies.
      */
     fun removeLoggerListener(loggingInterface: LoggingInterface)
 }
