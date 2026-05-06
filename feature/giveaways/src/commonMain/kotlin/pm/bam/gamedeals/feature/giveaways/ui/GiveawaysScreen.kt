@@ -76,6 +76,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_toolbar_title
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_ascending_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_descending_label
@@ -162,7 +163,7 @@ private fun ScreenScaffold(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary,
                         ),
-                        title = { Text(text = "Giveaways", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        title = { Text(text = stringResource(Res.string.giveaway_screen_toolbar_title), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         navigationIcon = {
                             IconButton(
                                 modifier = Modifier.testTag(TopAppNavBarTag),

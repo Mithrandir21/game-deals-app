@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
@@ -181,7 +182,7 @@ private fun GameDetails(
                 data.cheaperStores.forEach {
                     Row(
                         modifier = Modifier
-                            .clickable { goToWeb("$DEAL_URL${it.second.dealID}", data.gameName) }
+                            .clickable { goToWeb(cheapsharkDealRedirectUrl(it.second.dealID), data.gameName) }
                             .testTag(DealCheaperStoreRowTag.plus(it.first.storeID)),
                     ) {
                         AsyncImage(
@@ -253,7 +254,7 @@ private fun GameDetails(
                         .fillMaxWidth()
                         .align(Alignment.CenterHorizontally)
                         .testTag(GoToDealBtnTag),
-                    onClick = { goToWeb("$DEAL_URL${data.dealId}", data.gameName) }) {
+                    onClick = { goToWeb(cheapsharkDealRedirectUrl(data.dealId), data.gameName) }) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }
                 data.gameInfo.metacriticScore?.let { Text(text = stringResource(Res.string.deal_details_metacritic_score_label, it)) }
@@ -307,8 +308,6 @@ private fun GameDetailsError(
         }
     }
 }
-
-const val DEAL_URL = "https://www.cheapshark.com/redirect?dealID="
 
 internal const val CheapestPriceTag = "CheapestPrice"
 internal const val DataLoadingTag = "DataLoading"

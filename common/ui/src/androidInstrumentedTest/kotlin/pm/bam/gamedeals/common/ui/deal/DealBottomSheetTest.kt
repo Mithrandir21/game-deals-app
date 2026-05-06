@@ -25,6 +25,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 
 class DealBottomSheetTest {
 
@@ -225,11 +226,11 @@ class DealBottomSheetTest {
         composeTestRule.onNodeWithTag(DealCheaperStoreRowTag.plus(cheaperStoreId))
             .performClick()
 
-        verify(exactly = 1) { goToActions.invoke("$DEAL_URL${cheaperStoreDetailsDealId}", gameName) }
+        verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(cheaperStoreDetailsDealId), gameName) }
 
         composeTestRule.onNodeWithTag(GoToDealBtnTag)
             .performClick()
 
-        verify(exactly = 1) { goToActions.invoke("$DEAL_URL${dealId}", gameName) }
+        verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(dealId), gameName) }
     }
 }
