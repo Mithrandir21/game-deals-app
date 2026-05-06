@@ -8,8 +8,18 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-// Without this, kotlinx-serialization treats `ImmutableList` as a polymorphic interface and
-// throws "Serializer for subclass 'SmallPersistentVector' is not found" at runtime.
+/**
+ * Serializer for [ImmutableList] that delegates to kotlinx-serialization's built-in
+ * [ListSerializer]. Without this, kotlinx-serialization treats `ImmutableList` as a
+ * polymorphic interface and fails at runtime with
+ * `Serializer for subclass 'SmallPersistentVector' is not found in the polymorphic scope
+ * of 'ImmutableList'` whenever a `persistentListOf(...)` / `toImmutableList()` value
+ * needs to be serialized — e.g. when `GiveawaySearchParameters` is round-tripped through
+ * `Properties.encodeToMap` for `rememberSaveable` state restoration.
+ *
+ * Apply via `@file:UseSerializers(ImmutableListSerializer::class)` at the file level, or
+ * `@Serializable(with = ImmutableListSerializer::class)` on individual fields.
+ */
 class ImmutableListSerializer<T>(
     private val dataSerializer: KSerializer<T>,
 ) : KSerializer<ImmutableList<T>> {

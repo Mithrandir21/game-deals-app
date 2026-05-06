@@ -34,6 +34,7 @@ internal class StoreViewModel(
     private val storesRepository: StoresRepository
 ) : ViewModel() {
 
+    // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
     private val storeIdFlow = MutableStateFlow(savedStateHandle.get<Int>("storeId"))
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
@@ -61,8 +62,8 @@ internal class StoreViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val deals: StateFlow<ImmutableList<Deal>> = storeIdFlow
-        .filterNotNull()
-        .distinctUntilChanged()
+        .filterNotNull() // Skip our initial null value
+        .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
         .flatMapLatest { dealsRepository.observeStoreDeals(it) }
         .map { it.toImmutableList() }
         .logFlow(logger)

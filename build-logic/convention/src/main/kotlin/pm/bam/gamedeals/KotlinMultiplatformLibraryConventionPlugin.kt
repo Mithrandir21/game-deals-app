@@ -23,6 +23,18 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
  */
 abstract class IosSimulatorTestSerializer : BuildService<BuildServiceParameters.None>
 
+/**
+ * Convention plugin for Kotlin Multiplatform library modules with an Android target.
+ *
+ * - Applies `kotlin.multiplatform` and `com.android.library`.
+ * - Registers Android + iOS targets (`iosX64`, `iosArm64`, `iosSimulatorArm64`).
+ * - `jvmToolchain(21)`, Android `compileSdk=36`, `minSdk=26`, JDK 21 source/target.
+ * - Mockk needs `-XX:+EnableDynamicAgentLoading` for inline-mock byte-buddy
+ *   agent attach on JDK 21+ — applied to every `Test` task.
+ *
+ * Does NOT apply Compose or KSP. Modules opt into those by also applying
+ * `pm.bam.gamedeals.kmp.library.compose` and/or `pm.bam.gamedeals.kmp.ksp`.
+ */
 class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.multiplatform")

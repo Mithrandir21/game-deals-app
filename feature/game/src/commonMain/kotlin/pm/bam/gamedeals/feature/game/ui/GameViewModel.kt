@@ -35,6 +35,7 @@ internal class GameViewModel(
     private val storesRepository: StoresRepository
 ) : ViewModel() {
 
+    // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
     private val gameIdFlow = MutableStateFlow(savedStateHandle.get<Int>("gameId"))
 
     private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
