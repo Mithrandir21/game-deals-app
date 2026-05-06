@@ -33,3 +33,4 @@ render.experimental.xml
 
 # Claude Ignores
 /.claude/worktrees/
+/.claude/scratch/
