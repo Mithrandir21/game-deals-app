@@ -16,6 +16,7 @@ import org.koin.dsl.module
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIViewController
+import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.time.Clock
@@ -66,6 +67,7 @@ private fun bootstrapKoin() {
         modules(
             loggingIosModule,
             commonModule,
+            commonIosModule,
             domainModule,
             domainIosModule,
             remoteModule,
