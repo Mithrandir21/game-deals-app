@@ -21,7 +21,7 @@ dependencyResolutionManagement {
 rootProject.name = "Game Deals"
 
 include(":app")
-include(":base")
+include(":iosApp")
 include(":common")
 include(":common:ui")
 include(":logging")
@@ -32,7 +32,6 @@ include(":remote:cheapshark")
 include(":domain")
 
 include(":feature:store")
-include(":feature:deal")
 include(":feature:game")
 include(":feature:search")
 include(":feature:home")

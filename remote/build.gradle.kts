@@ -1,40 +1,57 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.kotlinx.serialization)
 }
 
-android {
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(libs.kotlinx)
+            implementation(libs.coroutines)
+
+            api(libs.ktor.client.core)
+            api(libs.ktor.client.content.negotiation)
+            api(libs.ktor.client.logging)
+            api(libs.ktor.serialization.kotlinx.json)
+            api(libs.sandwich.ktor)
+
+            implementation(libs.koin.core)
+
+            implementation(project(":logging"))
+            implementation(project(":common"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.material)
+
+            implementation(libs.koin.android)
+
+            implementation(libs.ktor.client.okhttp)
+        }
+
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.coroutines.testing)
+                implementation(libs.ktor.client.mock)
+            }
+        }
+    }
+}
+
+extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.remote"
 
     buildFeatures {
         buildConfig = true
     }
-}
-
-dependencies {
-    implementation(project(":logging"))
-    implementation(project(":common"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.coroutines)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.okio)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.retrofit)
-    implementation(libs.kotlinx.retrofit)
-    implementation(libs.sandwich)
-    implementation(libs.sandwich.serializer)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
 }

@@ -1,6 +1,7 @@
 # Gradle files
 .gradle/
 build/
+.kotlin/
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -32,3 +33,4 @@ render.experimental.xml
 
 # Claude Ignores
 /.claude/worktrees/
+/.claude/scratch/

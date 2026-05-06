@@ -1,36 +1,45 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.library.compose)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.kotlinx.serialization)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.common"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(libs.kotlinx)
+            api(libs.kotlinx.properties)
+            api(libs.kotlinx.datetime)
+            implementation(libs.coroutines)
+            implementation(libs.koin.core)
+
+            implementation(project(":logging"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.material)
+
+            implementation(libs.koin.android)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.coroutines.testing)
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.coroutines.testing)
+            }
+        }
+    }
 }
 
-dependencies {
-    // KotlinX Serialization - api so that other modules can use this dependency
-    api(libs.kotlinx)
-    api(libs.kotlinx.properties)
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.coroutines)
-
-    implementation(project(":logging"))
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
-
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.common"
 }

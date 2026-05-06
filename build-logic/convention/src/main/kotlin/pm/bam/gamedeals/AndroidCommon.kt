@@ -4,7 +4,6 @@ import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
-import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 /**
  * Shared Android compile / packaging defaults for both library and application modules.
@@ -12,7 +11,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
  * Centralises the previously-duplicated `compileSdk`, `minSdk`, JDK 21 source/target
  * compatibility, the OSGi packaging-resource excludes (org.jspecify / okhttp logging
  * interceptor), and the `-XX:+EnableDynamicAgentLoading` JVM arg required by Mockk's
- * inline mock-maker on JDK 21+.
+ * inline mock-maker on JDK 21+. Kotlin's `jvmToolchain(21)` is set per-plugin since
+ * KMP and Android-only modules use different Kotlin extension types.
  *
  * Per project policy this stays purely structural: do not bump SDK levels here without
  * also coordinating an explicit version-bump PR.
@@ -37,10 +37,6 @@ internal fun Project.configureAndroidCommon(extension: CommonExtension) {
             // com.squareup.okhttp3:logging-interceptor:5.2.1
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
-    }
-
-    extensions.configure(KotlinAndroidProjectExtension::class.java) {
-        jvmToolchain(21)
     }
 
     // Required by Mockk's inline mock-maker / byte-buddy agent attach on JDK 21+.

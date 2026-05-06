@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="giveaway_screen_toolbar_title">Giveaways</string>
+
+    <string name="giveaway_screen_list_item_worth_label">%1$s</string>
+    <string name="giveaway_screen_list_item_free_label">FREE</string>
+    <string name="giveaway_screen_game_image">%1$s Giveaway image</string>
+    <string name="giveaway_screen_navigation_back_button">Back</string>
+
+    <string name="giveaway_screen_filters_platform_label">Platforms</string>
+    <string name="giveaway_screen_filters_type_label">Type</string>
+    <string name="giveaway_screen_filters_sort_by_label">Sort By</string>
+    <string name="giveaway_screen_filters_sort_by_descending_label">Sort By Descending</string>
+    <string name="giveaway_screen_filters_sort_by_ascending_label">Sort By Ascending</string>
+    <string name="giveaway_screen_filters_icon">Filters icon</string>
+
+    <string name="giveaway_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
+    <string name="giveaway_screen_data_loading_error_retry">Retry</string>
+
+</resources>

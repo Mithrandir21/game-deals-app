@@ -1,41 +1,68 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.library.compose)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
+    alias(libs.plugins.gamedeals.kmp.ksp)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.androidx.room)
+    alias(libs.plugins.mokkery)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.domain"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(libs.kotlinx)
+            api(libs.kotlinx.collections.immutable)
+            api(libs.kotlinx.datetime)
+
+            implementation(libs.coroutines)
+            implementation(libs.room.runtime.multiplatform)
+            implementation(libs.koin.core)
+
+            implementation(project(":common"))
+            implementation(project(":logging"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.koin.android)
+
+            implementation(libs.room.runtime)
+        }
+
+        iosMain.dependencies {
+            implementation(libs.androidx.sqlite.bundled)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.coroutines.testing)
+            implementation(project(":testing"))
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(project(":testing"))
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.coroutines.testing)
+                implementation(libs.core.testing)
+                implementation(libs.kotlinx)
+            }
+        }
+    }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
-    implementation(project(":logging"))
-    implementation(project(":common"))
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+}
 
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.coroutines)
-    implementation(libs.kotlinx.collections.immutable)
-
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.room)
-    implementation(libs.room.runtime)
-    implementation(libs.room.paging)
-    ksp(libs.room.compiler)
-
-    implementation(libs.androidx.paging)
-
-    testImplementation(project(":testing"))
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
-    testImplementation(libs.core.testing)
-    testImplementation(libs.kotlinx)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.domain"
 }

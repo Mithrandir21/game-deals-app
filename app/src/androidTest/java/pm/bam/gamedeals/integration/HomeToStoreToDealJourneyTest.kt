@@ -8,57 +8,33 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.android.testing.UninstallModules
-import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.MainActivity
-import pm.bam.gamedeals.remote.cheapshark.di.CheapShark
-import pm.bam.gamedeals.remote.gamerpower.di.GamerPower
-import javax.inject.Inject
 
-@UninstallModules(
-    pm.bam.gamedeals.remote.cheapshark.di.RemoteModule::class,
-    pm.bam.gamedeals.remote.cheapshark.di.RemoteNetworkModule::class,
-    pm.bam.gamedeals.remote.gamerpower.di.RemoteModule::class,
-    pm.bam.gamedeals.remote.gamerpower.di.RemoteNetworkModule::class,
-    pm.bam.gamedeals.domain.di.DomainModule::class,
-    pm.bam.gamedeals.domain.di.DatabaseModule::class
-)
-@HiltAndroidTest
+/**
+ * End-to-end journey: Home → Store → Deal bottom sheet. Runs against [TestGameDealsApplication]
+ * (configured in `:app/build.gradle.kts` via `KoinTestRunner`) which loads the production
+ * Koin graph plus `test*OverridesModule`s — replacing the CheapShark + GamerPower HttpClients
+ * with Ktor MockEngine clients backed by JSON fixtures, and the Room DB with an in-memory one.
+ */
 class HomeToStoreToDealJourneyTest {
 
-    @Inject
-    @field:CheapShark
-    lateinit var cheapShark: MockWebServer
-
-    @Inject
-    @field:GamerPower
-    lateinit var gamerPower: MockWebServer
-
-    @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
-
-    @get:Rule(order = 1)
+    @get:Rule
     val composeRule = createEmptyComposeRule()
 
     private lateinit var scenario: ActivityScenario<MainActivity>
 
     @Before
     fun setUp() {
-        hiltRule.inject()
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
 
     @After
     fun tearDown() {
         scenario.close()
-        cheapShark.shutdown()
-        gamerPower.shutdown()
     }
 
     @Test

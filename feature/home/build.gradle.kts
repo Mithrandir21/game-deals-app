@@ -1,23 +1,26 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.feature)
+    alias(libs.plugins.gamedeals.kmp.feature)
+    alias(libs.plugins.mokkery)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.feature.home"
-}
+kotlin {
+    sourceSets {
+        androidMain.dependencies {
+            // Pulled in by libs.androidx.espresso.device — see
+            // https://github.com/android/android-test/issues/1755#issuecomment-1523810698
+            implementation(libs.androidx.tracing)
+        }
 
-dependencies {
-    implementation(project(":logging"))
-    implementation(project(":domain"))
-    implementation(project(":common"))
-    implementation(project(":common:ui"))
-    implementation(libs.compose.material.icons)
-    implementation(libs.kotlinx.collections.immutable)
-    implementation(libs.androidx.tracing) {
-        because("Pulled in by libs.androidx.espresso.device — see " +
-                "https://github.com/android/android-test/issues/1755#issuecomment-1523810698")
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.androidx.espresso.device)
+            }
+        }
     }
+}
 
-    testImplementation(project(":testing"))
-    androidTestImplementation(libs.androidx.espresso.device)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.feature.home"
 }

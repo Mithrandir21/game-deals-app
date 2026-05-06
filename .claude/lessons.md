@@ -8,6 +8,128 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-05-04 · `sentry-kotlin-multiplatform` SPM-only integration breaks Kotlin/Native test linking
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, gradle, version-skew
+**Applies to:** A KMP project considering integrating `sentry-kotlin-multiplatform` on iOS — choosing between SPM, CocoaPods, or the SDK's official Gradle plugin
+
+Adding Sentry-Cocoa via Xcode SPM gets the iOS *app* linking, but **Kotlin/Native test executables (`linkDebugTestIosSimulatorArm64`) fail with `framework 'Sentry' not found`** — Gradle's link step has no path to the SPM-managed framework, since that copy lives only inside Xcode's DerivedData. Every consuming module's iOS tests break: lifting `sentry-kotlin-multiplatform` to `commonMain` of a `:logging`-style module poisons the link path for `:common`, `:domain`, `:remote`, and every feature module that transitively depends on it. Either apply the official `io.sentry.kotlin.multiplatform.gradle` plugin (which auto-downloads Sentry-Cocoa for native targets), use the CocoaPods integration the SDK was designed for, or keep Sentry confined to `androidMain` with a `[Sentry stub]` listener on iOS.
+
+Two SPM gotchas worth preserving in case you return to that path: (1) pin Sentry-Cocoa to the **exact version** sentry-kotlin-multiplatform's cinterop was built against — `0.13.0` requires `8.36.0`. Newer 8.x and 9.x rewrite the referenced ObjC classes (`SentrySDK`, `SentryEnvelope`, `SentryDependencyContainer`) as Swift, breaking cinterop with `Undefined symbols: _OBJC_CLASS_$_Sentry…`. (2) Pick the **`Sentry-Dynamic`** SPM product, not `Sentry`. Xcode 26 treats the static product as a "codeless framework" (`Injecting stub binary into codeless framework` in the build log), strips its Mach-O during embedding, and leaves the linker with nothing to resolve.
+
+**Source:** Phase-7e iOS Sentry wire-up — SPM integration succeeded for the app but broke `:common:linkDebugTestIosSimulatorArm64` and every other iOS test target; reverted in `6037a7a`.
+
+### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
+**Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
+
+`--max-workers=1` works as a workaround but throttles the entire build. Better: register a marker `BuildService` with `maxParallelUsages.set(1)` at the project level (in a convention plugin so every consuming module hooks in), then `tasks.withType(<TaskType>::class.java).configureEach { usesService(svc) }`. Gradle permits only one of those tasks to run at a time across the build while leaving every other task free to parallelize. Same pattern works for any cross-module serialization need (shared simulator slots, exclusive emulators, native code-signing).
+
+**Source:** Phase-7b iOS polish — eliminating the `--max-workers=1` workaround we kept passing for `iosSimulatorArm64Test` runs.
+
+### L-2026-05-05-01 · `kotlin.test` annotations don't resolve in `commonMain` of a non-test KMP fixtures module
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** kmp, kotlin-test, source-sets, testing, fixtures-module
+**Applies to:** A KMP "test fixtures" module (e.g. `:testing`) that publishes test helpers via its `commonMain` (consumed by other modules as `commonTestImplementation(project(":testing"))`) — specifically attempts to put `@BeforeTest`/`@AfterTest`-annotated methods on a superclass in that `commonMain`.
+
+Adding `implementation(kotlin("test"))` to the fixtures module's `commonMain.dependencies` puts the artifact on the classpath, but `kotlin.test.BeforeTest`/`AfterTest` are `expect annotation class` decls that only resolve through platform-specific variants (`kotlin-test-junit`, `kotlin-test-junit5`, `kotlin-test-native`), which `kotlin("test")` pulls in only when declared in a *test* source set — not commonMain. Symptom: `Unresolved reference 'BeforeTest'` at `:fixtures-module:compileDebugKotlinAndroid` even after the dep is declared. Workaround: keep the superclass in commonMain providing plain helper methods (`protected fun installMainDispatcher() = Dispatchers.setMain(testDispatcher)`); subclasses in their consuming modules' commonTest carry the `@BeforeTest`/`@AfterTest` annotations themselves. Two annotated one-liners per subclass is the modest cost for not fighting source-set semantics.
+
+**Source:** Phase-A6 simplify pass — attempted to lift `@BeforeTest`/`@AfterTest` into `:testing/commonMain/.../MainDispatcherTest.kt` for 6 feature ViewModel tests.
+
+### L-2026-05-04-07 · Pick JetBrains-AndroidX-fork versions by reading the iOS dep tree first
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, kotlin-native, jetbrains-androidx-fork, version-skew, gradle
+**Applies to:** Adding any `org.jetbrains.androidx.*` artifact (navigation-compose, lifecycle-viewmodel, savedstate, etc.) to a KMP project that already has them transitively
+
+The JetBrains AndroidX KMP forks publish dozens of alpha/beta versions, most of which crash at runtime on Native with `IrLinkageError` if the fork's pinned transitive (e.g., `org.jetbrains.androidx.savedstate`) doesn't match the version your other deps already pull in. Don't pick by latest-Maven or by guessing; run `./gradlew :iosApp:dependencies --configuration iosSimulatorArm64CompileKlibraries | grep -E '<artifact-prefix>' | sort -u` first, identify the existing transitive version (e.g., `lifecycle-viewmodel:2.9.0-beta01 -> 2.9.6`), then declare the new artifact at *that* version. Skipping this step cost me three abandoned alphas in 7.6 before the working `2.9.0-beta01` (matched lifecycle's own published lineage).
+
+**Source:** Phase 7.6 retry — JetBrains nav-compose fork. Same lesson applies to any future `org.jetbrains.androidx.*` adoption.
+
+### L-2026-05-04-06 · `NSLog` from Kotlin/Native must use the single-arg pattern — varargs don't bridge
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kotlin-native, ios, nslog, foundation, interop
+**Applies to:** Any Kotlin/Native iOS code calling `platform.Foundation.NSLog` with format-and-args style
+
+`NSLog("%@", line)` from Kotlin/Native crashes at runtime with `EXC_BAD_ACCESS` the first time a log line lands. Kotlin/Native's Foundation binding types `NSLog` as `fun NSLog(format: String, vararg args: Any?)` but doesn't bridge Kotlin `String` to Objective-C `NSString *` through the C variadic ABI, so the slot for `%@` receives a garbage pointer. Use the single-arg form: pass the application content as the format string itself, pre-escape `%` characters (`line.replace("%", "%%")`) so user content can't be reinterpreted as format specifiers. Doesn't surface during compile/link — only at runtime when the affected code path actually logs.
+
+**Source:** Phase 7.2 — first iOS log line through `IosConsoleLoggingListener` after HomeScreen wired up.
+
+### L-2026-05-04-05 · Koin 4.0 references Android-only AndroidX lifecycle symbols on iOS
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** koin, kmp, kotlin-native, lifecycle, irlinkageerror, koin-compose-viewmodel
+**Applies to:** Any KMP project using `koin-compose-viewmodel` to call `koinViewModel()` from a Composable that runs on iOS
+
+Koin 4.0.0's `AndroidParametersHolder` references `androidx.lifecycle.SavedStateHandle` (Google's Android-only artifact) directly. On iOS the classpath has the JetBrains fork `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:*` instead, so first invocation of `koinViewModel()` from any Composable rendered on iOS throws `IrLinkageError: No class found for symbol 'androidx.lifecycle/SavedStateHandle|null[0]'`. Compile/link succeeds; the failure only appears when the affected code path runs (Composable rendering an `internal viewModel: T = koinViewModel()` default). Bump Koin to 4.1.0+, which dropped the direct AndroidX reference. Same family of failure as L-2026-05-04-04 (Ktor skew) — JVM resolves per-class at link time and silently muddles through; Native carries klib symbol fingerprints and crashes hard at runtime.
+
+**Source:** Phase 6.7d — first iOS render of a real feature Composable.
+
+### L-2026-05-04-04 · Ktor version skew silently breaks Native, silently works on JVM
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** ktor, kmp, kotlin-native, version-skew, irlinkageerror
+**Applies to:** Any KMP project pulling Ktor in alongside transitives (sandwich-ktor, coil3-network-ktor3, etc.) that may force a Ktor version higher than the BOM in `libs.versions.toml`
+
+JVM resolves missing/changed symbols at link time per-class, so a transitive forcing `ktor-client-core` from 3.0.3 → 3.3.0 while `ktor-client-darwin:3.0.3` stays pinned is invisible on Android. Kotlin/Native klibs carry exact symbol fingerprints — the same skew turns into `kotlin.internal.IrLinkageError` at runtime as soon as the affected code path runs (e.g., the first HTTP response body). Manifested for us as `Function 'dropCompressionHeaders' can not be called: No function found for symbol ...`. Fix: align the BOM (`ktor = "3.3.0"`) so all Ktor artifacts agree. Watch for this on every Ktor major version bump and any new dep that Ktor-uses internally.
+
+**Source:** Phase 6.7c — first iOS network round-trip surfaced the skew.
+
+### L-2026-05-04-03 · Two-Koin-module split is the right shape for platform-specific construction in KMP
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, koin, di, room
+**Applies to:** A KMP module that needs platform-specific construction (database Builder, file-path resolution, platform context, native handle) — i.e. a binding that can't live in commonMain because it touches `androidContext()`/`NSHomeDirectory()`/etc.
+
+Prefer two Koin modules over `expect`/`actual` for this case: `xModule` in commonMain owns all portable wiring (converters, DAOs, repositories, the final bound type that customizes a Builder and `.build()`s it), `xAndroidModule` in androidMain owns just the platform seed binding (`single<RoomDatabase.Builder<T>> { Room.databaseBuilder<T>(androidContext(), name) }`). The consumer registers both modules at `startKoin`. iOS later registers its own `xIosModule` providing the same bound type. Avoids `expect`/`actual` ceremony — DI is already a runtime indirection, no need to add a compile-time one. Test overrides target the *final* type (e.g. override `single<DomainDatabase>` with `inMemoryDatabaseBuilder`), bypassing the Builder graph entirely so it doesn't need a test double.
+
+**Source:** Phase 5.16 — `:domain` DI module split.
+
+### L-2026-05-04-02 · `BoxWithConstraints { maxWidth < 600.dp }` substitutes for `WindowWidthSizeClass` in CMP
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, compose-multiplatform, adaptive-layout
+**Applies to:** Lifting an Android Composable that branches on window size class to commonMain
+
+`androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()` and `WindowWidthSizeClass` are Android-only. For a screen that just needs "is this a phone or wider," wrap the layout in `BoxWithConstraints` and branch on `maxWidth < 600.dp` (or whatever breakpoint matters). It's a literal substitute, no behavior change on Android, works on every CMP target. For multi-breakpoint adaptive layouts the call shape gets uglier — but for the binary compact-vs-not case this is the path of least resistance.
+
+**Source:** Phase 5.10 — `:feature:game` migration.
+
+### L-2026-05-04-01 · `androidx.paging` is split: `paging-common` is KMP, `paging-compose` is not
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, paging, compose-multiplatform
+**Applies to:** Migrating a feature module that uses paging to KMP
+
+When migrating a paging-using feature, `androidx.paging:paging-common` (3.3+) is multiplatform-capable so types like `PagingData`, `LoadState`, and `cachedIn` work in commonMain — a paging-aware ViewModel can move freely. `androidx.paging:paging-compose` (`LazyPagingItems`, `collectAsLazyPagingItems`, `itemKey`) is Android-only; any Composable consuming it stays androidMain. JetBrains maintains a multiplatform fork, but adopt it only when an iOS consumer actually motivates it — until then, the natural cut is "ViewModel commonMain, Screen androidMain" and that has zero design overhead.
+
+**Source:** Phase 5.13 — `:feature:store` migration.
+
+### L-2026-05-03-06 · Same-named `.kt` files across KMP source sets generate duplicate JVM class names
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** kmp, kotlin, jvm, source-sets, file-naming
+**Applies to:** KMP modules where commonMain and androidMain (or any two source sets reaching the same target) both contain a top-level-functions file with the same filename — typical when splitting a file into a commonMain core + androidMain platform-specific implementation
+
+Kotlin generates one `<FileName>Kt` JVM class per top-level-functions file. When `Theme.kt` exists in both `commonMain/.../theme/` and `androidMain/.../theme/`, both compile to `ThemeKt.class` on the Android target → `Duplicate JVM class name 'pm/bam/gamedeals/common/ui/theme/ThemeKt' generated from: ThemeKt, ThemeKt`. Add `@file:JvmName("AndroidTheme")` (or rename the file `Theme.android.kt` if you prefer the convention) to one side. Doesn't trip when the file contains only classes/objects (those have per-class JVM names) or when using `expect/actual` (those merge to one JVM class on resolution). Watch for it during file-splits where one half stays androidMain because of platform deps.
+
+**Source:** Phase 5.4e — Theme.kt split (schemes/locals to commonMain; `GameDealsTheme` Composable stays androidMain).
+
+### L-2026-05-03-05 · `pluginManager.apply()` in precompiled convention plugins requires `implementation` deps, not `compileOnly`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, build-logic, convention-plugins, kmp, compose-multiplatform
+**Applies to:** Precompiled convention plugins in `:build-logic:convention` that call `pluginManager.apply("third.party.id")` from inside `Plugin<Project>.apply()`
+
+A `compileOnly(libs.foo.gradle.plugin)` in build-logic is enough for the convention's Kotlin source to compile against the plugin's APIs (configuring `ComposeExtension`, etc.), but at apply-time on a consuming module Gradle fails with `Plugin with id 'foo' not found`. The runtime classpath of the *convention plugin* needs the third-party plugin's classes, so switch to `implementation(...)`. `kotlin-gradle-plugin` and `compose-compiler-gradle-plugin` slip past this trap because they're already on the build's classpath via the project-level plugins block — third-party plugins like `org.jetbrains.compose` are not, and need the explicit `implementation`. Symptom catches you the *first* time a module applies the convention; build-logic's own compile is green so you don't spot it until consumer-build failure.
+
+**Source:** Phase 5.4a — `:common:ui` first module to apply `kmp.library.compose`; build-logic had `compose-multiplatform-gradle-plugin` as `compileOnly`.
+
+### L-2026-05-03-04 · Removing a Hilt module (esp. `hilt-navigation-compose`) silently strips Compose runtime from KSP classpath
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ksp, room, hilt-removal, compose-runtime, transitive-deps, kmp
+**Applies to:** Modules removing `androidx.hilt:hilt-navigation-compose` (or any Hilt-navigation dep) that contain Room `@Entity` classes annotated with Compose stability annotations like `@Immutable`.
+
+`hilt-navigation-compose` transitively brings `androidx.compose.runtime:runtime`. Modules that never explicitly declared a Compose runtime dep — e.g. `:domain`, which only uses `@Immutable` for stability hints on Room entities — were getting it for free through the Hilt chain. When you drop Hilt during a DI migration, the Compose runtime dep disappears from compile classpath; **Room's KSP processor then fails with `[MissingType]: Element 'pm.bam.gamedeals.domain.models.Deal' references a type that is not present` on every entity** — a misleading message that points at the entity, not at the missing annotation. Fix shape: add `implementation(libs.androidx.compose.runtime)` (i.e. `androidx.lifecycle:lifecycle-runtime-compose`, which brings the actual Compose runtime transitively) to any non-feature module that uses `@Immutable` and previously inherited Compose runtime through Hilt. **Audit checklist when removing Hilt from a module:** `gradle :module:dependencies | grep compose.runtime` *before* the removal; if any Compose-runtime artifact appears via a Hilt path, declare it explicitly on the module before dropping Hilt.
+
+**Source:** Phase 4.2 of the KMP migration; `:domain` → Koin; bisected during Hilt removal.
+
+### L-2026-05-03-03 · Ktor `parameter()` always encodes — use `encodedParameters` for already-encoded values
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, retrofit-migration, url-encoding, networking, kmp
+**Applies to:** Any Retrofit `@Query("name", encoded = true)` — or any other API surface where a query/path value is supplied already percent-encoded — being ported to Ktor `HttpRequestBuilder.parameter(...)`.
+
+Ktor's `parameter("name", value)` always URL-encodes the value, with no opt-out flag. For values that arrive already percent-encoded (e.g. CheapShark serves dealIDs as `…%3D`), this re-encodes `%` → `%25` and produces `…%253D` on the wire, which servers decode to a literal `%3D` and reject as a 404. The Ktor equivalent of Retrofit's `@Query("id", encoded = true)` is `url { encodedParameters.append("id", id) }` — `URLBuilder.encodedParameters` is the pre-encoded sibling of `URLBuilder.parameters` and is part of the multiplatform URL builder, so it works on iOS too. **Migration audit:** during a Retrofit → Ktor port, grep for every `@Query(...encoded = true)` and `@Path(...encoded = true)` in the pre-migration tree and convert each to `encodedParameters.append`/`encodedPathSegments`. The default `parameter()`/`path()` lookalikes silently drop the semantic.
+
+**Source:** Phase 4 smoke-test catch on `DealsApi.getDeal` (commit `012d27b`); pre-Phase-3 had `@Query("id", encoded = true)` (verified at `git show a8bacbd^`); regression test in `DealsApiTest`.
+
+### L-2026-05-03-02 · Ktor `Logging { level = LogLevel.BODY }` + OkHttp engine hangs `body<T>()`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, ktor-logging, okhttp-engine, content-negotiation, networking, kmp
+**Applies to:** Any HttpClient that installs both `Logging` at `LogLevel.BODY` and `ContentNegotiation`, on the OkHttp engine
+
+The Logging plugin at `LogLevel.BODY` reads the response body to log it; on OkHttp's engine that body is a one-shot stream and the read consumes it. `ContentNegotiation`'s subsequent `body<T>()` then waits indefinitely for bytes that have already been read. Symptom is exact: the `Ktor REQUEST: ...` line logs, then nothing — no `RESPONSE`, no exception, no timeout, no parse error. Use `LogLevel.HEADERS` as the default — same diagnostic value (request line, response status, headers) without consuming the body. If you genuinely need bodies in logs, use Ktor's `observeRequest`/`observeResponse` callbacks which don't consume the stream.
+
+**Source:** Phase 3 of the KMP migration, swapping Retrofit → Ktor in `:remote:*` modules.
+
 ### L-2026-05-03-01 · Module that opts out of the convention plugin silently loses inherited test-runtime deps
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, convention-plugins, build-logic, compose-testing, ui-test-manifest, test-infra
 **Applies to:** Any feature module that does not apply `gamedeals.android.feature` (or whichever convention plugin the rest of the modules use); audits checking whether existing instrumentation/Compose tests are actually runnable
@@ -359,3 +481,13 @@ Don't resolve merge conflicts file-by-file. First identify which *features* land
 **Source:** merge conflict resolution
 
 ## Archive
+
+### L-2026-05-05-03 · `sentry-kotlin-multiplatform` via Sentry-Cocoa SPM needs an exact version pin and the `Sentry-Dynamic` product
+**Status:** superseded by L-2026-05-05-04 · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, xcode-26, version-skew
+**Applies to:** A KMP project integrating `sentry-kotlin-multiplatform` on iOS by adding `https://github.com/getsentry/sentry-cocoa` as a Swift Package Manager dependency in `iosApp.xcodeproj` (rather than via CocoaPods)
+
+`sentry-kotlin-multiplatform`'s cinterop layer references specific Objective-C class symbols (`_OBJC_CLASS_$_SentrySDK`, `_OBJC_CLASS_$_SentryEnvelope`, `_OBJC_CLASS_$_SentryDependencyContainer`, etc.). Those symbols only exist in narrow Sentry-Cocoa version windows: Sentry-Cocoa 9.x rewrote them as Swift classes (mangled `__TtC6Sentry…` symbols), and even within 8.x successive patches keep deprecating more public surface to Swift. SPM rules like "Up to Next Major" silently pick a too-new patch and break the link with `Undefined symbols for architecture arm64: _OBJC_CLASS_$_Sentry…`. Pin to **Exact Version** matching the sentry-kotlin-multiplatform release's CocoaPods Podfile.lock — for `sentry-kotlin-multiplatform:0.13.0` that is **`8.36.0`**.
+
+Two more SPM gotchas worth knowing up front: (1) pick the **Sentry-Dynamic** SPM product, not `Sentry`. Xcode 26's SwiftBuild treats the static `Sentry` product as a "codeless framework", strips its Mach-O during embedding, and replaces it with a stub binary — so the linker has no symbols to resolve even when search paths are correct. The build log gives this away with `Injecting stub binary into codeless framework`. (2) Confirm the actual binary on disk with `nm -gU …/Build/Products/Debug-iphonesimulator/Sentry.framework/Sentry | grep <expected class>`; a missing symbol there is the difference between "wrong product variant" and "wrong upstream version" — the former produces no symbols, the latter produces *different* symbols (Swift-mangled).
+
+**Source:** Phase-7e iOS Sentry wire-up — three rounds of unresolved-symbol errors before isolating the dynamic product and the exact 8.36.0 pin.

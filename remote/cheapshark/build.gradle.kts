@@ -1,47 +1,36 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.kotlinx.serialization)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.remote.cheapshark"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx)
+            implementation(libs.coroutines)
+            implementation(libs.kotlinx.collections.immutable)
 
-    buildFeatures {
-        buildConfig = true
+            // :remote api-exposes ktor-client-core + content-negotiation + logging +
+            // ktor-serialization-kotlinx-json + sandwich-ktor for downstream use.
+            api(project(":remote"))
+
+            implementation(libs.koin.core)
+
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":domain"))
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(project(":testing"))
+            implementation(libs.coroutines.testing)
+        }
     }
 }
 
-dependencies {
-    implementation(project(":remote"))
-    implementation(project(":logging"))
-    implementation(project(":common"))
-    implementation(project(":domain"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.coroutines)
-    implementation(libs.kotlinx.collections.immutable)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.okio)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.retrofit)
-    implementation(libs.kotlinx.retrofit)
-    implementation(libs.sandwich)
-    implementation(libs.sandwich.serializer)
-
-    testImplementation(project(":testing"))
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
-    testImplementation(libs.mockwebserver)
-    testImplementation(libs.okhttp)
-    testImplementation(libs.kotlinx)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.remote.cheapshark"
 }

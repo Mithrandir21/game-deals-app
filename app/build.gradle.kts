@@ -3,9 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.gamedeals.android.application)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -62,7 +59,7 @@ android {
         versionCode = 9
         versionName = "1.0.6"
 
-        testInstrumentationRunner = "pm.bam.gamedeals.HiltTestRunner"
+        testInstrumentationRunner = "pm.bam.gamedeals.KoinTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -80,13 +77,12 @@ android {
 
 dependencies {
 
-    implementation(project(":base"))
     implementation(project(":logging"))
     implementation(project(":common"))
     implementation(project(":common:ui"))
     implementation(project(":domain"))
 
-    // Remote source adapters — wired into Hilt at the app boundary so :domain
+    // Remote source adapters — wired in Koin at the app boundary so :domain
     // stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
     implementation(project(":remote:cheapshark"))
     implementation(project(":remote:gamerpower"))
@@ -106,17 +102,14 @@ dependencies {
     implementation(libs.androidx.compose.activity)
     implementation(composeBom)
     implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.performance)
+    implementation(libs.sentry.kotlin.multiplatform)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.compose.viewmodel)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -124,37 +117,29 @@ dependencies {
     implementation(libs.androidx.compose.material3.window)
     implementation(libs.androidx.compose.material3.adaptive)
 
-    implementation(libs.androidx.paging)
-    implementation(libs.androidx.paging.compose)
-
-    implementation(libs.coil)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.test)
+    implementation(libs.coil3)
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.network.ktor)
+    implementation(libs.coil3.test)
 
     testImplementation(project(":testing"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
-    testImplementation(libs.androidx.paging.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.compose.junit4)
-    androidTestImplementation(libs.hilt.testing)
     androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.kotlinx)
-    androidTestImplementation(libs.kotlinx.retrofit)
-    androidTestImplementation(libs.okhttp)
-    androidTestImplementation(libs.retrofit)
-    androidTestImplementation(libs.sandwich)
+    androidTestImplementation(libs.koin.test)
+    androidTestImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.room)
     androidTestImplementation(libs.room.runtime)
     androidTestImplementation(project(":remote:cheapshark"))
     androidTestImplementation(project(":remote:gamerpower"))
-    kspAndroidTest(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.compose.test)

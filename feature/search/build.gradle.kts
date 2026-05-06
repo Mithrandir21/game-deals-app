@@ -1,18 +1,10 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.feature)
+    alias(libs.plugins.gamedeals.kmp.feature)
+    alias(libs.plugins.mokkery)
 }
 
-android {
+extensions.configure<LibraryExtension> {
     namespace = "pm.bam.gamedeals.feature.search"
-}
-
-dependencies {
-    implementation(project(":logging"))
-    implementation(project(":domain"))
-    implementation(project(":common"))
-    implementation(project(":common:ui"))
-    implementation(libs.compose.material.icons)
-    implementation(libs.kotlinx.collections.immutable)
-
-    testImplementation(project(":testing"))
 }

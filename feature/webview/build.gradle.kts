@@ -1,40 +1,17 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.library.compose)
+    alias(libs.plugins.gamedeals.kmp.feature)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.feature.webview"
-
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+kotlin {
+    sourceSets {
+        androidMain.dependencies {
+            implementation(libs.androidx.webview)
+        }
     }
 }
 
-dependencies {
-    implementation(project(":logging"))
-    implementation(project(":common"))
-    implementation(project(":common:ui"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.compose.material.icons)
-    implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.webview)
-
-    implementation(libs.androidx.compose.material3)
-
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling)
-
-    testImplementation(libs.junit)
-
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.compose.junit4)
-    androidTestImplementation(libs.mockk.android)
-    debugImplementation(libs.androidx.compose.test)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.feature.webview"
 }

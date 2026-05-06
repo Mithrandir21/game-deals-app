@@ -1,34 +1,32 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
-    alias(libs.plugins.gamedeals.android.library)
-    alias(libs.plugins.gamedeals.android.ksp)
+    alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.kotlinx.serialization)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.testing"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.coroutines)
+            implementation(libs.coroutines.testing)
+            implementation(libs.kotlinx.collections.immutable)
 
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
+            // Ktor MockEngine helper exposed to test source sets in consumer modules.
+            api(libs.ktor.client.core)
+            api(libs.ktor.client.mock)
+            api(libs.ktor.client.content.negotiation)
+            api(libs.ktor.serialization.kotlinx.json)
+            api(libs.kotlinx)
 
-    buildFeatures {
-        buildConfig = true
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":domain"))
+        }
+
     }
 }
 
-dependencies {
-    implementation(project(":logging"))
-    implementation(project(":common"))
-
-    implementation(libs.coroutines)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    ksp(libs.hilt.androidx.compiler)
-
-    implementation(libs.junit)
-    implementation(libs.mockk)
-    implementation(libs.hilt.testing)
-    implementation(libs.androidx.runner)
-    implementation(libs.coroutines.testing)
+extensions.configure<LibraryExtension> {
+    namespace = "pm.bam.gamedeals.testing"
 }
