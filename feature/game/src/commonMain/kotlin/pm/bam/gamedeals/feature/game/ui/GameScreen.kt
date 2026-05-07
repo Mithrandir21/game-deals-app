@@ -71,6 +71,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.store
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
+private val AlwaysScrollable: () -> Boolean = { true }
 
 @Composable
 internal fun GameScreen(
@@ -299,8 +300,7 @@ private fun ScreenScaffold(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val topAppBarState = rememberTopAppBarState()
-    val canScroll = remember { { true } }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, canScroll)
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, AlwaysScrollable)
     val currentOnRetry by rememberUpdatedState(onRetry)
 
     val errorMessage = stringResource(Res.string.game_screen_data_loading_error_msg)

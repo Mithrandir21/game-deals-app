@@ -66,6 +66,8 @@ import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigatio
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_store_banner
 import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
+private val AlwaysScrollable: () -> Boolean = { true }
+
 @Composable
 internal fun StoreScreen(
     onBack: () -> Unit,
@@ -217,9 +219,8 @@ private fun StoreToolbar(
     storeDetails: Store? = null
 ) {
     val topAppBarState = rememberTopAppBarState()
-    val canScroll = remember { { true } }
     val scrollBehavior: TopAppBarScrollBehavior =
-        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, canScroll)
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, AlwaysScrollable)
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
