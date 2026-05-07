@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +14,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
@@ -32,11 +31,10 @@ internal class SearchViewModel(
     private val gamesRepository: GamesRepository
 ) : ViewModel() {
 
-    // We store and react to the Query changes so that only a single search flow can exists
-    private val searchParametersFlow = MutableSharedFlow<SearchParameters?>(
-        replay = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
+    // We store and react to the Query changes so that only a single search flow can exists.
+    // StateFlow gives us atomic read-modify-write via update {} (L-2026-05-02-01) and
+    // conflated replay-of-latest semantics, replacing the prior SharedFlow + replayCache RMW.
+    private val searchParametersFlow = MutableStateFlow(SearchParameters())
 
     private val _resultState = MutableStateFlow<SearchData>(SearchData.Empty)
     val resultState: StateFlow<SearchData> = _resultState.asStateFlow()
@@ -45,7 +43,7 @@ internal class SearchViewModel(
         viewModelScope.launch {
             searchParametersFlow
                 .flatMapLatest { dealsSearch ->
-                    when (dealsSearch == null || (dealsSearch.title == null && dealsSearch.lowerPrice == null && dealsSearch.upperPrice == null && dealsSearch.steamMinRating == null)) {
+                    when (dealsSearch.title == null && dealsSearch.lowerPrice == null && dealsSearch.upperPrice == null && dealsSearch.steamMinRating == null) {
                         true -> flowOf(SearchData.Empty)
                         else -> flowOf(dealsSearch)
                             .onEach { _resultState.emit(SearchData.Loading) }
@@ -71,16 +69,14 @@ internal class SearchViewModel(
         steamMinimum: Int? = null,
         exactMatch: Boolean? = null
     ) {
-        viewModelScope.launch {
-            val current = searchParametersFlow.replayCache.firstOrNull() ?: SearchParameters()
-            val searchParameters = SearchParameters(
+        searchParametersFlow.update { current ->
+            SearchParameters(
                 title = title ?: current.title,
                 lowerPrice = lowerPrice ?: current.lowerPrice,
                 upperPrice = upperPrice ?: current.upperPrice,
                 steamMinRating = steamMinimum ?: current.steamMinRating,
                 exact = exactMatch ?: current.exact
             )
-            searchParametersFlow.emit(searchParameters)
         }
     }
 

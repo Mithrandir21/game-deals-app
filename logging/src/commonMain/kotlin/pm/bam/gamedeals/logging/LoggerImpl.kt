@@ -1,5 +1,18 @@
 package pm.bam.gamedeals.logging
 
+/**
+ * Default [Logger] implementation backed by a plain [MutableSet] of [LoggingInterface]s.
+ *
+ * **Thread-safety contract:** the listener set is not synchronized. The expected lifecycle is:
+ * 1. The set is populated during DI bootstrap (via constructor injection plus optional
+ *    [addLoggerListener] calls in the DI module setup).
+ * 2. Once log consumers start calling [log] / [fatalThrowable], the set is treated as read-only.
+ *
+ * Concurrent [addLoggerListener] / [removeLoggerListener] calls racing with active [log] /
+ * [fatalThrowable] calls would be a race against the underlying [MutableSet]; if such a use
+ * case ever lands, swap [loggers] for a thread-safe (e.g. copy-on-write) variant first rather
+ * than relying on incidental synchronization.
+ */
 internal class LoggerImpl(private val loggers: MutableSet<LoggingInterface>) : Logger {
 
     /**
