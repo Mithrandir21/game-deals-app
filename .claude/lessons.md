@@ -8,6 +8,50 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-06-05 · `TopAppBarDefaults.pinnedScrollBehavior` allocates per recomposition via the default `canScroll` lambda, not the wrapper
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, recomposition, top-app-bar, material3, stable-lambda
+**Applies to:** Any code calling `TopAppBarDefaults.pinnedScrollBehavior(...)` (or `enterAlwaysScrollBehavior`, `exitUntilCollapsedScrollBehavior`) directly inside a composable body
+
+`TopAppBarDefaults.pinnedScrollBehavior(state, canScroll)` is itself `@Composable` and already does `remember(state, canScroll) { PinnedScrollBehavior(...) }` internally. So you cannot wrap it in a caller-side `remember(state) { TopAppBarDefaults.pinnedScrollBehavior(state) }` — that fails with `Composable invocations can only happen from the context of a Composable function`.
+
+The actual cause of per-recomposition allocation is the default `canScroll = { true }` parameter — a fresh lambda each recomposition, which invalidates Material3's internal remember key. Hoist `canScroll` into a stable `remember { { true } }` (or pass `canScroll = remember { { true } }` inline). Same applies to other Material3 helpers that take a default lambda parameter — check before assuming "wrap in `remember`" is the fix.
+
+**Source:** 2026-05-06-bug-hunt-severity-low batch (issue #125 / PR #134). The original bug-hunt finding misidentified the cause; worker investigated Material3 source to find the real one.
+
+### L-2026-05-06-04 · Test mocking library is Mokkery, not MockK
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** testing, mokkery, mockk, kmp, commontest
+**Applies to:** Any test in a `*/src/commonTest/**` source set; by convention, all tests in this codebase
+
+This codebase uses Mokkery (`dev.mokkery:mokkery`) for mocking, not MockK. Mokkery is KMP-compatible; MockK ships JVM-only and cannot be used in `commonTest`. Use `every { … } returns …` for non-suspend stubs, `everySuspend { … } returns …` for suspend stubs, `throws` for exception stubs, and matchers like `any()` / `eq(...)`. The canonical examples live in `feature/*/src/commonTest/**/ui/*ViewModelTest.kt` (e.g., `StoreViewModelTest`, `GiveawaysViewModelTest`).
+
+`docs/patterns/testing.md` still says "MockK Everywhere; No Hand-Rolled Fakes" — that doc was surveyed at SHA `31a89bc` on 2026-05-03, before the KMP migration completed. The pattern is stale; this lesson takes precedence until the patterns doc is refreshed. JVM-only tests outside KMP modules (none currently exist in this project, but possible in `:app` androidTest) could theoretically still use MockK, but default to Mokkery for consistency.
+
+**Source:** Wave 1 of campaign `2026-05-06-bug-hunt-severity-medium` — issue #124 / PR #132. The worker prompt and issue body referenced MockK based on the stale patterns doc; the worker noticed the existing test file used Mokkery and adapted.
+
+### L-2026-05-06-03 · `Dispatchers.IO` is not accessible from `commonMain` in coroutines 1.10.x
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** kmp, coroutines, kotlin-native, dispatchers
+**Applies to:** KMP commonMain code that wants an IO-tagged dispatcher for blocking work
+
+`kotlinx.coroutines.Dispatchers.IO` is internal in commonMain in coroutines 1.10.x — only the JVM source set exposes it as public. Don't use it as a default value for a `commonMain` constructor parameter; declare the dispatcher as a required `CoroutineDispatcher` and inject it from each platform's DI module (`Dispatchers.IO` on Android, `Dispatchers.Default` on iOS, where K/N's `IO` aliases to `Default` anyway).
+
+**Source:** Phase-3 Storage commonization — wanted `Dispatchers.IO` as default for `StorageImpl.ioDispatcher`; hit "Cannot access 'val IO' — internal in 'kotlinx.coroutines.Dispatchers'".
+
+### L-2026-05-06-02 · `compose.material3` does NOT bring in `material-icons-core`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, compose-multiplatform, gradle, dependencies
+**Applies to:** Compose Multiplatform modules referencing `androidx.compose.material.icons.Icons` (e.g. `Icons.Filled.ArrowBack`)
+
+The `Icons` API surface (`androidx.compose.material.icons.*`) is in `material-icons-core`, which is shipped only transitively via `compose.material` (legacy Material 1) or `compose.materialIconsExtended`. `compose.material3` does NOT pull it in. Before dropping `compose.materialIconsExtended` "because we only use core icons like ArrowBack/Search", verify there's another path — otherwise the build snaps with "Unresolved reference 'icons'".
+
+**Source:** Phase-2 Compose-runtime lift in convention plugin — assumed material3 included the icons surface; broke the build, restored extended.
+
+### L-2026-05-06-01 · iOS-simulator test serializer BuildService must bind to `KotlinNativeTest`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** gradle, kmp, kotlin-native, ios, build-service
+**Applies to:** Convention-plugin BuildService that serializes `iosSimulatorArm64Test` across modules
+
+When wiring the cross-module test-serialization BuildService from L-2026-05-05-02, register against `KotlinNativeTest::class.java` — not `KotlinNativeHostTest`. The simulator tests are `KotlinNativeSimulatorTest`, the host tests are `KotlinNativeHostTest`, and both extend `KotlinNativeTest`. Binding to the host subclass leaves simulator tasks unserialized, so the XML race still fires intermittently and looks like a one-module flake instead of a known race.
+
+**Source:** Code-quality cleanup of feature/kmp-migration — prior selector had been masking the race for weeks.
+
 ### L-2026-05-05-04 · `sentry-kotlin-multiplatform` SPM-only integration breaks Kotlin/Native test linking
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, gradle, version-skew
 **Applies to:** A KMP project considering integrating `sentry-kotlin-multiplatform` on iOS — choosing between SPM, CocoaPods, or the SDK's official Gradle plugin
@@ -17,14 +61,6 @@ Adding Sentry-Cocoa via Xcode SPM gets the iOS *app* linking, but **Kotlin/Nativ
 Two SPM gotchas worth preserving in case you return to that path: (1) pin Sentry-Cocoa to the **exact version** sentry-kotlin-multiplatform's cinterop was built against — `0.13.0` requires `8.36.0`. Newer 8.x and 9.x rewrite the referenced ObjC classes (`SentrySDK`, `SentryEnvelope`, `SentryDependencyContainer`) as Swift, breaking cinterop with `Undefined symbols: _OBJC_CLASS_$_Sentry…`. (2) Pick the **`Sentry-Dynamic`** SPM product, not `Sentry`. Xcode 26 treats the static product as a "codeless framework" (`Injecting stub binary into codeless framework` in the build log), strips its Mach-O during embedding, and leaves the linker with nothing to resolve.
 
 **Source:** Phase-7e iOS Sentry wire-up — SPM integration succeeded for the app but broke `:common:linkDebugTestIosSimulatorArm64` and every other iOS test target; reverted in `6037a7a`.
-
-### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
-**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
-**Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
-
-`--max-workers=1` works as a workaround but throttles the entire build. Better: register a marker `BuildService` with `maxParallelUsages.set(1)` at the project level (in a convention plugin so every consuming module hooks in), then `tasks.withType(<TaskType>::class.java).configureEach { usesService(svc) }`. Gradle permits only one of those tasks to run at a time across the build while leaving every other task free to parallelize. Same pattern works for any cross-module serialization need (shared simulator slots, exclusive emulators, native code-signing).
-
-**Source:** Phase-7b iOS polish — eliminating the `--max-workers=1` workaround we kept passing for `iosSimulatorArm64Test` runs.
 
 ### L-2026-05-05-01 · `kotlin.test` annotations don't resolve in `commonMain` of a non-test KMP fixtures module
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** kmp, kotlin-test, source-sets, testing, fixtures-module
@@ -491,3 +527,11 @@ Don't resolve merge conflicts file-by-file. First identify which *features* land
 Two more SPM gotchas worth knowing up front: (1) pick the **Sentry-Dynamic** SPM product, not `Sentry`. Xcode 26's SwiftBuild treats the static `Sentry` product as a "codeless framework", strips its Mach-O during embedding, and replaces it with a stub binary — so the linker has no symbols to resolve even when search paths are correct. The build log gives this away with `Injecting stub binary into codeless framework`. (2) Confirm the actual binary on disk with `nm -gU …/Build/Products/Debug-iphonesimulator/Sentry.framework/Sentry | grep <expected class>`; a missing symbol there is the difference between "wrong product variant" and "wrong upstream version" — the former produces no symbols, the latter produces *different* symbols (Swift-mangled).
 
 **Source:** Phase-7e iOS Sentry wire-up — three rounds of unresolved-symbol errors before isolating the dynamic product and the exact 8.36.0 pin.
+
+### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
+**Status:** superseded by L-2026-05-06-01 · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
+**Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
+
+`--max-workers=1` works as a workaround but throttles the entire build. Better: register a marker `BuildService` with `maxParallelUsages.set(1)` at the project level (in a convention plugin so every consuming module hooks in), then `tasks.withType(<TaskType>::class.java).configureEach { usesService(svc) }`. Gradle permits only one of those tasks to run at a time across the build while leaving every other task free to parallelize. Same pattern works for any cross-module serialization need (shared simulator slots, exclusive emulators, native code-signing).
+
+**Source:** Phase-7b iOS polish — eliminating the `--max-workers=1` workaround we kept passing for `iosSimulatorArm64Test` runs.
