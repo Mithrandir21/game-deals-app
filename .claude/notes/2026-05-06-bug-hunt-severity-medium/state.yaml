@@ -1,0 +1,29 @@
+campaign_slug: "2026-05-06-bug-hunt-severity-medium"
+labels: ["bug-hunt", "severity:medium"]
+created: "2026-05-06"
+status: "in_progress"
+current_wave: 1
+issues:
+  - number: 123
+    title: "Lazy Koin first-access opens SQLite on Main during first composition"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-06-bug-hunt-severity-medium/issue-123-warm-database-on-startup"
+    pr: 133
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/133"
+    status: "open"  # PR open, awaiting human review/merge
+    files:
+      - "app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt"
+    note: "Worker scoped fix to resolving the Koin singleton (forcing Room.Builder.build off-main). Could not call db.openHelper.writableDatabase as the issue body suggested because :app doesn't have Room on its compile classpath (:domain declares Room as implementation, not api). Worker explained the trade-off in the PR body."
+  - number: 124
+    title: "StoreViewModel.deals has no .catch; one refresh failure permanently empties the StateFlow"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-06-bug-hunt-severity-medium/issue-124-store-deals-catch"
+    pr: 132
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/132"
+    status: "open"
+    files:
+      - "feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt"
+      - "feature/store/src/commonTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModelTest.kt"
+    note: "Worker noted the project uses Mokkery (not MockK as the issue body hinted) — Mokkery is KMP-compatible. New regression test follows the existing StoreViewModelTest's Mokkery patterns (everySuspend / returns / throws)."

@@ -1,0 +1,22 @@
+campaign_slug: "2026-05-06-bug-hunt-severity-low"
+labels: ["bug-hunt", "severity:low"]
+created: "2026-05-06"
+status: "in_progress"
+shape: "batched-pr"
+shape_note: |
+  User explicitly requested a single branch with one commit per issue, resulting in
+  one PR for all 6 issues. This breaks the standard /github-issue-waves "PR per issue"
+  shape but matches the user's preference for these latent foot-gun findings — most
+  are Low/Low confidence and getting six PRs reviewed individually was the wrong
+  cost/value trade-off.
+current_wave: 1
+batch_branch: "bug-hunt/2026-05-06-severity-low-batch"
+batch_pr: 134
+batch_pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/134"
+issues:
+  - { number: 125, title: "TopAppBarDefaults.pinnedScrollBehavior(...) reallocated on every recomposition", severity: "low", wave: 1, commit: "414cc20", status: "open" }
+  - { number: 126, title: "Shared NSDateFormatter at module scope on iOS", severity: "low", wave: 1, commit: "f27d522", status: "open" }
+  - { number: 127, title: "LoggerImpl.loggers is an unsynchronized MutableSet with public add/remove mutators", severity: "low", wave: 1, commit: "e1488e1", status: "open" }
+  - { number: 128, title: "KeyValueBackend.commit() thread contract carried only in a code comment", severity: "low", wave: 1, commit: "c8d6f20", status: "open" }
+  - { number: 129, title: "SearchViewModel.searchGames per-field merge against replayCache is racy by design", severity: "low", wave: 1, commit: "1caf566", status: "open" }
+  - { number: 130, title: "Filters rememberSaveable initial-value not re-keyed on parent change", severity: "low", wave: 1, commit: "d400f5f", status: "open" }
