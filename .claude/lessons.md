@@ -8,6 +8,26 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-11-02 · Compose host bootstrap must be applied in BOTH `:app:MainActivity` AND `:iosApp:MainViewController`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** kmp, compose-multiplatform, koin, composition-local, ios, dual-host
+**Applies to:** Any new root-scope wiring — Koin modules added to `startKoin { modules(...) }`, `CompositionLocalProvider(LocalX provides …)` around the NavHost — introduced for a feature
+
+The project has two roots of composition: `app/src/main/java/.../MainActivity.kt` (Android, via `setContent { GameDealsTheme { … } }`) and `iosApp/src/iosMain/.../MainViewController.kt` (iOS, via `ComposeUIViewController { App() }`). Each registers its own Koin module list and installs its own `CompositionLocalProvider`s. Anything host-scoped — a new Koin module, a `LocalX` provider — must be added to **both** files; the Android-side build will compile cleanly even if iOS is forgotten.
+
+When combined with a no-op `CompositionLocal` default (see L-2026-05-11-01), forgetting the iOS host presents as "feature silently does nothing on iOS" rather than a crash. A diagnostic helper: log a Sentry breadcrumb *before* emitting the side-effect event from the ViewModel — if the breadcrumb fires but the platform action doesn't, the host-wiring step is the suspect.
+
+**Source:** PR #135 (share feature) — iOS share path was silently no-op until `MainViewController.kt` got the matching `CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions())`.
+
+### L-2026-05-11-01 · `staticCompositionLocalOf { error(...) }` crashes `@Preview`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** compose, composition-local, preview, kmp
+**Applies to:** Any new `staticCompositionLocalOf<T>` introduced for a host-provided service in `:common:ui` (or anywhere a `@Preview` may render a consumer)
+
+The textbook default `staticCompositionLocalOf<T> { error("X not provided") }` crashes every `@Preview` that renders a composable reading `LocalX.current` — even when the preview never invokes the underlying side effect. For locals consumed inside shared screens (`DealBottomSheet`, screens with `@Preview` annotations) prefer a no-op singleton default (e.g. `object NoOpPlatformActions : PlatformActions { override fun share(text: String) = Unit }`) and let host-level `CompositionLocalProvider` bind the real impl.
+
+Trade-off: "fail-loud on missing provider" is lost. A missing host wiring becomes a silent runtime no-op, not a crash. See L-2026-05-11-02 for the mitigation.
+
+**Source:** PR #135 (share feature) — initial `error(...)` default caught in review.
+
 ### L-2026-05-06-05 · `TopAppBarDefaults.pinnedScrollBehavior` allocates per recomposition via the default `canScroll` lambda, not the wrapper
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, recomposition, top-app-bar, material3, stable-lambda
 **Applies to:** Any code calling `TopAppBarDefaults.pinnedScrollBehavior(...)` (or `enterAlwaysScrollBehavior`, `exitUntilCollapsedScrollBehavior`) directly inside a composable body
