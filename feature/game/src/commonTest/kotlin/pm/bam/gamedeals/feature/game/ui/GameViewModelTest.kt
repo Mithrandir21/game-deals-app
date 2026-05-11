@@ -12,6 +12,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -32,6 +33,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
+    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -41,6 +43,7 @@ class GameViewModelTest : MainDispatcherTest() {
         logger = TestingLoggingListener(),
         gamesRepository = gamesRepository,
         storesRepository = storesRepository,
+        dealShareTextBuilder = dealShareTextBuilder,
     )
 
     @Test

@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.delayOnStart
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.toFlow
-import pm.bam.gamedeals.common.ui.share.buildDealShareText
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -36,7 +36,8 @@ internal class GameViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
-    private val storesRepository: StoresRepository
+    private val storesRepository: StoresRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
@@ -86,7 +87,7 @@ internal class GameViewModel(
         store: Store,
         deal: GameDetails.GameDeal,
     ) {
-        val text = buildDealShareText(
+        val text = dealShareTextBuilder.build(
             gameTitle = gameInfo.title,
             salePriceDenominated = deal.priceDenominated,
             storeName = store.storeName,

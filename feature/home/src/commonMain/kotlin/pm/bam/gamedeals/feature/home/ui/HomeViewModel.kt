@@ -31,7 +31,7 @@ import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
-import pm.bam.gamedeals.common.ui.share.buildDealShareText
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
@@ -56,6 +56,7 @@ internal class HomeViewModel(
     private val gamesRepository: GamesRepository,
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
     private val logger: Logger
 ) : ViewModel() {
 
@@ -112,7 +113,7 @@ internal class HomeViewModel(
     }
 
     fun onShareDealClicked(data: DealBottomSheetData) {
-        val text = buildDealShareText(
+        val text = dealShareTextBuilder.build(
             gameTitle = data.gameName,
             salePriceDenominated = data.gameSalesPriceDenominated,
             storeName = data.store.storeName,

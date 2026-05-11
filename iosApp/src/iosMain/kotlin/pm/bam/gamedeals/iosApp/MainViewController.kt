@@ -20,6 +20,7 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
@@ -71,6 +72,7 @@ private fun bootstrapKoin() {
             loggingIosModule,
             commonModule,
             commonIosModule,
+            commonUiModule,
             domainModule,
             domainIosModule,
             remoteModule,
