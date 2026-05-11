@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
@@ -33,10 +35,12 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -56,12 +60,24 @@ internal class HomeViewModel(
     private val gamesRepository: GamesRepository,
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
+    private val favouritesRepository: FavouritesRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val logger: Logger
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeScreenData())
     val uiState: StateFlow<HomeScreenData> = _uiState.asStateFlow()
+
+    val favouriteIds: StateFlow<Set<Int>> = favouritesRepository.observeFavouriteIds()
+        .onStart { emit(emptySet()) }
+        .catch { emit(emptySet()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val favourites: StateFlow<ImmutableList<FavouriteGame>> = favouritesRepository.observeFavourites()
+        .map { it.toImmutableList() }
+        .onStart { emit(persistentListOf()) }
+        .catch { emit(persistentListOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
@@ -104,8 +120,18 @@ internal class HomeViewModel(
                 }
         }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealTitle, dealPriceDenominated)
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) {
+        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated)
+    }
+
+    fun toggleFavouriteFromDeal(data: DealBottomSheetData.DealDetailsData) {
+        viewModelScope.launch {
+            favouritesRepository.toggleFavourite(
+                gameId = data.gameId,
+                title = data.gameName,
+                thumb = data.gameInfo.thumb,
+            )
+        }
     }
 
     fun dismissDealDetails() {

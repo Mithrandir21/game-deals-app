@@ -6,13 +6,17 @@ import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -34,6 +38,9 @@ class GameViewModelTest : MainDispatcherTest() {
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
+        every { observeIsFavourite(any()) } returns flowOf(false)
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -44,6 +51,7 @@ class GameViewModelTest : MainDispatcherTest() {
         gamesRepository = gamesRepository,
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
+        favouritesRepository = favouritesRepository,
     )
 
     @Test

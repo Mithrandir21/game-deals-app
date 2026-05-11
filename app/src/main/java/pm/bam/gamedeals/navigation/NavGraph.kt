@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
@@ -32,6 +33,7 @@ internal fun NavGraph(
             goToGame = { gameId -> navActions.navigateToGame(gameId) },
             goToStore = { storeId -> navActions.navigateToStore(storeId) },
             goToGiveaway = { navActions.navigateToGiveaways() },
+            goToFavourites = { navActions.navigateToFavourites() },
             goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
         )
 
@@ -56,6 +58,11 @@ internal fun NavGraph(
         giveawaysScreen(
             navController = navController,
             goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+        )
+
+        favouritesScreen(
+            navController = navController,
+            goToGame = { gameId -> navActions.navigateToGame(gameId) }
         )
     }
 }

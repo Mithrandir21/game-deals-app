@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui.deal
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +43,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
@@ -67,8 +72,10 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 @Composable
 fun DealBottomSheet(
     data: DealBottomSheetData?,
+    isFavourite: Boolean = false,
     onDismiss: () -> Unit,
     onShare: (data: DealBottomSheetData) -> Unit,
+    onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetryDealDetails: () -> Unit
 ) {
@@ -79,7 +86,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, onShare, goToWeb, onRetryDealDetails)
+            DealContent(data, isFavourite, onShare, onToggleFavourite, goToWeb, onRetryDealDetails)
         }
     }
 }
@@ -87,7 +94,9 @@ fun DealBottomSheet(
 @Composable
 private fun DealContent(
     data: DealBottomSheetData,
+    isFavourite: Boolean,
     onShare: (data: DealBottomSheetData) -> Unit,
+    onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     retry: () -> Unit
 ) {
@@ -125,6 +134,21 @@ private fun DealContent(
                         .testTag(StoreDataGameNameTag),
                     text = data.gameName
                 )
+            }
+            IconButton(
+                modifier = Modifier.testTag(FavouriteDealBtnTag),
+                enabled = data is DealBottomSheetData.DealDetailsData,
+                onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleFavourite) },
+            ) {
+                AnimatedContent(targetState = isFavourite, label = "favourite-icon") { fav ->
+                    Icon(
+                        imageVector = if (fav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = stringResource(
+                            if (fav) Res.string.deal_favourite_remove_action
+                            else Res.string.deal_favourite_add_action
+                        ),
+                    )
+                }
             }
             IconButton(
                 modifier = Modifier.testTag(ShareDealBtnTag),
@@ -333,6 +357,7 @@ internal const val DataErrorMsgTag = "DataErrorMsg"
 internal const val DataErrorBtnTag = "DataErrorBtn"
 internal const val GoToDealBtnTag = "GoToDealBtn"
 internal const val ShareDealBtnTag = "ShareDealBtn"
+internal const val FavouriteDealBtnTag = "FavouriteDealBtn"
 internal const val DealCheaperStoreRowTag = "DealCheaperStoreRow"
 internal const val DealCheapestTag = "DealCheapest"
 internal const val StoreDataGameDataTag = "StoreDataGameData"

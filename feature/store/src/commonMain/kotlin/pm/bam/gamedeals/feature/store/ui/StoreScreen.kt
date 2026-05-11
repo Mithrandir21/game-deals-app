@@ -3,12 +3,14 @@ package pm.bam.gamedeals.feature.store.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +66,7 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.store.generated.resources.Res
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_favourite_indicator
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_game_image
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_store_banner
@@ -80,6 +84,7 @@ internal fun StoreScreen(
     val currentOnBack by rememberUpdatedState(onBack)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: ImmutableList<Deal> by viewModel.deals.collectAsStateWithLifecycle()
+    val favouriteIds by viewModel.favouriteIds.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
@@ -95,20 +100,23 @@ internal fun StoreScreen(
 
     StoreDeals(
         deals = deals,
+        favouriteIds = favouriteIds,
         dealDetails = dealDetails,
         storeDetails = store,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onLoadDealDetails = { dealId, dealStoreId, dealTitle, dealPriceDenominated ->
+        onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated ->
             viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
+                dealGameId = dealGameId,
                 dealTitle = dealTitle,
                 dealPriceDenominated = dealPriceDenominated,
             )
         },
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
+        onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
         goToWeb = goToWeb
     )
 
@@ -136,6 +144,7 @@ internal fun StoreScreen(
 @Composable
 private fun DealRow(
     deal: Deal,
+    isFavourite: Boolean,
     onViewDealDetails: ((deal: Deal) -> Unit)
 ) {
     Card {
@@ -152,16 +161,33 @@ private fun DealRow(
                 .testTag(DealRowTag.plus(deal.dealID)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = deal.thumb,
-                contentDescription = stringResource(Res.string.store_screen_game_image, deal.title),
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
                     .height(60.dp)
-                    .width(100.dp)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-            )
+                    .width(100.dp),
+            ) {
+                AsyncImage(
+                    model = deal.thumb,
+                    contentDescription = stringResource(Res.string.store_screen_game_image, deal.title),
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                )
+                if (isFavourite) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = stringResource(Res.string.store_screen_favourite_indicator),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(GameDealsCustomTheme.spacing.extraSmall)
+                            .size(16.dp),
+                    )
+                }
+            }
             Text(
                 modifier = Modifier
                     .weight(1f)
@@ -183,13 +209,15 @@ private fun DealRow(
 @Composable
 private fun StoreDeals(
     deals: ImmutableList<Deal>,
+    favouriteIds: Set<Int>,
     dealDetails: DealBottomSheetData? = null,
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
-    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
+    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
+    onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -210,16 +238,20 @@ private fun StoreDeals(
                 items = deals,
                 key = { it.dealID }
             ) { deal ->
-                DealRow(deal) { onLoadDealDetails(deal.dealID, deal.storeID, deal.title, deal.salePriceDenominated) }
+                DealRow(deal, deal.gameID in favouriteIds) {
+                    onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated)
+                }
             }
         }
 
         DealBottomSheet(
             data = dealDetails,
+            isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
             goToWeb = goToWeb,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
-            onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameName, it.gameSalesPriceDenominated) } }
+            onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
+            onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated) } }
         )
     }
 }

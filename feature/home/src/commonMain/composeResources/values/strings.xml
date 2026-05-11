@@ -13,6 +13,11 @@
     <string name="home_screen_giveaways_label">Giveaways</string>
     <string name="home_screen_all_giveaways_label">View All Giveaways</string>
 
+    <string name="home_screen_favourites_label">Your favourites</string>
+    <string name="home_screen_all_favourites_label">See all favourites</string>
+    <string name="home_screen_floating_favourites_icon">View favourites</string>
+    <string name="home_screen_favourite_indicator">Favourited</string>
+
     <string name="home_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="home_screen_data_loading_error_retry">Retry</string>
 

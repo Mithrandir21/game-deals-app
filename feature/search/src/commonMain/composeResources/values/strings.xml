@@ -16,4 +16,6 @@
     <string name="search_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="search_screen_data_loading_error_retry">Retry</string>
 
+    <string name="search_screen_favourite_indicator">Favourited</string>
+
 </resources>

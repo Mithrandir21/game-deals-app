@@ -50,10 +50,12 @@ class StoreScreenTest {
         val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
         val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
+        val favouriteIds: StateFlow<Set<Int>> = MutableStateFlow(emptySet())
 
         every { viewModel.deals } returns deals
         every { viewModel.dealDetails } returns dealDetails
         every { viewModel.uiState } returns uiState
+        every { viewModel.favouriteIds } returns favouriteIds
     }
 
 
@@ -79,7 +81,7 @@ class StoreScreenTest {
 
     @Test
     fun loadDealDetails() {
-        every { viewModel.loadDealDetails(any(), any(), any(), any()) } just runs
+        every { viewModel.loadDealDetails(any(), any(), any(), any(), any()) } just runs
 
         composeTestRule.setContent {
             GameDealsTheme {
@@ -97,7 +99,7 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.uiState }
-        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any()) }
+        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any(), any()) }
     }
 
     @Test

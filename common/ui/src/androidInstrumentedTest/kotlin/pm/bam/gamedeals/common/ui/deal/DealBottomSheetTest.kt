@@ -40,6 +40,7 @@ class DealBottomSheetTest {
         every { this@mockk.storeName } returns mockStoreName
     }
     private val dealId = "Deal ID"
+    private val gameId = 42
     private val gameName = "Game Name"
     private val gamePrice = "Game Price"
 
@@ -47,6 +48,7 @@ class DealBottomSheetTest {
     fun loadingState() {
         val loadingData = DealBottomSheetData.DealDetailsLoading(
             store = store,
+            gameId = gameId,
             gameName = gameName,
             dealId = dealId,
             gameSalesPriceDenominated = gamePrice
@@ -86,6 +88,7 @@ class DealBottomSheetTest {
     fun errorState() {
         val loadingData = DealBottomSheetData.DealDetailsError(
             store = store,
+            gameId = gameId,
             gameName = gameName,
             dealId = dealId,
             gameSalesPriceDenominated = gamePrice
@@ -167,6 +170,7 @@ class DealBottomSheetTest {
 
         val dealDetailsData = DealBottomSheetData.DealDetailsData(
             store = store,
+            gameId = gameId,
             gameName = gameName,
             dealId = dealId,
             gameSalesPriceDenominated = gamePrice,

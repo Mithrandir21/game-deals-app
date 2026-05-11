@@ -3,6 +3,7 @@
 package pm.bam.gamedeals.feature.search.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -19,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
@@ -78,6 +81,7 @@ import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.feature.search.generated.resources.Res
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_favourite_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_exact_match_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_price_range_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_steam_range_label
@@ -98,6 +102,7 @@ internal fun SearchScreen(
     searchViewModel: SearchViewModel = koinViewModel()
 ) {
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
+    val favouriteIds = searchViewModel.favouriteIds.collectAsStateWithLifecycle()
 
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var existingParameters by rememberSaveable(stateSaver = parametersSaver) { mutableStateOf(SearchParameters()) }
@@ -122,6 +127,7 @@ internal fun SearchScreen(
         },
         existingSearchParameters = existingParameters,
         searchData = data.value,
+        favouriteIds = favouriteIds.value,
         onSearchTitleChanged = {
             existingParameters = existingParameters.copy(title = it)
             onSearch()
@@ -141,6 +147,7 @@ private fun Screen(
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
     existingSearchParameters: SearchParameters,
     searchData: SearchViewModel.SearchData,
+    favouriteIds: Set<Int>,
     onSearchTitleChanged: (text: String) -> Unit,
     onSearchedGame: (gameId: Int) -> Unit = {},
     onPriceChanged: (from: Int?, to: Int?) -> Unit,
@@ -193,7 +200,11 @@ private fun Screen(
                                 key = { index -> searchData.searchResults[index].dealID },
                                 count = searchData.searchResults.size
                             ) {
-                                SearchResultListItem(searchData.searchResults[it]) { onSearchedGame(searchData.searchResults[it].gameID) }
+                                SearchResultListItem(
+                                    deal = searchData.searchResults[it],
+                                    isFavourite = searchData.searchResults[it].gameID in favouriteIds,
+                                    onGame = { onSearchedGame(searchData.searchResults[it].gameID) },
+                                )
                             }
                         }
                     )
@@ -228,22 +239,40 @@ private fun Screen(
 @Composable
 private fun SearchResultListItem(
     deal: Deal,
+    isFavourite: Boolean,
     onGame: () -> Unit
 ) {
     ListItem(
         headlineContent = { Text(deal.title) },
         supportingContent = { Text(stringResource(Res.string.search_screen_list_item_label, deal.salePriceDenominated)) },
         leadingContent = {
-            AsyncImage(
-                model = deal.thumb,
-                contentDescription = stringResource(Res.string.search_screen_game_image, deal.title),
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
                     .height(60.dp)
-                    .width(100.dp)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-            )
+                    .width(100.dp),
+            ) {
+                AsyncImage(
+                    model = deal.thumb,
+                    contentDescription = stringResource(Res.string.search_screen_game_image, deal.title),
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                )
+                if (isFavourite) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = stringResource(Res.string.search_screen_favourite_indicator),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(GameDealsCustomTheme.spacing.extraSmall)
+                            .size(16.dp),
+                    )
+                }
+            }
         },
         modifier = Modifier
             .clickable { onGame() }

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
@@ -29,6 +30,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
@@ -39,7 +41,13 @@ internal class StoreViewModel(
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
+    private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
+
+    val favouriteIds: StateFlow<Set<Int>> = favouritesRepository.observeFavouriteIds()
+        .onStart { emit(emptySet()) }
+        .catch { emit(emptySet()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
     private val storeIdFlow = MutableStateFlow(savedStateHandle.get<Int>("storeId"))
@@ -88,8 +96,18 @@ internal class StoreViewModel(
             initialValue = persistentListOf()
         )
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealTitle, dealPriceDenominated)
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) {
+        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated)
+    }
+
+    fun toggleFavouriteFromDeal(data: DealBottomSheetData.DealDetailsData) {
+        viewModelScope.launch {
+            favouritesRepository.toggleFavourite(
+                gameId = data.gameId,
+                title = data.gameName,
+                thumb = data.gameInfo.thumb,
+            )
+        }
     }
 
     fun dismissDealDetails() {
