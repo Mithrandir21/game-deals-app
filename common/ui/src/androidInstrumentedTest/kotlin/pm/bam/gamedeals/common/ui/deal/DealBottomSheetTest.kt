@@ -61,6 +61,7 @@ class DealBottomSheetTest {
                 DealBottomSheet(
                     data = loadingData,
                     onDismiss = {},
+                    onShare = {},
                     goToWeb = { _, _ -> },
                     onRetryDealDetails = {}
                 )
@@ -101,6 +102,7 @@ class DealBottomSheetTest {
                 DealBottomSheet(
                     data = loadingData,
                     onDismiss = {},
+                    onShare = {},
                     goToWeb = { _, _ -> },
                     onRetryDealDetails = {}
                 )
@@ -191,6 +193,7 @@ class DealBottomSheetTest {
                 DealBottomSheet(
                     data = dealDetailsData,
                     onDismiss = {},
+                    onShare = {},
                     goToWeb = goToActions,
                     onRetryDealDetails = {}
                 )

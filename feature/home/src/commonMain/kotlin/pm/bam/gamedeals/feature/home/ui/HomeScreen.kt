@@ -51,6 +51,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -87,6 +88,7 @@ internal fun HomeScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
+    val platformActions = LocalPlatformActions.current
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
 
@@ -106,6 +108,7 @@ internal fun HomeScreen(
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
         onDismissDealDetails = { viewModel.dismissDealDetails() },
+        onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         goToWeb = goToWeb,
         onRetry = { viewModel.loadTopStoresDeals() }
     )
@@ -114,6 +117,7 @@ internal fun HomeScreen(
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is HomeViewModel.HomeUiEvent.NavigateToGame -> goToGame(event.gameId)
+            is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
         }
     }
 }
@@ -175,6 +179,7 @@ private fun Screen(
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
     onDismissDealDetails: () -> Unit,
+    onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit
 ) {
@@ -275,6 +280,7 @@ private fun Screen(
                 DealBottomSheet(
                     data = dealDetails,
                     onDismiss = { onDismissDealDetails() },
+                    onShare = { sheetData -> onShareDealDetails(sheetData) },
                     goToWeb = goToWeb,
                     onRetryDealDetails = {
                         dealDetails?.let {

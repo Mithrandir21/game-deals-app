@@ -52,8 +52,8 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import pm.bam.gamedeals.common.ui.share.buildDealShareText
-import pm.bam.gamedeals.common.ui.share.rememberShareDealAction
+import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -85,17 +85,12 @@ internal fun GameScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
-    val share = rememberShareDealAction()
-    val onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit = { info, store, deal ->
-        share(
-            buildDealShareText(
-                gameTitle = info.title,
-                salePriceDenominated = deal.priceDenominated,
-                storeName = store.storeName,
-                dealId = deal.dealID,
-            )
-        )
-        viewModel.onDealShared(dealId = deal.dealID, storeName = store.storeName)
+    val platformActions = LocalPlatformActions.current
+
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is GameViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
+        }
     }
 
     // BoxWithConstraints is multiplatform — replaces the Android-only
@@ -107,7 +102,7 @@ internal fun GameScreen(
             data = data.value,
             onBack = onBack,
             goToWeb = goToWeb,
-            onShareDeal = onShareDeal,
+            onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onRetry = onRetry
         )
     }

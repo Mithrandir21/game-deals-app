@@ -51,8 +51,10 @@ import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -81,8 +83,15 @@ internal fun StoreScreen(
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
+    val platformActions = LocalPlatformActions.current
 
     val store = (uiState as? StoreScreenData.Data)?.store
+
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is StoreViewModel.StoreUiEvent.ShareDeal -> platformActions.share(event.text)
+        }
+    }
 
     StoreDeals(
         deals = deals,
@@ -99,6 +108,7 @@ internal fun StoreScreen(
             )
         },
         onDismissDealDetails = { viewModel.dismissDealDetails() },
+        onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         goToWeb = goToWeb
     )
 
@@ -179,6 +189,7 @@ private fun StoreDeals(
     onBack: () -> Unit,
     onLoadDealDetails: (dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
     onDismissDealDetails: () -> Unit,
+    onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -207,6 +218,7 @@ private fun StoreDeals(
             data = dealDetails,
             goToWeb = goToWeb,
             onDismiss = { onDismissDealDetails() },
+            onShare = { sheetData -> onShareDealDetails(sheetData) },
             onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameName, it.gameSalesPriceDenominated) } }
         )
     }

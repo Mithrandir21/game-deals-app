@@ -60,8 +60,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_store_thumbna
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
-import pm.bam.gamedeals.common.ui.share.buildDealShareText
-import pm.bam.gamedeals.common.ui.share.rememberShareDealAction
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 
 
@@ -70,6 +68,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 fun DealBottomSheet(
     data: DealBottomSheetData?,
     onDismiss: () -> Unit,
+    onShare: (data: DealBottomSheetData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetryDealDetails: () -> Unit
 ) {
@@ -80,7 +79,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, goToWeb, onRetryDealDetails)
+            DealContent(data, onShare, goToWeb, onRetryDealDetails)
         }
     }
 }
@@ -88,10 +87,10 @@ fun DealBottomSheet(
 @Composable
 private fun DealContent(
     data: DealBottomSheetData,
+    onShare: (data: DealBottomSheetData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     retry: () -> Unit
 ) {
-    val share = rememberShareDealAction()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -129,16 +128,7 @@ private fun DealContent(
             }
             IconButton(
                 modifier = Modifier.testTag(ShareDealBtnTag),
-                onClick = {
-                    share(
-                        buildDealShareText(
-                            gameTitle = data.gameName,
-                            salePriceDenominated = data.gameSalesPriceDenominated,
-                            storeName = data.store.storeName,
-                            dealId = data.dealId,
-                        )
-                    )
-                }
+                onClick = { onShare(data) }
             ) {
                 Icon(
                     imageVector = Icons.Filled.Share,
