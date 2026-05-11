@@ -2,6 +2,8 @@
 <resources>
 
     <string name="deal_details_go_to_deal_label">Go to Deal</string>
+    <string name="deal_share_label">Share</string>
+    <string name="deal_share_content_description">Share this deal</string>
 
     <string name="deal_details_game_image">%1$s Game image</string>
     <string name="deal_details_store_thumbnail">%1$s Store thumbnail</string>

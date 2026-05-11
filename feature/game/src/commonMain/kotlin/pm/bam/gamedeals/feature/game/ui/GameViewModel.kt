@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.info
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class GameViewModel(
@@ -68,6 +69,10 @@ internal class GameViewModel(
 
     fun reloadGameDetails() {
         reloadTrigger.tryEmit(Unit)
+    }
+
+    fun onDealShared(dealId: String, storeName: String) {
+        info(logger, tag = "deal_shared") { "dealId=$dealId store=$storeName" }
     }
 
     private fun loadGameDetailsFlow(gameId: Int) =

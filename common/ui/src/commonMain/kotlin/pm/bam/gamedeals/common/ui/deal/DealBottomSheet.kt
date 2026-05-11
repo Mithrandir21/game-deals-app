@@ -12,11 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -36,6 +40,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
@@ -55,6 +60,8 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_store_thumbna
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+import pm.bam.gamedeals.common.ui.share.buildDealShareText
+import pm.bam.gamedeals.common.ui.share.rememberShareDealAction
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 
 
@@ -84,13 +91,17 @@ private fun DealContent(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     retry: () -> Unit
 ) {
+    val share = rememberShareDealAction()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .navigationBarsPadding()
     ) {
-        Row(modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small)) {
+        Row(
+            modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             AsyncImage(
                 model = data.store.images.logo,
                 contentDescription = stringResource(Res.string.deal_details_store_thumbnail, data.store.storeName),
@@ -99,9 +110,8 @@ private fun DealContent(
                 modifier = Modifier
                     .size(48.dp)
                     .padding(GameDealsCustomTheme.spacing.small)
-                    .align(Alignment.CenterVertically)
             )
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -115,6 +125,24 @@ private fun DealContent(
                         .padding(horizontal = GameDealsCustomTheme.spacing.small)
                         .testTag(StoreDataGameNameTag),
                     text = data.gameName
+                )
+            }
+            IconButton(
+                modifier = Modifier.testTag(ShareDealBtnTag),
+                onClick = {
+                    share(
+                        buildDealShareText(
+                            gameTitle = data.gameName,
+                            salePriceDenominated = data.gameSalesPriceDenominated,
+                            storeName = data.store.storeName,
+                            dealId = data.dealId,
+                        )
+                    )
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(Res.string.deal_share_content_description)
                 )
             }
         }
@@ -314,6 +342,7 @@ internal const val DataLoadingTag = "DataLoading"
 internal const val DataErrorMsgTag = "DataErrorMsg"
 internal const val DataErrorBtnTag = "DataErrorBtn"
 internal const val GoToDealBtnTag = "GoToDealBtn"
+internal const val ShareDealBtnTag = "ShareDealBtn"
 internal const val DealCheaperStoreRowTag = "DealCheaperStoreRow"
 internal const val DealCheapestTag = "DealCheapest"
 internal const val StoreDataGameDataTag = "StoreDataGameData"
