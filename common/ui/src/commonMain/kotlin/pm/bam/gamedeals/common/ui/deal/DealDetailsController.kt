@@ -27,6 +27,7 @@ class DealDetailsController(
         scope: CoroutineScope,
         dealId: String,
         dealStoreId: Int,
+        dealGameId: Int,
         dealTitle: String,
         dealPriceDenominated: String,
     ): Job {
@@ -36,6 +37,7 @@ class DealDetailsController(
                 _dealDetails.emit(
                     DealBottomSheetData.DealDetailsLoading(
                         store = storesRepository.getStore(dealStoreId),
+                        gameId = dealGameId,
                         gameName = dealTitle,
                         dealId = dealId,
                         gameSalesPriceDenominated = dealPriceDenominated,
@@ -48,6 +50,7 @@ class DealDetailsController(
 
                     DealBottomSheetData.DealDetailsData(
                         store = store,
+                        gameId = dealGameId,
                         gameName = dealTitle,
                         dealId = dealId,
                         gameSalesPriceDenominated = dealPriceDenominated,
@@ -65,6 +68,7 @@ class DealDetailsController(
                     _dealDetails.emit(
                         DealBottomSheetData.DealDetailsError(
                             store = storesRepository.getStore(dealStoreId),
+                            gameId = dealGameId,
                             gameName = dealTitle,
                             dealId = dealId,
                             gameSalesPriceDenominated = dealPriceDenominated,

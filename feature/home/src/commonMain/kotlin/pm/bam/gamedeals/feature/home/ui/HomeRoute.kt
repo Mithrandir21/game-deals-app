@@ -14,6 +14,7 @@ fun HomeRoute(
     goToGame: (gameId: Int) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit = {},
     onViewGiveaways: () -> Unit,
+    onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
     HomeScreen(
@@ -21,6 +22,7 @@ fun HomeRoute(
         goToGame = goToGame,
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
+        onViewFavourites = onViewFavourites,
         goToWeb = goToWeb,
     )
 }

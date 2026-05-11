@@ -8,6 +8,30 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-11-05 · New collected VM `StateFlow` requires updating MockK stubs in instrumented `*ScreenTest.kt`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mockk, instrumentation, viewmodel, compose
+**Applies to:** Changes that add a `StateFlow`/`SharedFlow` property to a ViewModel that an existing Composable will `collectAsStateWithLifecycle()`; matters for `androidInstrumentedTest` `*ScreenTest.kt` files that mock the VM via strict MockK
+
+Adding `val newFlow: StateFlow<...>` to a VM and reading it in a Composable will throw `MockKException: no answer found` on first composition in any instrumented test that constructs the VM via `mockk<MyViewModel>()` (strict by default — unlike Mokkery's `MockMode.autoUnit`, MockK does not silently no-op). Unit tests don't catch it because they never compose. After adding a new collected flow on a VM, grep `*/androidInstrumentedTest/**/*ScreenTest.kt` for the VM type and add `every { viewModel.newFlow } returns <StateFlow>` in each test's `@Before` setup. The instrumentation suite only runs on a device/emulator, so the break can land in `dev` for weeks unnoticed.
+
+**Source:** Favourite Games — `StoreScreenTest` latent break discovered while wiring (and later reverting) swipe-to-favourite
+
+### L-2026-05-11-04 · For `.catch`-recovery tests, mock upstream as `flow { throw … }`, not `every { … } throws`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mokkery, flow, kmp
+**Applies to:** Any test that needs to verify a `Flow` consumer's `.catch { emit(default) }` recovery branch
+
+Mokkery's `every { repo.observeXxx() } throws Exception()` makes the **function call itself** throw at construction — before any `Flow` object exists, so `.catch` never sees it. The VM's `_state.catch { emit(empty) }` only catches in-stream errors. Correct shape: `every { repo.observeXxx() } returns flow { throw Exception() }`. The `flow { ... }` builder defers the throw to collection time, where the `.catch` operator is in scope. Same applies to `everySuspend` for suspend functions returning `Flow`. This is identical mechanics to the production hot/cold-source distinction documented in L-2026-05-02-05 — failure-injection sites must match where the production code's recovery operator runs.
+
+**Source:** Favourite Games — `FavouritesViewModelTest` ERROR case and `favouriteIds`/`favourites` recovery tests in Home/Store VM tests
+
+### L-2026-05-11-03 · Mokkery `MockMode.autoUnit` only auto-stubs Unit-returning calls
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mokkery, kmp, commontest
+**Applies to:** Any `mock(MockMode.autoUnit)` in `commonTest` whose subject has non-Unit methods that the system-under-test invokes
+
+`MockMode.autoUnit` silently returns Unit for unstubbed Unit-returning calls but throws `CallNotMockedException` for **any** non-Unit return type (`Boolean`, `Flow<T>`, `Int`, anything else) — including suspend functions launched fire-and-forget inside `viewModelScope.launch { ... }`. The fire-and-forget shape means the exception surfaces *after* the test thinks it's done, so the failure message can point at the wrong line. For repository methods that return values (e.g. `toggleFavourite(...): Boolean`), add an explicit `everySuspend { … } returns <default>` stub even when the test doesn't care about the return value — the goal is just to keep the launch from throwing.
+
+**Source:** Favourite Games — test backfill for `toggleFavouriteFromDeal`
+
 ### L-2026-05-11-02 · Compose host bootstrap must be applied in BOTH `:app:MainActivity` AND `:iosApp:MainViewController`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** kmp, compose-multiplatform, koin, composition-local, ios, dual-host
 **Applies to:** Any new root-scope wiring — Koin modules added to `startKoin { modules(...) }`, `CompositionLocalProvider(LocalX provides …)` around the NavHost — introduced for a feature

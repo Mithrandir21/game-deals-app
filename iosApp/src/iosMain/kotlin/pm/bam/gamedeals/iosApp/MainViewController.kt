@@ -28,6 +28,8 @@ import pm.bam.gamedeals.common.ui.theme.darkScheme
 import pm.bam.gamedeals.common.ui.theme.lightScheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.favourites.di.favouritesModule
+import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
@@ -84,6 +86,7 @@ private fun bootstrapKoin() {
             searchModule,
             gameModule,
             giveawaysModule,
+            favouritesModule,
             storeModule,
             iosAppModule,
         )
@@ -117,6 +120,7 @@ private fun AppNavHost() {
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navController.navigate(Destination.Giveaways) },
+            goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
         )
         searchScreen(
@@ -129,6 +133,10 @@ private fun AppNavHost() {
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+        )
+        favouritesScreen(
+            navController = navController,
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         storeScreen(
             navController = navController,

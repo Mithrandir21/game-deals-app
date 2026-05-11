@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,6 +67,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ev
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_value_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_remove_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
@@ -84,6 +89,7 @@ internal fun GameScreen(
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
+    val isFavourite = viewModel.isFavourite.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
     val platformActions = LocalPlatformActions.current
 
@@ -100,9 +106,11 @@ internal fun GameScreen(
         ScreenScaffold(
             isCompact = maxWidth < 600.dp,
             data = data.value,
+            isFavourite = isFavourite.value,
             onBack = onBack,
             goToWeb = goToWeb,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
+            onToggleFavourite = { viewModel.toggleFavourite() },
             onRetry = onRetry
         )
     }
@@ -330,9 +338,11 @@ private fun StoreGameDealRow(
 private fun ScreenScaffold(
     isCompact: Boolean,
     data: GameScreenData,
+    isFavourite: Boolean,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onToggleFavourite: () -> Unit,
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -367,6 +377,23 @@ private fun ScreenScaffold(
                                     imageVector = Icons.Filled.ArrowBack,
                                     contentDescription = stringResource(Res.string.game_screen_navigation_back_button)
                                 )
+                            }
+                        },
+                        actions = {
+                            IconButton(
+                                modifier = Modifier.testTag(FavouriteActionTag),
+                                enabled = data is GameScreenData.Data,
+                                onClick = onToggleFavourite,
+                            ) {
+                                AnimatedContent(targetState = isFavourite, label = "favourite-icon") { fav ->
+                                    Icon(
+                                        imageVector = if (fav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                        contentDescription = stringResource(
+                                            if (fav) Res.string.game_screen_favourite_remove_action
+                                            else Res.string.game_screen_favourite_add_action
+                                        ),
+                                    )
+                                }
                             }
                         },
                         scrollBehavior = scrollBehavior,
@@ -410,6 +437,7 @@ private fun ScreenScaffold(
 internal const val TopAppBarTag = "TopAppBarTag"
 internal const val TopAppNavBarTag = "TopAppNavBarTag"
 internal const val LoadingDataTag = "LoadingDataTag"
+internal const val FavouriteActionTag = "FavouriteActionTag"
 
 internal const val GameDetailsTag = "GameDetailsTag"
 internal const val GameDetailsTitleTag = "GameDetailsTitleTag"

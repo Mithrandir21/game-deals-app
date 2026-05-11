@@ -2,18 +2,22 @@ package pm.bam.gamedeals.feature.home.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -23,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -54,14 +59,19 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_favourites_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveaways_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourite_indicator
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaways_label
@@ -83,11 +93,14 @@ internal fun HomeScreen(
     goToGame: (gameId: Int) -> Unit,
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
+    onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
+    val favouriteIds = viewModel.favouriteIds.collectAsStateWithLifecycle()
+    val favourites = viewModel.favourites.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
@@ -96,19 +109,25 @@ internal fun HomeScreen(
         onSearch = onSearch,
         onReleaseTitle = onReleaseTitle,
         data = data.value,
+        favouriteIds = favouriteIds.value,
+        favourites = favourites.value,
         dealDetails = dealDetails.value,
-        onViewDealDetails = { dealId, dealStoreId, dealTitle, dealPriceDenominated ->
+        onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated ->
             viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
+                dealGameId = dealGameId,
                 dealTitle = dealTitle,
                 dealPriceDenominated = dealPriceDenominated,
             )
         },
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
+        onViewFavourites = onViewFavourites,
+        goToFavouriteGame = goToGame,
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
+        onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
         goToWeb = goToWeb,
         onRetry = { viewModel.loadTopStoresDeals() }
     )
@@ -125,27 +144,37 @@ internal fun HomeScreen(
 @Composable
 private fun StoreDealRow(
     deal: Deal,
-    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit)
+    isFavourite: Boolean,
+    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit)
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onViewDealDetails(deal.dealID, deal.storeID, deal.title, deal.salePriceDenominated) }
+            .clickable { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated) }
             .padding(bottom = GameDealsCustomTheme.spacing.small)
             .testTag(HomeScreenDealRowTag.plus(deal.dealID)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = deal.thumb,
-            contentDescription = stringResource(Res.string.home_screen_game_image, deal.title),
-            contentScale = ContentScale.Fit,
-            error = painterResource(CommonRes.drawable.videogame_thumb),
+        Box(
             modifier = Modifier
                 .padding(horizontal = GameDealsCustomTheme.spacing.medium)
                 .height(60.dp)
                 .width(100.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-        )
+        ) {
+            AsyncImage(
+                model = deal.thumb,
+                contentDescription = stringResource(Res.string.home_screen_game_image, deal.title),
+                contentScale = ContentScale.Fit,
+                error = painterResource(CommonRes.drawable.videogame_thumb),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+            )
+            if (isFavourite) {
+                FavouriteOverlay(modifier = Modifier.align(Alignment.BottomEnd))
+            }
+        }
         Text(
             modifier = Modifier
                 .weight(1f)
@@ -174,12 +203,17 @@ private fun Screen(
     onSearch: () -> Unit,
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
+    favouriteIds: Set<Int>,
+    favourites: kotlinx.collections.immutable.ImmutableList<FavouriteGame>,
     dealDetails: DealBottomSheetData?,
-    onViewDealDetails: (dealId: String, dealStoreId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
+    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
+    onViewFavourites: () -> Unit,
+    goToFavouriteGame: (gameId: Int) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
+    onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit
 ) {
@@ -197,15 +231,29 @@ private fun Screen(
             Scaffold(
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 floatingActionButton = {
-                    FloatingActionButton(onClick = {}) {
-                        when (data.state) {
-                            LOADING -> CircularProgressIndicator(Modifier.testTag(HomeScreenLoadingTag))
-                            ERROR -> Icon(Icons.Default.Warning, contentDescription = stringResource(Res.string.home_screen_floating_search_icon))
-                            SUCCESS -> Icon(
-                                modifier = Modifier.clickable { onSearch() },
-                                imageVector = Icons.Default.Search,
-                                contentDescription = stringResource(Res.string.home_screen_floating_search_icon)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+                        horizontalAlignment = Alignment.End,
+                    ) {
+                        SmallFloatingActionButton(
+                            modifier = Modifier.testTag(HomeScreenFavouritesFabTag),
+                            onClick = onViewFavourites,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Favorite,
+                                contentDescription = stringResource(Res.string.home_screen_floating_favourites_icon),
                             )
+                        }
+                        FloatingActionButton(onClick = {}) {
+                            when (data.state) {
+                                LOADING -> CircularProgressIndicator(Modifier.testTag(HomeScreenLoadingTag))
+                                ERROR -> Icon(Icons.Default.Warning, contentDescription = stringResource(Res.string.home_screen_floating_search_icon))
+                                SUCCESS -> Icon(
+                                    modifier = Modifier.clickable { onSearch() },
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = stringResource(Res.string.home_screen_floating_search_icon)
+                                )
+                            }
                         }
                     }
                 }) { innerPadding: PaddingValues ->
@@ -221,6 +269,29 @@ private fun Screen(
                                 key = { index -> "release-${data.releases[index].title}" }
                             ) { index ->
                                 ReleaseRow(data.releases[index], onReleaseTitle)
+                            }
+                        }
+
+                        if (favourites.isNotEmpty()) {
+                            item { SectionHeader(stringResource(Res.string.home_screen_favourites_label)) }
+
+                            items(
+                                count = favourites.size,
+                                key = { index -> "favourite-${favourites[index].gameID}" }
+                            ) { index ->
+                                FavouriteRow(favourites[index]) { goToFavouriteGame(favourites[index].gameID) }
+                            }
+
+                            item {
+                                Button(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentWidth()
+                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large)
+                                        .testTag(HomeScreenViewAllFavouritesButtonTag),
+                                    onClick = { onViewFavourites() }) {
+                                    Text(text = stringResource(Res.string.home_screen_all_favourites_label))
+                                }
                             }
                         }
 
@@ -260,7 +331,7 @@ private fun Screen(
                             ) { index ->
                                 when (val itemData = data.items[index]) {
                                     is StoreData -> StoreHeader(itemData.store)
-                                    is DealData -> StoreDealRow(itemData.deal, onViewDealDetails)
+                                    is DealData -> StoreDealRow(itemData.deal, itemData.deal.gameID in favouriteIds, onViewDealDetails)
                                     is ViewAllData -> Button(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -279,14 +350,17 @@ private fun Screen(
                 )
                 DealBottomSheet(
                     data = dealDetails,
+                    isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
                     onDismiss = { onDismissDealDetails() },
                     onShare = { sheetData -> onShareDealDetails(sheetData) },
+                    onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
                     goToWeb = goToWeb,
                     onRetryDealDetails = {
                         dealDetails?.let {
                             onViewDealDetails(
                                 it.dealId,
                                 it.store.storeID,
+                                it.gameId,
                                 it.gameName,
                                 it.gameSalesPriceDenominated
                             )
@@ -425,10 +499,71 @@ private fun GiveawayRow(
 }
 
 
+@Composable
+private fun FavouriteRow(
+    favourite: FavouriteGame,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(bottom = GameDealsCustomTheme.spacing.small)
+            .testTag(HomeScreenFavouriteRowTag.plus(favourite.gameID)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
+                .height(60.dp)
+                .width(100.dp),
+        ) {
+            AsyncImage(
+                model = favourite.thumb,
+                contentDescription = stringResource(Res.string.home_screen_game_image, favourite.title),
+                contentScale = ContentScale.Fit,
+                error = painterResource(CommonRes.drawable.videogame_thumb),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
+            )
+            FavouriteOverlay(modifier = Modifier.align(Alignment.BottomEnd))
+        }
+        Text(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = GameDealsCustomTheme.spacing.small),
+            textAlign = TextAlign.Start,
+            text = favourite.title,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun FavouriteOverlay(modifier: Modifier = Modifier) {
+    Icon(
+        imageVector = Icons.Filled.Favorite,
+        contentDescription = stringResource(Res.string.home_screen_favourite_indicator),
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .padding(GameDealsCustomTheme.spacing.extraSmall)
+            .size(16.dp),
+    )
+}
+
+
 internal const val HomeScreenReleaseRowTag = "HomeScreenReleaseRowTag"
 
 internal const val HomeScreenGiveawayRowTag = "HomeScreenGiveawayRowTag"
 internal const val HomeScreenViewAllGiveawaysButtonTag = "HomeScreenViewAllGiveawaysButtonTag"
+
+internal const val HomeScreenFavouriteRowTag = "HomeScreenFavouriteRowTag"
+internal const val HomeScreenViewAllFavouritesButtonTag = "HomeScreenViewAllFavouritesButtonTag"
+internal const val HomeScreenFavouritesFabTag = "HomeScreenFavouritesFabTag"
 
 internal const val HomeScreenStoreBannerTag = "HomeScreenStoreBannerTag"
 internal const val HomeScreenDealRowTag = "HomeScreenDealRowTag"

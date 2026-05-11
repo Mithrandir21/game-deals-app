@@ -8,4 +8,6 @@
     <string name="store_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="store_screen_data_loading_error_retry">Back</string>
 
+    <string name="store_screen_favourite_indicator">Favourited</string>
+
 </resources>

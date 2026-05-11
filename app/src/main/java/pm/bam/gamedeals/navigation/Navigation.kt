@@ -56,4 +56,10 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    fun navigateToFavourites() {
+        navController.navigate(Destination.Favourites) {
+            restoreState = true
+        }
+    }
+
 }

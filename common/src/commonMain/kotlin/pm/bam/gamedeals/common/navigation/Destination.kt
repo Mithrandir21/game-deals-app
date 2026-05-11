@@ -30,4 +30,7 @@ sealed interface Destination {
 
     @Serializable
     data object Giveaways : Destination
+
+    @Serializable
+    data object Favourites : Destination
 }

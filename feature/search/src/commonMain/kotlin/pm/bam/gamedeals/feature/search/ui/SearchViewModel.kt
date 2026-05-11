@@ -7,6 +7,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -21,6 +24,7 @@ import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.logging.Logger
 
@@ -28,7 +32,8 @@ import pm.bam.gamedeals.logging.Logger
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalSerializationApi::class)
 internal class SearchViewModel(
     private val logger: Logger,
-    private val gamesRepository: GamesRepository
+    private val gamesRepository: GamesRepository,
+    private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
 
     // We store and react to the Query changes so that only a single search flow can exists.
@@ -38,6 +43,11 @@ internal class SearchViewModel(
 
     private val _resultState = MutableStateFlow<SearchData>(SearchData.Empty)
     val resultState: StateFlow<SearchData> = _resultState.asStateFlow()
+
+    val favouriteIds: StateFlow<Set<Int>> = favouritesRepository.observeFavouriteIds()
+        .onStart { emit(emptySet()) }
+        .catch { emit(emptySet()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     init {
         viewModelScope.launch {

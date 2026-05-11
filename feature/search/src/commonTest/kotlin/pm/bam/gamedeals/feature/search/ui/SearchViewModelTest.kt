@@ -6,14 +6,17 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.sequentially
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.feature.search.ui.SearchViewModel.SearchData
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -30,13 +33,16 @@ import kotlin.test.assertEquals
 class SearchViewModelTest : MainDispatcherTest() {
 
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
+    private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
+        every { observeFavouriteIds() } returns flowOf(emptySet())
+    }
 
     private lateinit var viewModel: SearchViewModel
 
     @BeforeTest
     fun setup() {
         installMainDispatcher()
-        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository)
+        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
