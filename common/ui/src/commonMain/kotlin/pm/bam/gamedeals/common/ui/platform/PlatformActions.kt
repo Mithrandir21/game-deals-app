@@ -13,9 +13,15 @@ interface PlatformActions {
     fun share(text: String)
 }
 
-val LocalPlatformActions = staticCompositionLocalOf<PlatformActions> {
-    error("PlatformActions not provided. Wrap your content in CompositionLocalProvider(LocalPlatformActions provides …).")
+/**
+ * No-op fallback so `@Preview` composables that read [LocalPlatformActions] don't crash
+ * before a real binding is installed at the host (MainActivity / iOS entry).
+ */
+object NoOpPlatformActions : PlatformActions {
+    override fun share(text: String) = Unit
 }
+
+val LocalPlatformActions = staticCompositionLocalOf<PlatformActions> { NoOpPlatformActions }
 
 @Composable
 expect fun rememberPlatformActions(): PlatformActions
