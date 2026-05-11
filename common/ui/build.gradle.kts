@@ -13,10 +13,15 @@ kotlin {
             implementation(project(":domain"))
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.koin.core)
 
             implementation(libs.coil3)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.ktor)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
 
         androidMain.dependencies {

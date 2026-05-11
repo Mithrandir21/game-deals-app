@@ -3,6 +3,7 @@ package pm.bam.gamedeals.iosApp
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -19,7 +20,10 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.darkScheme
 import pm.bam.gamedeals.common.ui.theme.lightScheme
 import pm.bam.gamedeals.domain.di.domainIosModule
@@ -68,6 +72,7 @@ private fun bootstrapKoin() {
             loggingIosModule,
             commonModule,
             commonIosModule,
+            commonUiModule,
             domainModule,
             domainIosModule,
             remoteModule,
@@ -94,7 +99,9 @@ private fun App() {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme,
     ) {
-        AppNavHost()
+        CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
+            AppNavHost()
+        }
     }
 }
 

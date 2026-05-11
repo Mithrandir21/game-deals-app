@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
@@ -52,6 +53,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
     private val releasesRepository: ReleasesRepository = mock(MockMode.autoUnit)
     private val giveawaysRepository: GiveawaysRepository = mock(MockMode.autoUnit)
+    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
 
     private val logger: TestingLoggingListener = TestingLoggingListener()
 
@@ -64,7 +66,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
 
         val emissions = observeStates()
         assertEquals(1, emissions.size)
@@ -85,7 +87,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
         everySuspend { dealsRepository.getStoreDeals(topStores.first(), LIMIT_DEALS) } returns listOf(deal)
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
 
         val data = mutableListOf<HomeScreenListData>().apply {
@@ -106,7 +108,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     fun load_store_deals_from_source_failure() = runTest {
         every { storesRepository.observeStores() } throws Exception()
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
 
         assertEquals(1, emissions.size)
@@ -127,7 +129,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
         everySuspend { gamesRepository.getReleaseGameId(releaseTitle) } returns gameId
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
@@ -154,7 +156,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
         everySuspend { gamesRepository.getReleaseGameId(any()) } throws Exception()
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
@@ -176,7 +178,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
         everySuspend { gamesRepository.getReleaseGameId(releaseTitle) } returns null
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
@@ -200,7 +202,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
         everySuspend { dealsRepository.getStoreDeals(topStores.first(), LIMIT_DEALS) } returns listOf(deal)
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         runCurrent()
 
         viewModel.loadTopStoresDeals()
@@ -248,7 +250,7 @@ class HomeViewModelTest : MainDispatcherTest() {
             }
         }
 
-        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, logger)
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, dealShareTextBuilder, logger)
         runCurrent()
 
         storesFlow.emit(listOf(storeOne, storeTwo))

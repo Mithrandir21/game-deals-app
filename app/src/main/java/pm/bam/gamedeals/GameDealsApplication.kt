@@ -18,6 +18,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
@@ -49,6 +50,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 loggingAndroidModule,
                 commonModule,
                 commonAndroidModule,
+                commonUiModule,
                 domainModule,
                 domainAndroidModule,
                 remoteModule,

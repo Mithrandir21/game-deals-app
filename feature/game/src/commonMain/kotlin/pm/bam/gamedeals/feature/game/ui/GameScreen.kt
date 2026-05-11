@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +52,8 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -68,6 +71,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_thumb
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.store
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -81,6 +85,13 @@ internal fun GameScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
+    val platformActions = LocalPlatformActions.current
+
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is GameViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
+        }
+    }
 
     // BoxWithConstraints is multiplatform — replaces the Android-only
     // currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches
@@ -91,6 +102,7 @@ internal fun GameScreen(
             data = data.value,
             onBack = onBack,
             goToWeb = goToWeb,
+            onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onRetry = onRetry
         )
     }
@@ -101,6 +113,7 @@ private fun CompactGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -115,7 +128,13 @@ private fun CompactGameDealsDetails(
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
             data.dealDetails.forEach {
-                StoreGameDealRow(it.first, data.gameDetails.info, it.second, goToWeb = goToWeb)
+                StoreGameDealRow(
+                    store = it.first,
+                    gameInfo = data.gameDetails.info,
+                    deal = it.second,
+                    goToWeb = goToWeb,
+                    onShareDeal = onShareDeal,
+                )
             }
         }
     }
@@ -126,6 +145,7 @@ private fun WideGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Row(modifier = modifier.testTag(GameDealsTag)) {
         WideGameDetail(data.gameDetails)
@@ -138,7 +158,13 @@ private fun WideGameDealsDetails(
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
             data.dealDetails.forEach {
-                StoreGameDealRow(it.first, data.gameDetails.info, it.second, goToWeb = goToWeb)
+                StoreGameDealRow(
+                    store = it.first,
+                    gameInfo = data.gameDetails.info,
+                    deal = it.second,
+                    goToWeb = goToWeb,
+                    onShareDeal = onShareDeal,
+                )
             }
         }
     }
@@ -250,6 +276,7 @@ private fun StoreGameDealRow(
     gameInfo: GameDetails.GameInfo,
     deal: GameDetails.GameDeal,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Card(onClick = { goToWeb(cheapsharkDealRedirectUrl(deal.dealID), gameInfo.title) }) {
         Row(
@@ -285,6 +312,15 @@ private fun StoreGameDealRow(
                     .padding(GameDealsCustomTheme.spacing.medium),
                 text = deal.priceDenominated
             )
+            IconButton(
+                modifier = Modifier.testTag(GameDealItemShareBtnTag),
+                onClick = { onShareDeal(gameInfo, store, deal) }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(CommonRes.string.deal_share_content_description)
+                )
+            }
         }
     }
 }
@@ -296,6 +332,7 @@ private fun ScreenScaffold(
     data: GameScreenData,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -358,9 +395,9 @@ private fun ScreenScaffold(
 
                     is GameScreenData.Data -> {
                         if (isCompact) {
-                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
+                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
                         } else {
-                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb)
+                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
                         }
                     }
 
@@ -380,4 +417,5 @@ internal const val GameDetailsTitleTag = "GameDetailsTitleTag"
 internal const val GameDealsTag = "GameDealsTag"
 internal const val GameDealItemTag = "GameDealItemTag"
 internal const val GameDealItemStoreTitleLabelTag = "GameDealItemStoreTitleLabelTag"
+internal const val GameDealItemShareBtnTag = "GameDealItemShareBtn"
 

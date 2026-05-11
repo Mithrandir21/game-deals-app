@@ -31,6 +31,7 @@ import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
@@ -42,6 +43,7 @@ import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.info
 
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
@@ -54,6 +56,7 @@ internal class HomeViewModel(
     private val gamesRepository: GamesRepository,
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
     private val logger: Logger
 ) : ViewModel() {
 
@@ -109,6 +112,17 @@ internal class HomeViewModel(
         dealDetailsController.dismiss(viewModelScope)
     }
 
+    fun onShareDealClicked(data: DealBottomSheetData) {
+        val text = dealShareTextBuilder.build(
+            gameTitle = data.gameName,
+            salePriceDenominated = data.gameSalesPriceDenominated,
+            storeName = data.store.storeName,
+            dealId = data.dealId,
+        )
+        info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
+        _events.tryEmit(HomeUiEvent.ShareDeal(text))
+    }
+
     private fun loadTopStoreDataFlow() =
         flow { emitAll(storesRepository.observeStores()) }
             .map { listOfStores -> listOfStores.filter { topStores.contains(it.storeID) } }
@@ -158,6 +172,7 @@ internal class HomeViewModel(
 
     internal sealed interface HomeUiEvent {
         data class NavigateToGame(val gameId: Int) : HomeUiEvent
+        data class ShareDeal(val text: String) : HomeUiEvent
     }
 
     @Immutable

@@ -13,6 +13,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -28,6 +29,7 @@ class StoreViewModelTest : MainDispatcherTest() {
 
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
+    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -37,6 +39,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         logger = TestingLoggingListener(),
         dealsRepository = dealsRepository,
         storesRepository = storesRepository,
+        dealShareTextBuilder = dealShareTextBuilder,
     )
 
     @Test

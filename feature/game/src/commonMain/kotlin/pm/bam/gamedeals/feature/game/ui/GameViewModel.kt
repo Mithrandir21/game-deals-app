@@ -10,7 +10,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -21,18 +23,21 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.delayOnStart
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.toFlow
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.info
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class GameViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
-    private val storesRepository: StoresRepository
+    private val storesRepository: StoresRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
@@ -46,6 +51,13 @@ internal class GameViewModel(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+
+    private val _events = MutableSharedFlow<GameUiEvent>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val events: SharedFlow<GameUiEvent> = _events.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -70,6 +82,21 @@ internal class GameViewModel(
         reloadTrigger.tryEmit(Unit)
     }
 
+    fun onShareDealClicked(
+        gameInfo: GameDetails.GameInfo,
+        store: Store,
+        deal: GameDetails.GameDeal,
+    ) {
+        val text = dealShareTextBuilder.build(
+            gameTitle = gameInfo.title,
+            salePriceDenominated = deal.priceDenominated,
+            storeName = store.storeName,
+            dealId = deal.dealID,
+        )
+        info(logger, tag = "deal_shared") { "dealId=${deal.dealID} store=${store.storeName}" }
+        _events.tryEmit(GameUiEvent.ShareDeal(text))
+    }
+
     private fun loadGameDetailsFlow(gameId: Int) =
         flowOf(gameId)
             .flatMapLatest { gamesRepository.getGameDetails(it).toFlow() }
@@ -83,6 +110,10 @@ internal class GameViewModel(
             .logFlow(logger)
             .catch { emit(GameScreenData.Error) }
 
+
+    internal sealed interface GameUiEvent {
+        data class ShareDeal(val text: String) : GameUiEvent
+    }
 
     sealed class GameScreenData {
         data object Loading : GameScreenData()
