@@ -16,15 +16,16 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.datetime.LocalDateTime
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.FavouriteGame
+import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.testing.fixtures.giveaway
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
@@ -198,7 +199,7 @@ class HomeScreenTest {
 
     @Test
     fun giveawayRow_shows_worth_type_and_platforms() {
-        val rich = giveaway(
+        val rich = aGiveaway(
             id = 99,
             title = "Rich Giveaway",
             worthDenominated = "$59.99",
@@ -228,7 +229,7 @@ class HomeScreenTest {
 
     @Test
     fun giveawayRow_with_null_worth_shows_FREE_only() {
-        val freebie = giveaway(
+        val freebie = aGiveaway(
             id = 100,
             title = "Free Beta",
             worthDenominated = null,
@@ -254,4 +255,30 @@ class HomeScreenTest {
         composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(100)).assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE - Early Access · PC").assertIsDisplayed()
     }
+
+    private fun aGiveaway(
+        id: Int,
+        title: String,
+        worthDenominated: String?,
+        type: GiveawayType,
+        platforms: List<GiveawayPlatform>,
+    ) = Giveaway(
+        id = id,
+        title = title,
+        worthDenominated = worthDenominated,
+        worth = null,
+        thumbnail = "thumb.png",
+        image = "image.png",
+        description = "",
+        instructions = "",
+        openGiveawayUrl = "https://example.com/open",
+        publishedDate = LocalDateTime(1970, 1, 1, 0, 0),
+        type = type,
+        platforms = platforms,
+        endDate = null,
+        users = 0,
+        status = "Active",
+        gamerpowerUrl = "https://example.com",
+        openGiveaway = "https://example.com/giveaway",
+    )
 }
