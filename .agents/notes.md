@@ -1,0 +1,6 @@
+<!-- Project-specific lessons. Each bullet: `- [N] note` where N is the increment count (count = N + 1 observations). -->
+
+- [0] Compose `Row.verticalAlignment = CenterVertically` centers within the inner content area, not the padded outer bounds — for inter-row spacing on a centered row, use `padding(vertical = X)` not `padding(bottom = X)`, or the row's content looks pushed toward the top.
+- [0] Compose `onNodeWithText` is exact-match by default — when a single `Text` uses `buildAnnotatedString` to concatenate spans, the whole concatenated string is one node; assertions must use the full string or pass `substring = true`.
+- [0] When a Composable gets a new required parameter (e.g. `onViewFavourites`), every test invocation of that Composable must add the param OR a default value must be supplied — Compose instrumented tests fail at compile, not at test discovery, so a stale test file silently rots a whole module's Android tests.
+- [0] When a ViewModel adds a new collected StateFlow property, every mockk-based Compose test's `@Before setup()` must add a matching `every { viewModel.<prop> } returns MutableStateFlow(<default>)` stub — otherwise the screen crashes at composition because `collectAsStateWithLifecycle()` runs on a null property.
