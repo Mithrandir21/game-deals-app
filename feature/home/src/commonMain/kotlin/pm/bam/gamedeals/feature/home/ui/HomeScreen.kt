@@ -43,10 +43,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -74,6 +77,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaways_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_new_releases_label
@@ -470,7 +474,7 @@ private fun GiveawayRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onGiveawayTitle(giveaway.gamerpowerUrl) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small)
+            .padding(vertical = GameDealsCustomTheme.spacing.medium)
             .testTag(HomeScreenGiveawayRowTag.plus(giveaway.id)),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -485,16 +489,37 @@ private fun GiveawayRow(
                 .width(100.dp)
                 .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
         )
-        Text(
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
                 .padding(horizontal = GameDealsCustomTheme.spacing.small),
-            textAlign = TextAlign.Start,
-            text = giveaway.title,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+        ) {
+            Text(
+                textAlign = TextAlign.Start,
+                text = giveaway.title,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildAnnotatedString {
+                    append(stringResource(Res.string.home_screen_giveaway_free_label))
+                    giveaway.worthDenominated?.let {
+                        append(" ")
+                        withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(it) }
+                    }
+                    append(" - ")
+                    append(giveaway.type.displayLabel())
+                    if (giveaway.platforms.isNotEmpty()) {
+                        append(" · ")
+                        append(giveaway.platforms.joinToString(", ") { it.platformValue })
+                    }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

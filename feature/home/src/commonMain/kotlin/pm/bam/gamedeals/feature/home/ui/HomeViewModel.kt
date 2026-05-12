@@ -51,6 +51,7 @@ import pm.bam.gamedeals.logging.info
 
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
+internal const val EXPIRED_STATUS = "Expired"
 internal val topStores = listOf(1, 11, 3, 23, 15, 27, 7, 21, 2)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -192,6 +193,7 @@ internal class HomeViewModel(
 
     private fun loadGiveaways(): Flow<List<Giveaway>> =
         flow { emitAll(giveawaysRepository.observeGiveaways()) }
+            .map { list -> list.filter { !it.status.equals(EXPIRED_STATUS, ignoreCase = true) } }
             .onStart { giveawaysRepository.refreshGiveaways() }
             .logFlow(logger)
             .catch { emit(emptyList()) }

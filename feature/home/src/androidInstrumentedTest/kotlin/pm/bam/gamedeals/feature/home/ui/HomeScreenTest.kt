@@ -16,10 +16,15 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.datetime.LocalDateTime
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.FavouriteGame
+import pm.bam.gamedeals.domain.models.Giveaway
+import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
@@ -76,6 +81,8 @@ class HomeScreenTest {
     @Before
     fun setup() {
         every { viewModel.dealDetails } returns MutableStateFlow(null)
+        every { viewModel.favouriteIds } returns MutableStateFlow(emptySet())
+        every { viewModel.favourites } returns MutableStateFlow(persistentListOf<FavouriteGame>())
     }
 
     @Test
@@ -90,6 +97,7 @@ class HomeScreenTest {
                 goToGame = { _ -> },
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
+                onViewFavourites = {},
                 goToWeb = { _, _ -> },
                 viewModel = viewModel
             )
@@ -126,6 +134,7 @@ class HomeScreenTest {
                 goToGame = { _ -> },
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
+                onViewFavourites = {},
                 goToWeb = { _, _ -> },
                 viewModel = viewModel
             )
@@ -162,6 +171,7 @@ class HomeScreenTest {
                 goToGame = { _ -> },
                 onViewStoreDeals = {},
                 onViewGiveaways = {},
+                onViewFavourites = {},
                 goToWeb = { _, _ -> },
                 viewModel = viewModel
             )
@@ -187,4 +197,88 @@ class HomeScreenTest {
         storeDataLoaded()
     }
 
+    @Test
+    fun giveawayRow_shows_worth_type_and_platforms() {
+        val rich = aGiveaway(
+            id = 99,
+            title = "Rich Giveaway",
+            worthDenominated = "$59.99",
+            type = GiveawayType.GAME,
+            platforms = listOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(rich))
+        )
+
+        composeTestRule.setContent {
+            HomeScreen(
+                onSearch = {},
+                goToGame = { _ -> },
+                onViewStoreDeals = {},
+                onViewGiveaways = {},
+                onViewFavourites = {},
+                goToWeb = { _, _ -> },
+                viewModel = viewModel
+            )
+        }
+
+        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(99)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Rich Giveaway").assertIsDisplayed()
+        composeTestRule.onNodeWithText("FREE $59.99 - Game · PC, Steam").assertIsDisplayed()
+    }
+
+    @Test
+    fun giveawayRow_with_null_worth_shows_FREE_only() {
+        val freebie = aGiveaway(
+            id = 100,
+            title = "Free Beta",
+            worthDenominated = null,
+            type = GiveawayType.BETA,
+            platforms = listOf(GiveawayPlatform.PC),
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(freebie))
+        )
+
+        composeTestRule.setContent {
+            HomeScreen(
+                onSearch = {},
+                goToGame = { _ -> },
+                onViewStoreDeals = {},
+                onViewGiveaways = {},
+                onViewFavourites = {},
+                goToWeb = { _, _ -> },
+                viewModel = viewModel
+            )
+        }
+
+        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(100)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("FREE - Early Access · PC").assertIsDisplayed()
+    }
+
+    private fun aGiveaway(
+        id: Int,
+        title: String,
+        worthDenominated: String?,
+        type: GiveawayType,
+        platforms: List<GiveawayPlatform>,
+    ) = Giveaway(
+        id = id,
+        title = title,
+        worthDenominated = worthDenominated,
+        worth = null,
+        thumbnail = "thumb.png",
+        image = "image.png",
+        description = "",
+        instructions = "",
+        openGiveawayUrl = "https://example.com/open",
+        publishedDate = LocalDateTime(1970, 1, 1, 0, 0),
+        type = type,
+        platforms = platforms,
+        endDate = null,
+        users = 0,
+        status = "Active",
+        gamerpowerUrl = "https://example.com",
+        openGiveaway = "https://example.com/giveaway",
+    )
 }

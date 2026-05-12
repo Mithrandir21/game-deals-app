@@ -12,6 +12,11 @@
 
     <string name="home_screen_giveaways_label">Giveaways</string>
     <string name="home_screen_all_giveaways_label">View All Giveaways</string>
+    <string name="home_screen_giveaway_free_label">FREE</string>
+    <string name="home_screen_giveaway_type_game">Game</string>
+    <string name="home_screen_giveaway_type_dlc">DLC</string>
+    <string name="home_screen_giveaway_type_early_access">Early Access</string>
+    <string name="home_screen_giveaway_type_other">Other</string>
 
     <string name="home_screen_favourites_label">Your favourites</string>
     <string name="home_screen_all_favourites_label">See all favourites</string>

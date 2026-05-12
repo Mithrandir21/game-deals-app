@@ -42,6 +42,7 @@ import pm.bam.gamedeals.testing.fixtures.deal
 import pm.bam.gamedeals.testing.fixtures.dealDetails
 import pm.bam.gamedeals.testing.fixtures.favouriteGame
 import pm.bam.gamedeals.testing.fixtures.gameInfo
+import pm.bam.gamedeals.testing.fixtures.giveaway
 import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
@@ -446,6 +447,61 @@ class HomeViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertNull(emissions.last())
+    }
+
+    @Test
+    fun loadGiveaways_filters_out_Expired_status() = runTest {
+        val active = giveaway(id = 1, title = "Active one", status = "Active")
+        val expired = giveaway(id = 2, title = "Expired one", status = "Expired")
+
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(listOf())
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(active, expired))
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        val giveaways = emissions.last().giveaways
+        assertEquals(1, giveaways.size)
+        assertEquals(active.id, giveaways.first().id)
+    }
+
+    @Test
+    fun loadGiveaways_caps_to_LIMIT_GIVEAWAYS_active_after_filtering_Expired() = runTest {
+        val active = (1..7).map { giveaway(id = it, title = "Active $it", status = "Active") }
+        val expired = (100..102).map { giveaway(id = it, title = "Expired $it", status = "Expired") }
+
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(listOf())
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(active + expired)
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        val giveaways = emissions.last().giveaways
+        assertEquals(LIMIT_GIVEAWAYS, giveaways.size)
+        assertEquals(0, giveaways.count { it.status.equals("Expired", ignoreCase = true) })
+    }
+
+    @Test
+    fun loadGiveaways_Expired_filter_is_case_insensitive() = runTest {
+        val mixed = listOf(
+            giveaway(id = 1, status = "Expired"),
+            giveaway(id = 2, status = "EXPIRED"),
+            giveaway(id = 3, status = "expired"),
+            giveaway(id = 4, status = "Active"),
+        )
+
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(listOf())
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(mixed)
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        val giveaways = emissions.last().giveaways
+        assertEquals(1, giveaways.size)
+        assertEquals(4, giveaways.first().id)
     }
 
     private fun TestScope.observeStates() =
