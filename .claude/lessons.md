@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-13-02 · Preview the modal-sheet body inside `Surface`, not via `ModalBottomSheet`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, preview, material3, modal-bottom-sheet
+**Applies to:** Any feature with a filter/detail UI built on `ModalBottomSheet` (giveaways `Filters`, search `Filters`, `DealBottomSheet` in `:common:ui`)
+
+`ModalBottomSheet` doesn't drive its sheet-state machine in static previews, so a `@Preview` that wraps a sheet renders blank or just the scrim. Factor the sheet's body into a separately-named composable (e.g. `Filters`, `DealContent`) and preview that directly inside a `Surface(color = MaterialTheme.colorScheme.surface) { ... }`. The wrapping `ModalBottomSheet` composable still exists for production code; previews just call the body composable straight.
+
+**Source:** Phase preview-enablement — giveaways, search, deal
+
+### L-2026-05-13-01 · In commonMain previews, use the JetBrains-named `@Preview` import — not the AndroidX-named one the deprecation warning recommends
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, kmp, preview, jetbrains-compose, deprecation
+**Applies to:** Any `@Preview`-annotated composable placed in `commonMain` (i.e. the standard pattern in this project)
+
+Use `import org.jetbrains.compose.ui.tooling.preview.Preview` with `@file:Suppress("DEPRECATION")` at the top of the file. The CMP-1.10 deprecation message recommending `androidx.compose.ui.tooling.preview.Preview` is correct only when the file is in `androidMain` — the AndroidX-qualified import does not resolve on the iOS commonMain compile (the iOS variant of `org.jetbrains.compose.ui:ui-tooling-preview` doesn't expose that package). Following the deprecation hint blindly breaks the iOS build.
+
+**Source:** Phase preview-enablement, all 6 feature screens + `:common:ui` `DealBottomSheet`
+
 ### L-2026-05-11-05 · New collected VM `StateFlow` requires updating MockK stubs in instrumented `*ScreenTest.kt`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mockk, instrumentation, viewmodel, compose
 **Applies to:** Changes that add a `StateFlow`/`SharedFlow` property to a ViewModel that an existing Composable will `collectAsStateWithLifecycle()`; matters for `androidInstrumentedTest` `*ScreenTest.kt` files that mock the VM via strict MockK
