@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.favourites.ui
 
 import androidx.compose.foundation.clickable
@@ -47,10 +49,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewFavourite
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.feature.favourites.generated.resources.Res
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_data_loading_error_msg
@@ -73,7 +79,7 @@ internal fun FavouritesScreen(
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
 
-    ScreenScaffold(
+    FavouritesScreenContent(
         data = uiState.value,
         onBack = onBack,
         goToGame = goToGame,
@@ -83,7 +89,7 @@ internal fun FavouritesScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScreenScaffold(
+private fun FavouritesScreenContent(
     data: FavouritesViewModel.FavouritesScreenData,
     onBack: () -> Unit,
     goToGame: (Int) -> Unit,
@@ -233,3 +239,69 @@ internal const val TopAppNavBarTag = "FavouritesTopAppNavBarTag"
 internal const val LoadingDataTag = "FavouritesLoadingDataTag"
 internal const val EmptyFavouritesTag = "EmptyFavouritesTag"
 internal const val FavouriteListItemTag = "FavouriteListItemTag"
+
+
+private val previewFavouritesList = persistentListOf(
+    PreviewFavourite,
+    PreviewFavourite.copy(gameID = 456, title = "Hollow Knight"),
+    PreviewFavourite.copy(gameID = 789, title = "Stardew Valley"),
+)
+
+@Preview
+@Composable
+private fun FavouritesScreen_Success_Preview() {
+    GameDealsTheme {
+        FavouritesScreenContent(
+            data = FavouritesViewModel.FavouritesScreenData(
+                status = FavouritesViewModel.FavouritesScreenStatus.SUCCESS,
+                favourites = previewFavouritesList,
+            ),
+            onBack = {},
+            goToGame = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun FavouritesScreen_Success_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        FavouritesScreenContent(
+            data = FavouritesViewModel.FavouritesScreenData(
+                status = FavouritesViewModel.FavouritesScreenStatus.SUCCESS,
+                favourites = previewFavouritesList,
+            ),
+            onBack = {},
+            goToGame = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun FavouritesScreen_Empty_Preview() {
+    GameDealsTheme {
+        FavouritesScreenContent(
+            data = FavouritesViewModel.FavouritesScreenData(
+                status = FavouritesViewModel.FavouritesScreenStatus.SUCCESS,
+                favourites = persistentListOf(),
+            ),
+            onBack = {},
+            goToGame = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun FavouritesScreen_Loading_Preview() {
+    GameDealsTheme {
+        FavouritesScreenContent(
+            data = FavouritesViewModel.FavouritesScreenData(
+                status = FavouritesViewModel.FavouritesScreenStatus.LOADING,
+            ),
+            onBack = {},
+            goToGame = {},
+        )
+    }
+}
