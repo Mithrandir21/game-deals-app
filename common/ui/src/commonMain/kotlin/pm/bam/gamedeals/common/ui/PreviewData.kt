@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -30,3 +31,5 @@ val PreviewGameDeal = GameDetails.GameDeal(1, "123", 9.99, "$9.99", 29.99, "$29.
 val PreviewGameDetails = GameDetails(PreviewGameDetailsInfo, PreviewGameCheapestPriceEver, persistentListOf(PreviewGameDeal))
 
 val PreviewGame = Game(1, 123, 7.49, "$7.49", "123", "Game Tile", "Game Internal Title", "Thumb")
+
+val PreviewFavourite = FavouriteGame(gameID = 123, title = "Game Name", thumb = "Thumb", dateAddedMs = 1715212800000L)
