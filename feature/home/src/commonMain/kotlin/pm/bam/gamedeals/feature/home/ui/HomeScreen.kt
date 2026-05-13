@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.home.ui
 
 import androidx.compose.foundation.background
@@ -53,14 +55,24 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.common.ui.PreviewFavourite
+import pm.bam.gamedeals.common.ui.PreviewGiveaway
+import pm.bam.gamedeals.common.ui.PreviewRelease
+import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -89,7 +101,6 @@ import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus.ERROR
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus.LOADING
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus.SUCCESS
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun HomeScreen(
@@ -109,7 +120,7 @@ internal fun HomeScreen(
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
 
-    Screen(
+    HomeScreenContent(
         onSearch = onSearch,
         onReleaseTitle = onReleaseTitle,
         data = data.value,
@@ -203,7 +214,7 @@ private fun StoreDealRow(
 }
 
 @Composable
-private fun Screen(
+private fun HomeScreenContent(
     onSearch: () -> Unit,
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
@@ -594,3 +605,155 @@ internal const val HomeScreenStoreBannerTag = "HomeScreenStoreBannerTag"
 internal const val HomeScreenDealRowTag = "HomeScreenDealRowTag"
 internal const val HomeScreenViewAllButtonTag = "HomeScreenViewAllButtonTag"
 internal const val HomeScreenLoadingTag = "HomeScreenLoadingTag"
+
+
+private fun previewSuccessData(): HomeViewModel.HomeScreenData {
+    val storeA = PreviewStore
+    val storeB = PreviewStore.copy(storeID = 11, storeName = "Humble Store")
+
+    val items = listOf(
+        StoreData(storeA),
+        DealData(PreviewDeal),
+        DealData(
+            PreviewDeal.copy(
+                dealID = "preview-deal-2",
+                title = "Hollow Knight",
+                salePriceDenominated = "$7.49",
+                normalPriceDenominated = "$14.99",
+                gameID = 22222
+            )
+        ),
+        ViewAllData(storeA),
+        StoreData(storeB),
+        DealData(
+            PreviewDeal.copy(
+                dealID = "preview-deal-3",
+                storeID = 11,
+                title = "Stardew Valley",
+                salePriceDenominated = "$8.99",
+                normalPriceDenominated = "$14.99",
+                gameID = 33333
+            )
+        ),
+        ViewAllData(storeB),
+    )
+
+    return HomeViewModel.HomeScreenData(
+        state = SUCCESS,
+        releases = listOf(
+            PreviewRelease,
+            PreviewRelease.copy(title = "Silksong"),
+            PreviewRelease.copy(title = "Elden Ring: Nightreign"),
+        ).toImmutableList(),
+        giveaways = listOf(
+            PreviewGiveaway,
+            PreviewGiveaway.copy(id = 2, title = "Tomb Raider Trilogy", worthDenominated = "$49.99"),
+        ).toImmutableList(),
+        items = items.toImmutableList(),
+    )
+}
+
+private val previewFavourites = persistentListOf(
+    PreviewFavourite,
+    PreviewFavourite.copy(gameID = 22222, title = "Hollow Knight"),
+)
+
+@Preview
+@Composable
+private fun HomeScreenContent_Success_Preview() {
+    GameDealsTheme {
+        HomeScreenContent(
+            onSearch = {},
+            onReleaseTitle = {},
+            data = previewSuccessData(),
+            favouriteIds = setOf(12345),
+            favourites = previewFavourites,
+            dealDetails = null,
+            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewStoreDeals = {},
+            onViewGiveaways = {},
+            onViewFavourites = {},
+            goToFavouriteGame = {},
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun HomeScreenContent_Success_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        HomeScreenContent(
+            onSearch = {},
+            onReleaseTitle = {},
+            data = previewSuccessData(),
+            favouriteIds = setOf(12345),
+            favourites = previewFavourites,
+            dealDetails = null,
+            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewStoreDeals = {},
+            onViewGiveaways = {},
+            onViewFavourites = {},
+            goToFavouriteGame = {},
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun HomeScreenContent_Loading_Preview() {
+    GameDealsTheme {
+        HomeScreenContent(
+            onSearch = {},
+            onReleaseTitle = {},
+            data = HomeViewModel.HomeScreenData(state = LOADING),
+            favouriteIds = emptySet(),
+            favourites = persistentListOf(),
+            dealDetails = null,
+            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewStoreDeals = {},
+            onViewGiveaways = {},
+            onViewFavourites = {},
+            goToFavouriteGame = {},
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun HomeScreenContent_Error_Preview() {
+    GameDealsTheme {
+        HomeScreenContent(
+            onSearch = {},
+            onReleaseTitle = {},
+            data = HomeViewModel.HomeScreenData(state = ERROR),
+            favouriteIds = emptySet(),
+            favourites = persistentListOf(),
+            dealDetails = null,
+            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewStoreDeals = {},
+            onViewGiveaways = {},
+            onViewFavourites = {},
+            goToFavouriteGame = {},
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+            onRetry = {},
+        )
+    }
+}

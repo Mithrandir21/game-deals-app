@@ -54,7 +54,7 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("androidx-lifecycle-viewmodel-compose"))
                     implementation(lib("androidx-ui"))
                     implementation(lib("androidx-ui-graphics"))
-                    implementation(lib("androidx-ui-tooling"))
+                    implementation(lib("androidx-ui-tooling-preview"))
                     implementation(lib("androidx-compose-material3"))
                     implementation(lib("androidx-compose-material3-window"))
                     implementation(lib("androidx-compose-material3-adaptive"))
@@ -85,6 +85,7 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
         }
 
         dependencies.add("debugImplementation", lib("androidx-compose-test"))
+        dependencies.add("debugImplementation", lib("androidx-ui-tooling"))
 
         extensions.configure<LibraryExtension> {
             @Suppress("UnstableApiUsage")

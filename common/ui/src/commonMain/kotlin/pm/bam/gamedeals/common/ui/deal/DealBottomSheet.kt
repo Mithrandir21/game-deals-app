@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.animation.AnimatedContent
@@ -38,9 +40,16 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Surface
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.PreviewDealCheaperStore
+import pm.bam.gamedeals.common.ui.PreviewDealCheapestPrice
+import pm.bam.gamedeals.common.ui.PreviewDealGameInfo
+import pm.bam.gamedeals.common.ui.PreviewStore
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
@@ -362,3 +371,123 @@ internal const val DealCheaperStoreRowTag = "DealCheaperStoreRow"
 internal const val DealCheapestTag = "DealCheapest"
 internal const val StoreDataGameDataTag = "StoreDataGameData"
 internal const val StoreDataGameNameTag = "StoreDataGameName"
+
+
+private val previewDealDetailsData = DealBottomSheetData.DealDetailsData(
+    store = PreviewStore,
+    gameId = 123,
+    gameName = PreviewDealGameInfo.name,
+    dealId = "preview-deal-1",
+    gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
+    gameInfo = PreviewDealGameInfo,
+    cheaperStores = emptyList(),
+    cheapestPrice = PreviewDealCheapestPrice,
+)
+
+@Preview
+@Composable
+private fun DealContent_Success_Preview() {
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            DealContent(
+                data = previewDealDetailsData,
+                isFavourite = false,
+                onShare = {},
+                onToggleFavourite = {},
+                goToWeb = { _, _ -> },
+                retry = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealContent_Success_Favourited_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            DealContent(
+                data = previewDealDetailsData,
+                isFavourite = true,
+                onShare = {},
+                onToggleFavourite = {},
+                goToWeb = { _, _ -> },
+                retry = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealContent_WithCheaperStores_Preview() {
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            DealContent(
+                data = previewDealDetailsData.copy(
+                    cheaperStores = listOf(
+                        PreviewStore.copy(storeID = 11, storeName = "Humble Store") to PreviewDealCheaperStore,
+                        PreviewStore.copy(storeID = 7, storeName = "GOG") to PreviewDealCheaperStore.copy(
+                            dealID = "cheaper-2",
+                            storeID = 7,
+                            salePriceValue = 5.99,
+                            salePriceDenominated = "$5.99",
+                        ),
+                    ),
+                    cheapestPrice = null,
+                ),
+                isFavourite = false,
+                onShare = {},
+                onToggleFavourite = {},
+                goToWeb = { _, _ -> },
+                retry = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealContent_Loading_Preview() {
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            DealContent(
+                data = DealBottomSheetData.DealDetailsLoading(
+                    store = PreviewStore,
+                    gameId = 123,
+                    gameName = PreviewDealGameInfo.name,
+                    dealId = "preview-deal-1",
+                    gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
+                ),
+                isFavourite = false,
+                onShare = {},
+                onToggleFavourite = {},
+                goToWeb = { _, _ -> },
+                retry = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealContent_Error_Preview() {
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            DealContent(
+                data = DealBottomSheetData.DealDetailsError(
+                    store = PreviewStore,
+                    gameId = 123,
+                    gameName = PreviewDealGameInfo.name,
+                    dealId = "preview-deal-1",
+                    gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
+                ),
+                isFavourite = false,
+                onShare = {},
+                onToggleFavourite = {},
+                goToWeb = { _, _ -> },
+                retry = {},
+            )
+        }
+    }
+}

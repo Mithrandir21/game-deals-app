@@ -9,6 +9,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Cross-platform theme entry point. The Android actual additionally applies
+ * Material You dynamic colours (when [dynamicColor] is true on API 31+) and
+ * styles the host Activity's status bar; the iOS actual is a thin wrapper
+ * around MaterialTheme. The [dynamicColor] parameter is honoured on Android
+ * and ignored on iOS.
+ */
+@Composable
+expect fun GameDealsTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit,
+)
+
 val lightScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,

@@ -1,7 +1,5 @@
 package pm.bam.gamedeals.iosApp
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.ComposeUIViewController
@@ -24,8 +22,7 @@ import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
-import pm.bam.gamedeals.common.ui.theme.darkScheme
-import pm.bam.gamedeals.common.ui.theme.lightScheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.favourites.di.favouritesModule
@@ -99,9 +96,7 @@ private fun bootstrapKoin() {
 
 @Composable
 private fun App() {
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme,
-    ) {
+    GameDealsTheme {
         CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
             AppNavHost()
         }

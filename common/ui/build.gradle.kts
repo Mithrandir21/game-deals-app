@@ -36,7 +36,7 @@ kotlin {
 
             implementation(libs.androidx.ui)
             implementation(libs.androidx.ui.graphics)
-            implementation(libs.androidx.ui.tooling)
+            implementation(libs.androidx.ui.tooling.preview)
             implementation(libs.androidx.compose.material3)
             implementation(libs.androidx.compose.material3.window)
             implementation(libs.androidx.compose.material3.adaptive)
@@ -69,4 +69,5 @@ extensions.configure<LibraryExtension> {
 
 dependencies {
     debugImplementation(libs.androidx.compose.test)
+    debugImplementation(libs.androidx.ui.tooling)
 }

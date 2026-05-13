@@ -55,6 +55,7 @@ androidx-ktx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecyc
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose-ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "compose-ui" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose-ui" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "compose-ui" }
 
 androidx-webview = { group = "androidx.webkit", name = "webkit", version.ref = "webview" }
 

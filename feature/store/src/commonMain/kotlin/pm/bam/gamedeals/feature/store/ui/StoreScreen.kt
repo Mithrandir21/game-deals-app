@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.store.ui
 
 import androidx.compose.foundation.background
@@ -51,9 +53,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
@@ -61,6 +67,7 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.store.generated.resources.Res
@@ -315,3 +322,76 @@ private fun StoreToolbar(
 internal const val StoreTopBarTag = "StoreTopBar"
 internal const val TopBarNavTag = "TopBarNav"
 internal const val DealRowTag = "DealRow"
+
+
+private val previewDealsList = persistentListOf(
+    PreviewDeal,
+    PreviewDeal.copy(
+        dealID = "deal-2",
+        title = "Hollow Knight",
+        salePriceDenominated = "$7.49",
+        normalPriceDenominated = "$14.99",
+        gameID = 222,
+    ),
+    PreviewDeal.copy(
+        dealID = "deal-3",
+        title = "Stardew Valley",
+        salePriceDenominated = "$8.99",
+        normalPriceDenominated = "$14.99",
+        gameID = 333,
+    ),
+)
+
+@Preview
+@Composable
+private fun StoreDeals_Success_Preview() {
+    GameDealsTheme {
+        StoreDeals(
+            deals = previewDealsList,
+            favouriteIds = setOf(222), // marks Hollow Knight as favourited
+            storeDetails = PreviewStore,
+            onBack = {},
+            onLoadDealDetails = { _, _, _, _, _ -> },
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun StoreDeals_Success_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        StoreDeals(
+            deals = previewDealsList,
+            favouriteIds = setOf(222),
+            storeDetails = PreviewStore,
+            onBack = {},
+            onLoadDealDetails = { _, _, _, _, _ -> },
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun StoreDeals_Empty_Preview() {
+    GameDealsTheme {
+        StoreDeals(
+            deals = persistentListOf(),
+            favouriteIds = emptySet(),
+            storeDetails = PreviewStore,
+            onBack = {},
+            onLoadDealDetails = { _, _, _, _, _ -> },
+            onDismissDealDetails = {},
+            onShareDealDetails = {},
+            onToggleDealFavourite = {},
+            goToWeb = { _, _ -> },
+        )
+    }
+}

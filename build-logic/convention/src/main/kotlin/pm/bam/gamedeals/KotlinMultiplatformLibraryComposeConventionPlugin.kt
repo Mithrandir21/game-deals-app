@@ -46,6 +46,8 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
                 implementation(compose.materialIconsExtended)
                 @Suppress("DEPRECATION")
                 implementation(compose.components.resources)
+                @Suppress("DEPRECATION")
+                implementation(compose.components.uiToolingPreview)
             }
         }
 
