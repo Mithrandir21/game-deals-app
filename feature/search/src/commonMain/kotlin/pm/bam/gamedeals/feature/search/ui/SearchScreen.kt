@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:Suppress("DEPRECATION")
 
 package pm.bam.gamedeals.feature.search.ui
 
@@ -71,11 +72,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.feature.search.generated.resources.Res
@@ -117,7 +122,7 @@ internal fun SearchScreen(
         )
     }
 
-    Screen(
+    SearchScreenContent(
         showFilters = showFilters,
         onShowFiltersChanged = { newShowFilters ->
             showFilters = newShowFilters
@@ -142,7 +147,7 @@ internal fun SearchScreen(
 
 
 @Composable
-private fun Screen(
+private fun SearchScreenContent(
     showFilters: Boolean,
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
     existingSearchParameters: SearchParameters,
@@ -496,3 +501,122 @@ internal const val SearchFiltersRatingRangeTag = "SearchFiltersRatingRangeTag"
 internal const val SearchFiltersRatingRangeLabelTag = "SearchFiltersRatingRangeLabelTag"
 
 internal const val SearchFiltersExactMatchSwitchTag = "SearchFiltersExactMatchSwitchTag"
+
+
+private val previewSearchResults = persistentListOf(
+    PreviewDeal,
+    PreviewDeal.copy(
+        dealID = "deal-2",
+        title = "Hollow Knight",
+        salePriceDenominated = "$7.49",
+        gameID = 222,
+    ),
+    PreviewDeal.copy(
+        dealID = "deal-3",
+        title = "Stardew Valley",
+        salePriceDenominated = "$8.99",
+        gameID = 333,
+    ),
+)
+
+@Preview
+@Composable
+private fun SearchScreenContent_Results_Preview() {
+    GameDealsTheme {
+        SearchScreenContent(
+            showFilters = false,
+            onShowFiltersChanged = {},
+            existingSearchParameters = SearchParameters(),
+            searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
+            favouriteIds = setOf(222),
+            onSearchTitleChanged = {},
+            onSearchedGame = {},
+            onPriceChanged = { _, _ -> },
+            onSteamMinChanged = {},
+            onExactMatch = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun SearchScreenContent_Results_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        SearchScreenContent(
+            showFilters = false,
+            onShowFiltersChanged = {},
+            existingSearchParameters = SearchParameters(),
+            searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
+            favouriteIds = setOf(222),
+            onSearchTitleChanged = {},
+            onSearchedGame = {},
+            onPriceChanged = { _, _ -> },
+            onSteamMinChanged = {},
+            onExactMatch = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun SearchScreenContent_Empty_Preview() {
+    GameDealsTheme {
+        SearchScreenContent(
+            showFilters = false,
+            onShowFiltersChanged = {},
+            existingSearchParameters = SearchParameters(),
+            searchData = SearchViewModel.SearchData.Empty,
+            favouriteIds = emptySet(),
+            onSearchTitleChanged = {},
+            onSearchedGame = {},
+            onPriceChanged = { _, _ -> },
+            onSteamMinChanged = {},
+            onExactMatch = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun SearchScreenContent_NoResults_Preview() {
+    GameDealsTheme {
+        SearchScreenContent(
+            showFilters = false,
+            onShowFiltersChanged = {},
+            existingSearchParameters = SearchParameters(),
+            searchData = SearchViewModel.SearchData.NoResults,
+            favouriteIds = emptySet(),
+            onSearchTitleChanged = {},
+            onSearchedGame = {},
+            onPriceChanged = { _, _ -> },
+            onSteamMinChanged = {},
+            onExactMatch = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun SearchFilters_Preview() {
+    // Preview the Filters body directly; ModalBottomSheet does not render
+    // reliably in static previews.
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Filters(
+                existingSearchParameters = SearchParameters(
+                    lowerPrice = 5,
+                    upperPrice = 30,
+                    steamMinRating = 80,
+                    exact = false,
+                ),
+                onPriceChanged = { _, _ -> },
+                onSteamMinChanged = {},
+                onExactMatch = {},
+            )
+        }
+    }
+}
