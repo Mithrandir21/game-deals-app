@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.giveaways.ui
 
 import androidx.compose.foundation.clickable
@@ -65,8 +67,11 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
@@ -101,7 +106,7 @@ internal fun GiveawaysScreen(
     var existingParameters by rememberSaveable(stateSaver = parametersSaver) { mutableStateOf(GiveawaySearchParameters()) }
 
 
-    ScreenScaffold(
+    GiveawaysScreenContent(
         data = uiState.value,
         onBack = onBack,
         onReload = { viewModel.reloadGiveaways() },
@@ -135,7 +140,7 @@ internal fun GiveawaysScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScreenScaffold(
+private fun GiveawaysScreenContent(
     data: GiveawaysViewModel.GiveawaysScreenData,
     onBack: () -> Unit,
     onReload: () -> Unit,
@@ -420,3 +425,110 @@ internal const val GiveawayListItemTag = "GiveawayListItemTag"
 internal const val GiveawayFiltersTag = "GiveawayFiltersTag"
 internal const val GiveawayFiltersIconTag = "GiveawayFiltersIconTag"
 internal const val GiveawayFiltersSortTag = "GiveawayFiltersSortTag"
+
+
+private val previewGiveawaysList = persistentListOf(
+    PreviewGiveaway,
+    PreviewGiveaway.copy(
+        id = 456,
+        title = "Tomb Raider Trilogy",
+        worthDenominated = "$49.99",
+        worth = 49.99,
+        platforms = listOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
+    ),
+    PreviewGiveaway.copy(
+        id = 789,
+        title = "Crysis Remastered (DLC)",
+        worthDenominated = null,
+        worth = null,
+        type = GiveawayType.DLC,
+        platforms = listOf(GiveawayPlatform.EPIC),
+    ),
+)
+
+@Preview
+@Composable
+private fun GiveawaysScreen_Success_Preview() {
+    GameDealsTheme {
+        GiveawaysScreenContent(
+            data = GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = previewGiveawaysList,
+            ),
+            onBack = {},
+            onReload = {},
+            goToWeb = { _, _ -> },
+            existingParameters = GiveawaySearchParameters(),
+            showFilters = false,
+            onShowFiltersChanged = {},
+            onPlatformSelection = { _, _ -> },
+            onTypeSelection = { _, _ -> },
+            onSortBySelection = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GiveawaysScreen_Success_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        GiveawaysScreenContent(
+            data = GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = previewGiveawaysList,
+            ),
+            onBack = {},
+            onReload = {},
+            goToWeb = { _, _ -> },
+            existingParameters = GiveawaySearchParameters(),
+            showFilters = false,
+            onShowFiltersChanged = {},
+            onPlatformSelection = { _, _ -> },
+            onTypeSelection = { _, _ -> },
+            onSortBySelection = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GiveawaysScreen_Loading_Preview() {
+    GameDealsTheme {
+        GiveawaysScreenContent(
+            data = GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING,
+            ),
+            onBack = {},
+            onReload = {},
+            goToWeb = { _, _ -> },
+            existingParameters = GiveawaySearchParameters(),
+            showFilters = false,
+            onShowFiltersChanged = {},
+            onPlatformSelection = { _, _ -> },
+            onTypeSelection = { _, _ -> },
+            onSortBySelection = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GiveawayFilters_Preview() {
+    // Preview the Filters body directly. ModalBottomSheet does not render
+    // reliably in static previews, so we skip GiveawayFilters() and call
+    // its content composable instead.
+    GameDealsTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Filters(
+                existingParameters = GiveawaySearchParameters().copy(
+                    platforms = GiveawaySearchParameters().platforms
+                        .map { (p, _) -> p to (p == GiveawayPlatform.PC || p == GiveawayPlatform.STEAM) }
+                        .toImmutableList(),
+                ),
+                onPlatformSelection = { _, _ -> },
+                onTypeSelection = { _, _ -> },
+                onSortBySelection = {},
+            )
+        }
+    }
+}
