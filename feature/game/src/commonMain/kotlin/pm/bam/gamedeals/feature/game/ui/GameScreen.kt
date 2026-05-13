@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
@@ -52,12 +54,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.PreviewGameDeal
+import pm.bam.gamedeals.common.ui.PreviewGameDetails
+import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
@@ -103,7 +111,7 @@ internal fun GameScreen(
     // currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches
     // the Material3 Compact-vs-Medium boundary.
     BoxWithConstraints {
-        ScreenScaffold(
+        GameScreenContent(
             isCompact = maxWidth < 600.dp,
             data = data.value,
             isFavourite = isFavourite.value,
@@ -335,7 +343,7 @@ private fun StoreGameDealRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScreenScaffold(
+private fun GameScreenContent(
     isCompact: Boolean,
     data: GameScreenData,
     isFavourite: Boolean,
@@ -446,4 +454,100 @@ internal const val GameDealsTag = "GameDealsTag"
 internal const val GameDealItemTag = "GameDealItemTag"
 internal const val GameDealItemStoreTitleLabelTag = "GameDealItemStoreTitleLabelTag"
 internal const val GameDealItemShareBtnTag = "GameDealItemShareBtn"
+
+
+private val previewGameDealDetails = persistentListOf(
+    PreviewStore to PreviewGameDeal,
+    PreviewStore.copy(storeID = 11, storeName = "Humble Store") to PreviewGameDeal.copy(
+        storeID = 11,
+        dealID = "deal-2",
+        priceValue = 8.49,
+        priceDenominated = "$8.49",
+        savings = 78,
+    ),
+    PreviewStore.copy(storeID = 7, storeName = "GOG") to PreviewGameDeal.copy(
+        storeID = 7,
+        dealID = "deal-3",
+        priceValue = 11.99,
+        priceDenominated = "$11.99",
+        savings = 60,
+    ),
+)
+
+@Preview
+@Composable
+private fun GameScreenContent_Compact_Success_Preview() {
+    GameDealsTheme {
+        GameScreenContent(
+            isCompact = true,
+            data = GameViewModel.GameScreenData.Data(
+                gameDetails = PreviewGameDetails,
+                dealDetails = previewGameDealDetails,
+            ),
+            isFavourite = false,
+            onBack = {},
+            goToWeb = { _, _ -> },
+            onShareDeal = { _, _, _ -> },
+            onToggleFavourite = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
+    GameDealsTheme(darkTheme = true) {
+        GameScreenContent(
+            isCompact = true,
+            data = GameViewModel.GameScreenData.Data(
+                gameDetails = PreviewGameDetails,
+                dealDetails = previewGameDealDetails,
+            ),
+            isFavourite = true,
+            onBack = {},
+            goToWeb = { _, _ -> },
+            onShareDeal = { _, _, _ -> },
+            onToggleFavourite = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview(widthDp = 800, heightDp = 600)
+@Composable
+private fun GameScreenContent_Wide_Success_Preview() {
+    GameDealsTheme {
+        GameScreenContent(
+            isCompact = false,
+            data = GameViewModel.GameScreenData.Data(
+                gameDetails = PreviewGameDetails,
+                dealDetails = previewGameDealDetails,
+            ),
+            isFavourite = false,
+            onBack = {},
+            goToWeb = { _, _ -> },
+            onShareDeal = { _, _, _ -> },
+            onToggleFavourite = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameScreenContent_Loading_Preview() {
+    GameDealsTheme {
+        GameScreenContent(
+            isCompact = true,
+            data = GameViewModel.GameScreenData.Loading,
+            isFavourite = false,
+            onBack = {},
+            goToWeb = { _, _ -> },
+            onShareDeal = { _, _, _ -> },
+            onToggleFavourite = {},
+            onRetry = {},
+        )
+    }
+}
 
