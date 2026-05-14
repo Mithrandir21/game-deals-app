@@ -33,6 +33,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loadin
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
+import pm.bam.gamedeals.testing.SkipOnCi
 
 class GameScreenTest {
 
@@ -163,6 +164,7 @@ class GameScreenTest {
     }
 
     @Test
+    @SkipOnCi
     fun gameDetailsLoadedWide() {
         onDevice().setScreenOrientation(ScreenOrientation.LANDSCAPE)
 

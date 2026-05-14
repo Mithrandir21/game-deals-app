@@ -75,6 +75,7 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                 }
 
                 getByName("androidInstrumentedTest").dependencies {
+                    implementation(project(":testing"))
                     implementation(lib("mockk-android"))
                     implementation(lib("androidx-junit"))
                     implementation(lib("androidx-runner"))
