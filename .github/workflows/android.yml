@@ -101,7 +101,10 @@ jobs:
         force-avd-creation: false
         emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -grpc 8554
         disable-animations: true
-        script: ./gradlew --no-daemon connectedDebugAndroidTest
+        script: |
+          adb wait-for-device
+          adb shell settings put global mdevx.grpc_guest_port 8554
+          ./gradlew --no-daemon connectedDebugAndroidTest
 
     - name: Publish test results
       if: always()
