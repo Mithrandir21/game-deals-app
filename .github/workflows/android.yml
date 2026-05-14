@@ -120,8 +120,7 @@ jobs:
         script: |
           adb wait-for-device
           adb shell settings put global mdevx.grpc_guest_port 8554
-          ./gradlew --no-daemon connectedDebugAndroidTest \
-            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pm.bam.gamedeals.testing.SkipOnCi
+          ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pm.bam.gamedeals.testing.SkipOnCi
 
     - name: Publish test results
       if: always()
