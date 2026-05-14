@@ -20,25 +20,102 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
-        cache: gradle
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
     - run: sdkmanager tools platform-tools
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build with Gradle
       run: ./gradlew --no-daemon build test
+
+  instrumented-test:
+    name: Instrumented UI Tests (API ${{ matrix.api-level }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [34]
+
+    steps:
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+          | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - name: Checking out branch
+      uses: actions/checkout@v4
+
+    - name: JDK 21 Setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: AVD cache
+      uses: actions/cache@v5
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.api-level }}
+
+    - name: Create AVD snapshot for caching
+      if: steps.avd-cache.outputs.cache-hit != 'true'
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        arch: x86_64
+        target: google_apis
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: echo "Generated AVD snapshot."
+
+    - name: Run instrumented tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        arch: x86_64
+        target: google_apis
+        force-avd-creation: false
+        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: ./gradlew --no-daemon connectedDebugAndroidTest
+
+    - name: Publish test results
+      if: always()
+      uses: mikepenz/action-junit-report@v4
+      with:
+        report_paths: '**/build/outputs/androidTest-results/connected/**/*.xml'
+        check_name: Instrumented Test Results (API ${{ matrix.api-level }})
+
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: instrumented-test-reports-api${{ matrix.api-level }}
+        path: |
+          **/build/reports/androidTests/connected/**
+          **/build/outputs/androidTest-results/connected/**
+        if-no-files-found: ignore
