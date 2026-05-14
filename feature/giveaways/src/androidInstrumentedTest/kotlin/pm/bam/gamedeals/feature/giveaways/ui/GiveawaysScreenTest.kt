@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -31,25 +32,31 @@ class GiveawaysScreenTest {
 
     private val viewModel: GiveawaysViewModel = mockk()
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            GameDealsTheme {
+                GiveawaysScreen(
+                    onBack = onBack,
+                    goToWeb = goToWeb,
+                    viewModel = viewModel,
+                )
+            }
+        }
+    }
+
     @Test
     fun onLoadingState() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
-        var loadingCd = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
-
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(loadingCd)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
@@ -61,32 +68,16 @@ class GiveawaysScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.ERROR))
         every { viewModel.reloadGiveaways() } just Runs
 
-        var loadingCd = ""
-        var snackText = ""
-        var snackRetry = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
-            snackText = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
-            snackRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
-
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
-        composeTestRule.onNodeWithText(snackText).assertIsDisplayed()
-        composeTestRule.onNodeWithText(snackRetry).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.retry).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
 
-        composeTestRule.onNodeWithText(snackRetry).performClick()
+        composeTestRule.onNodeWithText(screenSemantics.retry).performClick()
 
         verify(exactly = 1) { viewModel.reloadGiveaways() }
     }
@@ -108,21 +99,9 @@ class GiveawaysScreenTest {
             )
         )
 
-        var loadingCd = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
-
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
         composeTestRule.onNodeWithText(giveawayTitle).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
@@ -133,31 +112,34 @@ class GiveawaysScreenTest {
     fun onShowFilters() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
-        var filtersIconCd = ""
-        var platformLabel = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            filtersIconCd = stringResource(Res.string.giveaway_screen_filters_icon)
-            platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label)
-
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(filtersIconCd, useUnmergedTree = true)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.filtersIcon, useUnmergedTree = true)
             .performClick()
 
-        // Assert the sheet is visible via a known child label rather than a wrapper CD —
-        // wrapper CDs mask their descendants in Compose's merged semantics tree.
-        composeTestRule.onNodeWithText(platformLabel)
+        composeTestRule.onNodeWithText(screenSemantics.platformLabel)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
+    }
+
+    private data class ScreenSemantics(
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+        val filtersIcon: String,
+        val platformLabel: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loading = stringResource(Res.string.giveaway_screen_loading_indicator),
+                errorMsg = stringResource(Res.string.giveaway_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.giveaway_screen_data_loading_error_retry),
+                filtersIcon = stringResource(Res.string.giveaway_screen_filters_icon),
+                platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label),
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.game.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -81,6 +82,7 @@ class GameScreenTest {
         every { images } returns storeImages
     }
 
+    private lateinit var screenSemantics: ScreenSemantics
 
     @Before
     fun setup() {
@@ -89,25 +91,29 @@ class GameScreenTest {
         every { viewModel.events } returns MutableSharedFlow<GameViewModel.GameUiEvent>().asSharedFlow()
     }
 
-    @Test
-    fun initialLoading() {
-        every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Loading)
-
-        var loadingTitle = ""
-
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
         composeTestRule.setContent {
-            loadingTitle = stringResource(Res.string.game_screen_toolbar_title_loading)
-
+            screenSemantics = ScreenSemantics.load()
             GameDealsTheme {
                 GameScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
+                    onBack = onBack,
+                    goToWeb = goToWeb,
                     viewModel = viewModel,
                 )
             }
         }
+    }
 
-        composeTestRule.onNodeWithText(loadingTitle)
+    @Test
+    fun initialLoading() {
+        every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Loading)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.loadingTitle)
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.uiState }
@@ -117,33 +123,18 @@ class GameScreenTest {
     fun errorState() {
         every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Error)
 
-        var snackText = ""
-        var snackRetry = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            snackText = stringResource(Res.string.game_screen_data_loading_error_msg)
-            snackRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
-
-            GameDealsTheme {
-                GameScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithText(snackText)
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithText(snackRetry)
+        composeTestRule.onNodeWithText(screenSemantics.retry)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.reloadGameDetails() }
         verify(exactly = 1) { viewModel.uiState }
 
-        // Retry button clicked
-        composeTestRule.onNodeWithText(snackRetry)
+        composeTestRule.onNodeWithText(screenSemantics.retry)
             .assertIsDisplayed()
             .performClick()
 
@@ -160,15 +151,7 @@ class GameScreenTest {
             )
         )
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                GameScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                )
-            }
-        }
+        setupCompose()
 
         composeTestRule.onAllNodesWithText(gameTitle)
             .assertCountEquals(2)
@@ -199,24 +182,29 @@ class GameScreenTest {
             )
         )
 
-        var backCd = ""
+        setupCompose(onBack = onBack)
 
-        composeTestRule.setContent {
-            backCd = stringResource(Res.string.game_screen_navigation_back_button)
-
-            GameDealsTheme {
-                GameScreen(
-                    onBack = onBack,
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel,
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(backCd)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.back)
             .performClick()
 
         verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { onBack.invoke() }
+    }
+
+    private data class ScreenSemantics(
+        val loadingTitle: String,
+        val errorMsg: String,
+        val retry: String,
+        val back: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loadingTitle = stringResource(Res.string.game_screen_toolbar_title_loading),
+                errorMsg = stringResource(Res.string.game_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.game_screen_data_loading_error_retry),
+                back = stringResource(Res.string.game_screen_navigation_back_button),
+            )
+        }
     }
 }

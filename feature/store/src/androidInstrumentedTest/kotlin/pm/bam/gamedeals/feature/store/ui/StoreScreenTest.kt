@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.store.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -44,6 +45,10 @@ class StoreScreenTest {
 
     private val storeId = 1
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    private var dealRowCd: String = ""
+
     @Before
     fun setup() {
         val dealId = "DealId"
@@ -68,26 +73,26 @@ class StoreScreenTest {
         every { viewModel.events } returns MutableSharedFlow<StoreViewModel.StoreUiEvent>().asSharedFlow()
     }
 
-
-    @Test
-    fun loadSingleDeal() {
-        var dealRowCd = ""
-
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
         composeTestRule.setContent {
-            dealRowCd = stringResource(
-                Res.string.store_screen_deal_row_description,
-                deal.title,
-                deal.salePriceDenominated,
-            )
-
+            screenSemantics = ScreenSemantics.load()
+            dealRowCd = ScreenSemantics.dealRowCd(deal.title, deal.salePriceDenominated)
             GameDealsTheme {
                 StoreScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
+                    onBack = onBack,
+                    goToWeb = goToWeb,
+                    viewModel = viewModel,
                 )
             }
         }
+    }
+
+    @Test
+    fun loadSingleDeal() {
+        setupCompose()
 
         composeTestRule.onNode(hasContentDescription(dealRowCd) and hasRole(Role.Button))
             .assertIsDisplayed()
@@ -101,23 +106,7 @@ class StoreScreenTest {
     fun loadDealDetails() {
         every { viewModel.loadDealDetails(any(), any(), any(), any(), any()) } just runs
 
-        var dealRowCd = ""
-
-        composeTestRule.setContent {
-            dealRowCd = stringResource(
-                Res.string.store_screen_deal_row_description,
-                deal.title,
-                deal.salePriceDenominated,
-            )
-
-            GameDealsTheme {
-                StoreScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
+        setupCompose()
 
         composeTestRule.onNode(hasContentDescription(dealRowCd) and hasRole(Role.Button))
             .performClick()
@@ -142,15 +131,7 @@ class StoreScreenTest {
 
         every { viewModel.uiState } returns uiState
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                StoreScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
+        setupCompose()
 
         composeTestRule.onNodeWithText(name)
             .assertIsDisplayed()
@@ -167,21 +148,9 @@ class StoreScreenTest {
 
         every { onBack.invoke() } just runs
 
-        var backCd = ""
+        setupCompose(onBack = onBack)
 
-        composeTestRule.setContent {
-            backCd = stringResource(Res.string.store_screen_navigation_back_icon)
-
-            GameDealsTheme {
-                StoreScreen(
-                    onBack = onBack,
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithContentDescription(backCd)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.back)
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
@@ -192,4 +161,19 @@ class StoreScreenTest {
 
     private fun hasRole(role: Role): SemanticsMatcher =
         SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
+
+    private data class ScreenSemantics(
+        val back: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                back = stringResource(Res.string.store_screen_navigation_back_icon),
+            )
+
+            @Composable
+            fun dealRowCd(title: String, price: String): String =
+                stringResource(Res.string.store_screen_deal_row_description, title, price)
+        }
+    }
 }

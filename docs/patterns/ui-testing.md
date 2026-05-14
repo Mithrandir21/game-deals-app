@@ -1,6 +1,6 @@
 ---
 **Path scope:** `*/src/commonMain/kotlin/**/ui/**/*.kt`, `*/src/androidInstrumentedTest/**/*Test.kt`, `app/src/androidTest/**/*Test.kt`
-**Last surveyed:** f215235 on 2026-05-14
+**Last surveyed:** 2026-05-14 (ScreenSemantics + setupCompose adoption)
 ---
 
 # UI Testing — Compose Node Finders
@@ -16,7 +16,7 @@ This file documents the **policy** (the finder hierarchy and the production-side
 **Status:** established
 **First documented:** 2026-05-14
 **Last verified:** 2026-05-14 @ f215235
-**Coverage:** instrumented tests in `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test
+**Coverage:** instrumented tests in `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, `:feature:home`, `:common:ui`, and the `:app` journey test
 
 **The pattern.**
 Compose UI tests select nodes via a deliberate escalation:
@@ -83,66 +83,115 @@ private fun hasRole(role: Role): SemanticsMatcher =
 - feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt and common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (`hasRole` helper + `hasContentDescription` combined matcher)
 - app/src/androidTest/java/pm/bam/gamedeals/integration/HomeToStoreToDealJourneyTest.kt (cross-screen integration uses `onNodeWithText` and `onNodeWithContentDescription` with `substring = true`)
 
-### Capture String Resources Inside `setContent` for Use in Assertions
+### Per-Test-Class `ScreenSemantics` + `setupCompose`
 
 **Status:** established
 **First documented:** 2026-05-14
-**Last verified:** 2026-05-14 @ f215235
+**Last verified:** 2026-05-14
 **Coverage:** every instrumented `*ScreenTest.kt` that asserts against a `stringResource`
 
 **The pattern.**
-`stringResource(...)` is `@Composable`, so it can only be called inside a composable block. Tests that need to compare against a resource declare a `var` outside `setContent`, assign it inside the `setContent` lambda, and reference the captured value in the assertions below. For tests that need several resources, bundle the captures inside `setContent` and return a small data class from a private helper rather than scattering `var` declarations.
+Each test class declares two pieces of structure:
+
+1. A private nested `data class ScreenSemantics(...)` holding every string resource the suite consumes as `val` fields, plus a `@Composable fun load(): ScreenSemantics` companion factory that resolves each `stringResource(Res.string.X)` once. Parameterised CDs (anything formatted with runtime data, like `deal.title` or a store name) live alongside as `@Composable` companion methods: `fun dealRowCd(title: String, price: String): String`.
+2. A private `setupCompose(...)` function wrapping `composeTestRule.setContent { GameDealsTheme { Screen(...) } }`. It assigns `screenSemantics = ScreenSemantics.load()` inside the `setContent` lambda (so the resources are captured during composition) and takes default-valued parameters for any per-test callback overrides (`onBack`, `onClick`, etc.).
+
+A class-level `lateinit var screenSemantics: ScreenSemantics` holds the captured object after `setupCompose()` returns. Tests then read `screenSemantics.loading`, `screenSemantics.retry`, etc., directly in assertions — no per-test `var x = ""` declarations and no inlined `setContent` blocks.
 
 **Why this works for us.**
-Resources are the source of truth for user-visible copy; hardcoded literals in tests drift from the production strings on every translation update. The capture pattern keeps tests reading directly from the same `Res.string.x` that the screen renders. Closing over a `var` from the `@Composable` lambda is supported and well-defined in Compose UI tests.
+Resources are the source of truth for user-visible copy; hardcoded literals drift on every translation update. Bundling captures into one `ScreenSemantics.load()` keeps every string the test class depends on in one auditable place. The `setupCompose` extraction removes the ~10 lines of identical `setContent { GameDealsTheme { Screen(...) } }` boilerplate that every test would otherwise repeat. Test bodies shrink to mock-stub setup + `setupCompose()` + assertions, which reads as arrange/act/assert.
 
 **Known trade-offs / when it strains.**
-The `var x = ""` placeholder pattern is mildly ugly and forces every assertion to be ordered after the `setContent` block. For tests that exercise the same screen many times with the same strings, factor the captures into a private helper that returns them.
+- `lateinit var screenSemantics` will throw `UninitializedPropertyAccessException` if a test forgets `setupCompose()` — that's noisier than the pre-refactor `var = ""` form, but the failure is also clearer.
+- Parameterised CDs can't be `val` fields. The `@Composable` method form on the companion keeps them inside the same data class but requires the test to capture the result into a class-level `var` (assigned inside `setupCompose`). Don't try to fold them back into `ScreenSemantics.load()`'s constructor — that couples the semantics object to fixture data.
+- `setupCompose` accumulates parameters as the screen's signature grows. Default values for every callback keep call-sites short, but at some point a builder or a per-test `setContent { ... }` escape hatch may be cleaner.
+- MockK stubs that the screen reads on first composition must be set up **before** `setupCompose()` is called. Same constraint as today's pattern, just less obvious because `setContent` is hidden behind the helper.
+
+**When to apply.**
+Any new Compose UI test class with ≥2 string-resource lookups or ≥2 `setContent` blocks. For a single-test, single-string class the inline `var = ""` form is still fine, but every existing in-repo `*ScreenTest.kt` already qualifies.
 
 **How to apply it.**
 ```kotlin
-@Test
-fun errorState() {
-    every { viewModel.uiState } returns MutableStateFlow(GameScreenData.Error)
+class GiveawaysScreenTest {
 
-    var snackText = ""
-    var snackRetry = ""
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
-    composeTestRule.setContent {
-        snackText = stringResource(Res.string.game_screen_data_loading_error_msg)
-        snackRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
+    private val viewModel: GiveawaysViewModel = mockk()
+    private lateinit var screenSemantics: ScreenSemantics
 
-        GameDealsTheme {
-            GameScreen(onBack = {}, goToWeb = { _, _ -> }, viewModel = viewModel)
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            GameDealsTheme {
+                GiveawaysScreen(onBack = onBack, goToWeb = goToWeb, viewModel = viewModel)
+            }
         }
     }
 
-    composeTestRule.onNodeWithText(snackText).assertIsDisplayed()
-    composeTestRule.onNodeWithText(snackRetry).assertIsDisplayed().performClick()
+    @Test
+    fun errorState() {
+        every { viewModel.uiState } returns MutableStateFlow(errorState)
+        every { viewModel.reloadGiveaways() } just Runs
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.retry).performClick()
+
+        verify(exactly = 1) { viewModel.reloadGiveaways() }
+    }
+
+    private data class ScreenSemantics(
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loading = stringResource(Res.string.giveaway_screen_loading_indicator),
+                errorMsg = stringResource(Res.string.giveaway_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.giveaway_screen_data_loading_error_retry),
+            )
+        }
+    }
 }
 ```
 
-Bundled variant for tests sharing a setup helper:
+Parameterised CDs use a `@Composable` companion method and a class-level `var` captured inside `setupCompose`:
 ```kotlin
-private data class FilterCds(val iconCd: String, val panelCd: String, val switchCd: String)
+private var dealRowCd: String = ""
 
-private fun openFilters(): FilterCds {
-    var iconCd = ""; var panelCd = ""; var switchCd = ""
+private fun setupCompose(/* … */) {
     composeTestRule.setContent {
-        iconCd = stringResource(Res.string.search_screen_filters_icon)
-        panelCd = stringResource(Res.string.search_screen_filters_panel_description)
-        switchCd = stringResource(Res.string.search_screen_filters_exact_match_switch_description)
-        GameDealsTheme { SearchScreen(...) }
+        screenSemantics = ScreenSemantics.load()
+        dealRowCd = ScreenSemantics.dealRowCd(deal.title, deal.salePriceDenominated)
+        GameDealsTheme { StoreScreen(...) }
     }
-    return FilterCds(iconCd, panelCd, switchCd)
+}
+
+private data class ScreenSemantics(val back: String) {
+    companion object {
+        @Composable fun load(): ScreenSemantics =
+            ScreenSemantics(back = stringResource(Res.string.store_screen_navigation_back_icon))
+
+        @Composable fun dealRowCd(title: String, price: String): String =
+            stringResource(Res.string.store_screen_deal_row_description, title, price)
+    }
 }
 ```
 
 **Seen in.**
+- feature/giveaways/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreenTest.kt
 - feature/game/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt
 - feature/search/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/search/ui/SearchScreenTest.kt
-- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt
-- feature/giveaways/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreenTest.kt
+- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt (parameterised CD helper)
+- feature/home/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreenTest.kt (parameterised CD helpers)
+- common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (parameterised CD helper)
 
 ### `clickable(role = Role.Button)` on Tap-Responsive Surfaces
 
@@ -180,10 +229,10 @@ Card {
 **Status:** established
 **First documented:** 2026-05-14
 **Last verified:** 2026-05-14 @ f215235
-**Coverage:** all four refactored `*ScreenTest.kt` files
+**Coverage:** all six refactored `*ScreenTest.kt` files
 
 **The pattern.**
-Per-feature `*ScreenTest.kt` files keep their assertions inline rather than wrapping each lookup in a named extension function. `composeTestRule.onNodeWithContentDescription(cd).assertIsDisplayed()` is clearer at the call-site than `composeTestRule.assertLoadingShown(cd)` when there is one consumer. Extension-function helpers (`tapBackButton()`, `assertDealRowShown(title)`) only earn their keep when **two or more** test files share the same screen pattern — typically when an integration test in `:app` exercises the same surface as a screen-level test in `:feature:*`.
+Per-feature `*ScreenTest.kt` files keep their assertions inline rather than wrapping each lookup in a named extension function. `composeTestRule.onNodeWithContentDescription(cd).assertIsDisplayed()` is clearer at the call-site than `composeTestRule.assertLoadingShown(cd)` when there is one consumer. Extension-function helpers (`tapBackButton()`, `assertDealRowShown(title)`) only earn their keep when **two or more** test files share the same screen pattern — typically when an integration test in `:app` exercises the same surface as a screen-level test in `:feature:*`. The per-class `setupCompose()` extraction documented above is the one helper that does belong inside a single test class, because it consolidates boilerplate that every test in that class needs.
 
 **Why this works for us.**
 A helper that takes resolved CDs as parameters re-introduces ceremony at the call-site, defeating its readability win. Inline `onNodeWith*` chains read directly: a reader doesn't have to jump to a helpers file to understand what is being asserted. Helpers also obscure the test's coupling to specific resources; inlining makes each lookup auditable in place.
@@ -192,33 +241,26 @@ A helper that takes resolved CDs as parameters re-introduces ceremony at the cal
 When the same screen surface is exercised by multiple test files (e.g., `:feature:store`'s `StoreScreenTest` and `:app`'s `HomeToStoreToDealJourneyTest` both tap a deal row), the lookup logic ends up duplicated. At that point the helper moves to a shared source set (a `testing-ui-android` module, or extensions under `:testing/src/androidMain`) — never alongside a single feature's tests.
 
 **How to apply it.**
-Inline (default):
+Inline (default — assumes the per-class `ScreenSemantics` + `setupCompose` from the pattern above):
 ```kotlin
 @Test
 fun onShowFilters() {
     every { viewModel.uiState } returns MutableStateFlow(loadingState)
 
-    var filtersIconCd = ""
-    var filtersPanelChildCd = ""
+    setupCompose()
 
-    composeTestRule.setContent {
-        filtersIconCd = stringResource(Res.string.giveaway_screen_filters_icon)
-        filtersPanelChildCd = stringResource(Res.string.giveaway_screen_filters_platform_label)
-        GameDealsTheme { GiveawaysScreen(...) }
-    }
-
-    composeTestRule.onNodeWithContentDescription(filtersIconCd).performClick()
-    composeTestRule.onNodeWithText(filtersPanelChildCd).assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription(screenSemantics.filtersIcon).performClick()
+    composeTestRule.onNodeWithText(screenSemantics.platformLabel).assertIsDisplayed()
 }
 ```
 
-Promotion to a shared helper happens only when a second test file would import it.
+Promotion to a shared cross-class helper happens only when a second test file would import it.
 
-**Seen in.** All four refactored test files in `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`.
+**Seen in.** All six refactored test files in `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, `:feature:home`, and `:common:ui`.
 
 ## What we don't do
 
 - **No `testTag` on production composables.** Removed wholesale during the May 2026 refactor; never added back. Tests find nodes by what users see, and `testTag` constants leak into other tests as hardcoded strings.
 - **No `Modifier.semantics { contentDescription = … }` on wrapper `Column`/`Box`/`ModalBottomSheet`.** The wrapper's CD masks its children in the merged semantic tree and produces noisy TalkBack output. Assert on a known child of the panel instead.
-- **No `@Composable` test helpers.** Helpers can't call `stringResource(...)` unless they're themselves `@Composable`, which would force them to run inside `setContent`. The capture-into-`var` pattern is preferred.
+- **No `@Composable` test helpers outside `ScreenSemantics`.** The `@Composable load()` factory and parameterised `@Composable` accessors live inside the per-class `ScreenSemantics` companion (so they're invoked inside `setContent`'s composable scope). Free-standing `@Composable` test helpers that would have to be called from `setContent` and somehow plumb their result back out are not used — the `ScreenSemantics` capture pattern covers the same need cleanly.
 - **No `onNodeWithTag(...)` in `:app` or feature instrumented tests.** Same reasoning as the production-side rule. As of `2026-05-14` no production composable or instrumented test in this codebase carries a `testTag`; new ones must not introduce them.
