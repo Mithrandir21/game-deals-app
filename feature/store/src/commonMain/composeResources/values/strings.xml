@@ -10,4 +10,6 @@
 
     <string name="store_screen_favourite_indicator">Favourited</string>
 
+    <string name="store_screen_deal_row_description">Deal: %1$s, %2$s</string>
+
 </resources>

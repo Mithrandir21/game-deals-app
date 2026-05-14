@@ -18,4 +18,9 @@
 
     <string name="search_screen_favourite_indicator">Favourited</string>
 
+    <string name="search_screen_loading_indicator">Searching for games</string>
+    <string name="search_screen_filters_price_range_slider_description">Price range slider</string>
+    <string name="search_screen_filters_rating_range_slider_description">Steam rating minimum slider</string>
+    <string name="search_screen_filters_exact_match_switch_description">Exact match toggle</string>
+
 </resources>

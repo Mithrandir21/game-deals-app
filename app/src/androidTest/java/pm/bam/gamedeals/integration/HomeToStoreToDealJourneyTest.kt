@@ -3,7 +3,10 @@ package pm.bam.gamedeals.integration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -49,19 +52,19 @@ class HomeToStoreToDealJourneyTest {
         composeRule.onNodeWithTag("HomeScreenViewAllButtonTag1", useUnmergedTree = true)
             .performClick()
 
-        // 3. Store screen — assert top app bar with store name.
+        // 3. Store screen — wait for the store name in the top app bar.
         composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithTag("StoreTopBar", useUnmergedTree = true)
-                .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText("Steam").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Steam").assertIsDisplayed()
 
         // 4. Wait for paged deals to render, then tap the first one (dealID = abc123 = Portal 2).
+        //    StoreScreen's DealRow exposes a content description like "Deal: Portal 2, $1.99".
         composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithTag("DealRowabc123", useUnmergedTree = true)
+            composeRule.onAllNodesWithContentDescription("Deal: Portal 2", substring = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithTag("DealRowabc123", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithContentDescription("Deal: Portal 2", substring = true).performClick()
 
         // 5. Deal bottom sheet — assert game name from deal_abc123.json appears in the sheet header.
         composeRule.waitUntil(timeoutMillis = 10_000) {

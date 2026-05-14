@@ -1,11 +1,13 @@
 package pm.bam.gamedeals.feature.store.ui
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.filterToOne
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onChildren
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.mockk.every
 import io.mockk.just
@@ -14,8 +16,11 @@ import io.mockk.runs
 import io.mockk.verify
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +28,9 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.feature.store.generated.resources.Res
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
 import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
 class StoreScreenTest {
@@ -44,6 +52,7 @@ class StoreScreenTest {
         val dealThumb = "DealThumbnail"
         every { deal.dealID } returns dealId
         every { deal.storeID } returns storeId
+        every { deal.gameID } returns 1
         every { deal.title } returns dealTitle
         every { deal.salePriceDenominated } returns dealPrice
         every { deal.thumb } returns dealThumb
@@ -56,12 +65,21 @@ class StoreScreenTest {
         every { viewModel.dealDetails } returns dealDetails
         every { viewModel.uiState } returns uiState
         every { viewModel.favouriteIds } returns favouriteIds
+        every { viewModel.events } returns MutableSharedFlow<StoreViewModel.StoreUiEvent>().asSharedFlow()
     }
 
 
     @Test
     fun loadSingleDeal() {
+        var dealRowCd = ""
+
         composeTestRule.setContent {
+            dealRowCd = stringResource(
+                Res.string.store_screen_deal_row_description,
+                deal.title,
+                deal.salePriceDenominated,
+            )
+
             GameDealsTheme {
                 StoreScreen(
                     onBack = {},
@@ -71,7 +89,7 @@ class StoreScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(DealRowTag.plus(deal.dealID))
+        composeTestRule.onNode(hasContentDescription(dealRowCd) and hasRole(Role.Button))
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.deals }
@@ -83,7 +101,15 @@ class StoreScreenTest {
     fun loadDealDetails() {
         every { viewModel.loadDealDetails(any(), any(), any(), any(), any()) } just runs
 
+        var dealRowCd = ""
+
         composeTestRule.setContent {
+            dealRowCd = stringResource(
+                Res.string.store_screen_deal_row_description,
+                deal.title,
+                deal.salePriceDenominated,
+            )
+
             GameDealsTheme {
                 StoreScreen(
                     onBack = {},
@@ -93,7 +119,7 @@ class StoreScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(DealRowTag.plus(deal.dealID))
+        composeTestRule.onNode(hasContentDescription(dealRowCd) and hasRole(Role.Button))
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
@@ -126,9 +152,7 @@ class StoreScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(StoreTopBarTag)
-            .onChildren()
-            .filterToOne(hasText(name))
+        composeTestRule.onNodeWithText(name)
             .assertIsDisplayed()
 
 
@@ -143,7 +167,11 @@ class StoreScreenTest {
 
         every { onBack.invoke() } just runs
 
+        var backCd = ""
+
         composeTestRule.setContent {
+            backCd = stringResource(Res.string.store_screen_navigation_back_icon)
+
             GameDealsTheme {
                 StoreScreen(
                     onBack = onBack,
@@ -153,7 +181,7 @@ class StoreScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(TopBarNavTag)
+        composeTestRule.onNodeWithContentDescription(backCd)
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
@@ -161,4 +189,7 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { onBack.invoke() }
     }
+
+    private fun hasRole(role: Role): SemanticsMatcher =
+        SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
 }

@@ -1,9 +1,10 @@
 package pm.bam.gamedeals.feature.game.ui
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.espresso.device.DeviceInteraction.Companion.setScreenOrientation
@@ -16,7 +17,9 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
 import org.junit.Rule
@@ -27,6 +30,8 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 
 class GameScreenTest {
 
@@ -80,13 +85,19 @@ class GameScreenTest {
     @Before
     fun setup() {
         every { viewModel.reloadGameDetails() } just runs
+        every { viewModel.isFavourite } returns MutableStateFlow(false)
+        every { viewModel.events } returns MutableSharedFlow<GameViewModel.GameUiEvent>().asSharedFlow()
     }
 
     @Test
     fun initialLoading() {
         every { viewModel.uiState } returns MutableStateFlow(GameViewModel.GameScreenData.Loading)
 
+        var loadingTitle = ""
+
         composeTestRule.setContent {
+            loadingTitle = stringResource(Res.string.game_screen_toolbar_title_loading)
+
             GameDealsTheme {
                 GameScreen(
                     onBack = {},
@@ -96,7 +107,7 @@ class GameScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(LoadingDataTag)
+        composeTestRule.onNodeWithText(loadingTitle)
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.uiState }
@@ -159,16 +170,11 @@ class GameScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GameDetailsTag)
-            .assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(gameTitle)
+            .assertCountEquals(2)
 
-        composeTestRule.onNodeWithTag(GameDetailsTitleTag)
+        composeTestRule.onNodeWithText(mockStoreName)
             .assertIsDisplayed()
-            .assertTextEquals(gameTitle)
-
-        composeTestRule.onNodeWithTag(GameDealItemStoreTitleLabelTag, useUnmergedTree = true)
-            .assertIsDisplayed()
-            .assertTextEquals(mockStoreName)
 
         verify(exactly = 1) { viewModel.uiState }
     }
@@ -193,7 +199,11 @@ class GameScreenTest {
             )
         )
 
+        var backCd = ""
+
         composeTestRule.setContent {
+            backCd = stringResource(Res.string.game_screen_navigation_back_button)
+
             GameDealsTheme {
                 GameScreen(
                     onBack = onBack,
@@ -203,7 +213,7 @@ class GameScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(TopAppNavBarTag)
+        composeTestRule.onNodeWithContentDescription(backCd)
             .performClick()
 
         verify(exactly = 1) { viewModel.uiState }

@@ -2,7 +2,7 @@ package pm.bam.gamedeals.feature.giveaways.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.mockk.Runs
@@ -20,6 +20,9 @@ import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 
 class GiveawaysScreenTest {
 
@@ -32,7 +35,11 @@ class GiveawaysScreenTest {
     fun onLoadingState() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
+        var loadingCd = ""
+
         composeTestRule.setContent {
+            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
+
             GameDealsTheme {
                 GiveawaysScreen(
                     onBack = {},
@@ -42,7 +49,7 @@ class GiveawaysScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(LoadingDataTag)
+        composeTestRule.onNodeWithContentDescription(loadingCd)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
@@ -54,10 +61,12 @@ class GiveawaysScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.ERROR))
         every { viewModel.reloadGiveaways() } just Runs
 
+        var loadingCd = ""
         var snackText = ""
         var snackRetry = ""
 
         composeTestRule.setContent {
+            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
             snackText = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
             snackRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
 
@@ -70,23 +79,14 @@ class GiveawaysScreenTest {
             }
         }
 
-
-        composeTestRule.onNodeWithTag(LoadingDataTag)
-            .assertDoesNotExist()
-
-        composeTestRule.onNodeWithText(snackText)
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(snackText).assertIsDisplayed()
+        composeTestRule.onNodeWithText(snackRetry).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
 
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
-            .performClick()
+        composeTestRule.onNodeWithText(snackRetry).performClick()
 
         verify(exactly = 1) { viewModel.reloadGiveaways() }
     }
@@ -94,8 +94,9 @@ class GiveawaysScreenTest {
     @Test
     fun onResults() {
         val giveawayId = 1
+        val giveawayTitle = "Title"
         val giveaway = mockk<Giveaway> {
-            every { title } returns "Title"
+            every { title } returns giveawayTitle
             every { worthDenominated } returns "Worth"
             every { thumbnail } returns "Thumbnail"
             every { id } returns giveawayId
@@ -107,7 +108,11 @@ class GiveawaysScreenTest {
             )
         )
 
+        var loadingCd = ""
+
         composeTestRule.setContent {
+            loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
+
             GameDealsTheme {
                 GiveawaysScreen(
                     onBack = {},
@@ -117,11 +122,8 @@ class GiveawaysScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(LoadingDataTag)
-            .assertDoesNotExist()
-
-        composeTestRule.onNodeWithTag(GiveawayListItemTag.plus(giveaway.id))
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(giveawayTitle).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
@@ -129,14 +131,15 @@ class GiveawaysScreenTest {
 
     @Test
     fun onShowFilters() {
-        openAndTestFilters()
-    }
-
-
-    private fun openAndTestFilters() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
+        var filtersIconCd = ""
+        var platformLabel = ""
+
         composeTestRule.setContent {
+            filtersIconCd = stringResource(Res.string.giveaway_screen_filters_icon)
+            platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label)
+
             GameDealsTheme {
                 GiveawaysScreen(
                     onBack = {},
@@ -146,10 +149,12 @@ class GiveawaysScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GiveawayFiltersIconTag, useUnmergedTree = true)
+        composeTestRule.onNodeWithContentDescription(filtersIconCd, useUnmergedTree = true)
             .performClick()
 
-        composeTestRule.onNodeWithTag(GiveawayFiltersTag)
+        // Assert the sheet is visible via a known child label rather than a wrapper CD —
+        // wrapper CDs mask their descendants in Compose's merged semantics tree.
+        composeTestRule.onNodeWithText(platformLabel)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }

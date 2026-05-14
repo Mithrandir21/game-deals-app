@@ -18,4 +18,6 @@
     <string name="giveaway_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="giveaway_screen_data_loading_error_retry">Retry</string>
 
+    <string name="giveaway_screen_loading_indicator">Loading giveaways</string>
+
 </resources>
