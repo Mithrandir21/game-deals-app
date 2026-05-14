@@ -90,7 +90,16 @@ class WebViewTest {
             )
         }
 
-        // The spinner is initially displayed because `loading` defaults to true.
+        // Pin `loading = true` so the precondition is deterministic. The real WebView is
+        // loading https://example.com on the emulator and may have already fired
+        // onPageFinished — or, if the emulator can't reach example.com, onReceivedError
+        // for the main frame — by the time we assert. Either path would clear loading
+        // before the spinner check and the test would fail intermittently with
+        // "ProgressBarRangeInfo is defined is not displayed!".
+        invokeOnWebViewClient { client, view ->
+            client.onPageStarted(view, "https://example.com", null)
+        }
+
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
             .assertIsDisplayed()
 
@@ -117,6 +126,12 @@ class WebViewTest {
                 url = "https://example.com",
                 onBack = {}
             )
+        }
+
+        // Pin `loading = true` so the precondition is deterministic — see the comment
+        // on webView_clearsLoadingOnMainFrameReceivedError for the timing rationale.
+        invokeOnWebViewClient { client, view ->
+            client.onPageStarted(view, "https://example.com", null)
         }
 
         composeTestRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
