@@ -88,7 +88,7 @@ jobs:
         arch: x86_64
         target: google_apis
         force-avd-creation: false
-        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim -camera-back none
+        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim -camera-back none -grpc 8554
         disable-animations: true
         script: echo "Generated AVD snapshot."
 
@@ -99,7 +99,7 @@ jobs:
         arch: x86_64
         target: google_apis
         force-avd-creation: false
-        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -grpc 8554
         disable-animations: true
         script: ./gradlew --no-daemon connectedDebugAndroidTest
 
