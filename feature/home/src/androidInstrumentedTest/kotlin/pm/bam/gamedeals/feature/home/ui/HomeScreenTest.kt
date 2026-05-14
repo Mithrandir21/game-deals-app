@@ -35,6 +35,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banne
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
+import pm.bam.gamedeals.testing.SkipOnCi
 
 class HomeScreenTest {
 
@@ -166,6 +167,7 @@ class HomeScreenTest {
     }
 
     @Test
+    @SkipOnCi
     fun storeDataLoadedWide() {
         onDevice().setScreenOrientation(ScreenOrientation.LANDSCAPE)
 

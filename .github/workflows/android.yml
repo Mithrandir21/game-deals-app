@@ -101,10 +101,27 @@ jobs:
         force-avd-creation: false
         emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -grpc 8554
         disable-animations: true
+        # `adb shell settings put global mdevx.grpc_guest_port` writes the
+        # Settings.Global key that androidx.test.espresso.device 1.1.0 reads
+        # via `DeviceControllerModule.getEmulatorGRPCPortFromSystem` to find
+        # the emulator's gRPC control port. AGP/UTP normally writes this for
+        # Gradle Managed Devices but not for externally-launched emulators
+        # like this one. The `-grpc 8554` emulator flag (above) opens the
+        # port on the emulator side; this line tells the test process where
+        # to find it.
+        #
+        # The `notAnnotation` filter excludes tests carrying
+        # `pm.bam.gamedeals.testing.SkipOnCi` — currently the two `*Wide`
+        # tests that drive `onDevice().setScreenOrientation(LANDSCAPE)`,
+        # which the externally-launched emulator's gRPC server refuses
+        # because it was started without `-grpc-use-token` / `-grpc-use-jwt`
+        # / `-grpc-allowlist`. Revisit if/when CI moves to Gradle Managed
+        # Devices.
         script: |
           adb wait-for-device
           adb shell settings put global mdevx.grpc_guest_port 8554
-          ./gradlew --no-daemon connectedDebugAndroidTest
+          ./gradlew --no-daemon connectedDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pm.bam.gamedeals.testing.SkipOnCi
 
     - name: Publish test results
       if: always()
