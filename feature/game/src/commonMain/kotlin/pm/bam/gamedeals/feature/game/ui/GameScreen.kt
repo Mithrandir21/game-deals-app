@@ -49,7 +49,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -132,9 +131,7 @@ private fun CompactGameDealsDetails(
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .testTag(GameDealsTag),
+        modifier = modifier.verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start
     ) {
         CompactGameDetail(data.gameDetails)
@@ -163,7 +160,7 @@ private fun WideGameDealsDetails(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
-    Row(modifier = modifier.testTag(GameDealsTag)) {
+    Row(modifier = modifier) {
         WideGameDetail(data.gameDetails)
 
         Column(
@@ -194,7 +191,6 @@ private fun CompactGameDetail(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = GameDealsCustomTheme.spacing.large, top = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large)
-            .testTag(GameDetailsTag)
     ) {
         AsyncImage(
             model = gameDetails.info.thumb,
@@ -210,9 +206,7 @@ private fun CompactGameDetail(
         Column(
             modifier = Modifier.padding(GameDealsCustomTheme.spacing.small)
         ) {
-            Text(
-                modifier = Modifier.testTag(GameDetailsTitleTag),
-                text = gameDetails.info.title)
+            Text(text = gameDetails.info.title)
             Text(
                 modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.small),
                 text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated)
@@ -240,7 +234,6 @@ private fun WideGameDetail(
         modifier = Modifier
             .width(IntrinsicSize.Min)
             .padding(start = GameDealsCustomTheme.spacing.large, top = GameDealsCustomTheme.spacing.large)
-            .testTag(GameDetailsTag)
     ) {
         AsyncImage(
             model = gameDetails.info.thumb,
@@ -257,9 +250,7 @@ private fun WideGameDetail(
             modifier = Modifier.padding(GameDealsCustomTheme.spacing.small)
         ) {
             Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(GameDetailsTitleTag),
+                modifier = Modifier.fillMaxWidth(),
                 text = gameDetails.info.title
             )
             Text(
@@ -298,8 +289,7 @@ private fun StoreGameDealRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(GameDealsCustomTheme.spacing.medium)
-                .testTag(GameDealItemTag),
+                .padding(GameDealsCustomTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
@@ -313,8 +303,7 @@ private fun StoreGameDealRow(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                    .testTag(GameDealItemStoreTitleLabelTag),
+                    .padding(horizontal = GameDealsCustomTheme.spacing.medium),
                 text = store.storeName,
             )
             Text(
@@ -329,7 +318,6 @@ private fun StoreGameDealRow(
                 text = deal.priceDenominated
             )
             IconButton(
-                modifier = Modifier.testTag(GameDealItemShareBtnTag),
                 onClick = { onShareDeal(gameInfo, store, deal) }
             ) {
                 Icon(
@@ -370,7 +358,6 @@ private fun GameScreenContent(
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        modifier = Modifier.testTag(TopAppBarTag),
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary,
@@ -378,7 +365,6 @@ private fun GameScreenContent(
                         title = { Text(text = title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         navigationIcon = {
                             IconButton(
-                                modifier = Modifier.testTag(TopAppNavBarTag),
                                 onClick = { onBack() }
                             ) {
                                 Icon(
@@ -389,7 +375,6 @@ private fun GameScreenContent(
                         },
                         actions = {
                             IconButton(
-                                modifier = Modifier.testTag(FavouriteActionTag),
                                 enabled = data is GameScreenData.Data,
                                 onClick = onToggleFavourite,
                             ) {
@@ -415,7 +400,6 @@ private fun GameScreenContent(
                             .padding(innerPadding)
                             .fillMaxSize()
                             .wrapContentSize(Alignment.Center)
-                            .testTag(LoadingDataTag)
                     )
 
                     GameScreenData.Error -> LaunchedEffect(snackbarHostState) {
@@ -440,20 +424,6 @@ private fun GameScreenContent(
             }
         }
 }
-
-
-internal const val TopAppBarTag = "TopAppBarTag"
-internal const val TopAppNavBarTag = "TopAppNavBarTag"
-internal const val LoadingDataTag = "LoadingDataTag"
-internal const val FavouriteActionTag = "FavouriteActionTag"
-
-internal const val GameDetailsTag = "GameDetailsTag"
-internal const val GameDetailsTitleTag = "GameDetailsTitleTag"
-
-internal const val GameDealsTag = "GameDealsTag"
-internal const val GameDealItemTag = "GameDealItemTag"
-internal const val GameDealItemStoreTitleLabelTag = "GameDealItemStoreTitleLabelTag"
-internal const val GameDealItemShareBtnTag = "GameDealItemShareBtn"
 
 
 private val previewGameDealDetails = persistentListOf(

@@ -1,14 +1,13 @@
 package pm.bam.gamedeals.feature.search.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertRangeInfoEquals
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -21,6 +20,7 @@ import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.stringResource
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -28,6 +28,13 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.feature.search.generated.resources.Res
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_price_range_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_exact_match_switch_description
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_icon
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_rating_range_slider_description
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_empty_state_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_no_results_state_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_loading_indicator
 
 class SearchScreenTest {
 
@@ -36,22 +43,35 @@ class SearchScreenTest {
 
     private val searchViewModel: SearchViewModel = mockk()
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    @Before
+    fun setup() {
+        every { searchViewModel.favouriteIds } returns MutableStateFlow(emptySet())
+    }
+
+    private fun setupCompose(
+        onSearchedGame: (Int) -> Unit = { _ -> },
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            GameDealsTheme {
+                SearchScreen(
+                    onSearchedGame = onSearchedGame,
+                    searchViewModel = searchViewModel,
+                )
+            }
+        }
+    }
 
     @Test
     fun onLoadEmptyState() {
         every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.Empty)
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
-            .assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.emptyLabel)
+            .assertIsDisplayed()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
@@ -61,17 +81,10 @@ class SearchScreenTest {
     fun noResultsOnLoad() {
         every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.NoResults)
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
-            .assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.noResultsLabel)
+            .assertIsDisplayed()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
@@ -81,20 +94,10 @@ class SearchScreenTest {
     fun searchLoading() {
         every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.Loading)
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(SearchLoadingTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertIsDisplayed()
-
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
-            .assertDoesNotExist()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
@@ -105,38 +108,22 @@ class SearchScreenTest {
         every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.Error)
         every { searchViewModel.searchGames(any(), any(), any(), any(), any()) } just Runs
 
-        var snackText = ""
-        var snackRetry = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            snackText = stringResource(Res.string.search_screen_data_loading_error_msg)
-            snackRetry = stringResource(Res.string.search_screen_data_loading_error_retry)
-
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(SearchLoadingTag)
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertDoesNotExist()
 
-        composeTestRule.onNodeWithText(snackText)
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithText(snackRetry)
+        composeTestRule.onNodeWithText(screenSemantics.retry)
             .assertIsDisplayed()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
 
 
-        composeTestRule.onNodeWithText(snackRetry)
+        composeTestRule.onNodeWithText(screenSemantics.retry)
             .assertIsDisplayed()
             .performClick()
 
@@ -151,6 +138,7 @@ class SearchScreenTest {
 
         val singleDeal: Deal = mockk {
             every { dealID } returns dealId
+            every { gameID } returns 1
             every { title } returns dealTitle
             every { salePriceDenominated } returns dealSalePriceDenominated
             every { thumb } returns "Thumb"
@@ -159,19 +147,12 @@ class SearchScreenTest {
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(SearchLoadingTag)
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
+            .assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
+        composeTestRule.onNodeWithText(dealTitle)
             .assertIsDisplayed()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
@@ -181,18 +162,14 @@ class SearchScreenTest {
     @Test
     fun onShowFilters() {
         openAndTestFilters()
-
-        composeTestRule.onNodeWithTag(SearchResultsListItemTag)
-            .assertDoesNotExist()
     }
 
     @Test
     fun initialPriceRange() {
         openAndTestFilters()
 
-        composeTestRule.onNodeWithTag(SearchFiltersPriceRangeLabelTag)
-            .assertTextContains(rangeString(SearchFilterMinPrice, SearchFilterMaxPrice, SearchFilterMaxPrice))
-
+        composeTestRule.onNodeWithText(rangeString(SearchFilterMinPrice, SearchFilterMaxPrice, SearchFilterMaxPrice))
+            .assertIsDisplayed()
     }
     // TODO - Add tests for Price range change when RangeSlider value change supported with Input action, like SwipeRight.
 
@@ -200,10 +177,10 @@ class SearchScreenTest {
     fun initialRateRange() {
         openAndTestFilters()
 
-        composeTestRule.onNodeWithTag(SearchFiltersRatingRangeLabelTag)
-            .assertTextContains(valueString(SearchFilterMinRate, SearchFilterMaxRate))
+        composeTestRule.onNodeWithText(valueString(SearchFilterMinRate, SearchFilterMaxRate))
+            .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(SearchFiltersRatingRangeTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.ratingSliderCd)
             .assertRangeInfoEquals(
                 ProgressBarRangeInfo(
                     current = SearchFilterMinRate,
@@ -217,7 +194,7 @@ class SearchScreenTest {
     fun initialExactMatchSelection() {
         openAndTestFilters()
 
-        composeTestRule.onNodeWithTag(SearchFiltersExactMatchSwitchTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.switchCd)
             .assertIsOff()
     }
 
@@ -225,35 +202,57 @@ class SearchScreenTest {
     fun toggleExactMatchSelection() {
         openAndTestFilters()
 
-        composeTestRule.onNodeWithTag(SearchFiltersExactMatchSwitchTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.switchCd)
             .assertIsOff()
 
-        composeTestRule.onNodeWithTag(SearchFiltersExactMatchSwitchTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.switchCd)
             .performTouchInput { swipeRight() }
 
-        composeTestRule.onNodeWithTag(SearchFiltersExactMatchSwitchTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.switchCd)
             .assertIsOn()
     }
 
     private fun openAndTestFilters() {
         every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.Empty)
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                SearchScreen(
-                    onSearchedGame = { _ -> },
-                    searchViewModel = searchViewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(SearchFiltersIconTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.filtersIcon)
             .performClick()
 
-        composeTestRule.onNodeWithTag(SearchFiltersTag)
+        // Assert the sheet is visible via a known child label rather than a wrapper CD —
+        // wrapper CDs mask their descendants in Compose's merged semantics tree.
+        composeTestRule.onNodeWithText(screenSemantics.priceRangeLabel)
             .assertIsDisplayed()
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 2) { searchViewModel.resultState }
+    }
+
+    private data class ScreenSemantics(
+        val emptyLabel: String,
+        val noResultsLabel: String,
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+        val filtersIcon: String,
+        val priceRangeLabel: String,
+        val ratingSliderCd: String,
+        val switchCd: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                emptyLabel = stringResource(Res.string.search_screen_list_empty_state_label),
+                noResultsLabel = stringResource(Res.string.search_screen_list_no_results_state_label),
+                loading = stringResource(Res.string.search_screen_loading_indicator),
+                errorMsg = stringResource(Res.string.search_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.search_screen_data_loading_error_retry),
+                filtersIcon = stringResource(Res.string.search_screen_filters_icon),
+                priceRangeLabel = stringResource(Res.string.search_screen_filter_price_range_label),
+                ratingSliderCd = stringResource(Res.string.search_screen_filters_rating_range_slider_description),
+                switchCd = stringResource(Res.string.search_screen_filters_exact_match_switch_description),
+            )
+        }
     }
 }

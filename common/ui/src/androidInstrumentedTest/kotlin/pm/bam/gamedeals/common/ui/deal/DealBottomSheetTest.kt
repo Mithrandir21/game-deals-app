@@ -1,11 +1,14 @@
 package pm.bam.gamedeals.common.ui.deal
 
-import androidx.compose.ui.test.assert
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.hasTextExactly
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.mockk.Runs
 import io.mockk.every
@@ -16,11 +19,14 @@ import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_row_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_on_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_store_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -44,6 +50,42 @@ class DealBottomSheetTest {
     private val gameName = "Game Name"
     private val gamePrice = "Game Price"
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    private var titleLabel: String = ""
+    private var cheapestOnLabel: String = ""
+    private var cheaperStoreRowCd: String = ""
+
+    private fun setupCompose(
+        data: DealBottomSheetData?,
+        onDismiss: () -> Unit = {},
+        onShare: (DealBottomSheetData) -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+        onRetryDealDetails: () -> Unit = {},
+        cheapestOnArgs: Pair<String, String>? = null,
+        cheaperStoreRowArgs: Pair<String, String>? = null,
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            titleLabel = ScreenSemantics.titleLabel(mockStoreName, gamePrice)
+            cheapestOnArgs?.let { (price, date) ->
+                cheapestOnLabel = ScreenSemantics.cheapestOnLabel(price, date)
+            }
+            cheaperStoreRowArgs?.let { (storeName, price) ->
+                cheaperStoreRowCd = ScreenSemantics.cheaperStoreRowCd(storeName, price)
+            }
+            GameDealsTheme {
+                DealBottomSheet(
+                    data = data,
+                    onDismiss = onDismiss,
+                    onShare = onShare,
+                    goToWeb = goToWeb,
+                    onRetryDealDetails = onRetryDealDetails,
+                )
+            }
+        }
+    }
+
     @Test
     fun loadingState() {
         val loadingData = DealBottomSheetData.DealDetailsLoading(
@@ -54,32 +96,15 @@ class DealBottomSheetTest {
             gameSalesPriceDenominated = gamePrice
         )
 
-        var expectedGameData = ""
+        setupCompose(data = loadingData)
 
-        composeTestRule.setContent {
-            expectedGameData = stringResource(Res.string.deal_details_title_label, mockStoreName, gamePrice)
-
-            GameDealsTheme {
-                DealBottomSheet(
-                    data = loadingData,
-                    onDismiss = {},
-                    onShare = {},
-                    goToWeb = { _, _ -> },
-                    onRetryDealDetails = {}
-                )
-            }
-        }
-
-
-        composeTestRule.onNodeWithTag(StoreDataGameDataTag)
-            .assert(hasTextExactly(expectedGameData))
+        composeTestRule.onNodeWithText(titleLabel)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(StoreDataGameNameTag)
-            .assert(hasTextExactly(gameName))
+        composeTestRule.onNodeWithText(gameName)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(DataLoadingTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertIsDisplayed()
     }
 
@@ -94,35 +119,16 @@ class DealBottomSheetTest {
             gameSalesPriceDenominated = gamePrice
         )
 
-        var expectedMessage = ""
-        var expectedBtnText = ""
+        setupCompose(data = loadingData)
 
-        composeTestRule.setContent {
-            expectedMessage = stringResource(Res.string.deal_details_data_loading_error_msg)
-            expectedBtnText = stringResource(Res.string.deal_details_data_loading_error_retry)
-
-            GameDealsTheme {
-                DealBottomSheet(
-                    data = loadingData,
-                    onDismiss = {},
-                    onShare = {},
-                    goToWeb = { _, _ -> },
-                    onRetryDealDetails = {}
-                )
-            }
-        }
-
-
-        composeTestRule.onNodeWithTag(DataErrorMsgTag)
-            .assert(hasTextExactly(expectedMessage))
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(DataErrorBtnTag)
-            .assert(hasTextExactly(expectedBtnText))
+        composeTestRule.onNodeWithText(screenSemantics.retry)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(DataLoadingTag)
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
+            .assertDoesNotExist()
     }
 
 
@@ -147,7 +153,7 @@ class DealBottomSheetTest {
 
         val salePriceDenominated = "Cheaper"
         val cheaperStoreId = 1
-        val cheaperStoreName = "Store Name"
+        val cheaperStoreName = "Cheaper Store"
         val cheaperStore: Store = mockk {
             every { this@mockk.storeID } returns cheaperStoreId
             every { this@mockk.images.logo } returns "Logo"
@@ -183,61 +189,77 @@ class DealBottomSheetTest {
             every { this@mockk.invoke(any(), any()) } just Runs
         }
 
-        var expectedGameData = ""
-        var expectedCheapestStore = ""
-        var expectedCheapestPrice = ""
+        setupCompose(
+            data = dealDetailsData,
+            goToWeb = goToActions,
+            cheapestOnArgs = cheapestPriceDenominated to cheapestPriceDate,
+            cheaperStoreRowArgs = cheaperStoreName to salePriceDenominated,
+        )
 
-        composeTestRule.setContent {
-            expectedGameData = stringResource(Res.string.deal_details_title_label, mockStoreName, gamePrice)
-            expectedCheapestStore = stringResource(Res.string.deal_details_cheapest_store_label)
-                .plus(stringResource(Res.string.deal_details_cheapest_no))
-            expectedCheapestPrice = stringResource(Res.string.deal_details_cheapest_on_label, cheapestPriceDenominated, cheapestPriceDate)
-
-            GameDealsTheme {
-                DealBottomSheet(
-                    data = dealDetailsData,
-                    onDismiss = {},
-                    onShare = {},
-                    goToWeb = goToActions,
-                    onRetryDealDetails = {}
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(StoreDataGameDataTag)
-            .assert(hasTextExactly(expectedGameData))
+        composeTestRule.onNodeWithText(titleLabel)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(StoreDataGameNameTag)
-            .assert(hasTextExactly(gameName))
+        composeTestRule.onNodeWithText(gameName)
             .assertIsDisplayed()
 
-        // Loading not being shown
-        composeTestRule.onNodeWithTag(DataLoadingTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(DealCheapestTag)
-            .assert(hasTextExactly(expectedCheapestStore))
+        composeTestRule.onNodeWithText(screenSemantics.cheapestStoreLabel + screenSemantics.cheapestNo)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(CheapestPriceTag)
-            .assert(hasTextExactly(expectedCheapestPrice))
+        composeTestRule.onNodeWithText(cheapestOnLabel)
             .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(DealCheaperStoreRowTag.plus(cheaperStoreId))
+        composeTestRule.onNode(hasContentDescription(cheaperStoreRowCd) and hasRole(Role.Button))
             .assertIsDisplayed()
 
         verify(exactly = 0) { goToActions.invoke(any(), any()) }
 
-
-        composeTestRule.onNodeWithTag(DealCheaperStoreRowTag.plus(cheaperStoreId))
+        composeTestRule.onNode(hasContentDescription(cheaperStoreRowCd) and hasRole(Role.Button))
             .performClick()
 
         verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(cheaperStoreDetailsDealId), gameName) }
 
-        composeTestRule.onNodeWithTag(GoToDealBtnTag)
+        composeTestRule.onNodeWithText(screenSemantics.goToDeal)
             .performClick()
 
         verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(dealId), gameName) }
+    }
+
+    private fun hasRole(role: Role): SemanticsMatcher =
+        SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
+
+    private data class ScreenSemantics(
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+        val cheapestStoreLabel: String,
+        val cheapestNo: String,
+        val goToDeal: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loading = stringResource(Res.string.deal_details_loading_indicator),
+                errorMsg = stringResource(Res.string.deal_details_data_loading_error_msg),
+                retry = stringResource(Res.string.deal_details_data_loading_error_retry),
+                cheapestStoreLabel = stringResource(Res.string.deal_details_cheapest_store_label),
+                cheapestNo = stringResource(Res.string.deal_details_cheapest_no),
+                goToDeal = stringResource(Res.string.deal_details_go_to_deal_label),
+            )
+
+            @Composable
+            fun titleLabel(storeName: String, price: String): String =
+                stringResource(Res.string.deal_details_title_label, storeName, price)
+
+            @Composable
+            fun cheapestOnLabel(price: String, date: String): String =
+                stringResource(Res.string.deal_details_cheapest_on_label, price, date)
+
+            @Composable
+            fun cheaperStoreRowCd(storeName: String, price: String): String =
+                stringResource(Res.string.deal_details_cheaper_store_row_description, storeName, price)
+        }
     }
 }

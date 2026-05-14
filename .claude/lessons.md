@@ -8,6 +8,26 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-14-02 · Per-test-class `ScreenSemantics` + `setupCompose` in instrumented UI tests
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, boilerplate
+**Applies to:** Any new instrumented `*ScreenTest.kt` with ≥2 string-resource lookups or ≥2 `setContent` blocks
+
+Don't repeat `composeTestRule.setContent { GameDealsTheme { Screen(...) } }` per test, and don't sprinkle `var x = ""` then-reassign-inside-`setContent` per resource lookup. Instead: declare a private nested `data class ScreenSemantics(...)` with a `@Composable fun load(): ScreenSemantics` companion factory that resolves every static `stringResource(Res.string.X)` the suite needs as `val` fields. Parameterised CDs (anything formatted with runtime data) become `@Composable` companion methods (`fun dealRowCd(title: String, price: String): String`). Add a `lateinit var screenSemantics: ScreenSemantics` field and a `private fun setupCompose(...)` wrapping the `setContent` block; inside the lambda, assign `screenSemantics = ScreenSemantics.load()`. Tests then read `screenSemantics.foo` and call `setupCompose()` with default-valued overrides (`onBack`, `onClick`, etc.) — bodies shrink to mock-stub setup + `setupCompose()` + assertions. MockK stubs that fire on first composition must still be set before `setupCompose()`. Parameterised CDs use a class-level `var` captured inside `setupCompose` (because their values depend on test fixture data); don't try to fold them into `ScreenSemantics.load()`'s constructor.
+
+Full pattern with code samples and pointers to all six refactored test files lives in `docs/patterns/ui-testing.md` under "Per-Test-Class `ScreenSemantics` + `setupCompose`".
+
+**Source:** May 2026 — applied across `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, `:feature:home`, and `:common:ui`'s `DealBottomSheetTest` after the testTag refactor surfaced the duplication. Pattern shape borrowed from a sibling project's `CoachingWidgetTest`.
+
+### L-2026-05-14-01 · Find Compose nodes by visible text or content description, never `testTag`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, accessibility, content-description
+**Applies to:** Any new `@Composable` screen, any new instrumented `*ScreenTest.kt`, and any edit that adds a clickable surface or unlabeled control to existing screens
+
+`testTag` is forbidden on production composables and as a finder in tests. The finder hierarchy is: (1) `onNodeWithText(stringResource(...))` for elements that already render user-visible copy; (2) `onNodeWithContentDescription(stringResource(...))` for icons/images/sliders/switches/spinner — adding `Modifier.semantics { contentDescription = stringResource(...) }` only on leaf or semantic-bearing nodes (never on wrapper `Column`/`Box`/`ModalBottomSheet` — Compose merges descendants into the parent, masking children for TalkBack); (3) `clickable(role = Role.Button) { ... }` on Card/Row/Box tap surfaces (production code, not test plumbing) + `hasContentDescription(...) and hasRole(...)` matchers in tests. Define `fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)` locally in the test file until a second consumer appears. `stringResource(...)` is `@Composable`, so tests resolve resources during composition via the per-class `ScreenSemantics` capture pattern (see L-2026-05-14-02) rather than scattering `var x = ""` placeholders. Skip extension-function helpers (`tapBack()`, `assertX()`) for per-feature tests with <10 methods — inline is clearer; promote to a shared source set only when a second test file imports them.
+
+Full policy with examples, "Seen in" pointers, and rationale lives in `docs/patterns/ui-testing.md`. Cross-referenced from `docs/patterns/testing.md`.
+
+**Source:** May 2026 — codebase-wide campaign to remove `testTag`. First pass landed `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test after trialling four approaches; the policy then covered `:feature:home`, `:feature:favourites`, and `:common:ui`'s `DealBottomSheet` in the same branch. As of 2026-05-14 no production composable or instrumented test in this codebase carries a `testTag`.
+
 ### L-2026-05-13-02 · Preview the modal-sheet body inside `Surface`, not via `ModalBottomSheet`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, preview, material3, modal-bottom-sheet
 **Applies to:** Any feature with a filter/detail UI built on `ModalBottomSheet` (giveaways `Filters`, search `Filters`, `DealBottomSheet` in `:common:ui`)

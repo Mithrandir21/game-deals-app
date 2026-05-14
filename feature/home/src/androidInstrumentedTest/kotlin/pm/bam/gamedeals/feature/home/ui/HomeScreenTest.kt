@@ -1,10 +1,9 @@
 package pm.bam.gamedeals.feature.home.ui
 
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.espresso.device.DeviceInteraction.Companion.setScreenOrientation
 import androidx.test.espresso.device.EspressoDevice.Companion.onDevice
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.datetime.LocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -27,8 +27,11 @@ import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
@@ -69,6 +72,7 @@ class HomeScreenTest {
     }
     private val mockDeal: Deal = mockk {
         every { dealID } returns dealId
+        every { gameID } returns 1
         every { title } returns dealTitle
         every { normalPriceDenominated } returns normalPrice
         every { salePriceDenominated } returns dealPrice
@@ -78,11 +82,40 @@ class HomeScreenTest {
     private val mockDealData = HomeScreenListData.DealData(mockDeal)
     private val mockViewAllData = HomeScreenListData.ViewAllData(mockStore)
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    private var bannerCd: String = ""
+    private var viewAllText: String = ""
+
     @Before
     fun setup() {
         every { viewModel.dealDetails } returns MutableStateFlow(null)
         every { viewModel.favouriteIds } returns MutableStateFlow(emptySet())
         every { viewModel.favourites } returns MutableStateFlow(persistentListOf<FavouriteGame>())
+    }
+
+    private fun setupCompose(
+        onSearch: () -> Unit = {},
+        goToGame: (Int) -> Unit = { _ -> },
+        onViewStoreDeals: (Store) -> Unit = { _ -> },
+        onViewGiveaways: () -> Unit = {},
+        onViewFavourites: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            bannerCd = ScreenSemantics.bannerCd(storeTitle)
+            viewAllText = ScreenSemantics.viewAllText(storeTitle)
+            HomeScreen(
+                onSearch = onSearch,
+                goToGame = goToGame,
+                onViewStoreDeals = onViewStoreDeals,
+                onViewGiveaways = onViewGiveaways,
+                onViewFavourites = onViewFavourites,
+                goToWeb = goToWeb,
+                viewModel = viewModel,
+            )
+        }
     }
 
     @Test
@@ -91,29 +124,13 @@ class HomeScreenTest {
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 
-        composeTestRule.setContent {
-            HomeScreen(
-                onSearch = {},
-                goToGame = { _ -> },
-                onViewStoreDeals = {},
-                onViewGiveaways = {},
-                onViewFavourites = {},
-                goToWeb = { _, _ -> },
-                viewModel = viewModel
-            )
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(dealTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(viewAllText).assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertIsDisplayed()
     }
 
     @Test
@@ -122,41 +139,15 @@ class HomeScreenTest {
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 
-        var snackText = ""
-        var snackRetry = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            snackText = stringResource(Res.string.home_screen_data_loading_error_msg)
-            snackRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(dealTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(viewAllText).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
 
-            HomeScreen(
-                onSearch = {},
-                goToGame = { _ -> },
-                onViewStoreDeals = {},
-                onViewGiveaways = {},
-                onViewFavourites = {},
-                goToWeb = { _, _ -> },
-                viewModel = viewModel
-            )
-        }
-
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithText(snackText)
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.retry).assertIsDisplayed()
     }
 
     @Test
@@ -165,29 +156,13 @@ class HomeScreenTest {
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 
-        composeTestRule.setContent {
-            HomeScreen(
-                onSearch = {},
-                goToGame = { _ -> },
-                onViewStoreDeals = {},
-                onViewGiveaways = {},
-                onViewFavourites = {},
-                goToWeb = { _, _ -> },
-                viewModel = viewModel
-            )
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertIsDisplayed()
+        composeTestRule.onNodeWithText(dealTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(viewAllText).assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
     }
 
     @Test
@@ -210,19 +185,8 @@ class HomeScreenTest {
             HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(rich))
         )
 
-        composeTestRule.setContent {
-            HomeScreen(
-                onSearch = {},
-                goToGame = { _ -> },
-                onViewStoreDeals = {},
-                onViewGiveaways = {},
-                onViewFavourites = {},
-                goToWeb = { _, _ -> },
-                viewModel = viewModel
-            )
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(99)).assertIsDisplayed()
         composeTestRule.onNodeWithText("Rich Giveaway").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE $59.99 - Game · PC, Steam").assertIsDisplayed()
     }
@@ -240,19 +204,9 @@ class HomeScreenTest {
             HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(freebie))
         )
 
-        composeTestRule.setContent {
-            HomeScreen(
-                onSearch = {},
-                goToGame = { _ -> },
-                onViewStoreDeals = {},
-                onViewGiveaways = {},
-                onViewFavourites = {},
-                goToWeb = { _, _ -> },
-                viewModel = viewModel
-            )
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(100)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Free Beta").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE - Early Access · PC").assertIsDisplayed()
     }
 
@@ -281,4 +235,27 @@ class HomeScreenTest {
         gamerpowerUrl = "https://example.com",
         openGiveaway = "https://example.com/giveaway",
     )
+
+    private data class ScreenSemantics(
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loading = stringResource(Res.string.home_screen_loading_indicator),
+                errorMsg = stringResource(Res.string.home_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.home_screen_data_loading_error_retry),
+            )
+
+            @Composable
+            fun bannerCd(storeName: String): String =
+                stringResource(Res.string.home_screen_store_banner, storeName)
+
+            @Composable
+            fun viewAllText(storeName: String): String =
+                stringResource(Res.string.home_screen_all_store_deals_label, storeName)
+        }
+    }
 }

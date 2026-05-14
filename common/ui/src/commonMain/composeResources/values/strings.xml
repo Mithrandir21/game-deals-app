@@ -29,4 +29,7 @@
     <string name="deal_details_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="deal_details_data_loading_error_retry">Retry</string>
 
+    <string name="deal_details_loading_indicator">Loading deal details</string>
+    <string name="deal_details_cheaper_store_row_description">Cheaper deal at %1$s: %2$s</string>
+
 </resources>

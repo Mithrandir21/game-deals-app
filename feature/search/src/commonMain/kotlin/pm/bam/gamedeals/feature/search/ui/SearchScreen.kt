@@ -67,7 +67,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,11 +91,15 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_favouri
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_exact_match_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_price_range_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_steam_range_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_exact_match_switch_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_icon
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_price_range_slider_description
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_rating_range_slider_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_game_image
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_empty_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_no_results_state_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_loading_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_field_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_icon
 import kotlin.math.roundToInt
@@ -182,18 +187,20 @@ private fun SearchScreenContent(
                     text = stringResource(Res.string.search_screen_list_empty_state_label)
                 )
 
-                SearchViewModel.SearchData.Loading -> CircularProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .wrapContentSize(Alignment.Center)
-                        .testTag(SearchLoadingTag)
-                )
+                SearchViewModel.SearchData.Loading -> {
+                    val loadingCd = stringResource(Res.string.search_screen_loading_indicator)
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.Center)
+                            .semantics { contentDescription = loadingCd }
+                    )
+                }
 
                 SearchViewModel.SearchData.NoResults -> Text(
                     modifier = Modifier
                         .fillMaxSize()
-                        .wrapContentSize(Alignment.Center)
-                        .testTag(SearchEmptyTag),
+                        .wrapContentSize(Alignment.Center),
                     text = stringResource(Res.string.search_screen_list_no_results_state_label)
                 )
 
@@ -283,7 +290,6 @@ private fun SearchResultListItem(
             .clickable { onGame() }
             .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .testTag(SearchResultsListItemTag)
     )
     HorizontalDivider(color = Color.Black)
 }
@@ -314,8 +320,7 @@ private fun SearchField(
                 } else {
                     false
                 }
-            }
-            .testTag(SearchFieldTag),
+            },
         value = title,
         onValueChange = { title = it },
         singleLine = true,
@@ -332,7 +337,6 @@ private fun SearchField(
                 stringResource(Res.string.search_screen_filters_icon),
                 modifier = Modifier
                     .clickable { onShowFilters() }
-                    .testTag(SearchFiltersIconTag)
             )
         },
         label = { Text(text = stringResource(Res.string.search_screen_search_field_label)) },
@@ -387,19 +391,22 @@ private fun Filters(
     var steamSliderValue by rememberSaveable(existingMin) { mutableFloatStateOf(existingMin) }
     var exactMatch by rememberSaveable(existingSearchParameters.exact) { mutableStateOf(existingSearchParameters.exact ?: false) }
 
+    val priceSliderCd = stringResource(Res.string.search_screen_filters_price_range_slider_description)
+    val ratingSliderCd = stringResource(Res.string.search_screen_filters_rating_range_slider_description)
+    val exactMatchSwitchCd = stringResource(Res.string.search_screen_filters_exact_match_switch_description)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(GameDealsCustomTheme.spacing.large)
             .navigationBarsPadding()
-            .testTag(SearchFiltersTag)
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(text = stringResource(Res.string.search_screen_filter_price_range_label), Modifier.weight(1f))
-            Text(modifier = Modifier.testTag(SearchFiltersPriceRangeLabelTag), text = rangeString(priceSliderValue.start, priceSliderValue.endInclusive, priceHighest))
+            Text(text = rangeString(priceSliderValue.start, priceSliderValue.endInclusive, priceHighest))
         }
         RangeSlider(
-            modifier = Modifier.testTag(SearchFiltersPriceRangeTag),
+            modifier = Modifier.semantics { contentDescription = priceSliderCd },
             value = priceSliderValue,
             steps = SearchFilterPriceSteps,
             onValueChange = { range -> priceSliderValue = range },
@@ -419,10 +426,10 @@ private fun Filters(
                 .padding(top = GameDealsCustomTheme.spacing.large)
         ) {
             Text(text = stringResource(Res.string.search_screen_filter_steam_range_label), modifier = Modifier.weight(1f))
-            Text(modifier = Modifier.testTag(SearchFiltersRatingRangeLabelTag), text = valueString(steamSliderValue, SearchFilterMaxRate))
+            Text(text = valueString(steamSliderValue, SearchFilterMaxRate))
         }
         Slider(
-            modifier = Modifier.testTag(SearchFiltersRatingRangeTag),
+            modifier = Modifier.semantics { contentDescription = ratingSliderCd },
             value = steamSliderValue,
             steps = SearchFilterRateSteps,
             onValueChange = { range -> steamSliderValue = range },
@@ -440,7 +447,7 @@ private fun Filters(
         ) {
             Text(text = stringResource(Res.string.search_screen_filter_exact_match_label), Modifier.weight(1f))
             Switch(
-                modifier = Modifier.testTag(SearchFiltersExactMatchSwitchTag),
+                modifier = Modifier.semantics { contentDescription = exactMatchSwitchCd },
                 checked = exactMatch,
                 onCheckedChange = {
                     exactMatch = it
@@ -484,23 +491,6 @@ internal const val SearchFilterPriceSteps = SearchFilterMaxPrice.toInt()
 internal const val SearchFilterMinRate = 40f
 internal const val SearchFilterMaxRate = 95f
 internal const val SearchFilterRateSteps = 10
-
-
-internal const val SearchFieldTag = "SearchFieldTag"
-internal const val SearchFiltersIconTag = "SearchFiltersIconTag"
-internal const val SearchLoadingTag = "SearchLoadingTag"
-internal const val SearchEmptyTag = "SearchEmptyTag"
-internal const val SearchResultsListItemTag = "SearchResultsListItemTag"
-
-internal const val SearchFiltersTag = "SearchFiltersTag"
-
-internal const val SearchFiltersPriceRangeTag = "SearchFiltersPriceRangeTag"
-internal const val SearchFiltersPriceRangeLabelTag = "SearchFiltersPriceRangeLabelTag"
-
-internal const val SearchFiltersRatingRangeTag = "SearchFiltersRatingRangeTag"
-internal const val SearchFiltersRatingRangeLabelTag = "SearchFiltersRatingRangeLabelTag"
-
-internal const val SearchFiltersExactMatchSwitchTag = "SearchFiltersExactMatchSwitchTag"
 
 
 private val previewSearchResults = persistentListOf(

@@ -18,7 +18,8 @@ These are **opinionated guidelines, not iron rules.** Each entry may carry a `Wh
 | [errors](patterns/errors.md)                          | Sealed `RemoteHttpException`, error state variants, `.catch` to UI state.        | 31a89bc · 2026-05-03 |
 | [resources](patterns/resources.md)                    | Room `withTransaction`, singleton `OkHttpClient`, `BufferedReader.use {}`.       | 31a89bc · 2026-05-03 |
 | [di](patterns/di.md)                                  | Singleton-only Hilt modules, per-vendor qualifiers, `@HiltViewModel` injection.  | 31a89bc · 2026-05-03 |
-| [testing](patterns/testing.md)                        | `MainCoroutineRule` + `observeEmissions()`, MockK, MockWebServer, fixture Hilt.  | 31a89bc · 2026-05-03 |
+| [testing](patterns/testing.md)                        | `MainCoroutineRule` + `observeEmissions()`, MockK, MockWebServer, fixture Hilt.  | f215235 · 2026-05-14 |
+| [ui-testing](patterns/ui-testing.md)                   | Compose node finder hierarchy: visible text → content description → role.        | f215235 · 2026-05-14 |
 | [observability](patterns/observability.md)            | Pluggable `Logger` listeners, extension-function call sites, fatal boundary.     | 31a89bc · 2026-05-03 |
 | [build](patterns/build.md)                            | Convention plugins, version catalog, KSP-only, Compose 2.2 wiring, signing.      | 31a89bc · 2026-05-03 |
 

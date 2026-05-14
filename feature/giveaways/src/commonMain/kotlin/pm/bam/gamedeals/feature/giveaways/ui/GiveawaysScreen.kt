@@ -54,7 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
@@ -81,6 +82,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_toolbar_title
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_ascending_label
@@ -159,21 +161,19 @@ private fun GiveawaysScreenContent(
     val errorMessage = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
 
+    val loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
+
     Surface(color = MaterialTheme.colorScheme.background) {
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        modifier = Modifier.testTag(TopAppBarTag),
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary,
                         ),
                         title = { Text(text = stringResource(Res.string.giveaway_screen_toolbar_title), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         navigationIcon = {
-                            IconButton(
-                                modifier = Modifier.testTag(TopAppNavBarTag),
-                                onClick = { onBack() }
-                            ) {
+                            IconButton(onClick = { onBack() }) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
                                     contentDescription = stringResource(Res.string.giveaway_screen_navigation_back_button)
@@ -184,8 +184,7 @@ private fun GiveawaysScreenContent(
                             IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
                                 Icon(
                                     imageVector = Icons.Default.Settings,
-                                    stringResource(Res.string.giveaway_screen_filters_icon),
-                                    modifier = Modifier.testTag(GiveawayFiltersIconTag)
+                                    stringResource(Res.string.giveaway_screen_filters_icon)
                                 )
                             }
                         }
@@ -199,7 +198,7 @@ private fun GiveawaysScreenContent(
                             .padding(innerPadding)
                             .fillMaxSize()
                             .wrapContentSize(Alignment.Center)
-                            .testTag(LoadingDataTag)
+                            .semantics { contentDescription = loadingCd }
                     )
 
                     GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS -> LazyColumn(
@@ -247,8 +246,7 @@ private fun GiveawayListItem(
         modifier = Modifier
             .clickable { onGiveaway() }
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .testTag(GiveawayListItemTag.plus(giveaway.id)),
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
         headlineContent = { Text(giveaway.title) },
         supportingContent = {
             giveaway.worthDenominated?.let {
@@ -293,7 +291,6 @@ private fun GiveawayFilters(
 
     if (showFilters) {
         ModalBottomSheet(
-            modifier = Modifier.testTag(GiveawayFiltersTag),
             onDismissRequest = { onDismiss() },
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
@@ -393,9 +390,7 @@ private fun GiveawaySortByOptions(
                 FilterChip(
                     label = {
                         Text(
-                            modifier = Modifier
-                                .padding(GameDealsCustomTheme.spacing.extraSmall)
-                                .testTag(GiveawayFiltersSortTag.plus(sortBy.name)),
+                            modifier = Modifier.padding(GameDealsCustomTheme.spacing.extraSmall),
                             text = sortBy.name,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -414,17 +409,6 @@ private val parametersSaver = run {
         restore = { GiveawaySearchParameters.from(it) }
     )
 }
-
-
-internal const val TopAppBarTag = "TopAppBarTag"
-internal const val TopAppNavBarTag = "TopAppNavBarTag"
-internal const val LoadingDataTag = "LoadingDataTag"
-
-internal const val GiveawayListItemTag = "GiveawayListItemTag"
-
-internal const val GiveawayFiltersTag = "GiveawayFiltersTag"
-internal const val GiveawayFiltersIconTag = "GiveawayFiltersIconTag"
-internal const val GiveawayFiltersSortTag = "GiveawayFiltersSortTag"
 
 
 private val previewGiveawaysList = persistentListOf(

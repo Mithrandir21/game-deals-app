@@ -46,7 +46,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +75,7 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.store.generated.resources.Res
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_favourite_indicator
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_game_image
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
@@ -154,18 +157,19 @@ private fun DealRow(
     isFavourite: Boolean,
     onViewDealDetails: ((deal: Deal) -> Unit)
 ) {
+    val dealRowCd = stringResource(Res.string.store_screen_deal_row_description, deal.title, deal.salePriceDenominated)
     Card {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onViewDealDetails(deal) }
+                .clickable(role = Role.Button) { onViewDealDetails(deal) }
                 .padding(
                     start = GameDealsCustomTheme.spacing.small,
                     top = GameDealsCustomTheme.spacing.extraSmall,
                     end = GameDealsCustomTheme.spacing.medium,
                     bottom = GameDealsCustomTheme.spacing.extraSmall
                 )
-                .testTag(DealRowTag.plus(deal.dealID)),
+                .semantics { contentDescription = dealRowCd },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -280,9 +284,7 @@ private fun StoreToolbar(
         ),
         title = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(StoreTopBarTag),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
@@ -305,7 +307,6 @@ private fun StoreToolbar(
         },
         navigationIcon = {
             IconButton(
-                modifier = Modifier.testTag(TopBarNavTag),
                 onClick = { onBack() }
             ) {
                 Icon(
@@ -317,11 +318,6 @@ private fun StoreToolbar(
         scrollBehavior = scrollBehavior,
     )
 }
-
-
-internal const val StoreTopBarTag = "StoreTopBar"
-internal const val TopBarNavTag = "TopBarNav"
-internal const val DealRowTag = "DealRow"
 
 
 private val previewDealsList = persistentListOf(

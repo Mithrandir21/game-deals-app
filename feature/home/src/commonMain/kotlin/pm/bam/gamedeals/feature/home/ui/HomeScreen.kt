@@ -44,7 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -91,6 +93,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_se
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaways_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_new_releases_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
@@ -165,9 +168,8 @@ private fun StoreDealRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small)
-            .testTag(HomeScreenDealRowTag.plus(deal.dealID)),
+            .clickable(role = Role.Button) { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated) }
+            .padding(bottom = GameDealsCustomTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -237,6 +239,7 @@ private fun HomeScreenContent(
 
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
+    val loadingCd = stringResource(Res.string.home_screen_loading_indicator)
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Box(
@@ -250,10 +253,7 @@ private fun HomeScreenContent(
                         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                         horizontalAlignment = Alignment.End,
                     ) {
-                        SmallFloatingActionButton(
-                            modifier = Modifier.testTag(HomeScreenFavouritesFabTag),
-                            onClick = onViewFavourites,
-                        ) {
+                        SmallFloatingActionButton(onClick = onViewFavourites) {
                             Icon(
                                 imageVector = Icons.Filled.Favorite,
                                 contentDescription = stringResource(Res.string.home_screen_floating_favourites_icon),
@@ -261,7 +261,9 @@ private fun HomeScreenContent(
                         }
                         FloatingActionButton(onClick = {}) {
                             when (data.state) {
-                                LOADING -> CircularProgressIndicator(Modifier.testTag(HomeScreenLoadingTag))
+                                LOADING -> CircularProgressIndicator(
+                                    Modifier.semantics { contentDescription = loadingCd }
+                                )
                                 ERROR -> Icon(Icons.Default.Warning, contentDescription = stringResource(Res.string.home_screen_floating_search_icon))
                                 SUCCESS -> Icon(
                                     modifier = Modifier.clickable { onSearch() },
@@ -302,8 +304,7 @@ private fun HomeScreenContent(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .wrapContentWidth()
-                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large)
-                                        .testTag(HomeScreenViewAllFavouritesButtonTag),
+                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
                                     onClick = { onViewFavourites() }) {
                                     Text(text = stringResource(Res.string.home_screen_all_favourites_label))
                                 }
@@ -325,8 +326,7 @@ private fun HomeScreenContent(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .wrapContentWidth()
-                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large)
-                                        .testTag(HomeScreenViewAllGiveawaysButtonTag),
+                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
                                     onClick = { onViewGiveaways() }) {
                                     Text(text = stringResource(Res.string.home_screen_all_giveaways_label))
                                 }
@@ -351,8 +351,7 @@ private fun HomeScreenContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .wrapContentWidth()
-                                            .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large)
-                                            .testTag(HomeScreenViewAllButtonTag.plus(itemData.store.storeID)),
+                                            .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
                                         onClick = { onViewStoreDeals(itemData.store) }) {
                                         Text(text = stringResource(Res.string.home_screen_all_store_deals_label, itemData.store.storeName))
                                     }
@@ -412,7 +411,6 @@ private fun StoreHeader(store: Store) {
             .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
             .background(color = MaterialTheme.colorScheme.primaryContainer)
             .padding(GameDealsCustomTheme.spacing.medium)
-            .testTag(HomeScreenStoreBannerTag.plus(store.storeID))
     )
 
     HorizontalDivider()
@@ -446,9 +444,8 @@ private fun ReleaseRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onReleaseTitle(release.title) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small)
-            .testTag(HomeScreenReleaseRowTag.plus(release.title)),
+            .clickable(role = Role.Button) { onReleaseTitle(release.title) }
+            .padding(bottom = GameDealsCustomTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -484,9 +481,8 @@ private fun GiveawayRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onGiveawayTitle(giveaway.gamerpowerUrl) }
-            .padding(vertical = GameDealsCustomTheme.spacing.medium)
-            .testTag(HomeScreenGiveawayRowTag.plus(giveaway.id)),
+            .clickable(role = Role.Button) { onGiveawayTitle(giveaway.gamerpowerUrl) }
+            .padding(vertical = GameDealsCustomTheme.spacing.medium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -543,9 +539,8 @@ private fun FavouriteRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(bottom = GameDealsCustomTheme.spacing.small)
-            .testTag(HomeScreenFavouriteRowTag.plus(favourite.gameID)),
+            .clickable(role = Role.Button) { onClick() }
+            .padding(bottom = GameDealsCustomTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -590,21 +585,6 @@ private fun FavouriteOverlay(modifier: Modifier = Modifier) {
             .size(16.dp),
     )
 }
-
-
-internal const val HomeScreenReleaseRowTag = "HomeScreenReleaseRowTag"
-
-internal const val HomeScreenGiveawayRowTag = "HomeScreenGiveawayRowTag"
-internal const val HomeScreenViewAllGiveawaysButtonTag = "HomeScreenViewAllGiveawaysButtonTag"
-
-internal const val HomeScreenFavouriteRowTag = "HomeScreenFavouriteRowTag"
-internal const val HomeScreenViewAllFavouritesButtonTag = "HomeScreenViewAllFavouritesButtonTag"
-internal const val HomeScreenFavouritesFabTag = "HomeScreenFavouritesFabTag"
-
-internal const val HomeScreenStoreBannerTag = "HomeScreenStoreBannerTag"
-internal const val HomeScreenDealRowTag = "HomeScreenDealRowTag"
-internal const val HomeScreenViewAllButtonTag = "HomeScreenViewAllButtonTag"
-internal const val HomeScreenLoadingTag = "HomeScreenLoadingTag"
 
 
 private fun previewSuccessData(): HomeViewModel.HomeScreenData {

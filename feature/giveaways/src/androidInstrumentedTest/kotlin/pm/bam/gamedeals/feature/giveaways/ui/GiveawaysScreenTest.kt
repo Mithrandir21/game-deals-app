@@ -1,8 +1,9 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.mockk.Runs
@@ -20,6 +21,9 @@ import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 
 class GiveawaysScreenTest {
 
@@ -28,21 +32,31 @@ class GiveawaysScreenTest {
 
     private val viewModel: GiveawaysViewModel = mockk()
 
+    private lateinit var screenSemantics: ScreenSemantics
+
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        goToWeb: (String, String) -> Unit = { _, _ -> },
+    ) {
+        composeTestRule.setContent {
+            screenSemantics = ScreenSemantics.load()
+            GameDealsTheme {
+                GiveawaysScreen(
+                    onBack = onBack,
+                    goToWeb = goToWeb,
+                    viewModel = viewModel,
+                )
+            }
+        }
+    }
+
     @Test
     fun onLoadingState() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(LoadingDataTag)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
@@ -54,39 +68,16 @@ class GiveawaysScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.ERROR))
         every { viewModel.reloadGiveaways() } just Runs
 
-        var snackText = ""
-        var snackRetry = ""
+        setupCompose()
 
-        composeTestRule.setContent {
-            snackText = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
-            snackRetry = stringResource(Res.string.giveaway_screen_data_loading_error_retry)
-
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
-
-
-        composeTestRule.onNodeWithTag(LoadingDataTag)
-            .assertDoesNotExist()
-
-        composeTestRule.onNodeWithText(snackText)
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.errorMsg).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.retry).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
 
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
-            .performClick()
+        composeTestRule.onNodeWithText(screenSemantics.retry).performClick()
 
         verify(exactly = 1) { viewModel.reloadGiveaways() }
     }
@@ -94,8 +85,9 @@ class GiveawaysScreenTest {
     @Test
     fun onResults() {
         val giveawayId = 1
+        val giveawayTitle = "Title"
         val giveaway = mockk<Giveaway> {
-            every { title } returns "Title"
+            every { title } returns giveawayTitle
             every { worthDenominated } returns "Worth"
             every { thumbnail } returns "Thumbnail"
             every { id } returns giveawayId
@@ -107,21 +99,10 @@ class GiveawaysScreenTest {
             )
         )
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(LoadingDataTag)
-            .assertDoesNotExist()
-
-        composeTestRule.onNodeWithTag(GiveawayListItemTag.plus(giveaway.id))
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
+        composeTestRule.onNodeWithText(giveawayTitle).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
@@ -129,30 +110,36 @@ class GiveawaysScreenTest {
 
     @Test
     fun onShowFilters() {
-        openAndTestFilters()
-    }
-
-
-    private fun openAndTestFilters() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
-        composeTestRule.setContent {
-            GameDealsTheme {
-                GiveawaysScreen(
-                    onBack = {},
-                    goToWeb = { _, _ -> },
-                    viewModel = viewModel
-                )
-            }
-        }
+        setupCompose()
 
-        composeTestRule.onNodeWithTag(GiveawayFiltersIconTag, useUnmergedTree = true)
+        composeTestRule.onNodeWithContentDescription(screenSemantics.filtersIcon, useUnmergedTree = true)
             .performClick()
 
-        composeTestRule.onNodeWithTag(GiveawayFiltersTag)
+        composeTestRule.onNodeWithText(screenSemantics.platformLabel)
             .assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
+    }
+
+    private data class ScreenSemantics(
+        val loading: String,
+        val errorMsg: String,
+        val retry: String,
+        val filtersIcon: String,
+        val platformLabel: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): ScreenSemantics = ScreenSemantics(
+                loading = stringResource(Res.string.giveaway_screen_loading_indicator),
+                errorMsg = stringResource(Res.string.giveaway_screen_data_loading_error_msg),
+                retry = stringResource(Res.string.giveaway_screen_data_loading_error_retry),
+                filtersIcon = stringResource(Res.string.giveaway_screen_filters_icon),
+                platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label),
+            )
+        }
     }
 }

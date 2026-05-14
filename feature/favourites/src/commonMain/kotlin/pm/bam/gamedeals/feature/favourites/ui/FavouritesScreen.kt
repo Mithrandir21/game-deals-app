@@ -44,7 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,6 +68,7 @@ import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_title
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_favourite_indicator
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_game_image
+import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_loading_indicator
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_navigation_back_button
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_toolbar_title
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -100,12 +103,12 @@ private fun FavouritesScreenContent(
 
     val errorMessage = stringResource(Res.string.favourites_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.favourites_screen_data_loading_error_retry)
+    val loadingCd = stringResource(Res.string.favourites_screen_loading_indicator)
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    modifier = Modifier.testTag(TopAppBarTag),
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = MaterialTheme.colorScheme.primary,
@@ -118,10 +121,7 @@ private fun FavouritesScreenContent(
                         )
                     },
                     navigationIcon = {
-                        IconButton(
-                            modifier = Modifier.testTag(TopAppNavBarTag),
-                            onClick = { onBack() },
-                        ) {
+                        IconButton(onClick = { onBack() }) {
                             Icon(
                                 imageVector = Icons.Filled.ArrowBack,
                                 contentDescription = stringResource(Res.string.favourites_screen_navigation_back_button),
@@ -138,7 +138,7 @@ private fun FavouritesScreenContent(
                         .padding(innerPadding)
                         .fillMaxSize()
                         .wrapContentSize(Alignment.Center)
-                        .testTag(LoadingDataTag),
+                        .semantics { contentDescription = loadingCd },
                 )
 
                 FavouritesViewModel.FavouritesScreenStatus.SUCCESS -> if (data.favourites.isEmpty()) {
@@ -178,8 +178,7 @@ private fun EmptyFavourites(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .padding(GameDealsCustomTheme.spacing.large)
-            .wrapContentSize(Alignment.Center)
-            .testTag(EmptyFavouritesTag),
+            .wrapContentSize(Alignment.Center),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
     ) {
@@ -206,10 +205,9 @@ private fun FavouriteListItem(
 ) {
     ListItem(
         modifier = Modifier
-            .clickable { onClick() }
+            .clickable(role = Role.Button) { onClick() }
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .testTag(FavouriteListItemTag.plus(favourite.gameID)),
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
         headlineContent = { Text(favourite.title) },
         leadingContent = {
             AsyncImage(
@@ -232,13 +230,6 @@ private fun FavouriteListItem(
     )
     HorizontalDivider(color = Color.Black)
 }
-
-
-internal const val TopAppBarTag = "FavouritesTopAppBarTag"
-internal const val TopAppNavBarTag = "FavouritesTopAppNavBarTag"
-internal const val LoadingDataTag = "FavouritesLoadingDataTag"
-internal const val EmptyFavouritesTag = "EmptyFavouritesTag"
-internal const val FavouriteListItemTag = "FavouriteListItemTag"
 
 
 private val previewFavouritesList = persistentListOf(

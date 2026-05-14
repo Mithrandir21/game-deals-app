@@ -34,7 +34,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +57,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_row_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
@@ -65,6 +68,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_game_image
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_metacritic_score_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_release_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steam_reviews_label
@@ -132,20 +136,17 @@ private fun DealContent(
                 Text(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = GameDealsCustomTheme.spacing.small)
-                        .testTag(StoreDataGameDataTag),
+                        .padding(horizontal = GameDealsCustomTheme.spacing.small),
                     text = stringResource(Res.string.deal_details_title_label, data.store.storeName, data.gameSalesPriceDenominated),
                 )
                 Text(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = GameDealsCustomTheme.spacing.small)
-                        .testTag(StoreDataGameNameTag),
+                        .padding(horizontal = GameDealsCustomTheme.spacing.small),
                     text = data.gameName
                 )
             }
             IconButton(
-                modifier = Modifier.testTag(FavouriteDealBtnTag),
                 enabled = data is DealBottomSheetData.DealDetailsData,
                 onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleFavourite) },
             ) {
@@ -159,10 +160,7 @@ private fun DealContent(
                     )
                 }
             }
-            IconButton(
-                modifier = Modifier.testTag(ShareDealBtnTag),
-                onClick = { onShare(data) }
-            ) {
+            IconButton(onClick = { onShare(data) }) {
                 Icon(
                     imageVector = Icons.Filled.Share,
                     contentDescription = stringResource(Res.string.deal_share_content_description)
@@ -172,6 +170,7 @@ private fun DealContent(
         HorizontalDivider()
         when (data) {
             is DealBottomSheetData.DealDetailsLoading -> {
+                val loadingCd = stringResource(Res.string.deal_details_loading_indicator)
                 Box(
                     modifier = Modifier
                         .navigationBarsPadding()
@@ -183,7 +182,7 @@ private fun DealContent(
                             .padding(GameDealsCustomTheme.spacing.extraLarge)
                             .wrapContentSize(Alignment.Center)
                             .aspectRatio(1f)
-                            .testTag(DataLoadingTag),
+                            .semantics { contentDescription = loadingCd },
                     )
                 }
             }
@@ -212,9 +211,7 @@ private fun GameDetails(
                     .padding(GameDealsCustomTheme.spacing.small)
             ) {
                 Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(DealCheapestTag),
+                    modifier = Modifier.fillMaxWidth(),
                     text = buildAnnotatedString {
                         append(stringResource(Res.string.deal_details_cheapest_store_label))
                         when (data.cheaperStores.isEmpty()) {
@@ -231,10 +228,15 @@ private fun GameDetails(
 
                 // List of Rows for each cheaper store
                 data.cheaperStores.forEach {
+                    val cheaperStoreRowCd = stringResource(
+                        Res.string.deal_details_cheaper_store_row_description,
+                        it.first.storeName,
+                        it.second.salePriceDenominated,
+                    )
                     Row(
                         modifier = Modifier
-                            .clickable { goToWeb(cheapsharkDealRedirectUrl(it.second.dealID), data.gameName) }
-                            .testTag(DealCheaperStoreRowTag.plus(it.first.storeID)),
+                            .clickable(role = Role.Button) { goToWeb(cheapsharkDealRedirectUrl(it.second.dealID), data.gameName) }
+                            .semantics { contentDescription = cheaperStoreRowCd },
                     ) {
                         AsyncImage(
                             model = it.first.images.logo,
@@ -275,9 +277,7 @@ private fun GameDetails(
 
                 data.cheapestPrice?.let {
                     Text(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(CheapestPriceTag),
+                        modifier = Modifier.fillMaxWidth(),
                         text = stringResource(Res.string.deal_details_cheapest_on_label, it.priceDenominated, it.date)
                     )
                 }
@@ -303,8 +303,7 @@ private fun GameDetails(
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.CenterHorizontally)
-                        .testTag(GoToDealBtnTag),
+                        .align(Alignment.CenterHorizontally),
                     onClick = { goToWeb(cheapsharkDealRedirectUrl(data.dealId), data.gameName) }) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }
@@ -344,34 +343,19 @@ private fun GameDetailsError(
             Text(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .wrapContentSize()
-                    .testTag(DataErrorMsgTag),
+                    .wrapContentSize(),
                 text = stringResource(Res.string.deal_details_data_loading_error_msg)
             )
             Button(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(vertical = GameDealsCustomTheme.spacing.large)
-                    .testTag(DataErrorBtnTag),
+                    .padding(vertical = GameDealsCustomTheme.spacing.large),
                 onClick = { retry() }) {
                 Text(text = stringResource(Res.string.deal_details_data_loading_error_retry))
             }
         }
     }
 }
-
-internal const val CheapestPriceTag = "CheapestPrice"
-internal const val DataLoadingTag = "DataLoading"
-internal const val DataErrorMsgTag = "DataErrorMsg"
-internal const val DataErrorBtnTag = "DataErrorBtn"
-internal const val GoToDealBtnTag = "GoToDealBtn"
-internal const val ShareDealBtnTag = "ShareDealBtn"
-internal const val FavouriteDealBtnTag = "FavouriteDealBtn"
-internal const val DealCheaperStoreRowTag = "DealCheaperStoreRow"
-internal const val DealCheapestTag = "DealCheapest"
-internal const val StoreDataGameDataTag = "StoreDataGameData"
-internal const val StoreDataGameNameTag = "StoreDataGameName"
-
 
 private val previewDealDetailsData = DealBottomSheetData.DealDetailsData(
     store = PreviewStore,
