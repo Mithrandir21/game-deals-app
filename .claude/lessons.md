@@ -8,6 +8,16 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-14-01 · Find Compose nodes by visible text or content description, never `testTag`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, accessibility, content-description
+**Applies to:** Any new `@Composable` screen, any new instrumented `*ScreenTest.kt`, and any edit that adds a clickable surface or unlabeled control to existing screens
+
+`testTag` is forbidden on production composables and as a finder in tests. The finder hierarchy is: (1) `onNodeWithText(stringResource(...))` for elements that already render user-visible copy; (2) `onNodeWithContentDescription(stringResource(...))` for icons/images/sliders/switches/spinner — adding `Modifier.semantics { contentDescription = stringResource(...) }` only on leaf or semantic-bearing nodes (never on wrapper `Column`/`Box`/`ModalBottomSheet` — Compose merges descendants into the parent, masking children for TalkBack); (3) `clickable(role = Role.Button) { ... }` on Card/Row/Box tap surfaces (production code, not test plumbing) + `hasContentDescription(...) and hasRole(...)` matchers in tests. Define `fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)` locally in the test file until a second consumer appears. `stringResource(...)` is `@Composable` so tests capture resources into `var x = ""` inside `setContent { x = stringResource(...) ; GameDealsTheme { Screen(...) } }` and assert against `x` afterwards. Skip extension-function helpers (`tapBack()`, `assertX()`) for per-feature tests with <10 methods — inline is clearer; promote to a shared source set only when a second test file imports them.
+
+Full policy with examples, "Seen in" pointers, and rationale lives in `docs/patterns/ui-testing.md`. Cross-referenced from `docs/patterns/testing.md`.
+
+**Source:** May 2026 — campaign to remove `testTag` from `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test. Four approaches trialled, then converged on this hybrid.
+
 ### L-2026-05-13-02 · Preview the modal-sheet body inside `Surface`, not via `ModalBottomSheet`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, preview, material3, modal-bottom-sheet
 **Applies to:** Any feature with a filter/detail UI built on `ModalBottomSheet` (giveaways `Filters`, search `Filters`, `DealBottomSheet` in `:common:ui`)

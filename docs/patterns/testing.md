@@ -1,11 +1,13 @@
 ---
 **Path scope:** `testing/**`, `*/src/test/**`, `*/src/androidTest/**`
-**Last surveyed:** 31a89bc on 2026-05-03
+**Last surveyed:** f215235 on 2026-05-14
 ---
 
 # Testing
 
 This codebase keeps a deliberate split between JVM unit tests and instrumented tests across three integration tiers: domain (repositories with MockK + virtual time), feature (ViewModels observing state via custom Flow collectors), and network (MockWebServer for API contract). The `:testing` module ships shared infrastructure (`MainCoroutineRule`, an `observeEmissions()` Flow collector) that enforces unconfined dispatchers and uses `TestScope.backgroundScope` for observation. No Turbine — a custom collector drains Flows into mutable lists. Naming uses backtick style.
+
+The **Compose UI test finder policy** (how to locate nodes in instrumented `*ScreenTest.kt` files, why `testTag` is forbidden, when to add `Modifier.semantics`) is documented separately in [ui-testing.md](ui-testing.md).
 
 ## Patterns
 
@@ -258,11 +260,14 @@ class HomeToStoreToDealJourneyTest {
   @Test
   fun home_to_store_happy_path() {
     composeRule.waitUntil { /* element appears */ }
-    composeRule.onNodeWithTag("tag").performClick()
-    composeRule.onNodeWithText("text").assertIsDisplayed()
+    composeRule.onNodeWithText("Steam").assertIsDisplayed()
+    composeRule.onNodeWithContentDescription("Deal: Portal 2", substring = true)
+      .performClick()
   }
 }
 ```
+
+Node finders follow the [ui-testing](ui-testing.md) policy — no `testTag` in production composables or instrumented tests.
 
 **Seen in.**
 - app/src/androidTest/java/pm/bam/gamedeals/integration/HomeToStoreToDealJourneyTest.kt
@@ -303,3 +308,4 @@ fun `load store deals from source failure`() = runTest { … }
 - **No `androidTest` coverage in `:domain`, `:common`, or `:remote`.** Integration coverage lives in `:app` and feature modules. Paging mediators are tested via MockK with hand-rolled slot capture, which works but is less elegant than real Room test fixtures.
 - **No parameterized / data-driven tests.** All tests are discrete `@Test` functions. **Why we avoid it:** verbose but explicit; parameterized failure diagnostics are weaker.
 - **No test data builders or object mothers.** Mocked objects are created ad-hoc. **Why we avoid it:** MockK keeps construction terse; builders would add maintenance without much gain at the current scale.
+- **No `testTag` on production composables.** See [ui-testing.md](ui-testing.md). **Why we avoid it:** test-only constants leak into other tests as hardcoded strings, couple tests to the screen's internal structure, and add nothing for users. Tests find nodes by visible text, content description, or role.
