@@ -16,7 +16,7 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 Full policy with examples, "Seen in" pointers, and rationale lives in `docs/patterns/ui-testing.md`. Cross-referenced from `docs/patterns/testing.md`.
 
-**Source:** May 2026 — campaign to remove `testTag` from `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test. Four approaches trialled, then converged on this hybrid.
+**Source:** May 2026 — codebase-wide campaign to remove `testTag`. First pass landed `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test after trialling four approaches; the policy then covered `:feature:home`, `:feature:favourites`, and `:common:ui`'s `DealBottomSheet` in the same branch. As of 2026-05-14 no production composable or instrumented test in this codebase carries a `testTag`.
 
 ### L-2026-05-13-02 · Preview the modal-sheet body inside `Surface`, not via `ModalBottomSheet`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, preview, material3, modal-bottom-sheet

@@ -77,7 +77,10 @@ private fun hasRole(role: Role): SemanticsMatcher =
 - feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchScreen.kt (CDs on the loading spinner, both sliders, and the exact-match switch)
 - feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt (`clickable(role = Role.Button)` + CD on the deal Card)
 - feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt (CD on the loading spinner)
-- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt (`hasRole` helper + `hasContentDescription` combined matcher)
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt (`clickable(role = Role.Button)` on every clickable Row; CD on the FAB loading spinner; all other lookups via visible text or the existing image CDs)
+- feature/favourites/src/commonMain/kotlin/pm/bam/gamedeals/feature/favourites/ui/FavouritesScreen.kt (`clickable(role = Role.Button)` on the ListItem; CD on the loading spinner)
+- common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheet.kt (`clickable(role = Role.Button)` + CD on the cheaper-store Row; CD on the loading spinner)
+- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt and common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (`hasRole` helper + `hasContentDescription` combined matcher)
 - app/src/androidTest/java/pm/bam/gamedeals/integration/HomeToStoreToDealJourneyTest.kt (cross-screen integration uses `onNodeWithText` and `onNodeWithContentDescription` with `substring = true`)
 
 ### Capture String Resources Inside `setContent` for Use in Assertions
@@ -218,4 +221,4 @@ Promotion to a shared helper happens only when a second test file would import i
 - **No `testTag` on production composables.** Removed wholesale during the May 2026 refactor; never added back. Tests find nodes by what users see, and `testTag` constants leak into other tests as hardcoded strings.
 - **No `Modifier.semantics { contentDescription = … }` on wrapper `Column`/`Box`/`ModalBottomSheet`.** The wrapper's CD masks its children in the merged semantic tree and produces noisy TalkBack output. Assert on a known child of the panel instead.
 - **No `@Composable` test helpers.** Helpers can't call `stringResource(...)` unless they're themselves `@Composable`, which would force them to run inside `setContent`. The capture-into-`var` pattern is preferred.
-- **No `onNodeWithTag(...)` in `:app` or feature instrumented tests.** Same reasoning as the production-side rule. The two remaining usages in `HomeToStoreToDealJourneyTest` (`HomeScreenViewAllButtonTag1`, `StoreDataGameName`) point to `:feature:home` and `:common:ui`, which are next on the refactor list — not new code.
+- **No `onNodeWithTag(...)` in `:app` or feature instrumented tests.** Same reasoning as the production-side rule. As of `2026-05-14` no production composable or instrumented test in this codebase carries a `testTag`; new ones must not introduce them.

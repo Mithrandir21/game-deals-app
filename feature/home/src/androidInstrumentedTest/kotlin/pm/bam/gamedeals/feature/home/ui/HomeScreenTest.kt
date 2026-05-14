@@ -2,9 +2,8 @@ package pm.bam.gamedeals.feature.home.ui
 
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.espresso.device.DeviceInteraction.Companion.setScreenOrientation
 import androidx.test.espresso.device.EspressoDevice.Companion.onDevice
@@ -27,8 +26,11 @@ import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
@@ -69,6 +71,7 @@ class HomeScreenTest {
     }
     private val mockDeal: Deal = mockk {
         every { dealID } returns dealId
+        every { gameID } returns 1
         every { title } returns dealTitle
         every { normalPriceDenominated } returns normalPrice
         every { salePriceDenominated } returns dealPrice
@@ -91,7 +94,15 @@ class HomeScreenTest {
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 
+        var bannerCd = ""
+        var viewAllText = ""
+        var loadingCd = ""
+
         composeTestRule.setContent {
+            bannerCd = stringResource(Res.string.home_screen_store_banner, storeTitle)
+            viewAllText = stringResource(Res.string.home_screen_all_store_deals_label, storeTitle)
+            loadingCd = stringResource(Res.string.home_screen_loading_indicator)
+
             HomeScreen(
                 onSearch = {},
                 goToGame = { _ -> },
@@ -103,17 +114,11 @@ class HomeScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(dealTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(viewAllText).assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(loadingCd).assertIsDisplayed()
     }
 
     @Test
@@ -124,10 +129,16 @@ class HomeScreenTest {
 
         var snackText = ""
         var snackRetry = ""
+        var bannerCd = ""
+        var viewAllText = ""
+        var loadingCd = ""
 
         composeTestRule.setContent {
             snackText = stringResource(Res.string.home_screen_data_loading_error_msg)
             snackRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
+            bannerCd = stringResource(Res.string.home_screen_store_banner, storeTitle)
+            viewAllText = stringResource(Res.string.home_screen_all_store_deals_label, storeTitle)
+            loadingCd = stringResource(Res.string.home_screen_loading_indicator)
 
             HomeScreen(
                 onSearch = {},
@@ -140,23 +151,13 @@ class HomeScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertDoesNotExist()
+        composeTestRule.onNodeWithText(dealTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(viewAllText).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsNotDisplayed()
-
-        composeTestRule.onNodeWithText(snackText)
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithText(snackRetry)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(snackText).assertIsDisplayed()
+        composeTestRule.onNodeWithText(snackRetry).assertIsDisplayed()
     }
 
     @Test
@@ -165,7 +166,15 @@ class HomeScreenTest {
 
         every { viewModel.uiState } returns MutableStateFlow(mockData)
 
+        var bannerCd = ""
+        var viewAllText = ""
+        var loadingCd = ""
+
         composeTestRule.setContent {
+            bannerCd = stringResource(Res.string.home_screen_store_banner, storeTitle)
+            viewAllText = stringResource(Res.string.home_screen_all_store_deals_label, storeTitle)
+            loadingCd = stringResource(Res.string.home_screen_loading_indicator)
+
             HomeScreen(
                 onSearch = {},
                 goToGame = { _ -> },
@@ -177,17 +186,11 @@ class HomeScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(HomeScreenStoreBannerTag.plus(storeId))
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(bannerCd).assertIsDisplayed()
+        composeTestRule.onNodeWithText(dealTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(viewAllText).assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(HomeScreenDealRowTag.plus(dealId))
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenViewAllButtonTag.plus(storeId))
-            .assertIsDisplayed()
-
-        composeTestRule.onNodeWithTag(HomeScreenLoadingTag)
-            .assertIsNotDisplayed()
+        composeTestRule.onNodeWithContentDescription(loadingCd).assertDoesNotExist()
     }
 
     @Test
@@ -222,7 +225,6 @@ class HomeScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(99)).assertIsDisplayed()
         composeTestRule.onNodeWithText("Rich Giveaway").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE $59.99 - Game · PC, Steam").assertIsDisplayed()
     }
@@ -252,7 +254,7 @@ class HomeScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithTag(HomeScreenGiveawayRowTag.plus(100)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Free Beta").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE - Early Access · PC").assertIsDisplayed()
     }
 

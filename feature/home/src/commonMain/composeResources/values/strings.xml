@@ -26,4 +26,6 @@
     <string name="home_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="home_screen_data_loading_error_retry">Retry</string>
 
+    <string name="home_screen_loading_indicator">Loading top deals</string>
+
 </resources>
