@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.di
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import pm.bam.gamedeals.domain.db.DomainDatabase
@@ -20,5 +21,6 @@ val domainAndroidModule = module {
                 { sqlQuery, bindArgs -> verbose(logger) { "SQL Query: $sqlQuery SQL Args: $bindArgs" } },
                 Executors.newSingleThreadExecutor()
             )
+            .setQueryCoroutineContext(Dispatchers.IO)
     }
 }

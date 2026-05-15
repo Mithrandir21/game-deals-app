@@ -3,6 +3,7 @@ package pm.bam.gamedeals.domain.di
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
@@ -16,6 +17,8 @@ val domainIosModule = module {
         ).first() as String
         Room.databaseBuilder<DomainDatabase>(
             name = "$documents/DomainDatabase.db"
-        ).setDriver(BundledSQLiteDriver())
+        )
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Default)
     }
 }
