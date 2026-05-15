@@ -62,7 +62,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.feature.favourites.generated.resources.Res
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_data_loading_error_msg
-import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_hint
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_icon
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_title
@@ -102,7 +101,7 @@ private fun FavouritesScreenContent(
     val currentOnBack by rememberUpdatedState(onBack)
 
     val errorMessage = stringResource(Res.string.favourites_screen_data_loading_error_msg)
-    val errorRetry = stringResource(Res.string.favourites_screen_data_loading_error_retry)
+    val backLabel = stringResource(Res.string.favourites_screen_navigation_back_button)
     val loadingCd = stringResource(Res.string.favourites_screen_loading_indicator)
 
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -161,7 +160,7 @@ private fun FavouritesScreenContent(
                 FavouritesViewModel.FavouritesScreenStatus.ERROR -> LaunchedEffect(snackbarHostState) {
                     val result = snackbarHostState.showSnackbar(
                         message = errorMessage,
-                        actionLabel = errorRetry,
+                        actionLabel = backLabel,
                     )
                     if (result == SnackbarResult.ActionPerformed) {
                         currentOnBack()

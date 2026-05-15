@@ -15,13 +15,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
@@ -52,6 +54,11 @@ internal class StoreViewModel(
     // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
     private val storeIdFlow = MutableStateFlow(savedStateHandle.get<Int>("storeId"))
 
+    // Retry counter: every increment re-runs the store-details load and re-subscribes the
+    // hot 'observeStoreDeals' source. `combine` fires whenever either upstream emits, and
+    // `flatMapLatest` cancels the in-flight inner flow before relaunching it.
+    private val retryTrigger = MutableStateFlow(0)
+
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
@@ -63,7 +70,7 @@ internal class StoreViewModel(
     val events: SharedFlow<StoreUiEvent> = _events.asSharedFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<StoreScreenData> = storeIdFlow
+    val uiState: StateFlow<StoreScreenData> = combine(storeIdFlow, retryTrigger) { id, _ -> id }
         .flatMapLatest { id: Int? ->
             when (id) {
                 null -> flowOf<StoreScreenData>(StoreScreenData.Error)
@@ -83,10 +90,10 @@ internal class StoreViewModel(
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val deals: StateFlow<ImmutableList<Deal>> = storeIdFlow
-        .filterNotNull() // Skip our initial null value
-        .distinctUntilChanged() // Skip fetching if storeId is the same, like on orientation change
-        .flatMapLatest { dealsRepository.observeStoreDeals(it) }
+    val deals: StateFlow<ImmutableList<Deal>> = combine(storeIdFlow, retryTrigger) { id, attempt -> id to attempt }
+        .filter { (id, _) -> id != null } // Skip our initial null value
+        .distinctUntilChanged() // Skip refetching if neither the storeId nor the retry counter changed (e.g. orientation change)
+        .flatMapLatest { (id, _) -> dealsRepository.observeStoreDeals(id!!) }
         .map { it.toImmutableList() }
         .logFlow(logger)
         .catch { emit(persistentListOf()) }
@@ -95,6 +102,10 @@ internal class StoreViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = persistentListOf()
         )
+
+    fun retry() {
+        retryTrigger.update { it + 1 }
+    }
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated)

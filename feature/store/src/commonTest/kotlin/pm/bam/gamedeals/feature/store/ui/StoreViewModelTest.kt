@@ -4,6 +4,7 @@ package pm.bam.gamedeals.feature.store.ui
 
 import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.every
@@ -15,6 +16,7 @@ import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -22,6 +24,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -195,6 +198,77 @@ class StoreViewModelTest : MainDispatcherTest() {
                 dealId = "deal-1",
             )
         }
+    }
+
+    @Test
+    fun retry_after_failed_store_details_load_flips_Error_back_to_Data() = runTest {
+        val storeId = 1
+        val store = store(storeID = storeId)
+        var callCount = 0
+        everySuspend { storesRepository.getStore(storeId) } calls {
+            callCount++
+            if (callCount == 1) throw RuntimeException("boom") else store
+        }
+
+        val viewModel = createViewModel(storeId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        // First load failed.
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
+
+        viewModel.retry()
+        advanceUntilIdle()
+
+        // After retry, the store details load succeeds.
+        assertEquals(StoreViewModel.StoreScreenData.Data(store), emissions.last())
+        verifySuspend(exactly(2)) { storesRepository.getStore(storeId) }
+    }
+
+    @Test
+    fun retry_resubscribes_deals_hot_source() = runTest {
+        val storeId = 1
+        val store = store(storeID = storeId)
+        everySuspend { storesRepository.getStore(storeId) } returns store
+
+        // Use MutableSharedFlow for the hot 'observeStoreDeals' source — flowOf would complete
+        // after one emission and mask second-emission/re-subscription behaviour (L-2026-05-02-05).
+        val dealsFlow = MutableSharedFlow<List<Deal>>(replay = 1)
+        every { dealsRepository.observeStoreDeals(storeId) } returns dealsFlow
+
+        val viewModel = createViewModel(storeId)
+        viewModel.deals.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        viewModel.retry()
+        runCurrent()
+
+        // Each subscription (initial + retry) results in a separate call to observeStoreDeals.
+        verify(exactly(2)) { dealsRepository.observeStoreDeals(storeId) }
+    }
+
+    @Test
+    fun retry_emits_Loading_before_re_running_failed_store_details_load() = runTest {
+        val storeId = 1
+        everySuspend { storesRepository.getStore(storeId) } throws Exception()
+
+        val viewModel = createViewModel(storeId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
+
+        viewModel.retry()
+        advanceUntilIdle()
+
+        // After retry the chain re-runs onStart { emit(Loading) } before the catch lands again.
+        // The user-visible flow is Loading→Error→Loading→Error, with at least one Loading mid-stream.
+        assertEquals(
+            true,
+            emissions.contains(StoreViewModel.StoreScreenData.Loading),
+            "Expected a Loading emission across the initial load and retry; got $emissions",
+        )
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
     }
 
     @Test
