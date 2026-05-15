@@ -42,6 +42,17 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
 
     private val imageLoader: ImageLoader by inject()
 
+    /**
+     * Application-scoped fire-and-forget work, intended to be reused by future
+     * cold-start initializers (e.g. moving `Sentry.init` off the Main thread).
+     *
+     * Backed by a [SupervisorJob] so one failed child doesn't tear down siblings,
+     * and pinned to [Dispatchers.IO] since the typical use case is I/O-bound
+     * warm-up. Not cancelled manually — the [Application] lives for the entire
+     * process lifetime, so the scope dies with the process.
+     */
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         initSentry()
@@ -102,8 +113,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
      * structured concurrency stays honest if the scope is ever cancelled.
      */
     private fun warmDomainDatabase() {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        scope.launch {
+        applicationScope.launch {
             try {
                 get<DomainDatabase>()
             } catch (ce: CancellationException) {
