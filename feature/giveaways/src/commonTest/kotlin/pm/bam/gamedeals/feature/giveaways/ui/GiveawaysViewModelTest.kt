@@ -48,8 +48,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        assertEquals(1, emissions.size)
-        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
+        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.last().status)
     }
 
     @Test
@@ -58,21 +57,25 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
-        assertEquals(1, emissions.size)
-        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.first().status)
+        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
     }
 
     @Test
     fun reload_giveaways() = runTest {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
+        val refreshGate = CompletableDeferred<Unit>()
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshGate.await() }
+
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+
+        // Subscribe before triggering reload so LOADING is observable under
+        // SharingStarted.WhileSubscribed semantics.
+        val emissions = observeStates(viewModel)
         viewModel.reloadGiveaways()
 
-        val emissions = observeStates(viewModel)
-        assertEquals(1, emissions.size)
+        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.last().status)
 
-        // Loading is emitted twice, but observed only once because StateFlow emits only distinct values
-        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.first().status)
+        refreshGate.complete(Unit)
     }
 
     @Test
@@ -82,9 +85,12 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshGate.await() }
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+
+        // Subscribe before triggering reload so LOADING is observable under
+        // SharingStarted.WhileSubscribed semantics.
+        val emissions = observeStates(viewModel)
         viewModel.reloadGiveaways()
 
-        val emissions = observeStates(viewModel)
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.LOADING, emissions.last().status)
 
         refreshGate.complete(Unit)
@@ -108,11 +114,10 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         viewModel.loadGiveaway(para)
 
         val emissions = observeStates(viewModel)
-        assertEquals(1, emissions.size)
-        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.first().status)
-        assertEquals(2, emissions.first().giveaways.size)
-        assertEquals(resultThree, emissions.first().giveaways.first())
-        assertEquals(resultOne, emissions.first().giveaways.second())
+        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.last().status)
+        assertEquals(2, emissions.last().giveaways.size)
+        assertEquals(resultThree, emissions.last().giveaways.first())
+        assertEquals(resultOne, emissions.last().giveaways.second())
     }
 
     @Test

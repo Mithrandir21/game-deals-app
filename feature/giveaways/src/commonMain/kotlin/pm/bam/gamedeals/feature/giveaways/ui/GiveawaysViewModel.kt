@@ -62,7 +62,7 @@ internal class GiveawaysViewModel(
         GiveawaysScreenData(status = status, giveaways = giveaways.toImmutableList())
     }
         .logFlow(logger)
-        .stateIn(viewModelScope, SharingStarted.Eagerly, GiveawaysScreenData())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GiveawaysScreenData())
 
     fun reloadGiveaways() {
         viewModelScope.launch {
