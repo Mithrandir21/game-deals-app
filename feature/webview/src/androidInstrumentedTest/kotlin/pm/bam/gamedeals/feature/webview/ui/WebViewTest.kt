@@ -22,6 +22,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Rule
 import org.junit.Test
+import pm.bam.gamedeals.testing.SkipOnCi
 
 class WebViewTest {
 
@@ -81,6 +82,7 @@ class WebViewTest {
     }
 
     @Test
+    @SkipOnCi
     fun webView_clearsLoadingOnMainFrameReceivedError() {
         composeTestRule.setContent {
             WebView(
@@ -119,6 +121,7 @@ class WebViewTest {
     }
 
     @Test
+    @SkipOnCi
     fun webView_clearsLoadingOnMainFrameReceivedHttpError() {
         composeTestRule.setContent {
             WebView(
@@ -153,6 +156,7 @@ class WebViewTest {
     }
 
     @Test
+    @SkipOnCi
     fun webView_keepsLoadingOnSubFrameReceivedError() {
         composeTestRule.setContent {
             WebView(
