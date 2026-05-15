@@ -3,6 +3,7 @@
 package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.animation.AnimatedContent
+import kotlinx.collections.immutable.persistentListOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -364,7 +365,7 @@ private val previewDealDetailsData = DealBottomSheetData.DealDetailsData(
     dealId = "preview-deal-1",
     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
     gameInfo = PreviewDealGameInfo,
-    cheaperStores = emptyList(),
+    cheaperStores = persistentListOf(),
     cheapestPrice = PreviewDealCheapestPrice,
 )
 
@@ -409,7 +410,7 @@ private fun DealContent_WithCheaperStores_Preview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             DealContent(
                 data = previewDealDetailsData.copy(
-                    cheaperStores = listOf(
+                    cheaperStores = persistentListOf(
                         StoreCheaperStorePair(
                             store = PreviewStore.copy(storeID = 11, storeName = "Humble Store"),
                             cheaperStore = PreviewDealCheaperStore,

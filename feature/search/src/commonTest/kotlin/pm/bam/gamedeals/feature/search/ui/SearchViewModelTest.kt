@@ -10,6 +10,7 @@ import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -34,7 +35,7 @@ class SearchViewModelTest : MainDispatcherTest() {
 
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeFavouriteIds() } returns flowOf(emptySet())
+        every { observeFavouriteIds() } returns flowOf(persistentSetOf())
     }
 
     private lateinit var viewModel: SearchViewModel

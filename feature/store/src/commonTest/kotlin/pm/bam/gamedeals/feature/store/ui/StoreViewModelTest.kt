@@ -15,6 +15,7 @@ import dev.mokkery.verify
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
@@ -48,7 +49,7 @@ class StoreViewModelTest : MainDispatcherTest() {
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeFavouriteIds() } returns flowOf(emptySet())
+        every { observeFavouriteIds() } returns flowOf(persistentSetOf())
     }
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -131,7 +132,7 @@ class StoreViewModelTest : MainDispatcherTest() {
             dealId = "deal-1",
             gameSalesPriceDenominated = "$9.99",
             gameInfo = gameInfo(gameID = 42, thumb = "thumb-42"),
-            cheaperStores = emptyList(),
+            cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
         viewModel.toggleFavouriteFromDeal(data)
@@ -152,7 +153,7 @@ class StoreViewModelTest : MainDispatcherTest() {
 
     @Test
     fun favouriteIds_emits_values_from_repository() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(setOf(1, 2, 3))
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
 
         val viewModel = createViewModel(storeId = 1)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)

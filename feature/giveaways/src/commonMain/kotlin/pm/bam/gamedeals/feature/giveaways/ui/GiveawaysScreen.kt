@@ -75,9 +75,11 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.domain.models.GiveawayPlatformSelection
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
+import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
@@ -124,13 +126,13 @@ internal fun GiveawaysScreen(
         onPlatformSelection = { platform, selection ->
             existingParameters = existingParameters.copy(
                 platforms = existingParameters.platforms
-                    .map { if (it.first == platform) platform to selection else it }
+                    .map { if (it.platform == platform) GiveawayPlatformSelection(platform, selection) else it }
                     .toImmutableList())
         },
         onTypeSelection = { type, selection ->
             existingParameters = existingParameters.copy(
                 types = existingParameters.types
-                    .map { if (it.first == type) type to selection else it }
+                    .map { if (it.type == type) GiveawayTypeSelection(type, selection) else it }
                     .toImmutableList())
         },
         onSortBySelection = { sortBy ->
@@ -418,7 +420,7 @@ private val previewGiveawaysList = persistentListOf(
         title = "Tomb Raider Trilogy",
         worthDenominated = "$49.99",
         worth = 49.99,
-        platforms = listOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
+        platforms = persistentListOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
     ),
     PreviewGiveaway.copy(
         id = 789,
@@ -426,7 +428,7 @@ private val previewGiveawaysList = persistentListOf(
         worthDenominated = null,
         worth = null,
         type = GiveawayType.DLC,
-        platforms = listOf(GiveawayPlatform.EPIC),
+        platforms = persistentListOf(GiveawayPlatform.EPIC),
     ),
 )
 
@@ -506,7 +508,7 @@ private fun GiveawayFilters_Preview() {
             Filters(
                 existingParameters = GiveawaySearchParameters().copy(
                     platforms = GiveawaySearchParameters().platforms
-                        .map { (p, _) -> p to (p == GiveawayPlatform.PC || p == GiveawayPlatform.STEAM) }
+                        .map { GiveawayPlatformSelection(it.platform, it.platform == GiveawayPlatform.PC || it.platform == GiveawayPlatform.STEAM) }
                         .toImmutableList(),
                 ),
                 onPlatformSelection = { _, _ -> },

@@ -4,7 +4,9 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -69,10 +71,10 @@ internal class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeScreenData())
     val uiState: StateFlow<HomeScreenData> = _uiState.asStateFlow()
 
-    val favouriteIds: StateFlow<Set<Int>> = favouritesRepository.observeFavouriteIds()
-        .onStart { emit(emptySet()) }
-        .catch { emit(emptySet()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+    val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
     val favourites: StateFlow<ImmutableList<FavouriteGame>> = favouritesRepository.observeFavourites()
         .map { it.toImmutableList() }

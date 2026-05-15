@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui.deal
 
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -56,7 +57,7 @@ class DealDetailsController(
                         gameSalesPriceDenominated = dealPriceDenominated,
                         gameInfo = dealDetails.gameInfo,
                         cheapestPrice = dealDetails.cheapestPrice,
-                        cheaperStores = dealDetails.cheaperStores.map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) },
+                        cheaperStores = dealDetails.cheaperStores.map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) }.toImmutableList(),
                     )
                 }
                 _dealDetails.emit(data)

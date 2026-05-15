@@ -3,6 +3,7 @@
 package pm.bam.gamedeals.domain.models
 
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -17,6 +18,7 @@ import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
 import pm.bam.gamedeals.domain.utils.LocalDateSerializer
 
 @Entity(tableName = "Giveaway")
+@Immutable
 @Serializable
 data class Giveaway(
     @PrimaryKey
@@ -44,7 +46,7 @@ data class Giveaway(
     @SerialName("type")
     val type: GiveawayType,
     @SerialName("platforms")
-    val platforms: List<GiveawayPlatform>,
+    val platforms: ImmutableList<GiveawayPlatform>,
     @SerialName("end_date")
     val endDate: String?,
     @SerialName("users")
@@ -130,13 +132,29 @@ enum class GiveawaySortBy {
 }
 
 
+@Immutable
+@Serializable
+data class GiveawayPlatformSelection(
+    val platform: GiveawayPlatform,
+    val selected: Boolean,
+)
+
+@Immutable
+@Serializable
+data class GiveawayTypeSelection(
+    val type: GiveawayType,
+    val selected: Boolean,
+)
+
+
 @OptIn(ExperimentalSerializationApi::class)
+@Immutable
 @Serializable
 data class GiveawaySearchParameters(
-    val platforms: ImmutableList<Pair<GiveawayPlatform, Boolean>> =
-        GiveawayPlatform.entries.map { it to false }.toImmutableList(),
-    val types: ImmutableList<Pair<GiveawayType, Boolean>> =
-        GiveawayType.entries.map { it to false }.toImmutableList(),
+    val platforms: ImmutableList<GiveawayPlatformSelection> =
+        GiveawayPlatform.entries.map { GiveawayPlatformSelection(it, false) }.toImmutableList(),
+    val types: ImmutableList<GiveawayTypeSelection> =
+        GiveawayType.entries.map { GiveawayTypeSelection(it, false) }.toImmutableList(),
     val sortBy: GiveawaySortBy = GiveawaySortBy.DATE,
 ) {
     /**

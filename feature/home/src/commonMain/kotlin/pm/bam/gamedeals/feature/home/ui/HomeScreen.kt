@@ -57,7 +57,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -220,7 +222,7 @@ private fun HomeScreenContent(
     onSearch: () -> Unit,
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
-    favouriteIds: Set<Int>,
+    favouriteIds: ImmutableSet<Int>,
     favourites: kotlinx.collections.immutable.ImmutableList<FavouriteGame>,
     dealDetails: DealBottomSheetData?,
     onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
@@ -646,7 +648,7 @@ private fun HomeScreenContent_Success_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
-            favouriteIds = setOf(12345),
+            favouriteIds = persistentSetOf(12345),
             favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _ -> },
@@ -671,7 +673,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
-            favouriteIds = setOf(12345),
+            favouriteIds = persistentSetOf(12345),
             favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _ -> },
@@ -696,7 +698,7 @@ private fun HomeScreenContent_Loading_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = LOADING),
-            favouriteIds = emptySet(),
+            favouriteIds = persistentSetOf(),
             favourites = persistentListOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _ -> },
@@ -721,7 +723,7 @@ private fun HomeScreenContent_Error_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = ERROR),
-            favouriteIds = emptySet(),
+            favouriteIds = persistentSetOf(),
             favourites = persistentListOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _ -> },

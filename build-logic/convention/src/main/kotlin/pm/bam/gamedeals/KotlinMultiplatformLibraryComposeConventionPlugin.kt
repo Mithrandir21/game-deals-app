@@ -61,5 +61,7 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
                 generateResClass = ResourcesExtension.ResourceClassGeneration.Auto
             }
         }
+
+        configureComposeCompilerReports()
     }
 }

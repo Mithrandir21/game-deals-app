@@ -20,8 +20,10 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.domain.models.GiveawayPlatformSelection
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
+import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -103,8 +105,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val resultThree = giveaway(id = 3)
 
         val para = GiveawaySearchParameters(
-            types = persistentListOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
-            platforms = persistentListOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true), GiveawayTypeSelection(GiveawayType.BETA, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true), GiveawayPlatformSelection(GiveawayPlatform.NINTENDO_SWITCH, true)),
             sortBy = GiveawaySortBy.DATE
         )
 
@@ -218,8 +220,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
 
         val para = GiveawaySearchParameters(
-            types = persistentListOf(GiveawayType.GAME to true),
-            platforms = persistentListOf(GiveawayPlatform.PC to true),
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true)),
             sortBy = GiveawaySortBy.DATE
         )
         viewModel.loadGiveaway(para)
@@ -236,8 +238,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val filteredOne = giveaway(id = 3)
 
         val para = GiveawaySearchParameters(
-            types = persistentListOf(GiveawayType.GAME to true),
-            platforms = persistentListOf(GiveawayPlatform.PC to true),
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true)),
             sortBy = GiveawaySortBy.DATE
         )
 

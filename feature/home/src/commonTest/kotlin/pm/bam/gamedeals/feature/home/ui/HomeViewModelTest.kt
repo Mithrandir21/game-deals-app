@@ -13,6 +13,8 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -63,7 +65,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val releasesRepository: ReleasesRepository = mock(MockMode.autoUnit)
     private val giveawaysRepository: GiveawaysRepository = mock(MockMode.autoUnit)
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeFavouriteIds() } returns flowOf(emptySet())
+        every { observeFavouriteIds() } returns flowOf(persistentSetOf())
         every { observeFavourites() } returns flowOf(emptyList())
     }
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
@@ -294,7 +296,7 @@ class HomeViewModelTest : MainDispatcherTest() {
             dealId = "deal-1",
             gameSalesPriceDenominated = "$9.99",
             gameInfo = gameInfo(gameID = 42, thumb = "thumb-42"),
-            cheaperStores = emptyList(),
+            cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
         viewModel.toggleFavouriteFromDeal(data)
@@ -322,7 +324,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(setOf(1, 2, 3))
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)

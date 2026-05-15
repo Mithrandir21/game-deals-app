@@ -1,5 +1,7 @@
 package pm.bam.gamedeals.remote.gamerpower.mappers
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
@@ -40,7 +42,7 @@ internal fun RemoteGiveawayType.toGiveawayType(): GiveawayType =
         RemoteGiveawayType.OTHER -> GiveawayType.OTHER
     }
 
-private fun String.toGiveawayPlatform(): List<GiveawayPlatform> =
+private fun String.toGiveawayPlatform(): ImmutableList<GiveawayPlatform> =
     this.split(", ")
         .map {
             when (it) {
@@ -61,3 +63,4 @@ private fun String.toGiveawayPlatform(): List<GiveawayPlatform> =
                 else -> GiveawayPlatform.OTHER
             }
         }
+        .toImmutableList()

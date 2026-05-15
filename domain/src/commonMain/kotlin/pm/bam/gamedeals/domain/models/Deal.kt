@@ -1,8 +1,10 @@
 package pm.bam.gamedeals.domain.models
 
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -10,6 +12,7 @@ import kotlinx.serialization.Serializable
 
 @OptIn(ExperimentalSerializationApi::class)
 @Entity(tableName = "Deal")
+@Immutable
 @Serializable
 data class Deal(
     @PrimaryKey
@@ -68,16 +71,18 @@ data class Deal(
     val expires: Long = 0L
 )
 
+@Immutable
 @Serializable
 data class DealDetails(
     @SerialName("gameInfo")
     val gameInfo: GameInfo,
     @SerialName("cheaperStores")
-    val cheaperStores: List<CheaperStore>,
+    val cheaperStores: ImmutableList<CheaperStore>,
     @SerialName("cheapestPrice")
     val cheapestPrice: CheapestPrice? = null
 ) {
 
+    @Immutable
     @Serializable
     data class GameInfo(
         @SerialName("storeID")
@@ -116,6 +121,7 @@ data class DealDetails(
         val thumb: String
     )
 
+    @Immutable
     @Serializable
     data class CheaperStore(
         @SerialName("dealID")
@@ -132,6 +138,7 @@ data class DealDetails(
         val retailPriceDenominated: String
     )
 
+    @Immutable
     @Serializable
     data class CheapestPrice(
         @SerialName("priceValue")

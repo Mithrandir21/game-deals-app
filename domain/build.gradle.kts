@@ -16,6 +16,7 @@ kotlin {
             api(libs.kotlinx.datetime)
 
             implementation(libs.coroutines)
+            implementation(libs.compose.runtime)
             implementation(libs.room.runtime.multiplatform)
             implementation(libs.koin.core)
 

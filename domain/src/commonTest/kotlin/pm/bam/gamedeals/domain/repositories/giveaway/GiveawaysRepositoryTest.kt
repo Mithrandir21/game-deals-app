@@ -14,9 +14,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.domain.models.GiveawayPlatformSelection
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
+import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -66,7 +68,7 @@ class GiveawaysRepositoryTest {
         val resultOne = giveaway(
             id = 1,
             type = GiveawayType.GAME,
-            platforms = listOf(GiveawayPlatform.PC),
+            platforms = persistentListOf(GiveawayPlatform.PC),
             publishedDate = MIN_DATETIME,
             users = 1,
             worth = 1.0,
@@ -74,7 +76,7 @@ class GiveawaysRepositoryTest {
         val resultTwo = giveaway(
             id = 2,
             type = GiveawayType.DLC,
-            platforms = listOf(GiveawayPlatform.PS5),
+            platforms = persistentListOf(GiveawayPlatform.PS5),
             publishedDate = MAX_DATETIME,
             users = 2,
             worth = 2.0,
@@ -82,7 +84,7 @@ class GiveawaysRepositoryTest {
         val resultThree = giveaway(
             id = 3,
             type = GiveawayType.BETA,
-            platforms = listOf(GiveawayPlatform.NINTENDO_SWITCH),
+            platforms = persistentListOf(GiveawayPlatform.NINTENDO_SWITCH),
             publishedDate = MAX_DATETIME,
             users = 3,
             worth = 3.0,
@@ -91,8 +93,8 @@ class GiveawaysRepositoryTest {
         every { giveawaysDao.observeAllGiveaways() } returns flowOf(listOf(resultOne, resultTwo, resultThree))
 
         val para = GiveawaySearchParameters(
-            types = persistentListOf(GiveawayType.GAME to true, GiveawayType.BETA to true),
-            platforms = persistentListOf(GiveawayPlatform.PC to true, GiveawayPlatform.NINTENDO_SWITCH to true),
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true), GiveawayTypeSelection(GiveawayType.BETA, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true), GiveawayPlatformSelection(GiveawayPlatform.NINTENDO_SWITCH, true)),
             sortBy = GiveawaySortBy.DATE
         )
 

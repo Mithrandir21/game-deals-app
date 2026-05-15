@@ -90,6 +90,6 @@ fun cheapestPrice(
 
 fun dealDetails(
     gameInfo: DealDetails.GameInfo = gameInfo(),
-    cheaperStores: List<DealDetails.CheaperStore> = emptyList(),
+    cheaperStores: ImmutableList<DealDetails.CheaperStore> = persistentListOf(),
     cheapestPrice: DealDetails.CheapestPrice? = cheapestPrice(),
 ) = DealDetails(gameInfo, cheaperStores, cheapestPrice)

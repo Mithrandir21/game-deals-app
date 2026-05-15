@@ -29,12 +29,12 @@ class GiveawaySearchParametersTest {
     fun customised_parameters_round_trip_via_asMap_and_from() {
         val original = GiveawaySearchParameters(
             platforms = persistentListOf(
-                GiveawayPlatform.PC to true,
-                GiveawayPlatform.STEAM to false,
+                GiveawayPlatformSelection(GiveawayPlatform.PC, true),
+                GiveawayPlatformSelection(GiveawayPlatform.STEAM, false),
             ),
             types = persistentListOf(
-                GiveawayType.GAME to true,
-                GiveawayType.DLC to false,
+                GiveawayTypeSelection(GiveawayType.GAME, true),
+                GiveawayTypeSelection(GiveawayType.DLC, false),
             ),
             sortBy = GiveawaySortBy.VALUE,
         )
