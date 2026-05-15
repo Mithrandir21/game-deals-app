@@ -85,6 +85,7 @@ internal fun FavouritesScreen(
     FavouritesScreenContent(
         data = uiState.value,
         onBack = onBack,
+        onRetry = { viewModel.retry() },
         goToGame = goToGame,
     )
 }
@@ -95,11 +96,12 @@ internal fun FavouritesScreen(
 private fun FavouritesScreenContent(
     data: FavouritesViewModel.FavouritesScreenData,
     onBack: () -> Unit,
+    onRetry: () -> Unit,
     goToGame: (Int) -> Unit,
 ) {
     val scrollState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val currentOnBack by rememberUpdatedState(onBack)
+    val currentOnRetry by rememberUpdatedState(onRetry)
 
     val errorMessage = stringResource(Res.string.favourites_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.favourites_screen_data_loading_error_retry)
@@ -164,7 +166,7 @@ private fun FavouritesScreenContent(
                         actionLabel = errorRetry,
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        currentOnBack()
+                        currentOnRetry()
                     }
                 }
             }
@@ -248,6 +250,7 @@ private fun FavouritesScreen_Success_Preview() {
                 favourites = previewFavouritesList,
             ),
             onBack = {},
+            onRetry = {},
             goToGame = {},
         )
     }
@@ -263,6 +266,7 @@ private fun FavouritesScreen_Success_Dark_Preview() {
                 favourites = previewFavouritesList,
             ),
             onBack = {},
+            onRetry = {},
             goToGame = {},
         )
     }
@@ -278,6 +282,7 @@ private fun FavouritesScreen_Empty_Preview() {
                 favourites = persistentListOf(),
             ),
             onBack = {},
+            onRetry = {},
             goToGame = {},
         )
     }
@@ -292,6 +297,7 @@ private fun FavouritesScreen_Loading_Preview() {
                 status = FavouritesViewModel.FavouritesScreenStatus.LOADING,
             ),
             onBack = {},
+            onRetry = {},
             goToGame = {},
         )
     }
