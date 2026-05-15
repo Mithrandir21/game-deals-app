@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlin.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -52,5 +53,22 @@ class DateTimeFormatterImplTest {
         val result = dateTimeFormatter.formatToISODateNullable(seconds)
 
         assertEquals("Jan 01, 2026", result)
+    }
+
+    @Test
+    fun `formatLocaleAwareDate reads Locale per call`() {
+        val instant = Instant.fromEpochSeconds(1767225600L) // 2026-01-01 00:00:00 UTC
+
+        Locale.setDefault(Locale.US)
+        val englishOutput = formatLocaleAwareDate(instant)
+
+        Locale.setDefault(Locale.FRENCH)
+        val frenchOutput = formatLocaleAwareDate(instant)
+
+        // The Android actual must read Locale.getDefault() on every invocation (matching iOS),
+        // not cache it at class-load time. Different default locales must yield different
+        // month-name renderings.
+        assertEquals("Jan 01, 2026", englishOutput)
+        assertNotEquals(englishOutput, frenchOutput)
     }
 }
