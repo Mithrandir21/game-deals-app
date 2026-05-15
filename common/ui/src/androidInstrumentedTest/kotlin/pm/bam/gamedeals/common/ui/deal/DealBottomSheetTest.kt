@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.runtime.Composable
+import kotlinx.collections.immutable.persistentListOf
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -181,7 +182,7 @@ class DealBottomSheetTest {
             dealId = dealId,
             gameSalesPriceDenominated = gamePrice,
             gameInfo = gameInfo,
-            cheaperStores = listOf(StoreCheaperStorePair(store = cheaperStore, cheaperStore = cheaperStoreDetails)),
+            cheaperStores = persistentListOf(StoreCheaperStorePair(store = cheaperStore, cheaperStore = cheaperStoreDetails)),
             cheapestPrice = cheapestPrice,
         )
 
