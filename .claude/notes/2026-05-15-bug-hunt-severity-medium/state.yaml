@@ -1,0 +1,34 @@
+campaign_slug: "2026-05-15-bug-hunt-severity-medium"
+labels: ["bug-hunt", "severity:medium"]
+created: "2026-05-15"
+completed: "2026-05-15"
+status: "complete"
+current_wave: 1
+issues:
+  - number: 145
+    title: "Snackbar 'Retry' action handler calls onBack(), no retry function exists"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-medium/issue-145-snackbar-retry-action"
+    pr: 159
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/159"
+    status: "merged"
+    files:
+      - "feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt"
+      - "feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt"
+      - "feature/favourites/src/commonMain/kotlin/pm/bam/gamedeals/feature/favourites/ui/FavouritesViewModel.kt"
+      - "feature/favourites/src/commonMain/kotlin/pm/bam/gamedeals/feature/favourites/ui/FavouritesScreen.kt"
+      - "feature/store/src/commonTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModelTest.kt"
+      - "feature/favourites/src/commonTest/kotlin/pm/bam/gamedeals/feature/favourites/ui/FavouritesViewModelTest.kt"
+  - number: 146
+    title: "Room builder does not call setQueryCoroutineContext on either platform"
+    severity: "medium"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-medium/issue-146-room-set-query-coroutine-context"
+    pr: 158
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/158"
+    status: "merged"
+    notes: "On iOS, Dispatchers.IO is internal even in iosMain (not just commonMain) — sub-agent used Dispatchers.Default instead, matching K/N's IO->Default alias and the existing usage in CommonIosModule.kt."
+    files:
+      - "domain/src/androidMain/kotlin/pm/bam/gamedeals/domain/di/DomainAndroidModule.kt"
+      - "domain/src/iosMain/kotlin/pm/bam/gamedeals/domain/di/DomainIosModule.kt"

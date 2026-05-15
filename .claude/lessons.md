@@ -8,6 +8,61 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-15-06 · Room `@Transaction suspend fun` default methods on `interface` DAOs work cleanly on Room 2.8.x KMP — both Android and iOS KSP
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** room, kmp, ksp, dao, transaction, atomicity, sqlite
+**Applies to:** Any `FooDao` `interface` in `:domain` that needs atomic read-modify-write (e.g. toggle, conditional-insert, upsert with a side check) — and would otherwise tempt you into a non-atomic `.first()` + `add()` shape in the repository
+
+In Room 2.8.x (KMP, with `androidx.sqlite`), KSP cleanly accepts `@Transaction suspend fun` declared as a Kotlin `default` method on an `interface` DAO — and the same code path generates correctly for `kspDebugKotlinAndroid` and `kspKotlinIosSimulatorArm64`, no special configuration. This is the in-house idiom for atomic read-modify-write: e.g. an `EXISTS`-style `suspend fun isXxxNow(id): Boolean` plus a `@Transaction suspend fun toggleXxx(...)` default that wraps `if (isXxxNow(id)) delete(id) else insert(...)`. Repo simply delegates to the new DAO method — its public signature stays unchanged, no DI plumbing changes, and existing Mokkery test stubs need only swap from `every { dao.observeXxx(...) }` chains to `everySuspend { dao.toggleXxx(...) } returns <bool>`.
+
+One operational note: when pushing logic from the repo into a DAO, factor any wall-clock parameter (`dateAddedMs: Long`, etc.) into the DAO method's signature and let the repo pass `clock.nowMillis()`. DAOs shouldn't depend on `Clock`; this keeps the deterministic-clock contract for tests intact.
+
+**Source:** Issue #150 / PR #161 — `FavouritesRepository.toggleFavourite` previously did `observeIsFavourite(gameId).first()` + `add`/`remove` (TOCTOU). Replaced with `FavouritesDao.toggleFavourite` `@Transaction` default method; KSP accepted on both Android and iOS without complaint.
+
+### L-2026-05-15-05 · `Pair<A, B>` in a Compose parameter type is unstable regardless of `ImmutableList` wrapping
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** compose, stability, recomposition, immutable, pair, kotlinx-collections-immutable
+**Applies to:** Any `@Composable` whose parameter type is `List<Pair<A, B>>` or `ImmutableList<Pair<A, B>>` (including types nested inside `@Immutable data class` UI-state holders consumed by a composable)
+
+`kotlin.Pair` carries no `@Immutable` / `@Stable` annotation, so the Compose compiler classifies any `Pair<A, B>` as unstable — regardless of how stable `A` and `B` individually are. Wrapping in `kotlinx.collections.immutable.ImmutableList<...>` doesn't rescue the parameter because the element type itself still makes the list-as-parameter unstable for the compiler's skippability analysis. Fix: introduce a small named `@Immutable data class FooBarPair(val foo: A, val bar: B)` per Pair shape, in the closest module where the consumer lives. Bonus: `.first/.second` become `.foo/.bar` at call sites, which is easier to read. Refines `L-2026-05-02-02` (`@Immutable + ImmutableList on every domain model used as a composable parameter`) to cover the element-type case — that lesson catches the *collection* type; this one catches the *element* type.
+
+**Source:** Issue #147 / PR #163 — `GameViewModel.dealDetails: ImmutableList<Pair<Store, GameDetails.GameDeal>>` was claimed "correctly typed" in closed #80 but actually still defeated skipping. Replaced with `ImmutableList<StoreDealPair>` (`@Immutable data class StoreDealPair(val store: Store, val deal: GameDetails.GameDeal)`); same pattern applied to `DealBottomSheetData.cheaperStores` via `StoreCheaperStorePair`.
+
+### L-2026-05-15-04 · `SharingStarted.Eagerly` → `WhileSubscribed(5_000)` swap on a VM's `uiState` is NOT test-transparent
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** testing, stateflow, sharingstarted, viewmodel, coroutines-test, mokkery, eagerly, whilesubscribed
+**Applies to:** Any future migration of a ViewModel's `uiState = upstream.stateIn(viewModelScope, SharingStarted.Eagerly, initialValue)` to `SharingStarted.WhileSubscribed(5_000)` — relevant when the project's `Eagerly` outliers are aligned with the prevailing convention
+
+Tests authored against `Eagerly`'s "upstream is primed before the test collector subscribes" semantics break in two specific ways under `WhileSubscribed`:
+
+1. **Emissions-count assertions invert.** Tests doing `assertEquals(1, emissions.size)` + `emissions.first()` become wrong: `WhileSubscribed` emits the placeholder `initialValue` *before* the upstream's first real emission lands, giving 2 emissions. Switch to `emissions.last()` and drop the `size == 1` assertion entirely.
+2. **Imperative-trigger-before-subscribe stops working.** Tests that call `viewModel.someTrigger()` *before* the collector subscribes (`observeStates(viewModel)`) observe nothing because there's no subscriber yet — with `Eagerly` the upstream was already collecting, so the trigger's intermediate states (LOADING, etc.) made it into the StateFlow's replay slot. Under `WhileSubscribed`, no subscriber means those writes are dropped. Fix: reorder to **subscribe first**, then call the trigger. If the underlying suspending work is a fast-returning Mokkery stub, also gate it with a `CompletableDeferred` so the success transition doesn't race the assertion and clobber the LOADING state before the test observes it.
+
+In the Giveaways migration, 5 of 11 existing tests required adjustment under one or both patterns. Budget the test rewrites accordingly when planning the migration of remaining `Eagerly` ViewModels (currently `FavouritesViewModel` is the only one left — deliberately, per the issue body).
+
+**Source:** Issue #149 / PR #162 — switched `GiveawaysViewModel.uiState` from `Eagerly` to `WhileSubscribed(5_000)`; broke 5 tests, all fixed via the two patterns above.
+
+### L-2026-05-15-03 · `actual` implementations must agree on whether system state is read live per call or cached
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kmp, expect-actual, platform-parity, system-state, locale, timezone
+**Applies to:** Any `expect`/`actual` pair where the function reads OS-provided state (locale, timezone, theme, network status, screen metrics) — the `actual`s on different platforms must agree on the read strategy.
+
+If one platform's `actual` reads live OS state on every call (e.g. iOS `formatLocaleAwareDate` reads `NSLocale.currentLocale` / `NSTimeZone.systemTimeZone` per call), the other platform's `actual` cannot cache that state at class-load — otherwise behaviour diverges the moment the user changes the setting in OS Settings: iOS picks it up immediately, Android stays on the boot-time value until process death. **Default to per-call reads** unless the constructor cost is provably expensive AND the state is immutable for the process lifetime. The per-call allocation cost of building a fresh formatter is negligible for typical UI usage (a handful of formatted dates per screen).
+
+**Source:** Issue #143 / PR #154 — Android `formatLocaleAwareDate` built a `private val DateTimeFormatter` once with `Locale.getDefault()` + `ZoneId.systemDefault()` at class load while the iOS actual read both per call. Fix: construct the formatter inside the function on each call.
+
+### L-2026-05-15-02 · `CGRectMake` and `cValue<T>.useContents { ... }` require file-level `@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)`
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kotlin-native, cinterop, opt-in, ios, uikit
+**Applies to:** Any K/N `iosMain` code that builds a C value via the `*Make` helpers (`CGRectMake`, `CGPointMake`, `CGSizeMake`), reads from a `cValue<T>` via `useContents { ... }`, or otherwise touches the `kotlinx.cinterop` foreign-API surface in current Kotlin/Native (2.2.x).
+
+These APIs are gated behind `kotlinx.cinterop.ExperimentalForeignApi`. Without an explicit opt-in, the build fails with `Calling '...' may have an unintended effect: ...` or `This declaration is experimental and its usage should be marked with '@OptIn(...)' or '@kotlinx.cinterop.ExperimentalForeignApi'`. Apply the opt-in at the file level (`@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)` near the imports) rather than per-call site. Will likely become non-experimental in a future K/N release.
+
+**Source:** Issue #144 / PR #155 — `IosPlatformActions.share` configures `popoverPresentationController.sourceRect` via `CGRectMake(...)` and reads `keyWindow.bounds.useContents { ... }`; first compile failed on the opt-in until a file-level `@file:OptIn` was added.
+
+### L-2026-05-15-01 · K/N exposes Objective-C **category** properties as top-level extension properties, not as members
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kotlin-native, ios, uikit, objc-interop, imports
+**Applies to:** K/N `iosMain` code reading any property that Apple defined via an Objective-C category on a UIKit (or Foundation) class — common examples include `UIViewController.popoverPresentationController`, `UIView.safeAreaInsets`, or anything from `UIKit/UIView+Additions.h`-style headers.
+
+Regular Objective-C members on a class are bridged as Kotlin member access (`view.bounds`, no extra import needed). Properties added via ObjC **categories**, however, are bridged as top-level Kotlin extension properties — accessing them requires an explicit import. Example: `viewController.popoverPresentationController` compiles only if you add `import platform.UIKit.popoverPresentationController` at the top of the file. The compile error doesn't obviously point at the missing import (it looks like the property doesn't exist on the type); know the pattern to recognise it.
+
+**Source:** Issue #144 / PR #155 — `UIActivityViewController.popoverPresentationController?.sourceView` failed to compile until `import platform.UIKit.popoverPresentationController` was added. `sourceView` and `sourceRect` on `UIPopoverPresentationController` itself are regular members and needed no import.
+
 ### L-2026-05-14-02 · Per-test-class `ScreenSemantics` + `setupCompose` in instrumented UI tests
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, boilerplate
 **Applies to:** Any new instrumented `*ScreenTest.kt` with ≥2 string-resource lookups or ≥2 `setContent` blocks
