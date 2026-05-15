@@ -230,16 +230,16 @@ private fun GameDetails(
                 data.cheaperStores.forEach {
                     val cheaperStoreRowCd = stringResource(
                         Res.string.deal_details_cheaper_store_row_description,
-                        it.first.storeName,
-                        it.second.salePriceDenominated,
+                        it.store.storeName,
+                        it.cheaperStore.salePriceDenominated,
                     )
                     Row(
                         modifier = Modifier
-                            .clickable(role = Role.Button) { goToWeb(cheapsharkDealRedirectUrl(it.second.dealID), data.gameName) }
+                            .clickable(role = Role.Button) { goToWeb(cheapsharkDealRedirectUrl(it.cheaperStore.dealID), data.gameName) }
                             .semantics { contentDescription = cheaperStoreRowCd },
                     ) {
                         AsyncImage(
-                            model = it.first.images.logo,
+                            model = it.store.images.logo,
                             contentDescription = stringResource(Res.string.deal_details_cheaper_store_thumbnail, data.store.storeName),
                             error = painterResource(Res.drawable.videogame_thumb),
                             contentScale = ContentScale.Fit,
@@ -252,7 +252,7 @@ private fun GameDetails(
                                 .fillMaxWidth()
                                 .align(Alignment.CenterVertically)
                                 .padding(horizontal = GameDealsCustomTheme.spacing.small),
-                            text = it.second.salePriceDenominated
+                            text = it.cheaperStore.salePriceDenominated
                         )
                     }
                 }
@@ -410,12 +410,18 @@ private fun DealContent_WithCheaperStores_Preview() {
             DealContent(
                 data = previewDealDetailsData.copy(
                     cheaperStores = listOf(
-                        PreviewStore.copy(storeID = 11, storeName = "Humble Store") to PreviewDealCheaperStore,
-                        PreviewStore.copy(storeID = 7, storeName = "GOG") to PreviewDealCheaperStore.copy(
-                            dealID = "cheaper-2",
-                            storeID = 7,
-                            salePriceValue = 5.99,
-                            salePriceDenominated = "$5.99",
+                        StoreCheaperStorePair(
+                            store = PreviewStore.copy(storeID = 11, storeName = "Humble Store"),
+                            cheaperStore = PreviewDealCheaperStore,
+                        ),
+                        StoreCheaperStorePair(
+                            store = PreviewStore.copy(storeID = 7, storeName = "GOG"),
+                            cheaperStore = PreviewDealCheaperStore.copy(
+                                dealID = "cheaper-2",
+                                storeID = 7,
+                                salePriceValue = 5.99,
+                                salePriceDenominated = "$5.99",
+                            ),
                         ),
                     ),
                     cheapestPrice = null,

@@ -148,7 +148,7 @@ class GameScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             GameViewModel.GameScreenData.Data(
                 gameDetails = gameDetails,
-                dealDetails = persistentListOf(store to gameDeal)
+                dealDetails = persistentListOf(StoreDealPair(store = store, deal = gameDeal))
             )
         )
 
@@ -180,7 +180,7 @@ class GameScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             GameViewModel.GameScreenData.Data(
                 gameDetails = gameDetails,
-                dealDetails = persistentListOf(store to gameDeal)
+                dealDetails = persistentListOf(StoreDealPair(store = store, deal = gameDeal))
             )
         )
 

@@ -20,7 +20,7 @@ sealed class DealBottomSheetData(
         override val dealId: String,
         override val gameSalesPriceDenominated: String,
         val gameInfo: DealDetails.GameInfo,
-        val cheaperStores: List<Pair<Store, DealDetails.CheaperStore>>,
+        val cheaperStores: List<StoreCheaperStorePair>,
         val cheapestPrice: DealDetails.CheapestPrice?,
     ) : DealBottomSheetData(store, gameId, gameName, dealId, gameSalesPriceDenominated)
 

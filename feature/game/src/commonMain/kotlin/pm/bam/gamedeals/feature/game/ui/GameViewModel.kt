@@ -125,7 +125,7 @@ internal class GameViewModel(
             .flatMapLatest { gamesRepository.getGameDetails(it).toFlow() }
             .flatMapLatest { details ->
                 details.deals
-                    .map { deal -> storesRepository.getStore(deal.storeID) to deal }
+                    .map { deal -> StoreDealPair(store = storesRepository.getStore(deal.storeID), deal = deal) }
                     .let { dealDetails -> GameScreenData.Data(details, dealDetails.toImmutableList()) }
                     .toFlow<GameScreenData>()
             }
@@ -145,7 +145,7 @@ internal class GameViewModel(
         @Immutable
         data class Data(
             val gameDetails: GameDetails,
-            val dealDetails: ImmutableList<Pair<Store, GameDetails.GameDeal>>
+            val dealDetails: ImmutableList<StoreDealPair>
         ) : GameScreenData()
     }
 }

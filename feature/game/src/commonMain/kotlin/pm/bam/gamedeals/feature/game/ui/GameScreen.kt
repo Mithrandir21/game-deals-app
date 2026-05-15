@@ -142,9 +142,9 @@ private fun CompactGameDealsDetails(
         ) {
             data.dealDetails.forEach {
                 StoreGameDealRow(
-                    store = it.first,
+                    store = it.store,
                     gameInfo = data.gameDetails.info,
-                    deal = it.second,
+                    deal = it.deal,
                     goToWeb = goToWeb,
                     onShareDeal = onShareDeal,
                 )
@@ -172,9 +172,9 @@ private fun WideGameDealsDetails(
         ) {
             data.dealDetails.forEach {
                 StoreGameDealRow(
-                    store = it.first,
+                    store = it.store,
                     gameInfo = data.gameDetails.info,
-                    deal = it.second,
+                    deal = it.deal,
                     goToWeb = goToWeb,
                     onShareDeal = onShareDeal,
                 )
@@ -427,20 +427,26 @@ private fun GameScreenContent(
 
 
 private val previewGameDealDetails = persistentListOf(
-    PreviewStore to PreviewGameDeal,
-    PreviewStore.copy(storeID = 11, storeName = "Humble Store") to PreviewGameDeal.copy(
-        storeID = 11,
-        dealID = "deal-2",
-        priceValue = 8.49,
-        priceDenominated = "$8.49",
-        savings = 78,
+    StoreDealPair(store = PreviewStore, deal = PreviewGameDeal),
+    StoreDealPair(
+        store = PreviewStore.copy(storeID = 11, storeName = "Humble Store"),
+        deal = PreviewGameDeal.copy(
+            storeID = 11,
+            dealID = "deal-2",
+            priceValue = 8.49,
+            priceDenominated = "$8.49",
+            savings = 78,
+        ),
     ),
-    PreviewStore.copy(storeID = 7, storeName = "GOG") to PreviewGameDeal.copy(
-        storeID = 7,
-        dealID = "deal-3",
-        priceValue = 11.99,
-        priceDenominated = "$11.99",
-        savings = 60,
+    StoreDealPair(
+        store = PreviewStore.copy(storeID = 7, storeName = "GOG"),
+        deal = PreviewGameDeal.copy(
+            storeID = 7,
+            dealID = "deal-3",
+            priceValue = 11.99,
+            priceDenominated = "$11.99",
+            savings = 60,
+        ),
     ),
 )
 

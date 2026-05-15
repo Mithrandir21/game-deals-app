@@ -181,7 +181,7 @@ class DealBottomSheetTest {
             dealId = dealId,
             gameSalesPriceDenominated = gamePrice,
             gameInfo = gameInfo,
-            cheaperStores = listOf(cheaperStore to cheaperStoreDetails),
+            cheaperStores = listOf(StoreCheaperStorePair(store = cheaperStore, cheaperStore = cheaperStoreDetails)),
             cheapestPrice = cheapestPrice,
         )
 
