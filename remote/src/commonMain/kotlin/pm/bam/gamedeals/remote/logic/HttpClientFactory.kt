@@ -12,3 +12,11 @@ import io.ktor.client.HttpClientConfig
  * to get a fully-configured engine-bound client.
  */
 expect fun httpClient(block: HttpClientConfig<*>.() -> Unit = {}): HttpClient
+
+/**
+ * Parameterless overload for Swift consumers. Kotlin/Native does not expose
+ * Kotlin default arguments to Swift, so callers on the iOS side cannot invoke
+ * `httpClient()` without supplying a closure unless this overload exists.
+ * Delegates to the `expect` form with an empty config block.
+ */
+fun httpClient(): HttpClient = httpClient {}
