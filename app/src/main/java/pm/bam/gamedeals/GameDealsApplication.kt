@@ -127,11 +127,24 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         }
     }
 
+    /**
+     * Initialise the Sentry SDK off the Main thread.
+     *
+     * The empty-DSN early-return is kept at the top so debug/CI builds stay
+     * zero-cost — we don't even wake [applicationScope] in that case.
+     *
+     * When a DSN is configured, the synchronous `Sentry.init` bootstrap is
+     * dispatched onto [applicationScope] (IO dispatcher) so it doesn't add
+     * cold-start cost to `Application.onCreate`. Fire-and-forget: any failure
+     * inside `Sentry.init` should not crash the app.
+     */
     private fun initSentry() {
         if (SENTRY_DSN.isEmpty()) return
-        Sentry.init { options ->
-            options.dsn = SENTRY_DSN
-            options.debug = isDebuggable()
+        applicationScope.launch {
+            Sentry.init { options ->
+                options.dsn = SENTRY_DSN
+                options.debug = isDebuggable()
+            }
         }
     }
 
