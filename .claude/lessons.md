@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-15-08 · When a bug-hunt finding's error path is practically unreachable, drop the fix or relabel — don't infrastructure-wrap a dead branch
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** scope, bug-hunt, error-handling, viewmodel, refactor
+**Applies to:** Implementing a `severity:low`/`severity:medium` bug-hunt finding that recommends adding retry/recovery infrastructure to an error path — before adding `retryTrigger` + `flatMapLatest` + hoisted `onRetry` lambdas + preview proliferation, ask whether the error path can realistically fire
+
+Before implementing the literal "option (a): add a retry method" route for a bug-hunt finding on an error UX path, sanity-check that the underlying flow actually errors in practice. Pure Room observation flows (`observeFavourites`, `observeStoreDeals` etc.) over a local SQLite DB rarely throw outside of DB corruption — the ERROR snackbar branch may be unreachable. In that case, prefer (b): relabel the misleading action ("Retry" → "Back" when the handler actually calls `onBack`) or drop the action entirely. Reserve the full retry-trigger infrastructure for flows that legitimately fail — network fetches, one-shot HTTP calls inside an error-prone repository method. Asymmetric error handling between two screens is fine when it reflects reality.
+
+**Source:** Issue #145 / PR #159 — first pass added a full `retryTrigger`-driven retry to both StoreViewModel (legitimate: contains a one-shot `getStoreDetails` HTTP call) and FavouritesViewModel (unreachable: only observes a Room flow). User pushback led to dropping the Favourites half (revert VM + test to dev; relabel snackbar action to "Back" reusing existing string); kept Store's retry. Net diff fell from ~174 LoC to ~92 LoC.
+
+### L-2026-05-15-07 · `Dispatchers.IO` is internal on Kotlin/Native in every source set — commonMain AND iosMain
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kmp, coroutines, kotlin-native, dispatchers, ios
+**Applies to:** any K/N-targeting source set that wants an IO-tagged dispatcher — commonMain, iosMain, macosMain, etc.
+
+`kotlinx.coroutines.Dispatchers.IO` is declared `internal` to the coroutines library on Kotlin/Native — only the JVM source set exposes it publicly. Referencing it from `iosMain` fails to compile with `Cannot access 'val IO: CoroutineDispatcher': it is internal`, identical to the error in commonMain. The correct substitute is `Dispatchers.Default` (which K/N's `IO` would alias to internally anyway). Either inject a `CoroutineDispatcher` from each platform's DI module (`Dispatchers.IO` on Android, `Dispatchers.Default` on iOS), or use `Dispatchers.Default` literally in platform-specific Apple source sets.
+
+**Source:** Issue #146 / PR #158 — Room `setQueryCoroutineContext` fix. Sub-agent followed the older lesson's wording, tried `Dispatchers.IO` in `iosMain`, hit the internal-access compile error, switched to `Dispatchers.Default`.
+
 ### L-2026-05-15-06 · Room `@Transaction suspend fun` default methods on `interface` DAOs work cleanly on Room 2.8.x KMP — both Android and iOS KSP
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** room, kmp, ksp, dao, transaction, atomicity, sqlite
 **Applies to:** Any `FooDao` `interface` in `:domain` that needs atomic read-modify-write (e.g. toggle, conditional-insert, upsert with a side check) — and would otherwise tempt you into a non-atomic `.first()` + `add()` shape in the repository
@@ -162,14 +178,6 @@ This codebase uses Mokkery (`dev.mokkery:mokkery`) for mocking, not MockK. Mokke
 `docs/patterns/testing.md` still says "MockK Everywhere; No Hand-Rolled Fakes" — that doc was surveyed at SHA `31a89bc` on 2026-05-03, before the KMP migration completed. The pattern is stale; this lesson takes precedence until the patterns doc is refreshed. JVM-only tests outside KMP modules (none currently exist in this project, but possible in `:app` androidTest) could theoretically still use MockK, but default to Mokkery for consistency.
 
 **Source:** Wave 1 of campaign `2026-05-06-bug-hunt-severity-medium` — issue #124 / PR #132. The worker prompt and issue body referenced MockK based on the stale patterns doc; the worker noticed the existing test file used Mokkery and adapted.
-
-### L-2026-05-06-03 · `Dispatchers.IO` is not accessible from `commonMain` in coroutines 1.10.x
-**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** kmp, coroutines, kotlin-native, dispatchers
-**Applies to:** KMP commonMain code that wants an IO-tagged dispatcher for blocking work
-
-`kotlinx.coroutines.Dispatchers.IO` is internal in commonMain in coroutines 1.10.x — only the JVM source set exposes it as public. Don't use it as a default value for a `commonMain` constructor parameter; declare the dispatcher as a required `CoroutineDispatcher` and inject it from each platform's DI module (`Dispatchers.IO` on Android, `Dispatchers.Default` on iOS, where K/N's `IO` aliases to `Default` anyway).
-
-**Source:** Phase-3 Storage commonization — wanted `Dispatchers.IO` as default for `StorageImpl.ioDispatcher`; hit "Cannot access 'val IO' — internal in 'kotlinx.coroutines.Dispatchers'".
 
 ### L-2026-05-06-02 · `compose.material3` does NOT bring in `material-icons-core`
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, compose-multiplatform, gradle, dependencies
@@ -652,6 +660,14 @@ Don't resolve merge conflicts file-by-file. First identify which *features* land
 **Source:** merge conflict resolution
 
 ## Archive
+
+### L-2026-05-06-03 · `Dispatchers.IO` is not accessible from `commonMain` in coroutines 1.10.x
+**Status:** superseded by L-2026-05-15-07 · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** kmp, coroutines, kotlin-native, dispatchers
+**Applies to:** KMP commonMain code that wants an IO-tagged dispatcher for blocking work
+
+`kotlinx.coroutines.Dispatchers.IO` is internal in commonMain in coroutines 1.10.x — only the JVM source set exposes it as public. Don't use it as a default value for a `commonMain` constructor parameter; declare the dispatcher as a required `CoroutineDispatcher` and inject it from each platform's DI module (`Dispatchers.IO` on Android, `Dispatchers.Default` on iOS, where K/N's `IO` aliases to `Default` anyway).
+
+**Source:** Phase-3 Storage commonization — wanted `Dispatchers.IO` as default for `StorageImpl.ioDispatcher`; hit "Cannot access 'val IO' — internal in 'kotlinx.coroutines.Dispatchers'".
 
 ### L-2026-05-05-03 · `sentry-kotlin-multiplatform` via Sentry-Cocoa SPM needs an exact version pin and the `Sentry-Dynamic` product
 **Status:** superseded by L-2026-05-05-04 · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, xcode-26, version-skew
