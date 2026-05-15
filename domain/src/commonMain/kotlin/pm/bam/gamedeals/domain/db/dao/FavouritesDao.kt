@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import pm.bam.gamedeals.domain.models.FavouriteGame
 
@@ -22,10 +23,37 @@ internal interface FavouritesDao {
     @Query("SELECT EXISTS(SELECT 1 FROM FavouriteGame WHERE gameID = :gameId)")
     fun observeIsFavourite(gameId: Int): Flow<Boolean>
 
+    /** Synchronous one-shot read used inside [toggleFavourite] for atomic read-modify-write. */
+    @Query("SELECT EXISTS(SELECT 1 FROM FavouriteGame WHERE gameID = :gameId)")
+    suspend fun isFavouriteNow(gameId: Int): Boolean
+
     /** REPLACE so re-favouriting refreshes [FavouriteGame.dateAddedMs]. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addFavourites(vararg favourites: FavouriteGame)
 
     @Query("DELETE FROM FavouriteGame WHERE gameID = :gameId")
     suspend fun removeFavouriteById(gameId: Int)
+
+    /**
+     * Atomic toggle: reads current favourite state and inserts/deletes within a single
+     * transaction so concurrent callers can't both observe "not favourite" and double-insert
+     * (or both observe "favourite" and have one of the deletes lose). Returns the new state.
+     */
+    @Transaction
+    suspend fun toggleFavourite(gameId: Int, title: String, thumb: String, dateAddedMs: Long): Boolean {
+        val nowFavourite = !isFavouriteNow(gameId)
+        if (nowFavourite) {
+            addFavourites(
+                FavouriteGame(
+                    gameID = gameId,
+                    title = title,
+                    thumb = thumb,
+                    dateAddedMs = dateAddedMs,
+                )
+            )
+        } else {
+            removeFavouriteById(gameId)
+        }
+        return nowFavourite
+    }
 }

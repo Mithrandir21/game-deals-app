@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.favourites
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.FavouritesDao
@@ -45,9 +44,11 @@ internal class FavouritesRepositoryImpl(
         favouritesDao.removeFavouriteById(gameId)
     }
 
-    override suspend fun toggleFavourite(gameId: Int, title: String, thumb: String): Boolean {
-        val nowFavourite = !favouritesDao.observeIsFavourite(gameId).first()
-        if (nowFavourite) addFavourite(gameId, title, thumb) else removeFavourite(gameId)
-        return nowFavourite
-    }
+    override suspend fun toggleFavourite(gameId: Int, title: String, thumb: String): Boolean =
+        favouritesDao.toggleFavourite(
+            gameId = gameId,
+            title = title,
+            thumb = thumb,
+            dateAddedMs = clock.nowMillis(),
+        )
 }
