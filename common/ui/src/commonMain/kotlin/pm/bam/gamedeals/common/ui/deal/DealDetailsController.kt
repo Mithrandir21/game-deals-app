@@ -56,7 +56,7 @@ class DealDetailsController(
                         gameSalesPriceDenominated = dealPriceDenominated,
                         gameInfo = dealDetails.gameInfo,
                         cheapestPrice = dealDetails.cheapestPrice,
-                        cheaperStores = dealDetails.cheaperStores.map { storesRepository.getStore(it.storeID) to it },
+                        cheaperStores = dealDetails.cheaperStores.map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) },
                     )
                 }
                 _dealDetails.emit(data)

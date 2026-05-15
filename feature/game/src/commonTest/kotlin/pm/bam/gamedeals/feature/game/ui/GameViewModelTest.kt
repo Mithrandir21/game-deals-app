@@ -106,7 +106,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
         assertEquals(2, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.first())
-        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(store to gameDeal)), emissions.second())
+        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(StoreDealPair(store = store, deal = gameDeal))), emissions.second())
     }
 
     @Test
@@ -129,12 +129,12 @@ class GameViewModelTest : MainDispatcherTest() {
         delay(1200)
 
         assertEquals(2, emissions.size)
-        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(store to gameDeal)), emissions.second())
+        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(StoreDealPair(store = store, deal = gameDeal))), emissions.second())
 
         viewModel.reloadGameDetails()
 
         assertEquals(4, emissions.size)
         assertEquals(GameViewModel.GameScreenData.Loading, emissions.third())
-        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(store to gameDeal)), emissions.fourth())
+        assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(StoreDealPair(store = store, deal = gameDeal))), emissions.fourth())
     }
 }
