@@ -3,7 +3,7 @@ package pm.bam.gamedeals.domain.repositories.favourites
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
-import dev.mokkery.matcher.any
+import dev.mokkery.everySuspend
 import dev.mokkery.mock
 import dev.mokkery.verifySuspend
 import dev.mokkery.verify.VerifyMode.Companion.exactly
@@ -43,27 +43,51 @@ class FavouritesRepositoryTest {
     }
 
     @Test
-    fun toggle_when_not_favourite_adds_and_returns_true() = runTest {
-        every { favouritesDao.observeIsFavourite(7) } returns flowOf(false)
+    fun toggle_delegates_to_dao_and_returns_new_state_true() = runTest {
+        everySuspend {
+            favouritesDao.toggleFavourite(
+                gameId = 7,
+                title = "Game 7",
+                thumb = "thumb7",
+                dateAddedMs = FIXED_NOW_MS,
+            )
+        } returns true
 
         val now = impl.toggleFavourite(gameId = 7, title = "Game 7", thumb = "thumb7")
         assertTrue(now)
 
         verifySuspend(exactly(1)) {
-            favouritesDao.addFavourites(
-                FavouriteGame(gameID = 7, title = "Game 7", thumb = "thumb7", dateAddedMs = FIXED_NOW_MS)
+            favouritesDao.toggleFavourite(
+                gameId = 7,
+                title = "Game 7",
+                thumb = "thumb7",
+                dateAddedMs = FIXED_NOW_MS,
             )
         }
     }
 
     @Test
-    fun toggle_when_favourite_removes_and_returns_false() = runTest {
-        every { favouritesDao.observeIsFavourite(7) } returns flowOf(true)
+    fun toggle_delegates_to_dao_and_returns_new_state_false() = runTest {
+        everySuspend {
+            favouritesDao.toggleFavourite(
+                gameId = 7,
+                title = "Game 7",
+                thumb = "thumb7",
+                dateAddedMs = FIXED_NOW_MS,
+            )
+        } returns false
 
         val now = impl.toggleFavourite(gameId = 7, title = "Game 7", thumb = "thumb7")
         assertFalse(now)
 
-        verifySuspend(exactly(1)) { favouritesDao.removeFavouriteById(7) }
+        verifySuspend(exactly(1)) {
+            favouritesDao.toggleFavourite(
+                gameId = 7,
+                title = "Game 7",
+                thumb = "thumb7",
+                dateAddedMs = FIXED_NOW_MS,
+            )
+        }
     }
 
     @Test
