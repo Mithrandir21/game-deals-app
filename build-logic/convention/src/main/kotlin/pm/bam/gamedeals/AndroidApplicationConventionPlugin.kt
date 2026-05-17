@@ -22,6 +22,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("com.android.application")
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
+        pluginManager.apply("com.github.skydoves.compose.stability.analyzer")
         pluginManager.apply("com.google.devtools.ksp")
 
         extensions.configure<ApplicationExtension> {

@@ -18,6 +18,7 @@ dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.ksp.gradle.plugin)
     compileOnly(libs.compose.gradle.plugin)
+    compileOnly(libs.compose.stability.analyzer.gradle.plugin)
     implementation(libs.compose.multiplatform.gradle.plugin)
 }
 
