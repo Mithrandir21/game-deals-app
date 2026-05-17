@@ -87,18 +87,26 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("mockk"))
                 }
 
-                getByName("androidDeviceTest").dependencies {
-                    implementation(project(":testing"))
-                    implementation(lib("mockk-android"))
-                    implementation(lib("androidx-junit"))
-                    implementation(lib("androidx-runner"))
-                    implementation(lib("androidx-espresso-core"))
-                    implementation(lib("androidx-compose-junit4"))
-                    // Compose UI test manifest moved here from debugImplementation:
-                    // the new KMP-library plugin is single-variant, so there's no
-                    // `debug` configuration on library modules. The test manifest
-                    // is only needed for the androidDeviceTest variant anyway.
-                    implementation(lib("androidx-compose-test"))
+                // The androidDeviceTest source set only exists when the
+                // library convention plugin opted into withDeviceTestBuilder,
+                // which it does only when `src/androidDeviceTest/` exists.
+                // Feature modules without device tests (e.g. :feature:favourites)
+                // therefore have no source set to configure, and `getByName`
+                // would fail. Gate this block on the same condition.
+                if (project.file("src/androidDeviceTest").exists()) {
+                    getByName("androidDeviceTest").dependencies {
+                        implementation(project(":testing"))
+                        implementation(lib("mockk-android"))
+                        implementation(lib("androidx-junit"))
+                        implementation(lib("androidx-runner"))
+                        implementation(lib("androidx-espresso-core"))
+                        implementation(lib("androidx-compose-junit4"))
+                        // Compose UI test manifest moved here from debugImplementation:
+                        // the new KMP-library plugin is single-variant, so there's no
+                        // `debug` configuration on library modules. The test manifest
+                        // is only needed for the androidDeviceTest variant anyway.
+                        implementation(lib("androidx-compose-test"))
+                    }
                 }
             }
         }

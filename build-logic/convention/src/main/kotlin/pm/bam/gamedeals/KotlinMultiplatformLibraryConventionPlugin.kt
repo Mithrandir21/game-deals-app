@@ -63,17 +63,57 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             // convention plugin we can't use the `android { }` / `androidLibrary { }`
             // DSL accessor (those are project-script auto-accessors); instead we
             // reach it via `targets.withType<KotlinMultiplatformAndroidLibraryTarget>()`.
+            // The new KMP-library plugin's `withDeviceTestBuilder { }` opt-in
+            // creates a `connectedAndroidDeviceTest` task even for modules
+            // with no device-test source files; that empty test APK then
+            // fails on the device with `ClassNotFoundException:
+            // androidx.test.runner.AndroidJUnitRunner` because androidx-runner
+            // is only declared in the feature convention's androidDeviceTest
+            // deps. Gate the opt-in on a real `src/androidDeviceTest/`
+            // directory so non-test library modules (e.g. :common, :domain,
+            // :logging, :testing) skip the device-test pipeline cleanly.
+            val hasDeviceTests = project.file("src/androidDeviceTest").exists()
+
             targets.withType(KotlinMultiplatformAndroidLibraryTarget::class.java).configureEach {
                 namespace = "pm.bam.gamedeals" + project.path.replace(":", ".")
                 compileSdk = 36
                 minSdk = 26
 
-                withHostTestBuilder {}
-                withDeviceTestBuilder {
-                    sourceSetTreeName = "test"
-                }.configure {
-                    instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+                // AGP 9's KMP-library plugin disables Android resources by
+                // default. Compose Multiplatform resources (used in modules
+                // applying the compose convention) require the pipeline to
+                // be enabled — without this, the
+                // CopyResourcesToAndroidAssetsTask for androidDeviceTest is
+                // generated without an outputDirectory and the connected
+                // tests fail to configure. Enabling here unconditionally
+                // keeps the convention plugin uniform; modules that don't
+                // use Compose Resources just have an empty pipeline.
+                androidResources {
+                    enable = true
                 }
+
+                withHostTestBuilder {}
+                if (hasDeviceTests) {
+                    withDeviceTestBuilder {
+                        sourceSetTreeName = "test"
+                    }.configure {
+                        instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+                    }
+                }
+
+                // Packaging excludes for the test APK. Mokkery 3.x + JUnit 4
+                // pull in transitive junit-jupiter artifacts that each ship
+                // their own META-INF/LICENSE.md, colliding at merge time.
+                // The AGP-9 KMP-library plugin's `packaging { resources { ... } }`
+                // block sets these on the target's outputs.
+                packaging.resources.excludes.addAll(
+                    listOf(
+                        "META-INF/LICENSE.md",
+                        "META-INF/LICENSE-notice.md",
+                        "META-INF/{AL2.0,LGPL2.1}",
+                        "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+                    )
+                )
             }
         }
 
