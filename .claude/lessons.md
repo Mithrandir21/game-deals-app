@@ -8,6 +8,38 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-17-16 · Local `connectedAndroidDeviceTest` needs `adb shell settings put global mdevx.grpc_guest_port 8554` for `androidx.test.espresso.device` to find the emulator gRPC service
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** instrumented-tests, espresso-device, emulator, local-dev, ci-parity
+**Applies to:** Running `connectedAndroidDeviceTest` locally on a standard Android-Studio-launched emulator (not via Gradle Managed Devices) when any test uses `androidx.test.espresso.device 1.1.0+`
+
+The espresso-device API reads the emulator's gRPC control port from a `Settings.Global` key the test process expects to be set. AGP/UTP writes it when running tests on a Gradle Managed Device; for externally-launched emulators (the normal Android Studio AVD case) nothing writes it, and tests fail with `DeviceControllerOperationException: Unable to connect to Emulator gRPC port`. Workaround: run `adb shell settings put global mdevx.grpc_guest_port 8554` once after starting the emulator (modern emulators expose gRPC on 8554 by default). CI's `.github/workflows/android.yml` already does this. The previous AGP-8 era had `testOptions.emulatorControl.enable = true` + `android.experimental.androidTest.enableEmulatorControl=true` to bridge this for non-GMD emulators, but the AGP 9 KMP-library plugin doesn't expose `testOptions.emulatorControl` — so locally you set the system property manually until the new plugin grows an equivalent. Affects two screen-test suites in this repo: `:feature:game GameScreenTest`, `:feature:home HomeScreenTest`.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · post-migration `connectedAndroidDeviceTest` run — 9 of 81 tests initially failed with the gRPC error, fixed by setting the property locally to match CI
+
+### L-2026-05-17-15 · Under the AGP 9 KMP-library plugin, gate `withDeviceTestBuilder { }` on a real `src/androidDeviceTest/` directory
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, instrumented-tests, conditional-config
+**Applies to:** Writing a convention plugin that applies `com.android.kotlin.multiplatform.library` to library modules where some have device tests and some don't (the typical pattern in a multi-module Android+KMP project)
+
+If the convention plugin calls `withDeviceTestBuilder { }.configure { instrumentationRunner = "..." }` unconditionally, every library module produces a `connectedAndroidDeviceTest` task and a test APK. Modules with no test files still deploy that empty test APK to the device, and the device process crashes with `ClassNotFoundException: androidx.test.runner.AndroidJUnitRunner` because androidx-runner is typically only declared in feature/test convention deps. The clean fix is to gate `withDeviceTestBuilder` on `project.file("src/androidDeviceTest").exists()` so non-test modules silently skip the device-test pipeline. Paired downstream gate: any feature convention that does `getByName("androidDeviceTest").dependencies { ... }` must use the same condition, since the source set only exists when the library convention opted in. Empty `src/androidDeviceTest/` directories work as opt-in markers if you want a module to participate without tests yet.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common`, `:domain`, `:logging`, `:testing`, `:remote*`, `:feature:favourites` all hit the runner-class-not-found crash on first `connectedAndroidDeviceTest` run; gating fixed it without touching any module's build file
+
+### L-2026-05-17-14 · Under the AGP 9 KMP-library plugin, Compose Multiplatform resources require `androidResources { enable = true }` explicitly
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, compose-multiplatform, compose-resources, gradle-config
+**Applies to:** Any KMP module that applies `com.android.kotlin.multiplatform.library` + Compose Multiplatform Resources (i.e. `org.jetbrains.compose` with `compose.components.resources`), which in this repo is every module applying `gamedeals.kmp.library.compose`
+
+AGP 9's KMP-library plugin disables Android resource processing by default — different from `com.android.library`. Compose Multiplatform Resources expects the pipeline to be enabled; without it, the per-source-set `CopyResourcesToAndroidAssetsTask` is generated with no `outputDirectory` and Gradle fails configuration with `property 'outputDirectory' doesn't have a configured value`. The fix is `androidResources { enable = true }` inside the `kotlin.android { }` (or from a convention plugin, `targets.withType<KotlinMultiplatformAndroidLibraryTarget>().configureEach { androidResources { enable = true } }`). Apply it unconditionally in the base library convention plugin — modules that don't use Compose Resources just have an empty pipeline; cheap and uniform.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui:copyAndroidDeviceTestComposeResourcesToAndroidAssets FAILED` on first `connectedAndroidDeviceTest` invocation; one-line convention plugin fix unblocked everything downstream
+
+### L-2026-05-17-13 · Under the AGP 9 KMP-library plugin, dex-merge across many `androidDeviceTest` APKs OOMs at the 4GB default heap
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, dex-merge, jvm-heap, gradle-properties, instrumented-tests
+**Applies to:** Running `connectedAndroidDeviceTest` on a multi-module project (7+ library modules with device tests) after migrating to `com.android.kotlin.multiplatform.library`
+
+The new plugin produces one `androidDeviceTest` test APK per library module that opts in. Gradle's parallel worker pool then runs `mergeExtDexAndroidDeviceTest` (D8) concurrently across those modules. At `-Xmx4096m` D8 reproducibly throws `java.lang.OutOfMemoryError: Java heap space` in `R8/D8.run` mid-merge, killing several tasks at once. Bump `org.gradle.jvmargs` in `gradle.properties` to at least `-Xmx8192m`. Note this affects new workstations too — the OOM only surfaces once you run instrumented tests across the whole module graph, not from compile-only or unit-test runs.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first `connectedAndroidDeviceTest` run with 4GB heap reproducibly OOM'd in 4 simultaneous `mergeExtDexAndroidDeviceTest` workers (`:common:ui`, `:feature:favourites`, `:feature:game`, `:feature:giveaways`); 8GB bump cleared it
+
 ### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
 **Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
