@@ -88,6 +88,30 @@ Per Android dev docs: the configuration block was called `androidLibrary {}` in 
 
 **Source:** chore/upgrade-kotlin-2.3-kmp · two failed compile attempts (one each on `androidLibrary { }` and `android { }`) before discovering the typed-API path via `developer.android.com/kotlin/multiplatform/kmp-integration`. The repo's older `docs/kotlin-2.3-upgrade-findings.md` recommended `androidLibrary { }` and was outdated.
 
+### L-2026-05-17-05 · Validate KMP-targeted Gradle plugins on an iOS-target compile task before pushing — Android-only smoke tests miss KLIB ABI mismatches
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** kmp, gradle, kotlin-native, klib, ci
+**Applies to:** Adopting any third-party Gradle plugin that publishes a multiplatform runtime (e.g. a `*-runtime-iosArm64` klib alongside the JVM/Android artifact) into a Kotlin Multiplatform project — especially when the plugin's release notes claim a Kotlin-version pin
+
+A plugin's "Kotlin 2.2 language level" pin in release notes only covers the **Gradle plugin source**, not the published runtime KLIBs. The iOS klibs may have been built with a newer Kotlin compiler and carry a higher ABI version that the project's Kotlin/Native compiler refuses to consume (`KLIB resolver: Skipping … having incompatible ABI version`). The Android-only `:app:<task>Dump` and `./gradlew :app:assembleDebug` paths can pass because the JVM artifact has no ABI mismatch — the failure only surfaces when any iOS-target task runs (`compileKotlinIosArm64`, `linkPodDebugFramework*`, etc.). **Before pushing**, run at least one explicit iOS-target compile task (e.g. `./gradlew :common:ui:compileKotlinIosArm64`); don't trust the Android smoke alone. Confirmed against `compose-stability-analyzer` 0.7.1 (PR #167, reverted) — its iOS klibs were Kotlin-2.3.20-built despite the source-pin to 2.2.
+
+**Source:** PR #167 (closed) — compose-stability-analyzer integration attempt
+
+### L-2026-05-17-06 · Gradle 9.x rejects implicit compile-output reads; wire missing `dependsOn` in a convention plugin as a workaround
+**Status:** active · **Confidence:** tentative · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-compile, task-validation, convention-plugin
+**Applies to:** Adopting a third-party Gradle plugin whose tasks read other tasks' outputs (typically `compileXxxKotlin[Android]`) without declaring the dependency — Gradle 9.x's task validator hard-fails this with `Task ':X' uses this output of task ':Y' without declaring an explicit or implicit dependency`
+
+The failure typically surfaces only when both tasks run in the same graph — e.g. `./gradlew build` triggers `check` → both the plugin's `xxxCheck` task and the unit-test compile. Standalone invocations of the plugin task may pass. Workaround: declare the missing edge in a convention-plugin helper:
+```kotlin
+internal fun Project.wireXxxTaskDependencies() {
+    tasks.matching { /* the plugin's tasks */ }.configureEach {
+        dependsOn(tasks.matching { /* the compile tasks it reads */ })
+    }
+}
+```
+Call from each convention plugin that applies the upstream plugin. Mark the helper file with a clear "remove when upstream fixes input declaration" comment + reference to a tracking issue. Marked tentative because seen only against `compose-stability-analyzer` 0.7.1 so far; the underlying pattern (third-party plugin missing input declarations + Gradle 9.x strict validator) is likely to recur.
+
+**Source:** PR #167 (closed) — compose-stability-analyzer integration attempt
+
 ### L-2026-05-17-01 · K2 Compose plugin (Kotlin 2.2.21) does NOT auto-infer cross-module data classes as stable
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, kmp, kotlin-2-2, k2
 **Applies to:** Any `data class` defined in a module that does not apply the Compose compiler plugin (e.g. `:domain` is pure KMP) and is consumed as a parameter — directly or transitively — by a `@Composable` in a feature module
