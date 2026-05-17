@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.kotlinx.serialization)
@@ -30,7 +28,7 @@ kotlin {
             implementation(libs.coroutines.testing)
         }
 
-        val androidUnitTest by getting {
+        val androidHostTest by getting {
             dependencies {
                 implementation(libs.junit)
                 implementation(libs.mockk)
@@ -40,6 +38,3 @@ kotlin {
     }
 }
 
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.common"
-}

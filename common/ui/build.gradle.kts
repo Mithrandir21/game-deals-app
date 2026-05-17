@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.gamedeals.kmp.library.compose)
@@ -42,7 +40,7 @@ kotlin {
             implementation(libs.androidx.compose.material3.adaptive)
         }
 
-        val androidUnitTest by getting {
+        val androidHostTest by getting {
             dependencies {
                 implementation(project(":testing"))
                 implementation(libs.junit)
@@ -51,7 +49,7 @@ kotlin {
             }
         }
 
-        val androidInstrumentedTest by getting {
+        val androidDeviceTest by getting {
             dependencies {
                 implementation(libs.mockk.android)
                 implementation(libs.androidx.junit)
@@ -63,11 +61,3 @@ kotlin {
     }
 }
 
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.common.ui"
-}
-
-dependencies {
-    debugImplementation(libs.androidx.compose.test)
-    debugImplementation(libs.androidx.ui.tooling)
-}

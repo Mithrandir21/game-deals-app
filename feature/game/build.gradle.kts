@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.feature)
     alias(libs.plugins.mokkery)
@@ -13,7 +11,7 @@ kotlin {
             implementation(libs.androidx.tracing)
         }
 
-        val androidInstrumentedTest by getting {
+        val androidDeviceTest by getting {
             dependencies {
                 implementation(libs.androidx.espresso.device)
             }
@@ -21,6 +19,3 @@ kotlin {
     }
 }
 
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.feature.game"
-}

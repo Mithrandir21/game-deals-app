@@ -68,6 +68,12 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
 
                     implementation(lib("koin-android"))
                     implementation(lib("koin-androidx-compose"))
+
+                    // Compose tooling moved here from debugImplementation:
+                    // the new KMP-library plugin is single-variant so there's
+                    // no `debug` configuration on library modules. Slight
+                    // binary bloat in release is acceptable for libraries.
+                    implementation(lib("androidx-ui-tooling"))
                 }
 
                 commonTest.dependencies {
@@ -88,11 +94,13 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("androidx-runner"))
                     implementation(lib("androidx-espresso-core"))
                     implementation(lib("androidx-compose-junit4"))
+                    // Compose UI test manifest moved here from debugImplementation:
+                    // the new KMP-library plugin is single-variant, so there's no
+                    // `debug` configuration on library modules. The test manifest
+                    // is only needed for the androidDeviceTest variant anyway.
+                    implementation(lib("androidx-compose-test"))
                 }
             }
         }
-
-        dependencies.add("debugImplementation", lib("androidx-compose-test"))
-        dependencies.add("debugImplementation", lib("androidx-ui-tooling"))
     }
 }

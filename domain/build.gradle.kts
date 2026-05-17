@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.gamedeals.kmp.ksp)
@@ -40,7 +38,7 @@ kotlin {
             implementation(project(":testing"))
         }
 
-        val androidUnitTest by getting {
+        val androidHostTest by getting {
             dependencies {
                 implementation(project(":testing"))
                 implementation(libs.junit)
@@ -59,11 +57,6 @@ room {
 
 dependencies {
     add("kspAndroid", libs.room.compiler)
-    add("kspIosX64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
-}
-
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.domain"
 }
