@@ -35,6 +35,15 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew --no-daemon build test
 
+    # Compares the live composable stability state against the committed
+    # `<module>/stability/<module>-debug.stability` baselines. Fails the
+    # PR on any drift (e.g. a domain model lost `@Immutable`, a Composable
+    # param flipped from STABLE to UNSTABLE). If the change is intentional,
+    # regenerate the baselines locally with `./gradlew debugStabilityDump`
+    # and commit them alongside the source change.
+    - name: Compose Stability Check
+      run: ./gradlew --no-daemon debugStabilityCheck
+
   instrumented-test:
     name: Instrumented UI Tests (API ${{ matrix.api-level }})
     if: github.event_name == 'pull_request'
