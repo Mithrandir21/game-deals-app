@@ -4,7 +4,7 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.everySuspend
-import dev.mokkery.matcher.varargs.anyVarargs
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify
 import dev.mokkery.verify.VerifyMode.Companion.exactly
@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
-import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.CheapsharkSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
@@ -47,7 +46,7 @@ class StoresRepositoryTest {
         verifySuspend(exactly(0)) { cheapsharkSource.fetchStores() }
         verify(exactly(1)) { storesDao.observeAllStores() }
         verifySuspend(exactly(1)) { storesDao.getAllStores() }
-        verifySuspend(exactly(0)) { storesDao.addStores(*anyVarargs<Store>()) }
+        verifySuspend(exactly(0)) { storesDao.addStores(*any()) }
     }
 
     @Test
@@ -78,7 +77,7 @@ class StoresRepositoryTest {
 
         verifySuspend(exactly(0)) { cheapsharkSource.fetchStores() }
         verifySuspend(exactly(1)) { storesDao.getAllStores() }
-        verifySuspend(exactly(0)) { storesDao.addStores(*anyVarargs<Store>()) }
+        verifySuspend(exactly(0)) { storesDao.addStores(*any()) }
     }
 
     @Test
