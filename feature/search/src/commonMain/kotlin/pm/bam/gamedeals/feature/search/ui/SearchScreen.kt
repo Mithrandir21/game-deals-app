@@ -73,7 +73,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -157,7 +159,7 @@ private fun SearchScreenContent(
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
     existingSearchParameters: SearchParameters,
     searchData: SearchViewModel.SearchData,
-    favouriteIds: Set<Int>,
+    favouriteIds: ImmutableSet<Int>,
     onSearchTitleChanged: (text: String) -> Unit,
     onSearchedGame: (gameId: Int) -> Unit = {},
     onPriceChanged: (from: Int?, to: Int?) -> Unit,
@@ -518,7 +520,7 @@ private fun SearchScreenContent_Results_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
-            favouriteIds = setOf(222),
+            favouriteIds = persistentSetOf(222),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },
@@ -538,7 +540,7 @@ private fun SearchScreenContent_Results_Dark_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
-            favouriteIds = setOf(222),
+            favouriteIds = persistentSetOf(222),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },
@@ -558,7 +560,7 @@ private fun SearchScreenContent_Empty_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.Empty,
-            favouriteIds = emptySet(),
+            favouriteIds = persistentSetOf(),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },
@@ -578,7 +580,7 @@ private fun SearchScreenContent_NoResults_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.NoResults,
-            favouriteIds = emptySet(),
+            favouriteIds = persistentSetOf(),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },

@@ -4,6 +4,8 @@ import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -40,8 +42,9 @@ class LocalDatetimeConverter {
 @ProvidedTypeConverter
 class GiveawayPlatformsConverter {
     @TypeConverter
-    fun convertToJsonString(platforms: List<GiveawayPlatform>): String = platforms.joinToString(separator = ", ")
+    fun convertToJsonString(platforms: ImmutableList<GiveawayPlatform>): String = platforms.joinToString(separator = ", ")
 
     @TypeConverter
-    fun convertToObject(json: String): List<GiveawayPlatform> = json.split(", ").map { GiveawayPlatform.valueOf(it) }
+    fun convertToObject(json: String): ImmutableList<GiveawayPlatform> =
+        json.split(", ").map { GiveawayPlatform.valueOf(it) }.toImmutableList()
 }

@@ -29,5 +29,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         extensions.configure<KotlinAndroidProjectExtension> {
             jvmToolchain(21)
         }
+
+        configureComposeCompilerReports()
     }
 }

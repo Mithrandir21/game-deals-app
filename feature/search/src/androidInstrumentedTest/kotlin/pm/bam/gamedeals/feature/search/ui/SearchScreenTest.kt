@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.feature.search.ui
 
 import androidx.compose.runtime.Composable
+import kotlinx.collections.immutable.persistentSetOf
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
@@ -47,7 +48,7 @@ class SearchScreenTest {
 
     @Before
     fun setup() {
-        every { searchViewModel.favouriteIds } returns MutableStateFlow(emptySet())
+        every { searchViewModel.favouriteIds } returns MutableStateFlow(persistentSetOf())
     }
 
     private fun setupCompose(

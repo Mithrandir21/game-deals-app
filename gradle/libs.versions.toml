@@ -81,6 +81,8 @@ kotlinx = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json"
 kotlinx-properties = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-properties", version.ref = "kotlinx" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 
+compose-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "compose-multiplatform" }
+
 # Room
 room = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-ktx", version.ref = "room" }

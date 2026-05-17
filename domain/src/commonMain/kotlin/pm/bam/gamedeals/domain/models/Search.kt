@@ -1,11 +1,13 @@
 package pm.bam.gamedeals.domain.models
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.properties.Properties
 
 @ExperimentalSerializationApi
+@Immutable
 @Serializable
 data class SearchParameters(
     val storeID: Int? = null,

@@ -30,12 +30,12 @@ internal class GiveawaysRepositoryImpl(
 
     override fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>> {
         val typeValues = giveawaySearchParameters.types
-            .filter { it.second }
-            .map { it.first }
+            .filter { it.selected }
+            .map { it.type }
 
         val requestedPlatforms = giveawaySearchParameters.platforms
-            .filter { it.second }
-            .map { it.first }
+            .filter { it.selected }
+            .map { it.platform }
 
         return giveawaysDao.observeAllGiveaways()
             .map { items ->

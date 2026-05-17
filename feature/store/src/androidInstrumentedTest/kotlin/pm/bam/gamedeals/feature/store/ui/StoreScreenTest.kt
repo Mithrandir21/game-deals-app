@@ -16,7 +16,9 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,7 +66,7 @@ class StoreScreenTest {
         val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
         val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
-        val favouriteIds: StateFlow<Set<Int>> = MutableStateFlow(emptySet())
+        val favouriteIds: StateFlow<ImmutableSet<Int>> = MutableStateFlow(persistentSetOf())
 
         every { viewModel.deals } returns deals
         every { viewModel.dealDetails } returns dealDetails

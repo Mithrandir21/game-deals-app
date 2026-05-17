@@ -54,7 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -218,7 +220,7 @@ private fun DealRow(
 @Composable
 private fun StoreDeals(
     deals: ImmutableList<Deal>,
-    favouriteIds: Set<Int>,
+    favouriteIds: ImmutableSet<Int>,
     dealDetails: DealBottomSheetData? = null,
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -342,7 +344,7 @@ private fun StoreDeals_Success_Preview() {
     GameDealsTheme {
         StoreDeals(
             deals = previewDealsList,
-            favouriteIds = setOf(222), // marks Hollow Knight as favourited
+            favouriteIds = persistentSetOf(222), // marks Hollow Knight as favourited
             storeDetails = PreviewStore,
             onBack = {},
             onLoadDealDetails = { _, _, _, _, _ -> },
@@ -360,7 +362,7 @@ private fun StoreDeals_Success_Dark_Preview() {
     GameDealsTheme(darkTheme = true) {
         StoreDeals(
             deals = previewDealsList,
-            favouriteIds = setOf(222),
+            favouriteIds = persistentSetOf(222),
             storeDetails = PreviewStore,
             onBack = {},
             onLoadDealDetails = { _, _, _, _, _ -> },
@@ -378,7 +380,7 @@ private fun StoreDeals_Empty_Preview() {
     GameDealsTheme {
         StoreDeals(
             deals = persistentListOf(),
-            favouriteIds = emptySet(),
+            favouriteIds = persistentSetOf(),
             storeDetails = PreviewStore,
             onBack = {},
             onLoadDealDetails = { _, _, _, _, _ -> },

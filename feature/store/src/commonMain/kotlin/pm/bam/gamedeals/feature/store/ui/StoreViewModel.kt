@@ -4,7 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -46,10 +48,10 @@ internal class StoreViewModel(
     private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
 
-    val favouriteIds: StateFlow<Set<Int>> = favouritesRepository.observeFavouriteIds()
-        .onStart { emit(emptySet()) }
-        .catch { emit(emptySet()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+    val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
     // We store and react to the StoreId changes so that only a single 'deals' flow can exists.
     private val storeIdFlow = MutableStateFlow(savedStateHandle.get<Int>("storeId"))

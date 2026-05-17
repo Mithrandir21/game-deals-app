@@ -1,5 +1,7 @@
 package pm.bam.gamedeals.testing.fixtures
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDateTime
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
@@ -20,7 +22,7 @@ fun giveaway(
     openGiveawayUrl: String = "https://example.com/open",
     publishedDate: LocalDateTime = MIN_DATETIME,
     type: GiveawayType = GiveawayType.GAME,
-    platforms: List<GiveawayPlatform> = listOf(GiveawayPlatform.PC),
+    platforms: ImmutableList<GiveawayPlatform> = persistentListOf(GiveawayPlatform.PC),
     endDate: String? = null,
     users: Int = 0,
     status: String = "Active",

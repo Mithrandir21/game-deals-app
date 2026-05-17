@@ -1,5 +1,7 @@
 package pm.bam.gamedeals.domain.repositories.favourites
 
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.common.time.Clock
@@ -8,7 +10,7 @@ import pm.bam.gamedeals.domain.models.FavouriteGame
 
 interface FavouritesRepository {
     fun observeFavourites(): Flow<List<FavouriteGame>>
-    fun observeFavouriteIds(): Flow<Set<Int>>
+    fun observeFavouriteIds(): Flow<ImmutableSet<Int>>
     fun observeIsFavourite(gameId: Int): Flow<Boolean>
     suspend fun addFavourite(gameId: Int, title: String, thumb: String)
     suspend fun removeFavourite(gameId: Int)
@@ -23,8 +25,8 @@ internal class FavouritesRepositoryImpl(
     override fun observeFavourites(): Flow<List<FavouriteGame>> =
         favouritesDao.observeAllFavourites()
 
-    override fun observeFavouriteIds(): Flow<Set<Int>> =
-        favouritesDao.observeFavouriteIds().map { it.toSet() }
+    override fun observeFavouriteIds(): Flow<ImmutableSet<Int>> =
+        favouritesDao.observeFavouriteIds().map { it.toImmutableSet() }
 
     override fun observeIsFavourite(gameId: Int): Flow<Boolean> =
         favouritesDao.observeIsFavourite(gameId)

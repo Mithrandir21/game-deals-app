@@ -11,7 +11,9 @@ import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -91,7 +93,7 @@ class HomeScreenTest {
     @Before
     fun setup() {
         every { viewModel.dealDetails } returns MutableStateFlow(null)
-        every { viewModel.favouriteIds } returns MutableStateFlow(emptySet())
+        every { viewModel.favouriteIds } returns MutableStateFlow(persistentSetOf())
         every { viewModel.favourites } returns MutableStateFlow(persistentListOf<FavouriteGame>())
     }
 
@@ -181,7 +183,7 @@ class HomeScreenTest {
             title = "Rich Giveaway",
             worthDenominated = "$59.99",
             type = GiveawayType.GAME,
-            platforms = listOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
+            platforms = persistentListOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
         )
         every { viewModel.uiState } returns MutableStateFlow(
             HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(rich))
@@ -200,7 +202,7 @@ class HomeScreenTest {
             title = "Free Beta",
             worthDenominated = null,
             type = GiveawayType.BETA,
-            platforms = listOf(GiveawayPlatform.PC),
+            platforms = persistentListOf(GiveawayPlatform.PC),
         )
         every { viewModel.uiState } returns MutableStateFlow(
             HomeScreenData(state = HomeScreenStatus.SUCCESS, giveaways = persistentListOf(freebie))
@@ -217,7 +219,7 @@ class HomeScreenTest {
         title: String,
         worthDenominated: String?,
         type: GiveawayType,
-        platforms: List<GiveawayPlatform>,
+        platforms: ImmutableList<GiveawayPlatform>,
     ) = Giveaway(
         id = id,
         title = title,
