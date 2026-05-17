@@ -1,6 +1,5 @@
 package pm.bam.gamedeals
 
-import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
@@ -17,9 +16,17 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
  * `compose.*` runtime declarations and the module-level mokkery plugin stay in
  * each module's build.gradle.kts — the compose accessor isn't available from a
  * precompiled plugin, and mokkery is already declared per-module.
+ *
+ * Test source sets under the AGP 9 KMP library plugin: `androidUnitTest` was
+ * renamed to `androidHostTest` and `androidInstrumentedTest` to
+ * `androidDeviceTest`. The old `testOptions.emulatorControl.enable` block
+ * (used by `androidx.test.espresso.device 1.1.0` for landscape-orientation
+ * tests) is not exposed by the new plugin; if a regression surfaces in the
+ * espresso-device tests we'll need to find the replacement DSL or skip those
+ * tests on CI.
  */
 class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("pm.bam.gamedeals.kmp.library")
         pluginManager.apply("pm.bam.gamedeals.kmp.library.compose")
         pluginManager.apply("pm.bam.gamedeals.kmp.ksp")
@@ -69,12 +76,12 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("coroutines-testing"))
                 }
 
-                getByName("androidUnitTest").dependencies {
+                getByName("androidHostTest").dependencies {
                     implementation(lib("junit"))
                     implementation(lib("mockk"))
                 }
 
-                getByName("androidInstrumentedTest").dependencies {
+                getByName("androidDeviceTest").dependencies {
                     implementation(project(":testing"))
                     implementation(lib("mockk-android"))
                     implementation(lib("androidx-junit"))
@@ -87,10 +94,5 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
 
         dependencies.add("debugImplementation", lib("androidx-compose-test"))
         dependencies.add("debugImplementation", lib("androidx-ui-tooling"))
-
-        extensions.configure<LibraryExtension> {
-            @Suppress("UnstableApiUsage")
-            testOptions.emulatorControl.enable = true
-        }
     }
 }

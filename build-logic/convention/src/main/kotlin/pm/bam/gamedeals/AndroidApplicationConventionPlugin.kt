@@ -9,15 +9,18 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 /**
  * Convention plugin for the single `:app` Android application module.
  *
- * Applies `com.android.application`, the Kotlin Android plugin, the Compose
- * compiler plugin, and KSP — the app always needs all four. Per-app concerns
- * (signing config, version metadata, dependency wiring) stay in
- * `:app/build.gradle.kts`.
+ * Applies `com.android.application`, the Compose compiler plugin, and KSP.
+ * The Kotlin Android plugin (`org.jetbrains.kotlin.android`) is no longer
+ * applied here: AGP 9 has built-in Kotlin support enabled by default
+ * (paired with dropping `android.builtInKotlin=false` from
+ * `gradle.properties`), so applying the standalone plugin would conflict.
+ *
+ * Per-app concerns (signing config, version metadata, dependency wiring)
+ * stay in `:app/build.gradle.kts`.
  */
 class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("com.android.application")
-        pluginManager.apply("org.jetbrains.kotlin.android")
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
         pluginManager.apply("com.google.devtools.ksp")
 
