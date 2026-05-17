@@ -8,6 +8,54 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
+**Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
+
+Gradle's K/N test runner fails the task with `"Index N out of bounds for length 2"` (N varies per run) when Mokkery prints the thrown exception's stack trace to stdout — the TeamCity protocol parser appears to misinterpret the `at <frame>` lines. The tests themselves pass: their JUnit-XML reports under `<module>/build/test-results/iosSimulatorArm64Test/` show `failures=0 errors=0`. Workaround for now: do not gate CI on iOS test report aggregation for affected modules; rely on the per-class XML. Repro examples in this repo: `:feature:game GameViewModelTest.error_state` (line 73 `throws Exception()`), `:feature:giveaways GiveawaysViewModelTest`. Modules without throwing mocks (`:common`, `:domain`) pass cleanly.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · post-bump verification of `./gradlew allTests` + targeted `:feature:game:iosSimulatorArm64Test --rerun-tasks`
+
+### L-2026-05-17-11 · CMP 1.11 requires Kotlin 2.3 on iOS targets and removes `iosX64` (Apple x86_64) entirely
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose-multiplatform, kotlin-native, ios, kmp, target-removal, upgrade
+**Applies to:** Any bump of `org.jetbrains.compose` to 1.11.0+ in a KMP project with iOS targets, especially convention plugins that still declare `iosX64()`
+
+Two coupled requirements: (1) Kotlin 2.3+ is mandatory for native/iOS targets when on CMP 1.11 — staying on Kotlin 2.2.x while bumping CMP fails to link; (2) `iosX64()` (Intel Mac simulator target) is no longer supported and must be removed from every KMP target list. Also drop any per-target processors that reference it, e.g. `add("kspIosX64", libs.room.compiler)`. Apple Silicon Mac simulators are covered by `iosSimulatorArm64`; real Apple Silicon devices by `iosArm64`. Keep an eye on `iosApp/build.gradle.kts` AND the convention plugin — both declare iOS targets independently in this repo.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · linker failures on first CMP 1.11 + iOS compile pointed at the `iosX64()` declarations
+
+### L-2026-05-17-10 · KSP 2.3.x writes to `kotlin.sourceSets` but AGP 9 built-in Kotlin disallows it — set `android.disallowKotlinSourceSets=false`
+**Status:** tentative · **Confidence:** confirmed for KSP 2.3.8 / AGP 9.1.1 · **Added:** 2026-05-17 · **Tags:** ksp, agp-9, kotlin-built-in, gradle-properties, workaround
+**Applies to:** Any project on AGP 9.x + Kotlin built-in support (`android.builtInKotlin=true`, the AGP-9 default) where KSP 2.3.x is applied to an Android-target module
+
+Configuration fails with `"Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin. Kotlin source set 'debug' contains: […]/build/generated/ksp/debug/…"`. KSP 2.3.x still uses the legacy mechanism to register its generated-source directories on the Kotlin source set; AGP 9's built-in Kotlin support rejects external writes. Workaround: set `android.disallowKotlinSourceSets=false` in `gradle.properties`. This is marked experimental by AGP and is intended as a transition flag — remove it when KSP migrates to `android.sourceSets`. Search: https://developer.android.com/r/tools/built-in-kotlin.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first failure after dropping `org.jetbrains.kotlin.android` from the application convention plugin
+
+### L-2026-05-17-09 · AGP 9 KMP-library is single-variant — `debugImplementation`, `buildTypes.release { proguardFiles }`, and `buildFeatures.buildConfig` are all gone
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, build-variants, compose-tooling, buildconfig, proguard
+**Applies to:** Any module migrated from `com.android.library` to `com.android.kotlin.multiplatform.library` under AGP 9.1+
+
+The new plugin produces one variant per module; everything keyed on `debug`/`release` disappears: (a) `debugImplementation` is unresolved — move Compose `ui-tooling` to `androidMain.dependencies { implementation(...) }` (slight release bloat, accept it) and `ui-test-manifest` to `androidDeviceTest.dependencies { implementation(...) }`. (b) `buildTypes.named("release") { isMinifyEnabled = false; proguardFiles(...) }` is not supported on library modules — drop it; rely on `:app`'s proguard config or `consumer-proguard-rules.pro`. (c) `buildFeatures.buildConfig = true` does not generate a `BuildConfig` class — replacements: BuildKonfig plugin (proper), inject the constant from `:app` via Koin (cleaner), or hardcode + accept the regression (what this repo did for `RemoteBuildUtil.android.kt` as a temporary fix). `:app` itself (still `com.android.application`) keeps BuildConfig and variants — applications are unchanged.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui` failed `debugImplementation` resolution; `:remote` lost `BuildConfig.BUILD_TYPE` access; central convention plugin needed both fixes
+
+### L-2026-05-17-08 · AGP 9 KMP-library plugin renames test source sets AND Gradle test tasks — propagates to CI
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, source-sets, gradle-tasks, ci, instrumented-tests
+**Applies to:** Every KMP module migrated to `com.android.kotlin.multiplatform.library` and every Gradle task name referenced from CI, scripts, or docs
+
+Source-set names: `androidUnitTest` → `androidHostTest`; `androidInstrumentedTest` → `androidDeviceTest`. This means three coordinated changes per module: (a) `val androidUnitTest by getting { ... }` → `val androidHostTest by getting { ... }` in every `build.gradle.kts`; (b) `getByName("androidUnitTest")` / `getByName("androidInstrumentedTest")` in convention plugins → the new names; (c) `git mv src/androidUnitTest src/androidHostTest` (and the instrumented equivalent) on the filesystem. Task names also shift: `testDebugUnitTest` → `testAndroidHostTest` (no debug/release library variants), `connectedDebugAndroidTest` → `connectedAndroidDeviceTest`, with `allTests` as the cross-target aggregator (commonTest + androidHostTest + iosSimulatorArm64Test). Update `.github/workflows/android.yml` (this repo: the `connectedDebugAndroidTest` invocation) and any developer docs that mention the old names.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first surfaced as `"KotlinSourceSet with name 'androidUnitTest' not found"` at `:common:build.gradle.kts:33` configuration time; CI workflow needed a paired edit
+
+### L-2026-05-17-07 · `com.android.kotlin.multiplatform.library` DSL accessor: `android {}` from build scripts, `targets.withType<KotlinMultiplatformAndroidLibraryTarget>` from convention plugins
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, dsl, kotlin-multiplatform
+**Applies to:** Writing or migrating precompiled convention plugins in `build-logic` for projects on AGP 8.12+ that use the new `com.android.kotlin.multiplatform.library` plugin
+
+Per Android dev docs: the configuration block was called `androidLibrary {}` in AGP < 8.12.0; AGP 8.12.0 introduced `android {}` as the replacement and deprecated `androidLibrary {}`. Use `android {}` going forward. But the auto-generated DSL accessors only exist in project-level build scripts — from a *precompiled* convention plugin in `build-logic` neither name resolves at compile time. The supported access pattern from a plugin is via the typed AGP API: `extensions.configure<KotlinMultiplatformExtension> { targets.withType(KotlinMultiplatformAndroidLibraryTarget::class.java).configureEach { /* namespace, compileSdk, minSdk, withHostTestBuilder { }, withDeviceTestBuilder { sourceSetTreeName = "test" }.configure { instrumentationRunner = "..." } */ } }` with `import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget`. Note `withDeviceTestBuilder { ... }.configure { ... }`: `instrumentationRunner` lives on the post-builder `configure` block, not inline. Sample to cross-check the API surface against a known-good project: `android/kotlin-multiplatform-samples/Fruitties/shared/build.gradle.kts`.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · two failed compile attempts (one each on `androidLibrary { }` and `android { }`) before discovering the typed-API path via `developer.android.com/kotlin/multiplatform/kmp-integration`. The repo's older `docs/kotlin-2.3-upgrade-findings.md` recommended `androidLibrary { }` and was outdated.
+
 ### L-2026-05-17-01 · K2 Compose plugin (Kotlin 2.2.21) does NOT auto-infer cross-module data classes as stable
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, kmp, kotlin-2-2, k2
 **Applies to:** Any `data class` defined in a module that does not apply the Compose compiler plugin (e.g. `:domain` is pure KMP) and is consumed as a parameter — directly or transitively — by a `@Composable` in a feature module

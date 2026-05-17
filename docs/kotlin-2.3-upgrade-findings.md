@@ -1,6 +1,7 @@
 # Kotlin 2.3.x upgrade — findings & deferred plan
 
-**Status:** deferred (May 2026). Resume when blockers clear (see "Resume conditions" below).
+**Status:** executed on branch `chore/upgrade-kotlin-2.3-kmp` (2026-05-17). Build configures, `:app:assembleDebug` packages, `testAndroidHostTest` passes. Known issue: Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for tests using `everySuspend { ... } throws Exception()`; individual tests pass per their XML reports. iOS Xcode/Simulator smoke and `connectedAndroidDeviceTest` still TODO. See lessons L-2026-05-17-07..12 for what diverged from this doc.
+
 **Source state at investigation time:**
 - Branch: `feature/kmp-migration-phase-A5-feature-viewmodel-tests` @ `260ad8f`
 - Kotlin **2.2.21**, AGP **9.0.1**, Gradle **9.1.0**, KSP **2.3.2**
