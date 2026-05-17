@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.feature)
 }
@@ -12,6 +10,3 @@ kotlin {
     }
 }
 
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.feature.webview"
-}

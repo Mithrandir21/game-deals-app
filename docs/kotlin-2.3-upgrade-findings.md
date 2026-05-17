@@ -1,6 +1,7 @@
 # Kotlin 2.3.x upgrade — findings & deferred plan
 
-**Status:** deferred (May 2026). Resume when blockers clear (see "Resume conditions" below).
+**Status:** completed on branch `chore/upgrade-kotlin-2.3-kmp` (2026-05-17). Build configures, `:app:assembleDebug` packages, `testAndroidHostTest` passes (Android JVM units), `connectedAndroidDeviceTest` passes (81 instrumented tests green across 7 modules), `:common:iosSimulatorArm64Test` + `:domain:iosSimulatorArm64Test` pass, iOS Xcode build + Simulator smoke verified. Known issue: Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for tests using `everySuspend { ... } throws Exception()`; the individual tests pass per their per-class JUnit-XML reports — only the report aggregator step fails. See lessons L-2026-05-17-07..16 for what diverged from this doc (the `androidLibrary { }` → `android { }` DSL rename, the typed-API path from precompiled plugins, the source-set + Gradle-task renames, single-variant impacts on `debugImplementation`/`buildTypes.release`/`buildFeatures.buildConfig`, the KSP `disallowKotlinSourceSets` workaround, CMP 1.11's iosX64 drop, the Mokkery/Gradle aggregator bug, the 8GB heap requirement for dex-merge, `androidResources { enable = true }` for Compose Resources, gating `withDeviceTestBuilder` on a real directory, and the espresso-device gRPC port workaround for local runs).
+
 **Source state at investigation time:**
 - Branch: `feature/kmp-migration-phase-A5-feature-viewmodel-tests` @ `260ad8f`
 - Kotlin **2.2.21**, AGP **9.0.1**, Gradle **9.1.0**, KSP **2.3.2**

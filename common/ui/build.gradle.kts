@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.LibraryExtension
-
 plugins {
     alias(libs.plugins.gamedeals.kmp.library)
     alias(libs.plugins.gamedeals.kmp.library.compose)
@@ -42,7 +40,7 @@ kotlin {
             implementation(libs.androidx.compose.material3.adaptive)
         }
 
-        val androidUnitTest by getting {
+        val androidHostTest by getting {
             dependencies {
                 implementation(project(":testing"))
                 implementation(libs.junit)
@@ -51,23 +49,21 @@ kotlin {
             }
         }
 
-        val androidInstrumentedTest by getting {
+        val androidDeviceTest by getting {
             dependencies {
                 implementation(libs.mockk.android)
                 implementation(libs.androidx.junit)
                 implementation(libs.androidx.runner)
                 implementation(libs.androidx.espresso.core)
                 implementation(libs.androidx.compose.junit4)
+                // ui-test-manifest declares ComponentActivity in the test APK
+                // manifest. Used to live in a `dependencies { debugImplementation(...) }`
+                // block; the new KMP-library plugin is single-variant so there is
+                // no `debug` configuration. Moved into androidDeviceTest where the
+                // manifest is actually needed.
+                implementation(libs.androidx.compose.test)
             }
         }
     }
 }
 
-extensions.configure<LibraryExtension> {
-    namespace = "pm.bam.gamedeals.common.ui"
-}
-
-dependencies {
-    debugImplementation(libs.androidx.compose.test)
-    debugImplementation(libs.androidx.ui.tooling)
-}

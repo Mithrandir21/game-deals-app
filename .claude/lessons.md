@@ -8,6 +8,86 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-17-16 · Local `connectedAndroidDeviceTest` needs `adb shell settings put global mdevx.grpc_guest_port 8554` for `androidx.test.espresso.device` to find the emulator gRPC service
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** instrumented-tests, espresso-device, emulator, local-dev, ci-parity
+**Applies to:** Running `connectedAndroidDeviceTest` locally on a standard Android-Studio-launched emulator (not via Gradle Managed Devices) when any test uses `androidx.test.espresso.device 1.1.0+`
+
+The espresso-device API reads the emulator's gRPC control port from a `Settings.Global` key the test process expects to be set. AGP/UTP writes it when running tests on a Gradle Managed Device; for externally-launched emulators (the normal Android Studio AVD case) nothing writes it, and tests fail with `DeviceControllerOperationException: Unable to connect to Emulator gRPC port`. Workaround: run `adb shell settings put global mdevx.grpc_guest_port 8554` once after starting the emulator (modern emulators expose gRPC on 8554 by default). CI's `.github/workflows/android.yml` already does this. The previous AGP-8 era had `testOptions.emulatorControl.enable = true` + `android.experimental.androidTest.enableEmulatorControl=true` to bridge this for non-GMD emulators, but the AGP 9 KMP-library plugin doesn't expose `testOptions.emulatorControl` — so locally you set the system property manually until the new plugin grows an equivalent. Affects two screen-test suites in this repo: `:feature:game GameScreenTest`, `:feature:home HomeScreenTest`.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · post-migration `connectedAndroidDeviceTest` run — 9 of 81 tests initially failed with the gRPC error, fixed by setting the property locally to match CI
+
+### L-2026-05-17-15 · Under the AGP 9 KMP-library plugin, gate `withDeviceTestBuilder { }` on a real `src/androidDeviceTest/` directory
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, instrumented-tests, conditional-config
+**Applies to:** Writing a convention plugin that applies `com.android.kotlin.multiplatform.library` to library modules where some have device tests and some don't (the typical pattern in a multi-module Android+KMP project)
+
+If the convention plugin calls `withDeviceTestBuilder { }.configure { instrumentationRunner = "..." }` unconditionally, every library module produces a `connectedAndroidDeviceTest` task and a test APK. Modules with no test files still deploy that empty test APK to the device, and the device process crashes with `ClassNotFoundException: androidx.test.runner.AndroidJUnitRunner` because androidx-runner is typically only declared in feature/test convention deps. The clean fix is to gate `withDeviceTestBuilder` on `project.file("src/androidDeviceTest").exists()` so non-test modules silently skip the device-test pipeline. Paired downstream gate: any feature convention that does `getByName("androidDeviceTest").dependencies { ... }` must use the same condition, since the source set only exists when the library convention opted in. Empty `src/androidDeviceTest/` directories work as opt-in markers if you want a module to participate without tests yet.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common`, `:domain`, `:logging`, `:testing`, `:remote*`, `:feature:favourites` all hit the runner-class-not-found crash on first `connectedAndroidDeviceTest` run; gating fixed it without touching any module's build file
+
+### L-2026-05-17-14 · Under the AGP 9 KMP-library plugin, Compose Multiplatform resources require `androidResources { enable = true }` explicitly
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, compose-multiplatform, compose-resources, gradle-config
+**Applies to:** Any KMP module that applies `com.android.kotlin.multiplatform.library` + Compose Multiplatform Resources (i.e. `org.jetbrains.compose` with `compose.components.resources`), which in this repo is every module applying `gamedeals.kmp.library.compose`
+
+AGP 9's KMP-library plugin disables Android resource processing by default — different from `com.android.library`. Compose Multiplatform Resources expects the pipeline to be enabled; without it, the per-source-set `CopyResourcesToAndroidAssetsTask` is generated with no `outputDirectory` and Gradle fails configuration with `property 'outputDirectory' doesn't have a configured value`. The fix is `androidResources { enable = true }` inside the `kotlin.android { }` (or from a convention plugin, `targets.withType<KotlinMultiplatformAndroidLibraryTarget>().configureEach { androidResources { enable = true } }`). Apply it unconditionally in the base library convention plugin — modules that don't use Compose Resources just have an empty pipeline; cheap and uniform.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui:copyAndroidDeviceTestComposeResourcesToAndroidAssets FAILED` on first `connectedAndroidDeviceTest` invocation; one-line convention plugin fix unblocked everything downstream
+
+### L-2026-05-17-13 · Under the AGP 9 KMP-library plugin, dex-merge across many `androidDeviceTest` APKs OOMs at the 4GB default heap
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, dex-merge, jvm-heap, gradle-properties, instrumented-tests
+**Applies to:** Running `connectedAndroidDeviceTest` on a multi-module project (7+ library modules with device tests) after migrating to `com.android.kotlin.multiplatform.library`
+
+The new plugin produces one `androidDeviceTest` test APK per library module that opts in. Gradle's parallel worker pool then runs `mergeExtDexAndroidDeviceTest` (D8) concurrently across those modules. At `-Xmx4096m` D8 reproducibly throws `java.lang.OutOfMemoryError: Java heap space` in `R8/D8.run` mid-merge, killing several tasks at once. Bump `org.gradle.jvmargs` in `gradle.properties` to at least `-Xmx8192m`. Note this affects new workstations too — the OOM only surfaces once you run instrumented tests across the whole module graph, not from compile-only or unit-test runs.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first `connectedAndroidDeviceTest` run with 4GB heap reproducibly OOM'd in 4 simultaneous `mergeExtDexAndroidDeviceTest` workers (`:common:ui`, `:feature:favourites`, `:feature:game`, `:feature:giveaways`); 8GB bump cleared it
+
+### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
+**Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
+
+Gradle's K/N test runner fails the task with `"Index N out of bounds for length 2"` (N varies per run) when Mokkery prints the thrown exception's stack trace to stdout — the TeamCity protocol parser appears to misinterpret the `at <frame>` lines. The tests themselves pass: their JUnit-XML reports under `<module>/build/test-results/iosSimulatorArm64Test/` show `failures=0 errors=0`. Workaround for now: do not gate CI on iOS test report aggregation for affected modules; rely on the per-class XML. Repro examples in this repo: `:feature:game GameViewModelTest.error_state` (line 73 `throws Exception()`), `:feature:giveaways GiveawaysViewModelTest`. Modules without throwing mocks (`:common`, `:domain`) pass cleanly.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · post-bump verification of `./gradlew allTests` + targeted `:feature:game:iosSimulatorArm64Test --rerun-tasks`
+
+### L-2026-05-17-11 · CMP 1.11 requires Kotlin 2.3 on iOS targets and removes `iosX64` (Apple x86_64) entirely
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose-multiplatform, kotlin-native, ios, kmp, target-removal, upgrade
+**Applies to:** Any bump of `org.jetbrains.compose` to 1.11.0+ in a KMP project with iOS targets, especially convention plugins that still declare `iosX64()`
+
+Two coupled requirements: (1) Kotlin 2.3+ is mandatory for native/iOS targets when on CMP 1.11 — staying on Kotlin 2.2.x while bumping CMP fails to link; (2) `iosX64()` (Intel Mac simulator target) is no longer supported and must be removed from every KMP target list. Also drop any per-target processors that reference it, e.g. `add("kspIosX64", libs.room.compiler)`. Apple Silicon Mac simulators are covered by `iosSimulatorArm64`; real Apple Silicon devices by `iosArm64`. Keep an eye on `iosApp/build.gradle.kts` AND the convention plugin — both declare iOS targets independently in this repo.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · linker failures on first CMP 1.11 + iOS compile pointed at the `iosX64()` declarations
+
+### L-2026-05-17-10 · KSP 2.3.x writes to `kotlin.sourceSets` but AGP 9 built-in Kotlin disallows it — set `android.disallowKotlinSourceSets=false`
+**Status:** tentative · **Confidence:** confirmed for KSP 2.3.8 / AGP 9.1.1 · **Added:** 2026-05-17 · **Tags:** ksp, agp-9, kotlin-built-in, gradle-properties, workaround
+**Applies to:** Any project on AGP 9.x + Kotlin built-in support (`android.builtInKotlin=true`, the AGP-9 default) where KSP 2.3.x is applied to an Android-target module
+
+Configuration fails with `"Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin. Kotlin source set 'debug' contains: […]/build/generated/ksp/debug/…"`. KSP 2.3.x still uses the legacy mechanism to register its generated-source directories on the Kotlin source set; AGP 9's built-in Kotlin support rejects external writes. Workaround: set `android.disallowKotlinSourceSets=false` in `gradle.properties`. This is marked experimental by AGP and is intended as a transition flag — remove it when KSP migrates to `android.sourceSets`. Search: https://developer.android.com/r/tools/built-in-kotlin.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first failure after dropping `org.jetbrains.kotlin.android` from the application convention plugin
+
+### L-2026-05-17-09 · AGP 9 KMP-library is single-variant — `debugImplementation`, `buildTypes.release { proguardFiles }`, and `buildFeatures.buildConfig` are all gone
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, build-variants, compose-tooling, buildconfig, proguard
+**Applies to:** Any module migrated from `com.android.library` to `com.android.kotlin.multiplatform.library` under AGP 9.1+
+
+The new plugin produces one variant per module; everything keyed on `debug`/`release` disappears: (a) `debugImplementation` is unresolved — move Compose `ui-tooling` to `androidMain.dependencies { implementation(...) }` (slight release bloat, accept it) and `ui-test-manifest` to `androidDeviceTest.dependencies { implementation(...) }`. (b) `buildTypes.named("release") { isMinifyEnabled = false; proguardFiles(...) }` is not supported on library modules — drop it; rely on `:app`'s proguard config or `consumer-proguard-rules.pro`. (c) `buildFeatures.buildConfig = true` does not generate a `BuildConfig` class — replacements: BuildKonfig plugin (proper), inject the constant from `:app` via Koin (cleaner), or hardcode + accept the regression (what this repo did for `RemoteBuildUtil.android.kt` as a temporary fix). `:app` itself (still `com.android.application`) keeps BuildConfig and variants — applications are unchanged.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui` failed `debugImplementation` resolution; `:remote` lost `BuildConfig.BUILD_TYPE` access; central convention plugin needed both fixes
+
+### L-2026-05-17-08 · AGP 9 KMP-library plugin renames test source sets AND Gradle test tasks — propagates to CI
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, source-sets, gradle-tasks, ci, instrumented-tests
+**Applies to:** Every KMP module migrated to `com.android.kotlin.multiplatform.library` and every Gradle task name referenced from CI, scripts, or docs
+
+Source-set names: `androidUnitTest` → `androidHostTest`; `androidInstrumentedTest` → `androidDeviceTest`. This means three coordinated changes per module: (a) `val androidUnitTest by getting { ... }` → `val androidHostTest by getting { ... }` in every `build.gradle.kts`; (b) `getByName("androidUnitTest")` / `getByName("androidInstrumentedTest")` in convention plugins → the new names; (c) `git mv src/androidUnitTest src/androidHostTest` (and the instrumented equivalent) on the filesystem. Task names also shift: `testDebugUnitTest` → `testAndroidHostTest` (no debug/release library variants), `connectedDebugAndroidTest` → `connectedAndroidDeviceTest`, with `allTests` as the cross-target aggregator (commonTest + androidHostTest + iosSimulatorArm64Test). Update `.github/workflows/android.yml` (this repo: the `connectedDebugAndroidTest` invocation) and any developer docs that mention the old names.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · first surfaced as `"KotlinSourceSet with name 'androidUnitTest' not found"` at `:common:build.gradle.kts:33` configuration time; CI workflow needed a paired edit
+
+### L-2026-05-17-07 · `com.android.kotlin.multiplatform.library` DSL accessor: `android {}` from build scripts, `targets.withType<KotlinMultiplatformAndroidLibraryTarget>` from convention plugins
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, dsl, kotlin-multiplatform
+**Applies to:** Writing or migrating precompiled convention plugins in `build-logic` for projects on AGP 8.12+ that use the new `com.android.kotlin.multiplatform.library` plugin
+
+Per Android dev docs: the configuration block was called `androidLibrary {}` in AGP < 8.12.0; AGP 8.12.0 introduced `android {}` as the replacement and deprecated `androidLibrary {}`. Use `android {}` going forward. But the auto-generated DSL accessors only exist in project-level build scripts — from a *precompiled* convention plugin in `build-logic` neither name resolves at compile time. The supported access pattern from a plugin is via the typed AGP API: `extensions.configure<KotlinMultiplatformExtension> { targets.withType(KotlinMultiplatformAndroidLibraryTarget::class.java).configureEach { /* namespace, compileSdk, minSdk, withHostTestBuilder { }, withDeviceTestBuilder { sourceSetTreeName = "test" }.configure { instrumentationRunner = "..." } */ } }` with `import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget`. Note `withDeviceTestBuilder { ... }.configure { ... }`: `instrumentationRunner` lives on the post-builder `configure` block, not inline. Sample to cross-check the API surface against a known-good project: `android/kotlin-multiplatform-samples/Fruitties/shared/build.gradle.kts`.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · two failed compile attempts (one each on `androidLibrary { }` and `android { }`) before discovering the typed-API path via `developer.android.com/kotlin/multiplatform/kmp-integration`. The repo's older `docs/kotlin-2.3-upgrade-findings.md` recommended `androidLibrary { }` and was outdated.
+
 ### L-2026-05-17-05 · Validate KMP-targeted Gradle plugins on an iOS-target compile task before pushing — Android-only smoke tests miss KLIB ABI mismatches
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** kmp, gradle, kotlin-native, klib, ci
 **Applies to:** Adopting any third-party Gradle plugin that publishes a multiplatform runtime (e.g. a `*-runtime-iosArm64` klib alongside the JVM/Android artifact) into a Kotlin Multiplatform project — especially when the plugin's release notes claim a Kotlin-version pin

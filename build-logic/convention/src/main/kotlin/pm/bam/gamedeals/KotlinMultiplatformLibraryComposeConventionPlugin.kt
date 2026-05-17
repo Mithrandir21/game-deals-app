@@ -1,6 +1,5 @@
 package pm.bam.gamedeals
 
-import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
@@ -16,20 +15,19 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
  * applies `pm.bam.gamedeals.kmp.library`.
  *
  * Applies the Kotlin Compose Compiler plugin and the JetBrains Compose
- * Multiplatform Gradle plugin, flips Android `buildFeatures.compose = true`,
- * wires the universal Compose runtime quartet (runtime / foundation /
- * material3 / ui) plus components.resources into commonMain, and configures
- * `compose.resources` to derive `packageOfResClass` from each module's
- * Android namespace (`<namespace>.generated.resources`).
+ * Multiplatform Gradle plugin, wires the universal Compose runtime quartet
+ * (runtime / foundation / material3 / ui) plus components.resources into
+ * commonMain, and configures `compose.resources` to derive
+ * `packageOfResClass` from the module's path-derived namespace.
+ *
+ * Under the AGP 9 KMP library plugin there is no `LibraryExtension.buildFeatures.compose`
+ * to flip — the Compose plugin alone enables composition. Namespace is
+ * derived from `project.path` (matches the KMP-library convention plugin).
  */
 class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
         pluginManager.apply("org.jetbrains.compose")
-
-        extensions.configure<LibraryExtension> {
-            buildFeatures.compose = true
-        }
 
         extensions.configure<KotlinMultiplatformExtension> {
             val compose = ComposePlugin.Dependencies(target)
@@ -51,15 +49,12 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
             }
         }
 
-        afterEvaluate {
-            val androidNamespace = extensions.getByType<LibraryExtension>().namespace
-                ?: error("$path: android namespace must be set before compose.resources can derive packageOfResClass")
-            val compose = extensions.getByType<ComposeExtension>() as ExtensionAware
-            compose.extensions.configure<ResourcesExtension> {
-                publicResClass = true
-                packageOfResClass = "$androidNamespace.generated.resources"
-                generateResClass = ResourcesExtension.ResourceClassGeneration.Auto
-            }
+        val androidNamespace = "pm.bam.gamedeals" + project.path.replace(":", ".")
+        val compose = extensions.getByType<ComposeExtension>() as ExtensionAware
+        compose.extensions.configure<ResourcesExtension> {
+            publicResClass = true
+            packageOfResClass = "$androidNamespace.generated.resources"
+            generateResClass = ResourcesExtension.ResourceClassGeneration.Auto
         }
 
         configureComposeCompilerReports()
