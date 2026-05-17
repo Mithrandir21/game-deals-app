@@ -52,7 +52,6 @@ data class GameDetails(
         val thumb: String
     )
 
-    @Immutable
     @Serializable
     data class GameCheapestPriceEver(
         @SerialName("priceValue")

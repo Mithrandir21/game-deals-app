@@ -71,7 +71,6 @@ data class Deal(
     val expires: Long = 0L
 )
 
-@Immutable
 @Serializable
 data class DealDetails(
     @SerialName("gameInfo")
@@ -82,7 +81,6 @@ data class DealDetails(
     val cheapestPrice: CheapestPrice? = null
 ) {
 
-    @Immutable
     @Serializable
     data class GameInfo(
         @SerialName("storeID")
@@ -121,7 +119,6 @@ data class DealDetails(
         val thumb: String
     )
 
-    @Immutable
     @Serializable
     data class CheaperStore(
         @SerialName("dealID")
@@ -138,7 +135,6 @@ data class DealDetails(
         val retailPriceDenominated: String
     )
 
-    @Immutable
     @Serializable
     data class CheapestPrice(
         @SerialName("priceValue")
