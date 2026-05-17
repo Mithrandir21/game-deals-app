@@ -8,6 +8,38 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-17-01 · K2 Compose plugin (Kotlin 2.2.21) does NOT auto-infer cross-module data classes as stable
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, kmp, kotlin-2-2, k2
+**Applies to:** Any `data class` defined in a module that does not apply the Compose compiler plugin (e.g. `:domain` is pure KMP) and is consumed as a parameter — directly or transitively — by a `@Composable` in a feature module
+
+The Compose stability classifier treats cross-module data classes as `Stability.Unstable` regardless of how structurally stable they are (all-`val` primitives/`String`/enums + `ImmutableList`). The compiler reads the upstream class metadata but won't infer stability across compilation boundaries without an explicit signal. Verified empirically against `:domain` models in this repo (`Deal`, `Store`, `Release`, etc. all reported `unstable` from every consumer feature module before annotation) and against the skydoves/compose-stability-inference reference doc: *"For classes from external modules: separately compiled… Result: Stability.Unstable."* This is the load-bearing reason why `L-2026-05-02-02` ("@Immutable on every domain model used as a composable parameter") still needs to be applied even though K2 added cross-module inference improvements — those improvements don't cover this case in 2.2.21. May change in a future Kotlin release; check the Compose compiler reports before assuming.
+
+**Source:** PR #166 — Compose stability retype + metrics
+
+### L-2026-05-17-02 · `@Immutable` is strictly stronger than a `stability_config.conf` entry — prefer it when feasible
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, lambda-memoization, annotations
+**Applies to:** Deciding between (a) annotating a model `@Immutable` (with the Compose-runtime dep cost on the module that owns the class) and (b) listing the class in a `stability_config.conf` / `composeCompiler.stabilityConfigurationFiles` entry
+
+Both paths flip the class to `Stability.Stable` so per-row composables become `@Skippable`. Only `@Immutable` additionally enables Compose's **lambda memoization** and **static expression detection** optimizations, per the skydoves/compose-stability-inference reference. For per-row patterns like `onClick = { onLoadDealDetails(deal.dealID, …) }` — where the lambda captures a model and runs N times per frame inside `LazyColumn` — that extra optimization is a real win, not a theoretical one. Cost of `@Immutable`: one `implementation(libs.compose.runtime)` line on the model's module (KMP-safe; iOS-compatible via `org.jetbrains.compose.runtime:runtime`). Reach for the config file only when adding the Compose runtime to that module is infeasible (legacy library, source you don't own, etc.).
+
+**Source:** PR #166 — choosing between strategies during plan-mode
+
+### L-2026-05-17-03 · Stability-fix verification needs `--rerun-tasks` (or per-module `build/compose-reports/` cleanup)
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, gradle, incremental-compile, ci, verification
+**Applies to:** Verifying a Compose stability change by re-reading `<module>/build/compose-reports/*-classes.txt` / `*-composables.txt` after annotating or retyping an upstream `:domain` type
+
+When the only change to an upstream module is a `@Immutable` annotation (no behavioural change), Gradle's incremental compile marks downstream feature modules' `compileDebugKotlinAndroid` as UP-TO-DATE — and the compose-reports inside those modules are NOT regenerated. You'll then read stale "unstable" verdicts on the very classes you just fixed and incorrectly conclude the fix didn't work. Force regeneration with `./gradlew :app:assembleDebug -Pgamedeals.composeReports=true --rerun-tasks` (project's report-gate property) or `rm -rf */build/compose-reports/`. Spend the extra 30s; otherwise you'll waste 10 minutes hunting a ghost.
+
+**Source:** PR #166 — caught a false-negative diff during Step 9 verification
+
+### L-2026-05-17-04 · `./gradlew testDebugUnitTest` does NOT compile `androidInstrumentedTest` sources — CI will surface the gap
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** testing, instrumented-tests, gradle, ci, signature-change
+**Applies to:** Any change that alters a public Composable parameter type or ViewModel `StateFlow` shape — i.e. anything that would force a test fixture or mockk stub to update
+
+`testDebugUnitTest` only compiles `commonTest` + `androidUnitTest` source sets. `androidInstrumentedTest` (the Compose UI-test source set, where `every { viewModel.foo } returns MutableStateFlow(...)` stubs and `setupCompose(...)` literals live) compiles only under `compileDebugAndroidTestKotlinAndroid` or as part of the Instrumented UI Tests CI job. A signature-changing sweep that updates commonTest/androidUnitTest will look locally green and fail at CI compile in the four screens that have instrumented tests (Home/Search/Store + DealBottomSheet). Before pushing a stability/retype sweep, run `./gradlew compileDebugAndroidTestKotlinAndroid` locally as a separate gate.
+
+**Source:** PR #166 — CI red after the first push; four `MutableStateFlow(emptySet())` / `listOf(...)` literals in instrumented-tests had been missed
+
 ### L-2026-05-15-08 · When a bug-hunt finding's error path is practically unreachable, drop the fix or relabel — don't infrastructure-wrap a dead branch
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** scope, bug-hunt, error-handling, viewmodel, refactor
 **Applies to:** Implementing a `severity:low`/`severity:medium` bug-hunt finding that recommends adding retry/recovery infrastructure to an error path — before adding `retryTrigger` + `flatMapLatest` + hoisted `onRetry` lambdas + preview proliferation, ask whether the error path can realistically fire
