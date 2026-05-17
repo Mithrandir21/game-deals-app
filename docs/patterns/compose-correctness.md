@@ -163,6 +163,43 @@ data class CustomSpaces(
 - common/ui/src/main/java/pm/bam/gamedeals/common/ui/theme/Spacing.kt
 - domain/src/main/java/pm/bam/gamedeals/domain/models/
 
+### CI Stability Gate: `debugStabilityCheck` against committed `.stability` baselines
+
+**Status:** established
+**First documented:** 2026-05-17   **Last verified:** 2026-05-17
+
+**The pattern.**
+Every Compose-using module ships a committed `<module>/stability/<module>-debug.stability` snapshot listing every `@Composable` with its `skippable` / `restartable` verdict and per-parameter `STABLE | UNSTABLE` reason. These are the regression contract. The `Build` job in `.github/workflows/android.yml` runs `./gradlew debugStabilityCheck` after `build test`, which diffs the live build against the committed baselines and fails the PR on any drift.
+
+**Why this works for us.**
+Without this gate, a future `data class` that quietly drops `@Immutable`, or adds a `kotlin.collections.List` field, would silently flip a row composable from `skippable` to non-skippable — a real perf cliff that's invisible at code review. The check turns "did the stability change?" from a manual `Compose Stability Analyzer` plugin scan into an automated PR-blocking signal.
+
+**Known trade-offs / when it strains.**
+Intentional API changes (renaming a Composable, adding a parameter, deliberately accepting a less-stable type) require regenerating the baselines and committing the diff alongside the source change. The baseline diff is itself reviewable and load-bearing — the PR description should justify a stability *loss*.
+
+**How to apply it — when `Build` fails on stability check.**
+
+1. Read the CI log. The failure message names the offending composable and parameter, e.g.:
+   ```
+   ❌ Stability check failed!
+   ~ pm.bam.gamedeals.feature.home.ui.ReleaseRow: skippable changed from true to false
+   ~ pm.bam.gamedeals.feature.home.ui.ReleaseRow(release): stability changed from STABLE to UNSTABLE
+   ```
+2. **If the regression is accidental** (likely the common case): find what changed in the named class. Typical causes — a missing `@Immutable` on a new `:domain` model, a raw `List<…>` field added where `ImmutableList<…>` was used, a `Pair<…>` introduced without a named `@Immutable` wrapper. Fix the root cause; the check goes green automatically.
+3. **If the regression is intentional**: locally regenerate the affected baseline(s) and commit the diff:
+   ```bash
+   JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+     ./gradlew debugStabilityDump
+   git add '**/stability/*.stability'
+   git commit -m "stability(baseline): accept <T>.foo flipping to UNSTABLE — <one-line reason>"
+   ```
+   The reason line shows up in PR review and in `git blame` later. Don't regenerate baselines silently.
+
+**Seen in.**
+- `.github/workflows/android.yml` — the `Compose Stability Check` step in the `build` job
+- `build-logic/convention/src/main/kotlin/pm/bam/gamedeals/AndroidApplicationConventionPlugin.kt` and `KotlinMultiplatformLibraryComposeConventionPlugin.kt` — where the `com.github.skydoves.compose.stability.analyzer` plugin is applied
+- `<module>/stability/<module>-debug.stability` — the 9 baseline files (one per Compose-using module)
+
 ### State Hoisting: Private `Screen` + Public Entry-Point Composable
 
 **Status:** established
