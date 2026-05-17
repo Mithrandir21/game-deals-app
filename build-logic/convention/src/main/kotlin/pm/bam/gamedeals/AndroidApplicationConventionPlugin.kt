@@ -32,5 +32,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         }
 
         configureComposeCompilerReports()
+        wireStabilityAnalyzerTaskDependencies()
     }
 }

@@ -64,5 +64,6 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
         }
 
         configureComposeCompilerReports()
+        wireStabilityAnalyzerTaskDependencies()
     }
 }
