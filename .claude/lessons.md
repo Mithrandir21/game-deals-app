@@ -8,6 +8,30 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-18-03 · Compose compiler trusts an `@Immutable` parent class as authoritative — nested `data class` fields don't need their own annotation
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** compose, stability, kotlin, k2
+**Applies to:** Adding `@Immutable` to cross-module domain models (companion to L-2026-05-17-01)
+
+When a data class `Parent` carries an `@Immutable` annotation, the Compose compiler does not descend into the types of `Parent`'s fields to verify their stability. Nested data classes used only inside an `@Immutable` parent (e.g. `Store.StoreImages` inside `@Immutable Store`, `GameDetails.GameInfo` inside `@Immutable GameDetails`) can drop their own `@Immutable` without any baseline flip. **L-2026-05-17-01 stands**: cross-module top-level types DO still need explicit `@Immutable` in Kotlin 2.3.21 — K2 inference has not improved enough to drop the outer annotation.
+
+**Source:** PR #174 K2 inference cleanup — dropped 8 of 18 `@Immutable` annotations from PR #166 without any composable flipping to unstable
+
+### L-2026-05-18-02 · Coil 3.x `AsyncImage(model = null)` logs `NullRequestDataException` even when a Painter `error`/`fallback` is set
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** coil, compose, logging, kmp
+**Applies to:** Any `AsyncImage` call whose `model` is reached through `?.` chains (i.e. a value that may be null on the first composition before a ViewModel emits)
+
+The Painter-level `error` and `fallback` parameters render the placeholder correctly, but the underlying `ImageRequest` still has `data = NullRequestData` and `RealImageLoader.execute()` throws `NullRequestDataException` internally. The exception is caught but surfaced to the `Logger`-wired `EventListener` — release-build logcat fills with the stack trace on every screen open until you gate the call site. Pattern: `val x = nullable?.path; if (x != null) AsyncImage(model = x, ...) else Image(painter = placeholder, ...)`.
+
+**Source:** :feature:store StoreScreen banner bug — surfaced via R8'd release-build logcat smoke test
+
+### L-2026-05-18-01 · Check the upstream's own `libs.versions.toml` to predict KLIB ABI compatibility for a KMP Gradle plugin
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kmp, gradle, klib, dependencies, kotlin
+**Applies to:** Picking a version of a Gradle plugin that publishes KMP runtime klibs (iosArm64, etc.) for a project on a specific Kotlin version
+
+A plugin's release notes claim a Kotlin version pin only for the *source*. Its published klibs may have been built with a different (usually newer) Kotlin compiler whose ABI version your project rejects (see L-2026-05-17-05). Before adopting, open the plugin's repository on GitHub and read `gradle/libs.versions.toml` at HEAD or the chosen tag — the `kotlin = "..."` line there is the actual ABI source of truth. Companion to L-2026-05-17-05: that lesson tells you to validate *after* the fact via an iOS-target compile; this one lets you predict *before* you spend the build cycle.
+
+**Source:** PR #173 Compose Stability Analyzer 0.7.5 revival — picked 0.7.5 by reading upstream's own catalog (`kotlin = "2.3.21"`) at HEAD before adopting
+
 ### L-2026-05-17-16 · Local `connectedAndroidDeviceTest` needs `adb shell settings put global mdevx.grpc_guest_port 8554` for `androidx.test.espresso.device` to find the emulator gRPC service
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** instrumented-tests, espresso-device, emulator, local-dev, ci-parity
 **Applies to:** Running `connectedAndroidDeviceTest` locally on a standard Android-Studio-launched emulator (not via Gradle Managed Devices) when any test uses `androidx.test.espresso.device 1.1.0+`
