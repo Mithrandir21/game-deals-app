@@ -4,7 +4,6 @@ jetbrains-kotlin-plugin = "2.3.21"
 google-ksp-plugin = "2.3.8"
 compose-stability-analyzer = "0.7.5"
 
-# KMP / CMP migration — registered now, used in subsequent phases.
 compose-multiplatform = "1.11.0"
 ktor = "3.4.3"
 koin = "4.1.0"
@@ -65,9 +64,9 @@ androidx-compose-activity = { group = "androidx.activity", name = "activity-comp
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-window = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }
 androidx-compose-material3-adaptive = { group = "androidx.compose.material3", name = "material3-adaptive", version.ref = "material3-adaptive" }
-# Lifecycle / ViewModel — phase 5.3. AndroidX 2.8+ publishes these as multiplatform
-# artifacts; package paths (androidx.lifecycle.ViewModel, viewModelScope,
-# SavedStateHandle, collectAsStateWithLifecycle) are stable across the migration.
+# Lifecycle / ViewModel — AndroidX 2.8+ publishes these as multiplatform artifacts.
+# Package paths (androidx.lifecycle.ViewModel, viewModelScope, SavedStateHandle,
+# collectAsStateWithLifecycle) work in commonMain.
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle-runtime-ktx" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle-runtime-ktx" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle-runtime-ktx" }
@@ -116,8 +115,7 @@ compose-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compil
 compose-multiplatform-gradle-plugin = { group = "org.jetbrains.compose", name = "compose-gradle-plugin", version.ref = "compose-multiplatform" }
 compose-stability-analyzer-gradle-plugin = { group = "com.github.skydoves.compose.stability.analyzer", name = "com.github.skydoves.compose.stability.analyzer.gradle.plugin", version.ref = "compose-stability-analyzer" }
 
-# KMP / CMP migration — registered now, used in subsequent phases.
-# Ktor — phase 3 networking swap.
+# Ktor — HTTP client (KMP).
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
@@ -126,31 +124,31 @@ ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.r
 ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
-# Koin — phase 4 DI swap.
+# Koin — dependency injection (KMP).
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin-compose" }
 koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin-compose" }
 koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
 
-# Sentry — phase 4 observability swap (replaces Firebase Crashlytics + Performance).
+# Sentry — crash + perf telemetry (KMP; replaced Firebase Crashlytics + Performance).
 sentry-kotlin-multiplatform = { group = "io.sentry", name = "sentry-kotlin-multiplatform", version.ref = "sentry-kmp" }
 
-# kotlinx-datetime — phase 2 date/time swap (replaces java.time).
+# kotlinx-datetime — date/time (KMP; replaced java.time).
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
-# Coil 3 — phase 5 image-loading swap (replaces Coil 2).
+# Coil 3 — image loading (KMP; replaced Coil 2).
 coil3 = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil3" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
 coil3-test = { group = "io.coil-kt.coil3", name = "coil-test", version.ref = "coil3" }
 
-# Room KMP — phase 2 storage swap. Room 2.7+ supports KMP via the same artifact;
-# only the build wiring changes. New entries for the KMP-specific glue:
+# Room — KMP storage. Room 2.7+ supports KMP via the same artifact; the
+# KMP-specific glue lives below alongside androidx-sqlite-bundled.
 room-runtime-multiplatform = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidx-sqlite" }
 
-# Sandwich-ktor — phase 3 networking swap (replaces sandwich-retrofit).
+# Sandwich-Ktor — response wrapper (KMP; replaced sandwich-retrofit).
 sandwich-ktor = { group = "com.github.skydoves", name = "sandwich-ktor", version.ref = "sandwich-ktor" }
 
 
@@ -159,7 +157,6 @@ android-application = { id = "com.android.application", version.ref = "android-g
 jetbrains-kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrains-kotlin-plugin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform" }
 compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin-plugin" }
-androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
 androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin-plugin" }

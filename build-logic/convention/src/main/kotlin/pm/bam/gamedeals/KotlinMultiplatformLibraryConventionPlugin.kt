@@ -26,14 +26,13 @@ abstract class IosSimulatorTestSerializer : BuildService<BuildServiceParameters.
  * Convention plugin for Kotlin Multiplatform library modules with an Android target.
  *
  * - Applies `kotlin.multiplatform` and `com.android.kotlin.multiplatform.library`
- *   (the AGP 9 KMP library plugin — replaces the old `androidTarget()` +
- *   `com.android.library` combo, forbidden under AGP 9 + Kotlin 2.3).
+ *   (the AGP 9 KMP library plugin; the AGP-8 `androidTarget()` +
+ *   `com.android.library` combo is incompatible with AGP 9 + Kotlin 2.3).
  * - Registers iOS targets (`iosArm64`, `iosSimulatorArm64`). The Android
  *   target is added automatically by the KMP-library plugin; it's
  *   configured below via `targets.withType<KotlinMultiplatformAndroidLibraryTarget>`.
- *   `iosX64` was dropped — CMP 1.11 + Kotlin 2.3 no longer support Apple
- *   x86_64 (Intel Mac simulator); Apple-Silicon Mac sim is covered by
- *   `iosSimulatorArm64`.
+ *   `iosX64` (Intel Mac simulator) is not supported under CMP 1.11 + Kotlin 2.3;
+ *   Apple-Silicon Mac sim is covered by `iosSimulatorArm64`.
  * - `jvmToolchain(21)`, Android `compileSdk=36`, `minSdk=26`.
  * - Namespace is path-derived in the convention plugin
  *   (`:feature:home` -> `pm.bam.gamedeals.feature.home`), so per-module
