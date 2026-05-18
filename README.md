@@ -16,6 +16,10 @@ A repository for an Android app showing game deals from CheapShark and GamerPowe
 
 CI runs `./gradlew debugStabilityCheck` on every PR. It diffs the live build against the committed `<module>/stability/*-debug.stability` baselines and fails the PR on any composable-stability drift. If your PR's `Build` job fails with `❌ Stability check failed!`, see [docs/patterns/compose-correctness.md](docs/patterns/compose-correctness.md#ci-stability-gate-debugstabilitycheck-against-committed-stability-baselines) for the two remediation paths (fix the regression OR regenerate the baseline and commit it with justification).
 
+#### Release-build R8 mapping
+
+The release variant of `:app` is R8-minified and resource-shrunk (~67% APK size reduction). Stack traces from release builds are obfuscated. The mapping file at `app/build/outputs/mapping/release/mapping.txt` deobfuscates them — see [docs/r8-mapping.md](docs/r8-mapping.md) for retrace workflows (Android Studio, `retrace.sh`, future Sentry auto-upload), the pairing rule between mapping and APK, and the workflow for fixing keep rules when a release-build crash reveals a stripped class.
+
 ##### List of improvements
 - Instrumentation testing tooling should be improved to allow less boilerplate code and more generalisation and abstraction, allowing faster writing of tests.
 - App designs should be done by actual designer.
