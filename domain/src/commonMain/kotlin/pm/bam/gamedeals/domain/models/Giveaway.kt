@@ -132,14 +132,12 @@ enum class GiveawaySortBy {
 }
 
 
-@Immutable
 @Serializable
 data class GiveawayPlatformSelection(
     val platform: GiveawayPlatform,
     val selected: Boolean,
 )
 
-@Immutable
 @Serializable
 data class GiveawayTypeSelection(
     val type: GiveawayType,

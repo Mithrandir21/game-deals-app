@@ -31,7 +31,6 @@ data class Store(
     @SerialName("expires")
     val expires: Long = 0L
 ) {
-    @Immutable
     @Serializable
     data class StoreImages(
         @SerialName("banner")

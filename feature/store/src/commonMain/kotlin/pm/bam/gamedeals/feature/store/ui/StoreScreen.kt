@@ -2,6 +2,7 @@
 
 package pm.bam.gamedeals.feature.store.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -287,16 +288,35 @@ private fun StoreToolbar(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = storeDetails?.images?.banner,
-                    contentDescription = stringResource(Res.string.store_screen_store_banner, storeDetails?.storeName ?: ""),
-                    error = painterResource(CommonRes.drawable.videogame_thumb),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .height(60.dp)
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-                )
+                val bannerContentDescription =
+                    stringResource(Res.string.store_screen_store_banner, storeDetails?.storeName ?: "")
+                val bannerPlaceholder = painterResource(CommonRes.drawable.videogame_thumb)
+                val bannerModifier = Modifier
+                    .height(60.dp)
+                    .width(100.dp)
+                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                // Render the network-backed banner only once we have a URL.
+                // Passing `model = null` to AsyncImage triggers Coil's
+                // NullRequestDataException at request execution — caught
+                // internally but still surfaced to the EventListener, which
+                // spammed the logcat on every Store open before details loaded.
+                val banner = storeDetails?.images?.banner
+                if (banner != null) {
+                    AsyncImage(
+                        model = banner,
+                        contentDescription = bannerContentDescription,
+                        error = bannerPlaceholder,
+                        contentScale = ContentScale.Fit,
+                        modifier = bannerModifier,
+                    )
+                } else {
+                    Image(
+                        painter = bannerPlaceholder,
+                        contentDescription = bannerContentDescription,
+                        contentScale = ContentScale.Fit,
+                        modifier = bannerModifier,
+                    )
+                }
                 Text(
                     modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium),
                     text = storeDetails?.storeName ?: "",
