@@ -2,6 +2,7 @@
 android-gradle-plugin = "9.1.1"
 jetbrains-kotlin-plugin = "2.3.21"
 google-ksp-plugin = "2.3.8"
+compose-stability-analyzer = "0.7.5"
 
 # KMP / CMP migration — registered now, used in subsequent phases.
 compose-multiplatform = "1.11.0"
@@ -113,6 +114,7 @@ kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-p
 ksp-gradle-plugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "google-ksp-plugin" }
 compose-gradle-plugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "jetbrains-kotlin-plugin" }
 compose-multiplatform-gradle-plugin = { group = "org.jetbrains.compose", name = "compose-gradle-plugin", version.ref = "compose-multiplatform" }
+compose-stability-analyzer-gradle-plugin = { group = "com.github.skydoves.compose.stability.analyzer", name = "com.github.skydoves.compose.stability.analyzer.gradle.plugin", version.ref = "compose-stability-analyzer" }
 
 # KMP / CMP migration — registered now, used in subsequent phases.
 # Ktor — phase 3 networking swap.
@@ -162,6 +164,7 @@ androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.r
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "google-ksp-plugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin-plugin" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
+compose-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version.ref = "compose-stability-analyzer" }
 
 # Convention plugins (registered by the build-logic included build).
 # All library/feature modules use the KMP plugins; only :app uses the

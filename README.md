@@ -11,6 +11,11 @@ A repository for an Android app showing game deals from CheapShark and GamerPowe
 
 #### Usage
 - App can be used as a standalone app
+
+#### Compose stability gate
+
+CI runs `./gradlew debugStabilityCheck` on every PR. It diffs the live build against the committed `<module>/stability/*-debug.stability` baselines and fails the PR on any composable-stability drift. If your PR's `Build` job fails with `❌ Stability check failed!`, see [docs/patterns/compose-correctness.md](docs/patterns/compose-correctness.md#ci-stability-gate-debugstabilitycheck-against-committed-stability-baselines) for the two remediation paths (fix the regression OR regenerate the baseline and commit it with justification).
+
 ##### List of improvements
 - Instrumentation testing tooling should be improved to allow less boilerplate code and more generalisation and abstraction, allowing faster writing of tests.
 - App designs should be done by actual designer.

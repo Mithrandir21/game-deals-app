@@ -28,6 +28,7 @@ class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
         pluginManager.apply("org.jetbrains.compose")
+        pluginManager.apply("com.github.skydoves.compose.stability.analyzer")
 
         extensions.configure<KotlinMultiplatformExtension> {
             val compose = ComposePlugin.Dependencies(target)
