@@ -105,7 +105,7 @@ internal class HomeViewModel(
         }
     }
 
-    fun onReleaseGame(releaseTitle: String) =
+    fun onReleaseGame(releaseTitle: String) {
         viewModelScope.launch {
             flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
                 .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
@@ -120,6 +120,7 @@ internal class HomeViewModel(
                     }
                 }
         }
+    }
 
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated)

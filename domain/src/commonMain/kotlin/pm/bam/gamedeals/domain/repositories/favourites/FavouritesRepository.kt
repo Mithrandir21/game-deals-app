@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.favourites
 
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
+import kotlin.IgnorableReturnValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.common.time.Clock
@@ -14,6 +15,7 @@ interface FavouritesRepository {
     fun observeIsFavourite(gameId: Int): Flow<Boolean>
     suspend fun addFavourite(gameId: Int, title: String, thumb: String)
     suspend fun removeFavourite(gameId: Int)
+    @IgnorableReturnValue
     suspend fun toggleFavourite(gameId: Int, title: String, thumb: String): Boolean
 }
 

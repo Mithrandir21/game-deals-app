@@ -119,9 +119,10 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             } catch (ce: CancellationException) {
                 throw ce
             } catch (t: Throwable) {
-                runCatching {
+                try {
                     val logger: Logger = get()
                     error(logger, throwable = t) { "Failed to warm DomainDatabase" }
+                } catch (_: Throwable) {
                 }
             }
         }

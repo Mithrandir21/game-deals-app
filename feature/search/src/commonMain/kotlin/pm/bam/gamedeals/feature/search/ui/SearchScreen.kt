@@ -306,7 +306,7 @@ private fun SearchField(
 
     val keyboardController = LocalSoftwareKeyboardController.current
     var title by rememberSaveable { mutableStateOf("") }
-    val searchAction: () -> Unit? = {
+    val searchAction: () -> Unit = {
         onSearchTitleChanged(title)
         keyboardController?.hide()
         focusManager.clearFocus()

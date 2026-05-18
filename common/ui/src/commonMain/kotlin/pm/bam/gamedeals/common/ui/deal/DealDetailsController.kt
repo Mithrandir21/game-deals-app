@@ -30,9 +30,9 @@ class DealDetailsController(
         dealGameId: Int,
         dealTitle: String,
         dealPriceDenominated: String,
-    ): Job {
+    ) {
         loadJob?.cancel()
-        return scope.launch {
+        scope.launch {
             try {
                 dealDetails.emit(
                     DealBottomSheetData.DealDetailsLoading(
@@ -84,8 +84,8 @@ class DealDetailsController(
         }.also { loadJob = it }
     }
 
-    fun dismiss(scope: CoroutineScope): Job {
+    fun dismiss(scope: CoroutineScope) {
         loadJob?.cancel()
-        return scope.launch { dealDetails.emit(null) }
+        scope.launch { dealDetails.emit(null) }
     }
 }
