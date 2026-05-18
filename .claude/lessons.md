@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-18-07 · Room `@Query` Flow observation makes repository write-method return values structurally redundant
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** room, kmp, architecture, reactive
+**Applies to:** Repository / DAO methods that mutate Room tables whose state is also observed via `@Query` Flows
+
+In this codebase the UI never consumes the Boolean from `FavouritesRepository.toggleFavourite`, the `Job` from `DealDetailsController.load`/`.dismiss`, or similar write-method returns — because every consumer subscribes to a Room `@Query` Flow over the mutated table (`observeFavouriteIds`, `observeIsFavourite`, etc.), and Room's invalidation tracker re-emits the moment the transaction commits. The architecture is "DAO is source of truth; UI observes." When the return-value checker flags a write-method drop, the default fix is `@IgnorableReturnValue` on the declaration (not Unit-return) so that future snackbar / analytics / test callers can still consume the value without forcing every current UI site to. Reserve Unit-return for write methods whose return was never semantically meaningful in the first place.
+
+**Source:** `FavouritesRepository.toggleFavourite` triage during `-Xreturn-value-checker=full` rollout
+
+### L-2026-05-18-06 · Kotlin 2.3 `-Xreturn-value-checker=full` is warning-level; kotlinx.coroutines/stdlib pre-annotate the common drops
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kotlin-2.3, compiler-flags, coroutines, kmp
+**Applies to:** Adopting or tuning `-Xreturn-value-checker` in any KMP / Android module
+
+`-Xreturn-value-checker=full` is still warning-level despite the name — `-Werror` is needed to make drops fail the build. `=check` is the conservative subset; `=full` widens to project-owned function returns. Kotlinx.coroutines 1.10.x and stdlib already annotate `launch`, `tryEmit`, `MutableList.add` etc. with `@IgnorableReturnValue`, so noise-surface pre-scans that count those patterns over-predict heavily (this session's 15–20-site prediction collapsed to 3 sites under `=check`, 9 under `=full`). For first-party APIs whose return is structurally redundant in this codebase but semantically meaningful, prefer `@kotlin.IgnorableReturnValue` on the declaration over changing the return type to `Unit` — keeps the value available for future callers.
+
+**Source:** PR adopting `-Xreturn-value-checker=full` (commit 192bf84) and the noise-vs-prediction triage during rollout
+
 ### L-2026-05-18-05 · `iosSimulatorArm64Test` `Index N out of bounds for length 2` failures are Gradle 9 ↔ KGP 2.3 generic-report deserialization
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** gradle-9, kgp, kotlin-native, ios, test-reports, tooling-bug
 **Applies to:** Any `KotlinNativeTest` task (`iosSimulatorArm64Test`, `iosArm64Test`) on Gradle 9.x + KGP 2.3.x — independent of whether tests use throwing mocks
