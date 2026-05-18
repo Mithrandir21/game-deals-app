@@ -14,11 +14,17 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 /**
  * Marker [BuildService] used to serialize Kotlin/Native iOS-simulator test
- * tasks across modules. With Gradle 9.1 + Kotlin 2.x, running multiple
- * `iosSimulatorArm64Test` tasks in parallel races on the test-result XML
- * writer and randomly fails one task's report. Holding a single permit on
- * this service forces sequential execution for those tasks while leaving
- * everything else free to parallelize.
+ * tasks across modules. Originally introduced as a workaround for what
+ * looked like a parallel test-result XML race; later diagnosis showed the
+ * actual failure was Gradle 9's `GenericHtmlTestReportGenerator`
+ * mis-deserializing the binary event stream written by KGP's
+ * `TCServiceMessagesClient` (an `ArrayIndexOutOfBoundsException` reading
+ * `TestOutputEvent.Destination` ordinals). That report-generator crash is
+ * now mitigated separately by disabling `reports.html.required` on every
+ * `KotlinNativeTest` task below. The serializer is kept because forcing
+ * sequential iOS-sim test execution is still useful (concurrent simulator
+ * sessions are flaky on macOS) — but it is no longer the load-bearing fix
+ * for the test-report failure.
  */
 abstract class IosSimulatorTestSerializer : BuildService<BuildServiceParameters.None>
 
@@ -133,6 +139,9 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
         }
         tasks.withType(KotlinNativeTest::class.java).configureEach {
             usesService(iosTestSerializer)
+            // KGP 2.3 ↔ Gradle 9 incompatibility
+            reports.html.required.set(false)
+            reports.junitXml.required.set(false)
         }
     }
 }
