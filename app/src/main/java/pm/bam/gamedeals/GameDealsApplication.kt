@@ -41,6 +41,7 @@ import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 class GameDealsApplication : Application(), SingletonImageLoader.Factory {
 
     private val imageLoader: ImageLoader by inject()
+    private val logger: Logger by inject()
 
     /**
      * Application-scoped fire-and-forget work, intended to be reused by future
@@ -120,7 +121,6 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 throw ce
             } catch (t: Throwable) {
                 try {
-                    val logger: Logger = get()
                     error(logger, throwable = t) { "Failed to warm DomainDatabase" }
                 } catch (_: Throwable) {
                 }
