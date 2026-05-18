@@ -7,6 +7,10 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
+    compilerOptions {
+        freeCompilerArgs.add("-Xexplicit-backing-fields")
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()

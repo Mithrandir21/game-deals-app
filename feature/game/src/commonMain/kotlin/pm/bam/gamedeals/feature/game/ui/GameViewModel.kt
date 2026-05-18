@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -53,8 +51,8 @@ internal class GameViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    private val _uiState = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
-    val uiState: StateFlow<GameScreenData> = _uiState.asStateFlow()
+    val uiState: StateFlow<GameScreenData>
+        field = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
 
     private val reloadTrigger = MutableSharedFlow<Unit>(
         replay = 0,
@@ -62,12 +60,12 @@ internal class GameViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val _events = MutableSharedFlow<GameUiEvent>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val events: SharedFlow<GameUiEvent> = _events.asSharedFlow()
+    val events: SharedFlow<GameUiEvent>
+        field = MutableSharedFlow<GameUiEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     init {
         viewModelScope.launch {
@@ -83,7 +81,7 @@ internal class GameViewModel(
                     }
                 }
                 .logFlow(logger)
-                .collect { _uiState.emit(it) }
+                .collect { uiState.emit(it) }
         }
     }
 
@@ -93,7 +91,7 @@ internal class GameViewModel(
     }
 
     fun toggleFavourite() {
-        val current = _uiState.value as? GameScreenData.Data ?: return
+        val current = uiState.value as? GameScreenData.Data ?: return
         val info = current.gameDetails.info
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
@@ -117,7 +115,7 @@ internal class GameViewModel(
             dealId = deal.dealID,
         )
         info(logger, tag = "deal_shared") { "dealId=${deal.dealID} store=${store.storeName}" }
-        _events.tryEmit(GameUiEvent.ShareDeal(text))
+        events.tryEmit(GameUiEvent.ShareDeal(text))
     }
 
     private fun loadGameDetailsFlow(gameId: Int) =
@@ -129,7 +127,7 @@ internal class GameViewModel(
                     .let { dealDetails -> GameScreenData.Data(details, dealDetails.toImmutableList()) }
                     .toFlow<GameScreenData>()
             }
-            .onStart { _uiState.emit(GameScreenData.Loading) }
+            .onStart { uiState.emit(GameScreenData.Loading) }
             .logFlow(logger)
             .catch { emit(GameScreenData.Error) }
 

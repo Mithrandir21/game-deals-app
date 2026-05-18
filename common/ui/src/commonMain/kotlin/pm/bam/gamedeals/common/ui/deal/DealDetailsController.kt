@@ -6,7 +6,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.withMinimumDuration
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -19,8 +18,8 @@ class DealDetailsController(
     private val storesRepository: StoresRepository,
     private val logger: Logger,
 ) {
-    private val _dealDetails = MutableStateFlow<DealBottomSheetData?>(null)
-    val dealDetails: StateFlow<DealBottomSheetData?> = _dealDetails.asStateFlow()
+    val dealDetails: StateFlow<DealBottomSheetData?>
+        field = MutableStateFlow<DealBottomSheetData?>(null)
 
     private var loadJob: Job? = null
 
@@ -35,7 +34,7 @@ class DealDetailsController(
         loadJob?.cancel()
         return scope.launch {
             try {
-                _dealDetails.emit(
+                dealDetails.emit(
                     DealBottomSheetData.DealDetailsLoading(
                         store = storesRepository.getStore(dealStoreId),
                         gameId = dealGameId,
@@ -60,13 +59,13 @@ class DealDetailsController(
                         cheaperStores = dealDetails.cheaperStores.map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) }.toImmutableList(),
                     )
                 }
-                _dealDetails.emit(data)
+                dealDetails.emit(data)
             } catch (t: CancellationException) {
                 throw t
             } catch (t: Throwable) {
                 fatal(logger, t)
                 try {
-                    _dealDetails.emit(
+                    dealDetails.emit(
                         DealBottomSheetData.DealDetailsError(
                             store = storesRepository.getStore(dealStoreId),
                             gameId = dealGameId,
@@ -79,7 +78,7 @@ class DealDetailsController(
                     throw inner
                 } catch (inner: Throwable) {
                     fatal(logger, inner)
-                    _dealDetails.emit(null)
+                    dealDetails.emit(null)
                 }
             }
         }.also { loadJob = it }
@@ -87,6 +86,6 @@ class DealDetailsController(
 
     fun dismiss(scope: CoroutineScope): Job {
         loadJob?.cancel()
-        return scope.launch { _dealDetails.emit(null) }
+        return scope.launch { dealDetails.emit(null) }
     }
 }

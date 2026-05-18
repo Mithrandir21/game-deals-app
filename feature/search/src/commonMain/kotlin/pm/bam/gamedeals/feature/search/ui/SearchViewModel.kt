@@ -11,7 +11,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -43,8 +42,8 @@ internal class SearchViewModel(
     // conflated replay-of-latest semantics, replacing the prior SharedFlow + replayCache RMW.
     private val searchParametersFlow = MutableStateFlow(SearchParameters())
 
-    private val _resultState = MutableStateFlow<SearchData>(SearchData.Empty)
-    val resultState: StateFlow<SearchData> = _resultState.asStateFlow()
+    val resultState: StateFlow<SearchData>
+        field = MutableStateFlow<SearchData>(SearchData.Empty)
 
     val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
         .onStart { emit(persistentSetOf()) }
@@ -58,7 +57,7 @@ internal class SearchViewModel(
                     when (dealsSearch.title == null && dealsSearch.lowerPrice == null && dealsSearch.upperPrice == null && dealsSearch.steamMinRating == null) {
                         true -> flowOf(SearchData.Empty)
                         else -> flowOf(dealsSearch)
-                            .onEach { _resultState.emit(SearchData.Loading) }
+                            .onEach { resultState.emit(SearchData.Loading) }
                             .flatMapLatestDelayAtLeast(1000) { gamesRepository.searchGames(it) }
                             .map {
                                 when (it.isEmpty()) {
@@ -70,7 +69,7 @@ internal class SearchViewModel(
                     }
                 }
                 .logFlow(logger)
-                .collect { _resultState.emit(it) }
+                .collect { resultState.emit(it) }
         }
     }
 

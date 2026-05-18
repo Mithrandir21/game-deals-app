@@ -54,6 +54,10 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
         extensions.configure<KotlinMultiplatformExtension> {
             jvmToolchain(21)
 
+            compilerOptions {
+                freeCompilerArgs.add("-Xexplicit-backing-fields")
+            }
+
             iosArm64()
             iosSimulatorArm64()
 

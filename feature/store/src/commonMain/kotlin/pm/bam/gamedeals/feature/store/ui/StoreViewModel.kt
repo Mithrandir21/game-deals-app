@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -64,12 +63,12 @@ internal class StoreViewModel(
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
-    private val _events = MutableSharedFlow<StoreUiEvent>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val events: SharedFlow<StoreUiEvent> = _events.asSharedFlow()
+    val events: SharedFlow<StoreUiEvent>
+        field = MutableSharedFlow<StoreUiEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<StoreScreenData> = combine(storeIdFlow, retryTrigger) { id, _ -> id }
@@ -135,7 +134,7 @@ internal class StoreViewModel(
             dealId = data.dealId,
         )
         info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
-        _events.tryEmit(StoreUiEvent.ShareDeal(text))
+        events.tryEmit(StoreUiEvent.ShareDeal(text))
     }
 
     internal sealed interface StoreUiEvent {

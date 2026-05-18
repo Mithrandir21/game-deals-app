@@ -32,6 +32,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
         extensions.configure<KotlinAndroidProjectExtension> {
             jvmToolchain(21)
+
+            compilerOptions {
+                freeCompilerArgs.add("-Xexplicit-backing-fields")
+            }
         }
 
         configureComposeCompilerReports()

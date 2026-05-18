@@ -20,8 +20,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
@@ -68,8 +66,8 @@ internal class HomeViewModel(
     private val logger: Logger
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeScreenData())
-    val uiState: StateFlow<HomeScreenData> = _uiState.asStateFlow()
+    val uiState: StateFlow<HomeScreenData>
+        field = MutableStateFlow(HomeScreenData())
 
     val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
         .onStart { emit(persistentSetOf()) }
@@ -85,12 +83,12 @@ internal class HomeViewModel(
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
 
-    private val _events = MutableSharedFlow<HomeUiEvent>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val events: SharedFlow<HomeUiEvent> = _events.asSharedFlow()
+    val events: SharedFlow<HomeUiEvent>
+        field = MutableSharedFlow<HomeUiEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     private var loadJob: Job? = null
 
@@ -102,23 +100,23 @@ internal class HomeViewModel(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             loadTopStoreDataFlow()
-                .onStart { _uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
-                .collect { newState -> _uiState.emit(newState) }
+                .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
+                .collect { newState -> uiState.emit(newState) }
         }
     }
 
     fun onReleaseGame(releaseTitle: String) =
         viewModelScope.launch {
             flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
-                .onStart { _uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
+                .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
                 .onError { fatal(logger, it) }
-                .catch { _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) } }
+                .catch { uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) } }
                 .collect { gameId ->
                     if (gameId == null) {
-                        _uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
+                        uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
                     } else {
-                        _uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
-                        _events.emit(HomeUiEvent.NavigateToGame(gameId))
+                        uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
+                        events.emit(HomeUiEvent.NavigateToGame(gameId))
                     }
                 }
         }
@@ -149,7 +147,7 @@ internal class HomeViewModel(
             dealId = data.dealId,
         )
         info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
-        _events.tryEmit(HomeUiEvent.ShareDeal(text))
+        events.tryEmit(HomeUiEvent.ShareDeal(text))
     }
 
     private fun loadTopStoreDataFlow() =
