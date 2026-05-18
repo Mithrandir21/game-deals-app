@@ -8,6 +8,22 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 ## Active
 
+### L-2026-05-18-05 · `iosSimulatorArm64Test` `Index N out of bounds for length 2` failures are Gradle 9 ↔ KGP 2.3 generic-report deserialization
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** gradle-9, kgp, kotlin-native, ios, test-reports, tooling-bug
+**Applies to:** Any `KotlinNativeTest` task (`iosSimulatorArm64Test`, `iosArm64Test`) on Gradle 9.x + KGP 2.3.x — independent of whether tests use throwing mocks
+
+Gradle 9 introduced new "generic" test report infrastructure (`org.gradle.api.internal.tasks.testing.report.generic.*`). Both `GenericHtmlTestReportGenerator` and `Binary2JUnitXmlReportGenerator` consume KGP's `output-events.bin` via `TestOutputReader.iterateEvents` → `DefaultTestOutputEventSerializer.read`, which mis-deserializes the binary stream KGP's `TCServiceMessagesClient` writes — crashing reading the `TestOutputEvent.Destination` enum (length 2, getting ordinals like 101 / 108 / 4097). KGP officially supports Gradle up to 9.3.0 (this repo runs 9.3.1 to stay aligned with AGP 9); no upstream fix in Gradle 9.4 / 9.5 or KGP 2.3.x as of writing. Workaround: set both `reports.html.required = false` and `reports.junitXml.required = false` on every `KotlinNativeTest` — the task still propagates pass/fail in-process and stdout shows test output, and reports were already local-only (CI runs `ubuntu-latest` and never invokes these tasks). Supersedes L-2026-05-17-12, which blamed Mokkery `throws`-mock stdout — verified incorrect since the same failure reproduces in modules without any throwing mocks (`:feature:home`, `:feature:store`).
+
+**Source:** Post-Kotlin-2.3 migration follow-up — full diagnosis via `--stacktrace --info` traced to `BaseSerializerFactory$EnumSerializer.read`; failure pattern matched four feature modules independent of mock usage
+
+### L-2026-05-18-04 · Kotlin 2.3 `-Xexplicit-backing-fields` propagates pre-release status — every consumer needs the flag
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kotlin-2.3, kmp, gradle, convention-plugins, experimental-features
+**Applies to:** Any opt-in to Kotlin 2.3 experimental language features (KEEP-278 explicit backing fields, and similar future opt-ins) in a multi-module project
+
+Adding `freeCompilerArgs.add("-Xexplicit-backing-fields")` to producer modules stamps their compiled klibs as pre-release. Every Kotlin compilation that consumes those klibs — including downstream consumers that don't themselves use the feature — must also have the flag, or it fails to load them with `Class '...' was compiled by a pre-release version of Kotlin and cannot be loaded by this version of the compiler. Enabled pre-release features: ExplicitBackingFields`. In this repo that's three places: `KotlinMultiplatformLibraryConventionPlugin` (KMP producers), `AndroidApplicationConventionPlugin` (`:app`), and `iosApp/build.gradle.kts` (no convention plugin). The same propagation rule applies to any future experimental opt-in — audit every Kotlin compilation in the graph, not just the module introducing the feature.
+
+**Source:** ViewModels migration to KEEP-278 — `:app:compileReleaseKotlin` failed first (missed app plugin); `:iosApp:compileKotlinIosArm64` failed second (missed iosApp build script)
+
 ### L-2026-05-18-03 · Compose compiler trusts an `@Immutable` parent class as authoritative — nested `data class` fields don't need their own annotation
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** compose, stability, kotlin, k2
 **Applies to:** Adding `@Immutable` to cross-module domain models (companion to L-2026-05-17-01)
@@ -63,14 +79,6 @@ AGP 9's KMP-library plugin disables Android resource processing by default — d
 The new plugin produces one `androidDeviceTest` test APK per library module that opts in. Gradle's parallel worker pool then runs `mergeExtDexAndroidDeviceTest` (D8) concurrently across those modules. At `-Xmx4096m` D8 reproducibly throws `java.lang.OutOfMemoryError: Java heap space` in `R8/D8.run` mid-merge, killing several tasks at once. Bump `org.gradle.jvmargs` in `gradle.properties` to at least `-Xmx8192m`. Note this affects new workstations too — the OOM only surfaces once you run instrumented tests across the whole module graph, not from compile-only or unit-test runs.
 
 **Source:** chore/upgrade-kotlin-2.3-kmp · first `connectedAndroidDeviceTest` run with 4GB heap reproducibly OOM'd in 4 simultaneous `mergeExtDexAndroidDeviceTest` workers (`:common:ui`, `:feature:favourites`, `:feature:game`, `:feature:giveaways`); 8GB bump cleared it
-
-### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
-**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
-**Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
-
-Gradle's K/N test runner fails the task with `"Index N out of bounds for length 2"` (N varies per run) when Mokkery prints the thrown exception's stack trace to stdout — the TeamCity protocol parser appears to misinterpret the `at <frame>` lines. The tests themselves pass: their JUnit-XML reports under `<module>/build/test-results/iosSimulatorArm64Test/` show `failures=0 errors=0`. Workaround for now: do not gate CI on iOS test report aggregation for affected modules; rely on the per-class XML. Repro examples in this repo: `:feature:game GameViewModelTest.error_state` (line 73 `throws Exception()`), `:feature:giveaways GiveawaysViewModelTest`. Modules without throwing mocks (`:common`, `:domain`) pass cleanly.
-
-**Source:** chore/upgrade-kotlin-2.3-kmp · post-bump verification of `./gradlew allTests` + targeted `:feature:game:iosSimulatorArm64Test --rerun-tasks`
 
 ### L-2026-05-17-11 · CMP 1.11 requires Kotlin 2.3 on iOS targets and removes `iosX64` (Apple x86_64) entirely
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose-multiplatform, kotlin-native, ios, kmp, target-removal, upgrade
@@ -820,6 +828,14 @@ Don't resolve merge conflicts file-by-file. First identify which *features* land
 **Source:** merge conflict resolution
 
 ## Archive
+
+### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
+**Status:** superseded by L-2026-05-18-05 · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
+**Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
+
+Gradle's K/N test runner fails the task with `"Index N out of bounds for length 2"` (N varies per run) when Mokkery prints the thrown exception's stack trace to stdout — the TeamCity protocol parser appears to misinterpret the `at <frame>` lines. The tests themselves pass: their JUnit-XML reports under `<module>/build/test-results/iosSimulatorArm64Test/` show `failures=0 errors=0`. Workaround for now: do not gate CI on iOS test report aggregation for affected modules; rely on the per-class XML. Repro examples in this repo: `:feature:game GameViewModelTest.error_state` (line 73 `throws Exception()`), `:feature:giveaways GiveawaysViewModelTest`. Modules without throwing mocks (`:common`, `:domain`) pass cleanly.
+
+**Source:** chore/upgrade-kotlin-2.3-kmp · post-bump verification of `./gradlew allTests` + targeted `:feature:game:iosSimulatorArm64Test --rerun-tasks`
 
 ### L-2026-05-06-03 · `Dispatchers.IO` is not accessible from `commonMain` in coroutines 1.10.x
 **Status:** superseded by L-2026-05-15-07 · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** kmp, coroutines, kotlin-native, dispatchers
