@@ -1,13 +1,13 @@
 ---
-**Path scope:** `*/src/commonMain/kotlin/**/ui/**/*.kt`, `*/src/androidInstrumentedTest/**/*Test.kt`, `app/src/androidTest/**/*Test.kt`
-**Last surveyed:** 2026-05-14 (ScreenSemantics + setupCompose adoption)
+**Path scope:** `*/src/commonMain/kotlin/**/ui/**/*.kt`, `*/src/androidDeviceTest/**/*Test.kt`, `app/src/androidTest/**/*Test.kt`
+**Last surveyed:** 34b01013 on 2026-05-18
 ---
 
 # UI Testing — Compose Node Finders
 
 This codebase finds Compose nodes the way users (and TalkBack) experience them: by visible text, by content description, and by accessibility role. `testTag` is forbidden — both as a modifier on production composables and as a finder in tests. The same `Modifier.semantics { contentDescription = … }` and `clickable(role = Role.Button)` that disambiguate a node for a test also improve TalkBack output for real users, so the production code changes are real accessibility improvements rather than test plumbing.
 
-This file documents the **policy** (the finder hierarchy and the production-side conventions that support it). For the broader unit-test toolchain — `MainCoroutineRule`, MockK, MockWebServer, fixture-driven Hilt — see [testing.md](testing.md).
+This file documents the **policy** (the finder hierarchy and the production-side conventions that support it). For the broader unit-test toolchain — `MainDispatcherTest`, Mokkery, `MockHttpClient`, Koin test-override modules — see [testing.md](testing.md).
 
 ## Patterns
 
@@ -15,7 +15,7 @@ This file documents the **policy** (the finder hierarchy and the production-side
 
 **Status:** established
 **First documented:** 2026-05-14
-**Last verified:** 2026-05-14 @ f215235
+**Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** instrumented tests in `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, `:feature:home`, `:common:ui`, and the `:app` journey test
 
 **The pattern.**
@@ -80,14 +80,14 @@ private fun hasRole(role: Role): SemanticsMatcher =
 - feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt (`clickable(role = Role.Button)` on every clickable Row; CD on the FAB loading spinner; all other lookups via visible text or the existing image CDs)
 - feature/favourites/src/commonMain/kotlin/pm/bam/gamedeals/feature/favourites/ui/FavouritesScreen.kt (`clickable(role = Role.Button)` on the ListItem; CD on the loading spinner)
 - common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheet.kt (`clickable(role = Role.Button)` + CD on the cheaper-store Row; CD on the loading spinner)
-- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt and common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (`hasRole` helper + `hasContentDescription` combined matcher)
+- feature/store/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt and common/ui/src/androidDeviceTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (`hasRole` helper + `hasContentDescription` combined matcher)
 - app/src/androidTest/java/pm/bam/gamedeals/integration/HomeToStoreToDealJourneyTest.kt (cross-screen integration uses `onNodeWithText` and `onNodeWithContentDescription` with `substring = true`)
 
 ### Per-Test-Class `ScreenSemantics` + `setupCompose`
 
 **Status:** established
 **First documented:** 2026-05-14
-**Last verified:** 2026-05-14
+**Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** every instrumented `*ScreenTest.kt` that asserts against a `stringResource`
 
 **The pattern.**
@@ -186,18 +186,20 @@ private data class ScreenSemantics(val back: String) {
 ```
 
 **Seen in.**
-- feature/giveaways/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreenTest.kt
-- feature/game/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt
-- feature/search/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/search/ui/SearchScreenTest.kt
-- feature/store/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt (parameterised CD helper)
-- feature/home/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreenTest.kt (parameterised CD helpers)
-- common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (parameterised CD helper)
+- feature/giveaways/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreenTest.kt
+- feature/game/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt
+- feature/search/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/search/ui/SearchScreenTest.kt
+- feature/store/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreenTest.kt (parameterised CD helper)
+- feature/home/src/androidDeviceTest/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreenTest.kt (parameterised CD helpers)
+- common/ui/src/androidDeviceTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt (parameterised CD helper)
+
+**Exception**: WebViewTest at `feature/webview/src/androidDeviceTest/.../WebViewTest.kt` uses hardcoded CD strings instead of `ScreenSemantics` and `createAndroidComposeRule<ComponentActivity>()` instead of `createComposeRule()`. This is intentional — the composable is activity-bound (needs `LocalUriHandler`) and has fewer than 5 assertions without parameterised CDs, so the ScreenSemantics overhead isn't worth it.
 
 ### `clickable(role = Role.Button)` on Tap-Responsive Surfaces
 
 **Status:** established
 **First documented:** 2026-05-14
-**Last verified:** 2026-05-14 @ f215235
+**Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** any `Card`, `Row`, or `Box` that consumes a tap (i.e. `Modifier.clickable { … }`) and is not already a Material component with a built-in `Role.Button` (which `Button`, `IconButton`, and `FilterChip` already declare)
 
 **The pattern.**
@@ -228,7 +230,7 @@ Card {
 
 **Status:** established
 **First documented:** 2026-05-14
-**Last verified:** 2026-05-14 @ f215235
+**Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all six refactored `*ScreenTest.kt` files
 
 **The pattern.**

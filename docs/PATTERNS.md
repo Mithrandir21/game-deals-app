@@ -8,20 +8,21 @@ These are **opinionated guidelines, not iron rules.** Each entry may carry a `Wh
 
 ## Categories
 
-| Category                                              | Summary                                                                          | Last surveyed         |
-|-------------------------------------------------------|----------------------------------------------------------------------------------|-----------------------|
-| [architecture](patterns/architecture.md)              | Module layering, type-safe navigation, port/adapter remote sources.              | 31a89bc · 2026-05-03 |
-| [ui-state](patterns/ui-state.md)                      | Sealed screen state, StateFlow + `WhileSubscribed(5000)`, shared controllers.    | 31a89bc · 2026-05-03 |
-| [compose-correctness](patterns/compose-correctness.md) | `LaunchedEffect`, `rememberUpdatedState`, savers, `@Immutable`, state hoisting. | 31a89bc · 2026-05-03 |
-| [data](patterns/data.md)                              | Repository facades, `CachedResource` TTL, Sandwich `ApiResponse`, paging.        | 31a89bc · 2026-05-03 |
-| [concurrency](patterns/concurrency.md)                | Virtual-time delay operators, `viewModelScope`, `flatMapLatest`, `Job` cancel.   | 31a89bc · 2026-05-03 |
-| [errors](patterns/errors.md)                          | Sealed `RemoteHttpException`, error state variants, `.catch` to UI state.        | 31a89bc · 2026-05-03 |
-| [resources](patterns/resources.md)                    | Room `withTransaction`, singleton `OkHttpClient`, `BufferedReader.use {}`.       | 31a89bc · 2026-05-03 |
-| [di](patterns/di.md)                                  | Singleton-only Hilt modules, per-vendor qualifiers, `@HiltViewModel` injection.  | 31a89bc · 2026-05-03 |
-| [testing](patterns/testing.md)                        | `MainCoroutineRule` + `observeEmissions()`, MockK, MockWebServer, fixture Hilt.  | f215235 · 2026-05-14 |
-| [ui-testing](patterns/ui-testing.md)                   | Compose node finder hierarchy: visible text → content description → role.        | f215235 · 2026-05-14 |
-| [observability](patterns/observability.md)            | Pluggable `Logger` listeners, extension-function call sites, fatal boundary.     | 31a89bc · 2026-05-03 |
-| [build](patterns/build.md)                            | Convention plugins, version catalog, KSP-only, Compose 2.2 wiring, signing.      | 31a89bc · 2026-05-03 |
+| Category                                              | Summary                                                                                | Last surveyed         |
+|-------------------------------------------------------|----------------------------------------------------------------------------------------|-----------------------|
+| [architecture](patterns/architecture.md)              | KMP module layering, type-safe `@Serializable` navigation, port/adapter remote sources, twin Android/iOS composition roots. | 34b01013 · 2026-05-18 |
+| [ui-state](patterns/ui-state.md)                      | Sealed screen state, StateFlow + `WhileSubscribed(5000)`, shared controllers, `koinViewModel()` resolution. | 34b01013 · 2026-05-18 |
+| [compose-correctness](patterns/compose-correctness.md) | `LaunchedEffect`, `rememberUpdatedState`, savers, parent-class `@Immutable` trust, stability gate, Coil 3 null-model guard. | 34b01013 · 2026-05-18 |
+| [data](patterns/data.md)                              | Repository facades (Koin-bound), `CachedResource` TTL, Sandwich-Ktor `ApiResponse`, Ktor `HttpClient` factory, Room KMP. | 34b01013 · 2026-05-18 |
+| [concurrency](patterns/concurrency.md)                | Virtual-time delay operators, `viewModelScope`, `flatMapLatest`, `Job` cancel, iOS dispatcher caveat. | 34b01013 · 2026-05-18 |
+| [errors](patterns/errors.md)                          | Sealed `RemoteHttpException` (Ktor-backed), explicit API try/catch wrapping, `expectSuccess` + timeouts, catch-all `HttpException(code)`. | 34b01013 · 2026-05-18 |
+| [resources](patterns/resources.md)                    | Room KMP `useWriterConnection` + `immediateTransaction`, singleton Ktor `HttpClient` per vendor, `BufferedReader.use {}`. | 34b01013 · 2026-05-18 |
+| [di](patterns/di.md)                                  | Koin `module { single { … } }` per layer, `viewModel { }` + `koinViewModel()`, `named()` qualifiers, twin `startKoin` bootstrap, platform-suffixed modules. | 34b01013 · 2026-05-18 |
+| [kmp](patterns/kmp.md)                                | Expect/actual sibling files, KMP source-set anatomy, platform-suffixed DI modules, iOS UIViewController host, Swift interop, shared `composeResources/`. | 34b01013 · 2026-05-18 |
+| [testing](patterns/testing.md)                        | `MainDispatcherTest` base class, Mokkery 3.3.0 in commonTest, `MockHttpClient` (Ktor MockEngine), Koin test module overrides, shared fixtures DSL. | 34b01013 · 2026-05-18 |
+| [ui-testing](patterns/ui-testing.md)                  | Compose node finder hierarchy: visible text → content description → role; `androidDeviceTest` source-set rename. | 34b01013 · 2026-05-18 |
+| [observability](patterns/observability.md)            | Pluggable `Logger` listeners, extension-function call sites, Sentry-KMP sink (Android), platform-specific impls (Logcat / NSLog), Ktor logging via expect/actual. | 34b01013 · 2026-05-18 |
+| [build](patterns/build.md)                            | KMP convention plugin family (`kmp.library` / `kmp.library.compose` / `kmp.feature`), version catalog, KSP-only, `IosSimulatorTestSerializer`, R8 + `isShrinkResources` on `:app`. | 34b01013 · 2026-05-18 |
 
 ## How to read these
 

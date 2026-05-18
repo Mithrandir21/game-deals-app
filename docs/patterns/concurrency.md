@@ -1,6 +1,6 @@
 ---
-**Path scope:** `common/**`, `feature/*/src/main/java/**/ui/*ViewModel.kt`, `domain/**`, `remote/**`
-**Last surveyed:** 31a89bc on 2026-05-03
+**Path scope:** common/src/commonMain/kotlin/**, domain/src/commonMain/kotlin/repositories/**, remote/src/commonMain/kotlin/**, feature/*/src/commonMain/kotlin/**/ui/*ViewModel.kt, testing/src/commonMain/kotlin/**
+**Last surveyed:** 34b01013 on 2026-05-18
 ---
 
 # Concurrency
@@ -12,7 +12,7 @@ This codebase shows disciplined coroutine scope management, a small set of caref
 ### Virtual-Time-Correct Delay Operators
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** delay-sensitive flows in search, deal-details, and elsewhere
 
 **The pattern.**
@@ -38,17 +38,17 @@ suspend fun loadWithMinDuration() = withMinimumDuration(500) {
 ```
 
 **Seen in.**
-- common/src/main/java/pm/bam/gamedeals/common/FlowExtensions.kt
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
-- feature/deal/src/main/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModel.kt
+- common/src/commonMain/kotlin/pm/bam/gamedeals/common/FlowExtensions.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
+- common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt
 
 **Deep dive (senior).**
-Operators are exhaustively tested in `common/src/test/.../FlowExtensionsTest.kt`. Tests assert via `testScheduler.currentTime` to verify the operator emits after at least N ms under `runTest` and adds no extra delay if the work takes longer. Use these only for UX-driven minimum delay; for resilience use `catch` + `retry`.
+Operators are exhaustively tested in `common/src/commonTest/.../FlowExtensionsTest.kt`. Tests assert via `testScheduler.currentTime` to verify the operator emits after at least N ms under `runTest` and adds no extra delay if the work takes longer. Use these only for UX-driven minimum delay; for resilience use `catch` + `retry`.
 
 ### `viewModelScope.launch` for State and Event Emission
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all 6 feature ViewModels
 
 **The pattern.**
@@ -72,14 +72,14 @@ init {
 ```
 
 **Seen in.**
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
-- feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
+- feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
 
 ### `Job` Cancellation for Serialized Async Work
 
 **Status:** emerging
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** HomeViewModel, DealDetailsViewModel
 
 **The pattern.**
@@ -104,13 +104,13 @@ fun loadDetails() {
 ```
 
 **Seen in.**
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
-- feature/deal/src/main/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt
 
 ### Repository Flows with `.onError` (Re-Throwing) Logging
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all repositories
 
 **The pattern.**
@@ -137,17 +137,17 @@ viewModelScope.launch {
 ```
 
 **Seen in.**
-- domain/src/main/java/pm/bam/gamedeals/domain/repositories/giveaway/GiveawaysRepository.kt
-- common/src/main/java/pm/bam/gamedeals/common/FlowExtensions.kt
+- domain/src/commonMain/kotlin/pm/bam/gamedeals/domain/repositories/giveaway/GiveawaysRepository.kt
+- common/src/commonMain/kotlin/pm/bam/gamedeals/common/FlowExtensions.kt
 
 ### Test Virtual-Time Discipline with `runTest`
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all test classes touching Flow or suspending code
 
 **The pattern.**
-Tests use `kotlinx.coroutines.test.runTest { }` with an implicit `TestDispatcher` and virtual clock. No `Thread.sleep()` and no `System.currentTimeMillis()` checks. Delay-based assertions measure `testScheduler.currentTime` before and after the operation.
+Tests use `kotlinx.coroutines.test.runTest { }` with an implicit `TestDispatcher` and virtual clock. No `Thread.sleep()` and no `System.currentTimeMillis()` checks. Delay-based assertions measure `testScheduler.currentTime` before and after the operation. The shared `MainDispatcherTest` helper in `testing/` installs a `TestDispatcher` as `Dispatchers.Main` for the duration of a test, replacing the older `MainCoroutineRule`. See `testing.md` for that seam's full contract.
 
 **Why this works for us.**
 Virtual time runs in microseconds of wall-clock time regardless of delay durations. Tests execute in milliseconds; scheduling is fully deterministic.
@@ -168,14 +168,14 @@ fun `operation respects minimum duration`() = runTest {
 ```
 
 **Seen in.**
-- common/src/test/java/pm/bam/gamedeals/common/FlowExtensionsTest.kt
-- feature/home/src/test/java/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt
-- testing/src/main/java/pm/bam/gamedeals/testing/MainCoroutineRule.kt
+- common/src/commonTest/kotlin/pm/bam/gamedeals/common/FlowExtensionsTest.kt
+- feature/home/src/commonTest/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModelTest.kt
+- testing/src/commonMain/kotlin/pm/bam/gamedeals/testing/MainDispatcherTest.kt
 
 ### `MutableSharedFlow(replay=0, DROP_OLDEST)` for One-Shot Events
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** HomeViewModel events, SearchViewModel state, GameViewModel reload trigger
 
 **The pattern.**
@@ -201,13 +201,13 @@ val events: SharedFlow<Event> = _events.asSharedFlow()
 ```
 
 **Seen in.**
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
-- feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
 
 ### `flatMapLatest` for Latest-Wins Query Cancellation
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** SearchViewModel, GameViewModel, GiveawaysViewModel
 
 **The pattern.**
@@ -232,13 +232,50 @@ viewModelScope.launch {
 ```
 
 **Seen in.**
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
-- feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
+- feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+
+### iOS Dispatcher Caveat (no `Dispatchers.IO` on Kotlin/Native)
+
+**Status:** emerging
+**First documented:** 2026-05-18   **Last verified:** 2026-05-18 @ 34b01013
+**Coverage:** emerging — applied in `common/src/iosMain/kotlin/.../di/CommonIosModule.kt` for storage-style work; not yet a project-wide convention
+
+**The pattern.**
+Kotlin/Native's coroutines stdlib doesn't ship a `Dispatchers.IO` (the JVM artifact does). On iOS, the platform-specific Koin module (`commonIosModule`) explicitly aliases IO work to `Dispatchers.Default`. Don't hard-code `Dispatchers.IO` in commonMain; either accept the alias on iOS, or inject a `dispatcher: CoroutineDispatcher` and let Koin wire the platform-appropriate one.
+
+**Why this works for us.**
+Keeps commonMain free of platform leaks while preserving the JVM/Android semantics where `Dispatchers.IO` is meaningful. Centralising the alias in the iOS Koin module means callers stay dispatcher-agnostic.
+
+**Known trade-offs / when it strains.**
+On iOS, "IO" work runs on the same `Default` pool as CPU work — sustained blocking calls there will starve the shared pool. If real blocking I/O lands in iosMain, it needs a bespoke `newFixedThreadPoolContext` (or equivalent) rather than the alias. The injection pattern also adds Koin wiring overhead for what was previously a one-liner.
+
+**How to apply it.**
+```kotlin
+// commonMain: don't reference Dispatchers.IO directly
+class StorageWorker(private val dispatcher: CoroutineDispatcher) {
+  suspend fun persist(payload: Payload) = withContext(dispatcher) {
+    // …
+  }
+}
+
+// iosMain (CommonIosModule.kt): alias IO -> Default
+single<CoroutineDispatcher>(named("io")) { Dispatchers.Default }
+
+// androidMain: real IO dispatcher
+single<CoroutineDispatcher>(named("io")) { Dispatchers.IO }
+```
+
+**Seen in.**
+- common/src/iosMain/kotlin/pm/bam/gamedeals/common/di/CommonIosModule.kt
+- common/src/commonMain/kotlin/pm/bam/gamedeals/common/**
+
+**Related lessons.** L-2026-05-15-07
 
 ## What we don't do
 
 - **No `GlobalScope` and no scopeless `launch { }`.** All coroutines are rooted in `viewModelScope` or test scopes. **Why we avoid it:** unscoped coroutines outlive their owners and leak state into destroyed UIs.
 - **No `runBlocking` in production code.** Found only in test setup. **Why we avoid it:** `runBlocking` defeats structured concurrency; the production codebase has no place where blocking the caller is correct.
-- **No explicit `Dispatcher` injection.** All work happens on `Dispatchers.Main` (via `viewModelScope`) and implicit IO for Room/Retrofit. **Why we avoid it:** dispatcher-aware injection is overkill for the size of this codebase; Room and Retrofit handle their own threading.
+- **No project-wide `Dispatcher` injection (yet).** Most work runs on `Dispatchers.Main` via `viewModelScope`, with Room KMP and Ktor handling their own threading internally. The one exception is the emerging iOS-dispatcher pattern above, which is scoped to the small slice of code that actually needs `Dispatchers.IO` semantics on iOS. **Why we avoid it:** dispatcher-aware injection across the whole codebase is overkill at current scale; broader rollout is reserved for code that actually has platform-divergent threading needs.
 - **No `SupervisorJob` or custom `CoroutineExceptionHandler`.** Coroutine cancellation is allowed to propagate; ViewModels don't suppress it.
 - **No `launch { }` without `.collect()` or `.catch()`.** Every Flow subscription is guarded against downstream exceptions.

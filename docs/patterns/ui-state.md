@@ -1,6 +1,6 @@
 ---
-**Path scope:** `feature/*/src/main/java/**/ui/*ViewModel.kt`, `feature/*/src/main/java/**/ui/*State.kt`, `feature/*/src/main/java/**/ui/*Screen.kt`, `base/src/main/java/**/ui/**`, `common/ui/src/main/java/**/deal/**`
-**Last surveyed:** 31a89bc on 2026-05-03
+**Path scope:** `feature/*/src/commonMain/kotlin/**/ui/*ViewModel.kt`, `feature/*/src/commonMain/kotlin/**/ui/*State.kt`, `feature/*/src/commonMain/kotlin/**/ui/*Screen.kt`, `common/ui/src/commonMain/kotlin/**/deal/**`
+**Last surveyed:** 34b01013 on 2026-05-18
 ---
 
 # UI State
@@ -12,7 +12,7 @@ UI state in this codebase follows a consistent MVVM shape: ViewModels expose imm
 ### Sealed Screen State with Loading / Error / Data Variants
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all 6 feature ViewModels (Store, Game, Deal, Home, Giveaways, Search)
 
 **The pattern.**
@@ -42,29 +42,30 @@ when (val s = state) {
 ```
 
 **Seen in.**
-- feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
-- feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
+- feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
+- feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
 
 ### Private MutableStateFlow + Public StateFlow Source-of-Truth
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all 6 feature ViewModels
 
 **The pattern.**
 Every ViewModel maintains a private `MutableStateFlow` (`_uiState`) and exposes a public read-only `StateFlow` via `asStateFlow()`. The ViewModel is the sole writer; consumers receive the immutable view. This encapsulation enforces unidirectional data flow.
 
 **Why this works for us.**
-The boundary between private write-access and public read-access is enforced by Kotlin's type system, not convention. Accidental mutation attempts fail at compile time. With Hilt scoping, the ViewModel persists across recomposition, so the same source-of-truth object is never torn down unexpectedly.
+The boundary between private write-access and public read-access is enforced by Kotlin's type system, not convention. Accidental mutation attempts fail at compile time. Koin's `viewModel { }` scopes the instance to the current `NavBackStackEntry`, so the source-of-truth object survives recomposition and config change without being torn down.
 
 **Known trade-offs / when it strains.**
 Two properties for one logical stream is verbose. ViewModels with many independent state fields end up with many `_field`/`field` pairs. Stateless presentational composables don't need this; they should accept state as parameters.
 
 **How to apply it.**
 ```kotlin
-@HiltViewModel
-class MyViewModel : ViewModel() {
+class MyViewModel(
+  private val repository: MyRepository
+) : ViewModel() {
   private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
   val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -77,19 +78,22 @@ class MyViewModel : ViewModel() {
     }
   }
 }
-```
+
+// Koin binding in the feature's *Module.kt
+val myFeatureModule = module {
+  viewModel { MyViewModel(get()) }
+}
 
 **Seen in.**
-- feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
-- feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
-- feature/deal/src/main/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModel.kt
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
+- feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt
 
 ### `combine()` Merging Upstream Flows into a Single Screen State
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** Game ViewModel (id + reload trigger), Giveaways ViewModel (giveaways list + refresh outcome)
 
 **The pattern.**
@@ -116,13 +120,13 @@ init {
 ```
 
 **Seen in.**
-- feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
-- feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+- feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt
+- feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
 
 ### `WhileSubscribed(5000)` Sharing Strategy for `stateIn()`
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** Store ViewModel (screen state + paged deals)
 
 **The pattern.**
@@ -145,12 +149,12 @@ val uiState: StateFlow<Data> = upstreamFlow
 ```
 
 **Seen in.**
-- feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
+- feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
 
 ### Shared State Controller for Modal / Bottom-Sheet State
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** Home, Store ViewModels via `DealDetailsController`
 
 **The pattern.**
@@ -175,14 +179,14 @@ fun loadDealDetails(dealId: String, ...) {
 ```
 
 **Seen in.**
-- common/ui/src/main/java/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt
-- feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt
+- feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
 
 ### `SharedFlow` for One-Shot UI Events (Navigation, Snackbar)
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** Home ViewModel
 
 **The pattern.**
@@ -209,27 +213,29 @@ SingleEventEffect(viewModel.events) { event ->
 ```
 
 **Seen in.**
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt
 
 ### Composable State Collection via `collectAsStateWithLifecycle()`
 
 **Status:** established
-**First documented:** 2026-05-03   **Last verified:** 2026-05-03 @ 31a89bc
+**First documented:** 2026-05-03   **Last verified:** 2026-05-18 @ 34b01013
 **Coverage:** all 6 feature screens
 
 **The pattern.**
-Every feature screen Composable uses `collectAsStateWithLifecycle()` to collect the ViewModel's `StateFlow` into a Compose `State`. Paging flows use the specialized `collectAsLazyPagingItems()` variant. The lifecycle-aware variant automatically pauses collection when the Composable's lifecycle is below STARTED, minimizing battery drain and unnecessary upstream work.
+Every feature screen Composable uses `collectAsStateWithLifecycle()` to collect the ViewModel's `StateFlow` into a Compose `State`. Paging flows use the specialized `collectAsLazyPagingItems()` variant. The lifecycle-aware variant automatically pauses collection when the Composable's lifecycle is below STARTED, minimizing battery drain and unnecessary upstream work. The ViewModel itself is obtained from Koin via `koinViewModel()` — the DI seam moved off Hilt with the KMP migration, but the lifecycle-aware collection contract on the screen side is unchanged.
 
 **Why this works for us.**
-Lifecycle-aware collection respects both the Compose lifecycle and the underlying Android Lifecycle without manual subscription management. No leaks; no redundant re-fetches on every recomposition.
+Lifecycle-aware collection respects both the Compose lifecycle and the underlying Android Lifecycle without manual subscription management. No leaks; no redundant re-fetches on every recomposition. Resolving the ViewModel through `koinViewModel()` keeps the screen `@Composable` callable from `commonMain` source sets, since Koin's Compose integration is multiplatform.
 
 **Known trade-offs / when it strains.**
 Lifecycle-aware collection introduces a small latency when the Lifecycle regains the started state — first value may not arrive until the next dispatch. Imperceptible for screen state, but noticeable for high-frequency animations.
 
 **How to apply it.**
 ```kotlin
+import org.koin.compose.viewmodel.koinViewModel
+
 @Composable
-fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
+fun MyScreen(viewModel: MyViewModel = koinViewModel()) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
   val pagingItems = viewModel.items.collectAsLazyPagingItems()
   // ...
@@ -237,11 +243,11 @@ fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
 ```
 
 **Seen in.**
-- feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt
-- feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt
-- feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchScreen.kt
-- feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameScreen.kt
-- feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt
+- feature/store/src/commonMain/kotlin/pm/bam/gamedeals/feature/store/ui/StoreScreen.kt
+- feature/home/src/commonMain/kotlin/pm/bam/gamedeals/feature/home/ui/HomeScreen.kt
+- feature/search/src/commonMain/kotlin/pm/bam/gamedeals/feature/search/ui/SearchScreen.kt
+- feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreen.kt
+- feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt
 
 ## What we don't do
 
