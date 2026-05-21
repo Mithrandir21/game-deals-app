@@ -30,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -334,12 +335,12 @@ private fun SearchField(
             )
         },
         trailingIcon = {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                stringResource(Res.string.search_screen_filters_icon),
-                modifier = Modifier
-                    .clickable { onShowFilters() }
-            )
+            IconButton(onClick = { onShowFilters() }) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(Res.string.search_screen_filters_icon),
+                )
+            }
         },
         label = { Text(text = stringResource(Res.string.search_screen_search_field_label)) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
