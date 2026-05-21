@@ -100,6 +100,8 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_ind
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_new_releases_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_deal_row_description
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_deal_row_description_favourite
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData.DealData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData.StoreData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData.ViewAllData
@@ -168,11 +170,19 @@ private fun StoreDealRow(
     isFavourite: Boolean,
     onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit)
 ) {
+    val rowCd = stringResource(
+        if (isFavourite) Res.string.home_screen_store_deal_row_description_favourite
+        else Res.string.home_screen_store_deal_row_description,
+        deal.title,
+        deal.normalPriceDenominated,
+        deal.salePriceDenominated,
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button) { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small),
+            .padding(bottom = GameDealsCustomTheme.spacing.small)
+            .semantics(mergeDescendants = true) { contentDescription = rowCd },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

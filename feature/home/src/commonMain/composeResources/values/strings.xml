@@ -23,6 +23,8 @@
     <string name="home_screen_all_favourites_label">See all favourites</string>
     <string name="home_screen_floating_favourites_icon">View favourites</string>
     <string name="home_screen_favourite_indicator">Favourited</string>
+    <string name="home_screen_store_deal_row_description">%1$s, was %2$s, now %3$s</string>
+    <string name="home_screen_store_deal_row_description_favourite">%1$s, favourited, was %2$s, now %3$s</string>
 
     <string name="home_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="home_screen_data_loading_error_retry">Retry</string>
