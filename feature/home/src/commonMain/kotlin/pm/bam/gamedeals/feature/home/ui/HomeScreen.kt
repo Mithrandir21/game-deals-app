@@ -95,6 +95,10 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_se
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_platforms
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_worth
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_worth_no_platforms
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaways_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_label
@@ -501,22 +505,28 @@ private fun GiveawayRow(
     giveaway: Giveaway,
     onGiveawayTitle: (url: String) -> Unit,
 ) {
-    val freeLabel = stringResource(Res.string.home_screen_giveaway_free_label)
     val typeLabel = giveaway.type.displayLabel()
-    val rowCd = buildString {
-        append(freeLabel)
-        append(", ")
-        append(giveaway.title)
-        giveaway.worthDenominated?.let {
-            append(", originally ")
-            append(it)
-        }
-        append(", ")
-        append(typeLabel)
-        if (giveaway.platforms.isNotEmpty()) {
-            append(" on ")
-            append(giveaway.platforms.joinToString(", ") { it.platformValue })
-        }
+    val worth = giveaway.worthDenominated
+    val platforms = giveaway.platforms
+    val rowCd = when {
+        worth != null && platforms.isNotEmpty() -> stringResource(
+            Res.string.home_screen_giveaway_row_description,
+            giveaway.title, worth, typeLabel,
+            platforms.joinToString(", ") { it.platformValue },
+        )
+        worth != null -> stringResource(
+            Res.string.home_screen_giveaway_row_description_no_platforms,
+            giveaway.title, worth, typeLabel,
+        )
+        platforms.isNotEmpty() -> stringResource(
+            Res.string.home_screen_giveaway_row_description_no_worth,
+            giveaway.title, typeLabel,
+            platforms.joinToString(", ") { it.platformValue },
+        )
+        else -> stringResource(
+            Res.string.home_screen_giveaway_row_description_no_worth_no_platforms,
+            giveaway.title, typeLabel,
+        )
     }
     Row(
         modifier = Modifier

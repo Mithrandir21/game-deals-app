@@ -26,6 +26,11 @@
     <string name="home_screen_store_deal_row_description">%1$s, was %2$s, now %3$s</string>
     <string name="home_screen_store_deal_row_description_favourite">%1$s, favourited, was %2$s, now %3$s</string>
 
+    <string name="home_screen_giveaway_row_description">FREE, %1$s, originally %2$s, %3$s on %4$s</string>
+    <string name="home_screen_giveaway_row_description_no_platforms">FREE, %1$s, originally %2$s, %3$s</string>
+    <string name="home_screen_giveaway_row_description_no_worth">FREE, %1$s, %2$s on %3$s</string>
+    <string name="home_screen_giveaway_row_description_no_worth_no_platforms">FREE, %1$s, %2$s</string>
+
     <string name="home_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="home_screen_data_loading_error_retry">Retry</string>
 
