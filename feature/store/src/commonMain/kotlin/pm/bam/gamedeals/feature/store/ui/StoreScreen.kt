@@ -175,7 +175,7 @@ private fun DealRow(
                     end = GameDealsCustomTheme.spacing.medium,
                     bottom = GameDealsCustomTheme.spacing.extraSmall
                 )
-                .semantics { contentDescription = dealRowCd },
+                .semantics(mergeDescendants = true) { contentDescription = dealRowCd },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
