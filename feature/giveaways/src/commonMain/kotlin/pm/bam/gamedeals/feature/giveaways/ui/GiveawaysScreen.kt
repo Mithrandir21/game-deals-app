@@ -94,6 +94,8 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_fi
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_type_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_game_image
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description_worth
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_navigation_back_button
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -252,11 +254,15 @@ private fun GiveawayListItem(
     giveaway: Giveaway,
     onGiveaway: () -> Unit
 ) {
+    val rowCd = giveaway.worthDenominated?.let {
+        stringResource(Res.string.giveaway_screen_list_item_row_description_worth, giveaway.title, it)
+    } ?: stringResource(Res.string.giveaway_screen_list_item_row_description, giveaway.title)
     ListItem(
         modifier = Modifier
             .clickable(role = Role.Button) { onGiveaway() }
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
+            .semantics(mergeDescendants = true) { contentDescription = rowCd },
         headlineContent = { Text(giveaway.title) },
         supportingContent = {
             giveaway.worthDenominated?.let {
