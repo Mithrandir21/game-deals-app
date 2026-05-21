@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -450,7 +451,8 @@ private fun SectionHeader(text: String) {
             .height(80.dp)
             .fillMaxWidth()
             .background(color = MaterialTheme.colorScheme.primary)
-            .padding(GameDealsCustomTheme.spacing.medium),
+            .padding(GameDealsCustomTheme.spacing.medium)
+            .semantics { heading() },
         contentAlignment = Alignment.Center
     ) {
         Text(
