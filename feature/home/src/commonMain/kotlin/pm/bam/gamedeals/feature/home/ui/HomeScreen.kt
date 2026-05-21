@@ -89,7 +89,6 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveawa
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourite_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_error_icon
@@ -631,7 +630,7 @@ private fun FavouriteRow(
 private fun FavouriteOverlay(modifier: Modifier = Modifier) {
     Icon(
         imageVector = Icons.Filled.Favorite,
-        contentDescription = stringResource(Res.string.home_screen_favourite_indicator),
+        contentDescription = null,
         tint = MaterialTheme.colorScheme.primary,
         modifier = modifier
             .padding(GameDealsCustomTheme.spacing.extraSmall)

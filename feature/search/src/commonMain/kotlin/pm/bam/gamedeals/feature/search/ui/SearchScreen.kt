@@ -67,6 +67,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -89,7 +90,6 @@ import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.feature.search.generated.resources.Res
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_retry
-import pm.bam.gamedeals.feature.search.generated.resources.search_screen_favourite_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_exact_match_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_price_range_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filter_steam_range_label
@@ -100,6 +100,8 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_game_image
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_empty_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_no_results_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_loading_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_field_label
@@ -256,6 +258,12 @@ private fun SearchResultListItem(
     isFavourite: Boolean,
     onGame: () -> Unit
 ) {
+    val rowCd = stringResource(
+        if (isFavourite) Res.string.search_screen_list_item_row_description_favourite
+        else Res.string.search_screen_list_item_row_description,
+        deal.title,
+        deal.salePriceDenominated,
+    )
     ListItem(
         headlineContent = { Text(deal.title) },
         supportingContent = { Text(stringResource(Res.string.search_screen_list_item_label, deal.salePriceDenominated)) },
@@ -278,7 +286,7 @@ private fun SearchResultListItem(
                 if (isFavourite) {
                     Icon(
                         imageVector = Icons.Filled.Favorite,
-                        contentDescription = stringResource(Res.string.search_screen_favourite_indicator),
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -289,9 +297,10 @@ private fun SearchResultListItem(
             }
         },
         modifier = Modifier
-            .clickable { onGame() }
+            .clickable(role = Role.Button) { onGame() }
             .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
+            .semantics(mergeDescendants = true) { contentDescription = rowCd }
     )
     HorizontalDivider()
 }

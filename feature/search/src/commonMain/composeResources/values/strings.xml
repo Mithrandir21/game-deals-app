@@ -17,6 +17,8 @@
     <string name="search_screen_data_loading_error_retry">Retry</string>
 
     <string name="search_screen_favourite_indicator">Favourited</string>
+    <string name="search_screen_list_item_row_description">%1$s, %2$s</string>
+    <string name="search_screen_list_item_row_description_favourite">%1$s, favourited, %2$s</string>
 
     <string name="search_screen_loading_indicator">Searching for games</string>
     <string name="search_screen_filters_price_range_slider_description">Price range slider</string>

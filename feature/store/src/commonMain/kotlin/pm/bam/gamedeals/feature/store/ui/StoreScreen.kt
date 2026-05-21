@@ -78,7 +78,7 @@ import pm.bam.gamedeals.feature.store.generated.resources.Res
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description
-import pm.bam.gamedeals.feature.store.generated.resources.store_screen_favourite_indicator
+import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description_favourite
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_game_image
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_store_banner
@@ -158,7 +158,12 @@ private fun DealRow(
     isFavourite: Boolean,
     onViewDealDetails: ((deal: Deal) -> Unit)
 ) {
-    val dealRowCd = stringResource(Res.string.store_screen_deal_row_description, deal.title, deal.salePriceDenominated)
+    val dealRowCd = stringResource(
+        if (isFavourite) Res.string.store_screen_deal_row_description_favourite
+        else Res.string.store_screen_deal_row_description,
+        deal.title,
+        deal.salePriceDenominated,
+    )
     Card {
         Row(
             modifier = Modifier
@@ -191,7 +196,7 @@ private fun DealRow(
                 if (isFavourite) {
                     Icon(
                         imageVector = Icons.Filled.Favorite,
-                        contentDescription = stringResource(Res.string.store_screen_favourite_indicator),
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
