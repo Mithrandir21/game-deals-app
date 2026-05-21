@@ -91,6 +91,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loadin
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourite_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_error_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
@@ -261,14 +262,24 @@ private fun HomeScreenContent(
                                 contentDescription = stringResource(Res.string.home_screen_floating_favourites_icon),
                             )
                         }
-                        FloatingActionButton(onClick = {}) {
+                        FloatingActionButton(
+                            onClick = {
+                                when (data.state) {
+                                    SUCCESS -> onSearch()
+                                    ERROR -> onRetry()
+                                    LOADING -> Unit
+                                }
+                            }
+                        ) {
                             when (data.state) {
                                 LOADING -> CircularProgressIndicator(
                                     Modifier.semantics { contentDescription = loadingCd }
                                 )
-                                ERROR -> Icon(Icons.Default.Warning, contentDescription = stringResource(Res.string.home_screen_floating_search_icon))
+                                ERROR -> Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = stringResource(Res.string.home_screen_floating_search_error_icon)
+                                )
                                 SUCCESS -> Icon(
-                                    modifier = Modifier.clickable { onSearch() },
                                     imageVector = Icons.Default.Search,
                                     contentDescription = stringResource(Res.string.home_screen_floating_search_icon)
                                 )
