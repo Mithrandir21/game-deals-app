@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,7 +83,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_thumbnail
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -287,6 +288,12 @@ private fun StoreGameDealRow(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
+    val rowCd = stringResource(
+        Res.string.game_screen_store_deal_row_description,
+        store.storeName,
+        deal.savings,
+        deal.priceDenominated,
+    )
     Card(onClick = { goToWeb(cheapsharkDealRedirectUrl(deal.dealID), gameInfo.title) }) {
         Row(
             modifier = Modifier
@@ -294,31 +301,38 @@ private fun StoreGameDealRow(
                 .padding(GameDealsCustomTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = store.images.icon,
-                contentDescription = stringResource(Res.string.game_screen_store_thumbnail, store.storeName),
-                error = painterResource(CommonRes.drawable.store),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(GameDealsCustomTheme.spacing.large)
-            )
-            Text(
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = GameDealsCustomTheme.spacing.medium),
-                text = store.storeName,
-            )
-            Text(
-                modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-                text = stringResource(Res.string.game_screen_list_item_savings_label, deal.savings),
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-                    .padding(GameDealsCustomTheme.spacing.medium),
-                text = deal.priceDenominated
-            )
+                    .semantics(mergeDescendants = true) { contentDescription = rowCd },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AsyncImage(
+                    model = store.images.icon,
+                    contentDescription = null,
+                    error = painterResource(CommonRes.drawable.store),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(GameDealsCustomTheme.spacing.large)
+                )
+                Text(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = GameDealsCustomTheme.spacing.medium),
+                    text = store.storeName,
+                )
+                Text(
+                    modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+                    text = stringResource(Res.string.game_screen_list_item_savings_label, deal.savings),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background, RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                        .padding(GameDealsCustomTheme.spacing.medium),
+                    text = deal.priceDenominated
+                )
+            }
             IconButton(
                 onClick = { onShareDeal(gameInfo, store, deal) }
             ) {
