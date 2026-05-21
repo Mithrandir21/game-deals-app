@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -416,8 +417,12 @@ private fun Filters(
             Text(text = stringResource(Res.string.search_screen_filter_price_range_label), Modifier.weight(1f))
             Text(text = rangeString(priceSliderValue.start, priceSliderValue.endInclusive, priceHighest))
         }
+        val priceSliderState = rangeString(priceSliderValue.start, priceSliderValue.endInclusive, priceHighest)
         RangeSlider(
-            modifier = Modifier.semantics { contentDescription = priceSliderCd },
+            modifier = Modifier.semantics {
+                contentDescription = priceSliderCd
+                stateDescription = priceSliderState
+            },
             value = priceSliderValue,
             steps = SearchFilterPriceSteps,
             onValueChange = { range -> priceSliderValue = range },
@@ -439,8 +444,12 @@ private fun Filters(
             Text(text = stringResource(Res.string.search_screen_filter_steam_range_label), modifier = Modifier.weight(1f))
             Text(text = valueString(steamSliderValue, SearchFilterMaxRate))
         }
+        val ratingSliderState = valueString(steamSliderValue, SearchFilterMaxRate)
         Slider(
-            modifier = Modifier.semantics { contentDescription = ratingSliderCd },
+            modifier = Modifier.semantics {
+                contentDescription = ratingSliderCd
+                stateDescription = ratingSliderState
+            },
             value = steamSliderValue,
             steps = SearchFilterRateSteps,
             onValueChange = { range -> steamSliderValue = range },
