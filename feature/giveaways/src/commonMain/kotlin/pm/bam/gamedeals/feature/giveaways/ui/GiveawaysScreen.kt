@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -253,7 +254,7 @@ private fun GiveawayListItem(
 ) {
     ListItem(
         modifier = Modifier
-            .clickable { onGiveaway() }
+            .clickable(role = Role.Button) { onGiveaway() }
             .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
         headlineContent = { Text(giveaway.title) },
