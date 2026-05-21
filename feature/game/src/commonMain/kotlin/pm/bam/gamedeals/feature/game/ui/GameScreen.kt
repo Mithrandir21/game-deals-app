@@ -49,6 +49,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -362,7 +364,14 @@ private fun GameScreenContent(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary,
                         ),
-                        title = { Text(text = title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        title = {
+                            Text(
+                                modifier = Modifier.semantics { heading() },
+                                text = title,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
                         navigationIcon = {
                             IconButton(
                                 onClick = { onBack() }

@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -113,6 +114,7 @@ private fun FavouritesScreenContent(
                     ),
                     title = {
                         Text(
+                            modifier = Modifier.semantics { heading() },
                             text = stringResource(Res.string.favourites_screen_toolbar_title),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,

@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -172,7 +173,14 @@ private fun GiveawaysScreenContent(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary,
                         ),
-                        title = { Text(text = stringResource(Res.string.giveaway_screen_toolbar_title), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        title = {
+                            Text(
+                                modifier = Modifier.semantics { heading() },
+                                text = stringResource(Res.string.giveaway_screen_toolbar_title),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = { onBack() }) {
                                 Icon(
