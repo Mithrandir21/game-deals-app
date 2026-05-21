@@ -351,7 +351,7 @@ private fun Filters(
             existingParameters.types.forEach { (type, selected) ->
                 FilterChip(selected = selected, onClick = { onTypeSelection(type, !selected) }, label = {
                     Text(
-                        text = type.name,
+                        text = type.displayLabel(),
                         modifier = Modifier.padding(GameDealsCustomTheme.spacing.extraSmall),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -393,7 +393,7 @@ private fun GiveawaySortByOptions(
                     label = {
                         Text(
                             modifier = Modifier.padding(GameDealsCustomTheme.spacing.extraSmall),
-                            text = sortBy.name,
+                            text = sortBy.displayLabel(),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     },
