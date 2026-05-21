@@ -16,5 +16,6 @@
 
     <string name="game_screen_favourite_add_action">Add to favourites</string>
     <string name="game_screen_favourite_remove_action">Remove from favourites</string>
+    <string name="game_screen_share_action">Share %1$s deal</string>
 
 </resources>

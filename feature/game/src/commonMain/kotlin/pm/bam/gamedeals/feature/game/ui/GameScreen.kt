@@ -79,11 +79,11 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_r
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_thumbnail
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.store
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -322,7 +322,7 @@ private fun StoreGameDealRow(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Share,
-                    contentDescription = stringResource(CommonRes.string.deal_share_content_description)
+                    contentDescription = stringResource(Res.string.game_screen_share_action, store.storeName)
                 )
             }
         }
