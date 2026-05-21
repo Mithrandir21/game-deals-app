@@ -501,11 +501,29 @@ private fun GiveawayRow(
     giveaway: Giveaway,
     onGiveawayTitle: (url: String) -> Unit,
 ) {
+    val freeLabel = stringResource(Res.string.home_screen_giveaway_free_label)
+    val typeLabel = giveaway.type.displayLabel()
+    val rowCd = buildString {
+        append(freeLabel)
+        append(", ")
+        append(giveaway.title)
+        giveaway.worthDenominated?.let {
+            append(", originally ")
+            append(it)
+        }
+        append(", ")
+        append(typeLabel)
+        if (giveaway.platforms.isNotEmpty()) {
+            append(" on ")
+            append(giveaway.platforms.joinToString(", ") { it.platformValue })
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button) { onGiveawayTitle(giveaway.gamerpowerUrl) }
-            .padding(vertical = GameDealsCustomTheme.spacing.medium),
+            .padding(vertical = GameDealsCustomTheme.spacing.medium)
+            .semantics(mergeDescendants = true) { contentDescription = rowCd },
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
