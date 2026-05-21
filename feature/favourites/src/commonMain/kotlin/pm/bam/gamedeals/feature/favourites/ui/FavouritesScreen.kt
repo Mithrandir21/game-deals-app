@@ -64,7 +64,6 @@ import pm.bam.gamedeals.feature.favourites.generated.resources.Res
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_hint
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_title
-import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_favourite_indicator
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_game_image
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_loading_indicator
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_navigation_back_button
@@ -206,7 +205,8 @@ private fun FavouriteListItem(
         modifier = Modifier
             .clickable(role = Role.Button) { onClick() }
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
+            .semantics(mergeDescendants = true) { contentDescription = favourite.title },
         headlineContent = { Text(favourite.title) },
         leadingContent = {
             AsyncImage(
@@ -223,7 +223,7 @@ private fun FavouriteListItem(
         trailingContent = {
             Icon(
                 imageVector = Icons.Filled.Favorite,
-                contentDescription = stringResource(Res.string.favourites_screen_favourite_indicator),
+                contentDescription = null,
             )
         },
     )
