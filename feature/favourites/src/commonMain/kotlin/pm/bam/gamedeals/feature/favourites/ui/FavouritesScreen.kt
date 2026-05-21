@@ -63,7 +63,6 @@ import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.feature.favourites.generated.resources.Res
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_hint
-import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_icon
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_empty_title
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_favourite_indicator
 import pm.bam.gamedeals.feature.favourites.generated.resources.favourites_screen_game_image
@@ -184,7 +183,7 @@ private fun EmptyFavourites(modifier: Modifier = Modifier) {
     ) {
         Icon(
             imageVector = Icons.Outlined.FavoriteBorder,
-            contentDescription = stringResource(Res.string.favourites_screen_empty_icon),
+            contentDescription = null,
             modifier = Modifier.height(48.dp).width(48.dp),
         )
         Text(
