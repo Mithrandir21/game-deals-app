@@ -13,8 +13,9 @@ The output is not a retro document. It is a short append to `.claude/lessons.md`
 
 Every stored lesson must be:
 
-- **Condensed** — a headline plus 2–4 sentences. If it won't fit, it's probably two lessons or a design doc.
+- **Condensed** — hard caps: headline ≤ 70 chars, TL;DR ≤ 140 chars, body ≤ ~100 words (≤ 3 short paragraphs), Source ≤ 1 sentence. If it won't fit, it's probably two lessons or a design doc.
 - **Structured** — carries an ID, date, status, confidence, scope, and tags. This is what makes it reviewable.
+- **Scannable** — every lesson opens with a TL;DR line directly under the headline. That single line is what humans skim and what the auto-generated index uses.
 - **Superseded, not silently corrected** — when a later session finds a lesson wrong or outdated, the old lesson gets marked `superseded` or `deprecated` and a new one is added. **Never edit an existing lesson's content.**
 
 Lessons get outdated. Libraries change, practices change, earlier learnings turn out to be wrong. The format is built for that — not to pretend it won't happen.
@@ -72,6 +73,8 @@ Before proposing lessons, briefly summarize in chat what happened this session �
 
 For each candidate, use the full lesson format below (see *Lesson format*). The user's senior judgment is the filter: if a candidate feels obvious or not clearly durable, flag it as "probably not worth saving" rather than quietly including it.
 
+Before presenting candidates, **self-check each one against the caps** (headline ≤ 70 chars, TL;DR ≤ 140 chars, body ≤ ~100 words, Source ≤ 1 sentence). If a candidate exceeds a cap, either trim it or split it into two lessons — do not present overlong candidates and ask the user to absorb the violation.
+
 Bias toward fewer lessons. Three is already a lot from a single session. One well-chosen lesson is often the right output.
 
 ### Phase 5 — Reconcile with existing lessons
@@ -95,10 +98,11 @@ Present the final plan:
 
 ### Phase 7 — Persist
 
-Edit `.claude/lessons.md` (create it from the template below if missing). Two operations only:
+Edit `.claude/lessons.md` (create it from the template below if missing). Three operations:
 
 1. **Prepend approved new lessons** to the `## Active` section (most recent first).
-2. **Move superseded/deprecated lessons** from `## Active` to `## Archive`, updating only their `Status` line. **Never change any other field on an archived lesson** — the audit trail depends on it.
+2. **Move superseded/deprecated lessons** from `## Active` to `## Archive`, updating only their status chip. **Never change any other field on an archived lesson** — the audit trail depends on it.
+3. **Regenerate `## Index — Active`** above the `## Active` section. The index is pure derivation: one row per active lesson, columns `ID | TL;DR | Tags`, in the same order as `## Active`. For older lessons that predate the TL;DR field, fall back to the headline (the text after the `· `). Comma-join tags. Never hand-edit the index — rewrite it in full each time.
 
 ## Lesson format
 
@@ -106,49 +110,56 @@ Every lesson — active or archived — follows this exact structure:
 
 ```markdown
 ### L-<YYYY-MM-DD>-<NN> · <concise headline>
-**Status:** active · **Confidence:** <confirmed|tentative> · **Added:** <YYYY-MM-DD> · **Tags:** <3–5 tags>
+**TL;DR:** <single-line summary, ≤ 140 chars — the rule in one sentence>
+`<active|superseded by L-…|deprecated (reason)>` · `<confirmed|tentative>` · <YYYY-MM-DD> · `<tag1>` `<tag2>` `<tag3>`
 **Applies to:** <where future-Claude would encounter this — 1 line>
 
-<2–4 sentence lesson, imperative voice. Lead with the advice; then just enough context for a future session to know when it applies. Mention a specific library/version only if it's load-bearing.>
+<Body, ≤ ~100 words / ≤ 3 short paragraphs, imperative voice. Lead with the advice; then just enough context for a future session to know when it applies. Mention a specific library/version only if it's load-bearing.>
 
-**Source:** <one phrase — feature, concept, or area this came from>
+**Source:** <one sentence — feature, concept, or area this came from>
 ```
 
 **Field rules:**
 
 - **ID** — `L-` then ISO date then `-NN` (01, 02, …) for multiple lessons on the same day. **IDs never change**, even when a lesson is archived.
-- **Status** — one of:
+- **Headline** — ≤ 70 chars. State the rule, not an example. No backticked symbols — those belong in the body.
+- **TL;DR** — mandatory. Single line, ≤ 140 chars, restating the rule in one sentence. This is what humans skim and what the generated index uses.
+- **Status chip** — one of:
     - `active` — apply it
     - `superseded by L-YYYY-MM-DD-NN` — don't apply; see replacement
     - `deprecated (<short reason>)` — don't apply; no replacement
-- **Confidence** — `confirmed` (verified, repeated, or well-grounded) or `tentative` (one observation, might not generalize). When in doubt, use `tentative`. A later session can promote a tentative lesson to confirmed via supersession with a `confirmed` replacement.
+- **Confidence chip** — exactly `confirmed` or `tentative`. No qualifying suffixes; if a caveat matters (e.g. "only verified for KSP 2.3.8"), state it in the body, not the chip.
 - **Tags** — short, kebab-case or single word: `ktor`, `websocket`, `kmp`, `compose`, `gradle`, `ci`, `testing`, `skie`, `koin`, `sqldelight`.
+- **Body** — ≤ ~100 words / ≤ 3 short paragraphs. If it doesn't fit, it's two lessons or a design doc.
+- **Source** — ≤ 1 sentence. Provenance, not a postmortem. Longer narratives belong in PR bodies.
 
 ### Example — active lesson
 
 ```markdown
-### L-2026-04-20-01 · Ktor `incoming` channel is passive
-**Status:** active · **Confidence:** confirmed · **Added:** 2026-04-20 · **Tags:** ktor, websocket, kmp
+### L-2026-04-20-01 · Ktor WebSocket incoming channel must be actively pulled
+**TL;DR:** Launch a dedicated coroutine to collect from a Ktor client WebSocket's `incoming` channel — it doesn't pull on its own.
+`active` · `confirmed` · 2026-04-20 · `ktor` `websocket` `kmp`
 **Applies to:** Ktor client WebSocket sessions using request/response multiplexing
 
-When using a Ktor client WebSocket, the `incoming` channel doesn't pull messages on its own. Launch a dedicated coroutine that collects from `incoming` in a loop, otherwise `CompletableDeferred`-based response pairing will hang. This is not a bug — it's how Ktor's channel model works.
+When using a Ktor client WebSocket, the `incoming` channel doesn't pull messages on its own. Launch a dedicated coroutine that collects from it in a loop, otherwise `CompletableDeferred`-based response pairing will hang. This is how Ktor's channel model works.
 
-**Source:** :shared module
+**Source:** `:shared` module's WebSocket request-multiplex layer.
 ```
 
 ### Example — superseded lesson
 
 ```markdown
 ### L-2025-11-02-01 · Use callbackFlow for WebSocket events
-**Status:** superseded by L-2026-04-20-01 · **Confidence:** tentative · **Added:** 2025-11-02 · **Tags:** ktor, websocket, kmp
+**TL;DR:** Wrap a Ktor WebSocket session's incoming channel in a `callbackFlow` to expose events.
+`superseded by L-2026-04-20-01` · `tentative` · 2025-11-02 · `ktor` `websocket` `kmp`
 **Applies to:** Ktor client WebSocket sessions
 
 Wrap the WebSocket session's `incoming` channel in a `callbackFlow` to expose events to the app layer.
 
-**Source:** initial WebSocket spike
+**Source:** Initial WebSocket spike.
 ```
 
-Only the `Status` line changed. Everything else is preserved so the archive remains an honest record of what was once believed.
+Only the status chip changed. Everything else is preserved so the archive remains an honest record of what was once believed.
 
 ## File template
 
@@ -159,9 +170,15 @@ When creating `.claude/lessons.md` for the first time, use this skeleton:
 
 Condensed, structured lessons from past development sessions. Claude reads this file at the start of each session (via a separate skill) so it can apply past learnings without re-deriving them.
 
-Each lesson has an immutable ID. When a lesson is superseded or turns out to be wrong, it is moved to `## Archive` with an updated `Status` line — its content is never rewritten. This preserves the audit trail.
+Each lesson has an immutable ID. When a lesson is superseded or turns out to be wrong, it is moved to `## Archive` with an updated status chip — its content is never rewritten. This preserves the audit trail.
 
-**Claude:** apply lessons from `## Active` only. Consult `## Archive` only if something appears contradictory and you need the history.
+**Claude:** apply lessons from `## Active` only. Consult `## Archive` only if something appears contradictory and you need the history. Ignore `## Index — Active` — it's a generated human-readable TOC, not a source of lesson content.
+
+## Index — Active
+<!-- generated; do not hand-edit -->
+
+| ID | TL;DR | Tags |
+|---|---|---|
 
 ## Active
 
@@ -175,8 +192,10 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 ## Output rules
 
 - **Never** write files before the user has approved the plan in chat.
-- **Never** edit the content of an existing lesson — only move it between sections and update its `Status` line.
+- **Never** edit the content of an existing lesson — only move it between sections and update its status chip.
+- **TL;DR backfill is the sole sanctioned edit to an existing lesson.** A `**TL;DR:** …` line may be inserted directly under the headline of any lesson (active or archived) that lacks one. **No other field may be added, removed, modified, or reordered.** Once a TL;DR is present, the lesson reverts to fully immutable.
 - **Never** truncate, reorder, or delete archived lessons. The archive is permanent.
+- **Always** regenerate `## Index — Active` in full as the last step of any write — never hand-edit individual rows. The index is a derived view; the lessons themselves are the source of truth.
 - If git is unavailable or the working tree is empty, rely on conversation alone and note this during scoping.
 - Keep new lessons per retro small. Three is already a lot; one well-chosen lesson is often the right output. If the session taught Claude nothing durable, say so and stop — "no new lessons" is a valid outcome.
 
@@ -190,17 +209,20 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 2. Runs `git log`, `git diff --stat`; notes changes in `:shared/src/commonMain/.../ws/`.
 3. Summarizes inline: *"We built WebSocket request/response multiplexing in `:shared`. Main friction was correlating responses to requests, and `incoming` not auto-pulling messages."*
 4. Proposes two candidates:
-    - `L-2026-04-20-01` · Ktor `incoming` channel is passive (confirmed)
+    - `L-2026-04-20-01` · Ktor WebSocket incoming channel must be actively pulled (confirmed)
     - `L-2026-04-20-02` · Correlation IDs for single-socket request multiplexing (confirmed)
 5. Reads existing `.claude/lessons.md`; finds `L-2025-11-02-01 · Use callbackFlow for WebSocket events`. The new lesson refines and replaces it. Flags the supersession.
 6. User approves both new lessons and the supersession.
-7. Prepends the two new lessons to `## Active`; moves `L-2025-11-02-01` to `## Archive` with `Status: superseded by L-2026-04-20-01`.
+7. Prepends the two new lessons to `## Active`; moves `L-2025-11-02-01` to `## Archive` with its status chip set to `superseded by L-2026-04-20-01`; regenerates `## Index — Active` so the new rows appear at the top.
 
 ## Anti-patterns — avoid these
 
 - **Over-saving.** If the session didn't teach Claude anything durable, "no new lessons" is the right answer. Say so and stop.
 - **Vague lessons.** "Be careful with coroutines" is noise. "When collecting Ktor's `incoming` channel, launch a dedicated coroutine — it's passive" is signal.
-- **Silently correcting old lessons.** If an earlier lesson turns out wrong, it gets superseded or deprecated via its `Status`. Never rewrite the original content — reviewability depends on the record staying honest.
+- **Silently correcting old lessons.** If an earlier lesson turns out wrong, it gets superseded or deprecated via its status chip. Never rewrite the original content — reviewability depends on the record staying honest.
 - **Running the skill for trivial changes.** A one-commit bugfix rarely produces durable lessons. If it does, fine; if not, skip the persist step.
 - **Treating `tentative` as `confirmed`.** If you only saw it work once, mark it tentative. A future session can promote it to confirmed via supersession after the pattern holds up.
 - **Reordering or pruning the archive.** The archive is an audit log. Its value comes from being complete.
+- **Hand-editing the index.** The index is a generated view, not a source of truth. Edits won't survive the next retro — fix the underlying lesson instead.
+- **Omitting the TL;DR.** A lesson without a TL;DR is unscannable and falls back to its headline in the index. The TL;DR is the one mandatory new field — write it.
+- **Using the TL;DR backfill exception as a hook to "tidy up" old lessons.** The exception is TL;DR-line addition only. Reflowing the body, converting old `**Status:**` metadata to chip style, rewording the headline, etc. are still forbidden — even when the temptation to "fix it while we're here" is strong.

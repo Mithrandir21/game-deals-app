@@ -2,13 +2,105 @@
 
 Condensed, structured lessons from past development sessions. Claude reads this file at the start of each session (via a separate skill) so it can apply past learnings without re-deriving them.
 
-Each lesson has an immutable ID. When a lesson is superseded or turns out to be wrong, it is moved to `## Archive` with an updated `Status` line — its content is never rewritten. This preserves the audit trail.
+Each lesson has an immutable ID. When a lesson is superseded or turns out to be wrong, it is moved to `## Archive` with an updated status chip — its content is never rewritten. This preserves the audit trail.
 
-**Claude:** apply lessons from `## Active` only. Consult `## Archive` only if something appears contradictory and you need the history.
+**Claude:** apply lessons from `## Active` only. Consult `## Archive` only if something appears contradictory and you need the history. Ignore `## Index — Active` — it's a generated human-readable TOC, not a source of lesson content.
+
+## Index — Active
+<!-- generated; do not hand-edit -->
+
+| ID | TL;DR | Tags |
+|---|---|---|
+| L-2026-05-18-07 | Default fix for return-value-checker drops on Room write methods is `@IgnorableReturnValue`, not Unit-return. | room, kmp, architecture, reactive |
+| L-2026-05-18-06 | `-Xreturn-value-checker=full` is warning-level — add `-Werror` to fail builds; coroutines/stdlib already annotate common drops. | kotlin-2.3, compiler-flags, coroutines, kmp |
+| L-2026-05-18-05 | Disable `reports.html.required` and `reports.junitXml.required` on every `KotlinNativeTest` to dodge the Gradle 9 ↔ KGP 2.3 report bug. | gradle-9, kgp, kotlin-native, ios, test-reports, tooling-bug |
+| L-2026-05-18-04 | Every Kotlin compilation consuming klibs built with `-Xexplicit-backing-fields` needs the same flag — audit the whole graph. | kotlin-2.3, kmp, gradle, convention-plugins, experimental-features |
+| L-2026-05-18-03 | Compose trusts `@Immutable` on a parent as authoritative — nested `data class` fields inside it can drop their own annotation. | compose, stability, kotlin, k2 |
+| L-2026-05-18-02 | Don't pass `null` to Coil 3.x `AsyncImage(model = …)` — guard the call site and render a placeholder `Image` instead. | coil, compose, logging, kmp |
+| L-2026-05-18-01 | Before adopting a KMP Gradle plugin, read its own `libs.versions.toml` for the `kotlin = "…"` pin — that's the real klib ABI source. | kmp, gradle, klib, dependencies, kotlin |
+| L-2026-05-17-16 | After launching an AVD for `connectedAndroidDeviceTest` locally, run `adb shell settings put global mdevx.grpc_guest_port 8554` once. | instrumented-tests, espresso-device, emulator, local-dev, ci-parity |
+| L-2026-05-17-15 | Gate `withDeviceTestBuilder { }` on `project.file("src/androidDeviceTest").exists()` so modules without tests skip the device-test pipeline. | agp-9, kmp-library-plugin, convention-plugins, instrumented-tests, conditional-config |
+| L-2026-05-17-14 | Set `androidResources { enable = true }` on every `com.android.kotlin.multiplatform.library` target, or Compose Resources fails. | agp-9, kmp-library-plugin, compose-multiplatform, compose-resources, gradle-config |
+| L-2026-05-17-13 | Bump `org.gradle.jvmargs` to `-Xmx8192m` — AGP 9 KMP-library dex-merge across many androidDeviceTest APKs OOMs at the 4 GB default. | agp-9, kmp-library-plugin, dex-merge, jvm-heap, gradle-properties, instrumented-tests |
+| L-2026-05-17-11 | CMP 1.11 needs Kotlin 2.3 on iOS targets and removes `iosX64()` — drop it from every KMP target list and matching KSP per-target deps. | compose-multiplatform, kotlin-native, ios, kmp, target-removal, upgrade |
+| L-2026-05-17-10 | On AGP 9 + KSP 2.3.x, set `android.disallowKotlinSourceSets=false` in `gradle.properties` to unblock KSP's source-set registration. | ksp, agp-9, kotlin-built-in, gradle-properties, workaround |
+| L-2026-05-17-09 | AGP 9 KMP-library is single-variant — `debugImplementation`, library `buildTypes.release { proguardFiles }`, and `buildConfig` are gone. | agp-9, kmp-library-plugin, build-variants, compose-tooling, buildconfig, proguard |
+| L-2026-05-17-08 | AGP 9 KMP-library renames `androidUnitTest`→`androidHostTest` and `androidInstrumentedTest`→`androidDeviceTest` — update files & CI. | agp-9, kmp-library-plugin, source-sets, gradle-tasks, ci, instrumented-tests |
+| L-2026-05-17-07 | Build scripts: `android {}`. Convention plugins: `targets.withType<KotlinMultiplatformAndroidLibraryTarget>().configureEach { … }`. | agp-9, kmp-library-plugin, convention-plugins, dsl, kotlin-multiplatform |
+| L-2026-05-17-05 | Before pushing a KMP Gradle plugin, run an iOS-target compile (`:…:compileKotlinIosArm64`) — Android smoke tests miss klib ABI skew. | kmp, gradle, kotlin-native, klib, ci |
+| L-2026-05-17-06 | Wire missing `dependsOn(compileXxxKotlin)` in a convention plugin to satisfy Gradle 9's strict task validator for third-party plugins. | gradle, kotlin-compile, task-validation, convention-plugin |
+| L-2026-05-17-01 | K2 in Kotlin 2.2.21 doesn't infer cross-module `data class` stability — annotate cross-module domain models with `@Immutable` explicitly. | compose, stability, recomposition, kmp, kotlin-2-2, k2 |
+| L-2026-05-17-02 | Prefer `@Immutable` over `stability_config.conf` — only `@Immutable` enables Compose lambda memoization and static-expression detection. | compose, stability, recomposition, lambda-memoization, annotations |
+| L-2026-05-17-03 | Verifying a Compose stability fix needs `--rerun-tasks` (or `rm -rf */build/compose-reports/`) — incremental compile skips regen. | compose, stability, gradle, incremental-compile, ci, verification |
+| L-2026-05-17-04 | Run `./gradlew compileDebugAndroidTestKotlinAndroid` before signature sweeps — `testDebugUnitTest` skips the instrumented-test source set. | testing, instrumented-tests, gradle, ci, signature-change |
+| L-2026-05-15-08 | Before adding retry infrastructure for a bug-hunt finding, check the error path can actually fire — Room observation flows rarely throw. | scope, bug-hunt, error-handling, viewmodel, refactor |
+| L-2026-05-15-07 | `Dispatchers.IO` is `internal` on Kotlin/Native — in `iosMain` use `Dispatchers.Default` or inject the dispatcher per platform. | kmp, coroutines, kotlin-native, dispatchers, ios |
+| L-2026-05-15-06 | Use `@Transaction suspend fun` default methods on `interface` DAOs for atomic RMW — Room 2.8.x KMP accepts them on Android and iOS. | room, kmp, ksp, dao, transaction, atomicity, sqlite |
+| L-2026-05-15-05 | Replace `Pair<A, B>` in any Compose parameter with a small named `@Immutable data class` — `Pair` is unstable even inside `ImmutableList`. | compose, stability, recomposition, immutable, pair, kotlinx-collections-immutable |
+| L-2026-05-15-04 | Swapping `Eagerly` for `WhileSubscribed(5_000)` on a VM `uiState` is not test-transparent — emission counts and trigger order shift. | testing, stateflow, sharingstarted, viewmodel, coroutines-test, mokkery, eagerly, whilesubscribed |
+| L-2026-05-15-03 | Where one platform's `actual` reads live OS state, the other's must too — default `expect`/`actual` pairs to per-call reads, never cached. | kmp, expect-actual, platform-parity, system-state, locale, timezone |
+| L-2026-05-15-02 | Add `@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)` whenever `iosMain` uses `CGRectMake`/`useContents` or cinterop APIs. | kotlin-native, cinterop, opt-in, ios, uikit |
+| L-2026-05-15-01 | ObjC category properties (e.g. `popoverPresentationController`) are bridged as top-level Kotlin extensions — add an explicit `import`. | kotlin-native, ios, uikit, objc-interop, imports |
+| L-2026-05-14-02 | In `*ScreenTest.kt`, hoist `stringResource` lookups into a per-class `ScreenSemantics` and wrap `setContent` in `setupCompose(...)`. | testing, compose, instrumented, boilerplate |
+| L-2026-05-14-01 | Never use `testTag` in production or tests — find nodes by `onNodeWithText`, `onNodeWithContentDescription`, or role matchers. | testing, compose, instrumented, accessibility, content-description |
+| L-2026-05-13-02 | Preview a `ModalBottomSheet`'s body composable directly inside `Surface { … }` — `ModalBottomSheet` itself renders blank in `@Preview`. | compose, preview, material3, modal-bottom-sheet |
+| L-2026-05-13-01 | In commonMain previews use the JetBrains `Preview` import + `@file:Suppress("DEPRECATION")` — the AndroidX one won't resolve on iOS. | compose, kmp, preview, jetbrains-compose, deprecation |
+| L-2026-05-11-05 | Adding a collected `StateFlow` to a ViewModel breaks strict MockK in `*ScreenTest.kt` — backfill `every { vm.newFlow } returns …` stubs. | testing, mockk, instrumentation, viewmodel, compose |
+| L-2026-05-11-04 | To test a Flow consumer's `.catch` recovery, return `flow { throw … }` from the Mokkery stub — not `every { … } throws`. | testing, mokkery, flow, kmp |
+| L-2026-05-11-03 | Mokkery's `MockMode.autoUnit` no-ops only Unit returns — stub every non-Unit call with `everySuspend { … } returns <default>`. | testing, mokkery, kmp, commontest |
+| L-2026-05-11-02 | Any new Koin module or `CompositionLocalProvider` must be wired in BOTH `:app:MainActivity` AND `:iosApp:MainViewController`. | kmp, compose-multiplatform, koin, composition-local, ios, dual-host |
+| L-2026-05-11-01 | Use a no-op singleton default for shared `staticCompositionLocalOf` — `error(...)` defaults crash every `@Preview` that reads the local. | compose, composition-local, preview, kmp |
+| L-2026-05-06-05 | Pass `canScroll = remember { { true } }` to `TopAppBarDefaults.pinnedScrollBehavior(...)` — the default lambda re-allocates each frame. | compose, recomposition, top-app-bar, material3, stable-lambda |
+| L-2026-05-06-04 | This project uses Mokkery for all `commonTest` mocking — MockK is JVM-only and is not used; the patterns doc on this is stale. | testing, mokkery, mockk, kmp, commontest |
+| L-2026-05-06-02 | Keep `compose.materialIconsExtended` — `compose.material3` doesn't pull in `material-icons-core`, so `Icons.*` fails to resolve. | compose, compose-multiplatform, gradle, dependencies |
+| L-2026-05-06-01 | Register the cross-module iOS-test-serialization `BuildService` against `KotlinNativeTest`, not `KotlinNativeHostTest` (excludes simulator). | gradle, kmp, kotlin-native, ios, build-service |
+| L-2026-05-05-04 | Don't integrate sentry-kotlin-multiplatform via Xcode SPM — K/N tests fail to link. Use the Gradle plugin or CocoaPods instead. | sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, gradle, version-skew |
+| L-2026-05-05-01 | Don't put `@BeforeTest`/`@AfterTest` on a KMP fixtures module's commonMain — `kotlin("test")` resolves them only in test source sets. | kmp, kotlin-test, source-sets, testing, fixtures-module |
+| L-2026-05-04-07 | Before adding an `org.jetbrains.androidx.*` artifact, read the existing transitive version from `:iosApp:dependencies` and pin to that. | kmp, kotlin-native, jetbrains-androidx-fork, version-skew, gradle |
+| L-2026-05-04-06 | From K/N, call `NSLog(line.replace("%","%%"))` — the vararg `%@` form crashes at runtime; `String` doesn't bridge to `NSString *`. | kotlin-native, ios, nslog, foundation, interop |
+| L-2026-05-04-05 | Use Koin 4.1.0+ for `koinViewModel()` from iOS Composables — 4.0.0 references `androidx.lifecycle.SavedStateHandle` and crashes on K/N. | koin, kmp, kotlin-native, lifecycle, irlinkageerror, koin-compose-viewmodel |
+| L-2026-05-04-04 | Align every Ktor artifact via the catalog BOM — a transitive forcing a higher core version causes Native `IrLinkageError` at first call. | ktor, kmp, kotlin-native, version-skew, irlinkageerror |
+| L-2026-05-04-03 | Prefer a commonMain Koin module + a platform module seeding the platform binding over `expect`/`actual` for platform-specific construction. | kmp, koin, di, room |
+| L-2026-05-04-02 | For phone-vs-wider in commonMain, wrap in `BoxWithConstraints` + check `maxWidth < 600.dp` — `WindowWidthSizeClass` is Android-only. | kmp, compose-multiplatform, adaptive-layout |
+| L-2026-05-04-01 | `paging-common` 3.3+ is KMP; `paging-compose` is Android-only. Put the paging ViewModel in commonMain, the Screen in androidMain. | kmp, paging, compose-multiplatform |
+| L-2026-05-03-06 | Same-named top-level `.kt` files in commonMain and androidMain need `@file:JvmName("…")` on one side, else duplicate JVM classes. | kmp, kotlin, jvm, source-sets, file-naming |
+| L-2026-05-03-05 | In a convention plugin that calls `pluginManager.apply("third.party")`, declare the upstream plugin as `implementation`, not `compileOnly`. | gradle, build-logic, convention-plugins, kmp, compose-multiplatform |
+| L-2026-05-03-04 | When removing Hilt from a module that uses `@Immutable`, explicitly add `implementation(libs.androidx.compose.runtime)` — KSP needs it. | ksp, room, hilt-removal, compose-runtime, transitive-deps, kmp |
+| L-2026-05-03-03 | For already-encoded query values use `url { encodedParameters.append(...) }` — `parameter(...)` always re-encodes and produces 404s. | ktor, retrofit-migration, url-encoding, networking, kmp |
+| L-2026-05-03-02 | Set Ktor `Logging` to `LogLevel.HEADERS` on the OkHttp engine — `LogLevel.BODY` consumes the one-shot body and hangs `body<T>()`. | ktor, ktor-logging, okhttp-engine, content-negotiation, networking, kmp |
+| L-2026-05-03-01 | A module opting out of the convention plugin must declare `debugImplementation(libs.androidx.compose.test)` or `createComposeRule` fails. | gradle, convention-plugins, build-logic, compose-testing, ui-test-manifest, test-infra |
+| L-2026-05-02-10 | Re-verify bug-hunt findings against `origin/<merge-target>` HEAD before working them — wave branches drift while `dev` moves on. | workflow, planner-agents, worker-agents, merge-target-drift, github-sync, github-issue-waves |
+| L-2026-05-02-09 | Don't mix `currentTimeMillis()` with `delay()` in suspend helpers — `runTest` virtualizes only `delay`, so wall-clock checks break tests. | coroutines, test-virtual-time, runtest, dispatchers, common-helpers |
+| L-2026-05-02-08 | When one function writes both upstream of `combine` and into `_uiState`, do the upstream write first — combine propagates synchronously. | stateflow, combine, viewmodel, race-conditions, ordering, source-of-truth |
+| L-2026-05-02-07 | Fix StateFlow conflation by swapping to `MutableSharedFlow(replay = 1, DROP_OLDEST)` — never break `equals` on the model type. | stateflow, sharedflow, conflation, compose, stability, equals-override, anti-pattern |
+| L-2026-05-02-06 | Wrap caller lambdas in `rememberUpdatedState` before capturing in `LaunchedEffect` — otherwise it keeps firing the launch-time copy. | compose, launchedeffect, rememberupdatedstate, stale-capture, lambda-capture |
+| L-2026-05-02-05 | Stub hot Flow sources with `MutableSharedFlow`, not `flowOf(...)` — `flowOf` completes after one emission and hides second-emission races. | testing, coroutines, flow, room, race-conditions, test-fixtures |
+| L-2026-05-02-04 | In any `catch (Throwable)` whose body suspends, rethrow `CancellationException` first — otherwise structured cancellation breaks silently. | coroutines, cancellation, structured-concurrency, error-handling, crashlytics |
+| L-2026-05-02-03 | When a shared type adopts a third-party type/extension, add the dep to every consumer module — `implementation` doesn't propagate. | gradle, modularization, kotlinx-collections-immutable, dependency-graph, build-config |
+| L-2026-05-02-02 | Mark every `:domain` `data class` used as a Composable parameter `@Immutable` and retype its `List<…>` fields to `ImmutableList<…>`. | compose, stability, recomposition, immutable-collections, kotlinx-serialization |
+| L-2026-05-02-01 | Use `_uiState.update { it.copy(...) }` for field-level merges; reserve `emit(...)` for full-state replacements driven by an upstream Flow. | viewmodel, stateflow, coroutines, race-conditions, atomicity |
+| L-2026-05-01-09 | `remember` clients outside `AndroidView`'s `factory` and wire `onRelease` to tear the native view down (e.g. `WebView.destroy()`). | compose, androidview, webview, lifecycle, memory-leak |
+| L-2026-05-01-08 | For one-off debug-build checks, use `(applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0` — avoids opting into BuildConfig. | android, agp, buildconfig, debug-gate, gradle |
+| L-2026-05-01-07 | Under `UnconfinedTestDispatcher`, a correctly-shaped VM emits one steady `uiState` — don't assert `[initial, current]`. | viewmodel, stateflow, coroutines, testing, unconfined-test-dispatcher |
+| L-2026-05-01-06 | In `:common:ui`, get the host Activity via nullable `LocalActivity.current` — `view.context as Activity` crashes `@Preview` and tests. | compose, theme, activity, common-ui, preview-safety |
+| L-2026-05-01-05 | In Flow operators that may run under `TestDispatcher`, pad via parallel `launch { delay(...) }`/join — never `currentTimeMillis()`. | kotlin, coroutines, flow, testing, virtual-time |
+| L-2026-05-01-04 | Don't `.catch` after `.cachedIn(...)` on a Paging Flow — let `LoadState.Error` surface load failures or the Flow pins to its last cache. | paging, coroutines, flow, viewmodel, error-handling |
+| L-2026-05-01-01 | Read nav args in VMs via `savedStateHandle.get<Primitive>("propName")` — `toRoute<>()` round-trips through `Bundle` and breaks JVM tests. | navigation, compose, viewmodel, testing |
+| L-2026-05-01-02 | Don't add Robolectric — find a JVM-only path or move the test to `androidTest`. Robolectric is rejected for this project. | testing, robolectric, project-policy |
+| L-2026-05-01-03 | When dropping a `:domain` interface whose `@Inject` impl took internal Daos, mark the renamed concrete class `@Inject internal constructor`. | hilt, di, kotlin-visibility, multi-module |
+| L-2026-04-30-06 | Expose VM `uiState` via `_uiState.asStateFlow()` — `stateIn(WhileSubscribed, …)` wraps produce a spurious LOADING flash on resume. | viewmodel, stateflow, coroutines, compose |
+| L-2026-04-30-05 | Keep `flow { emitAll(repo.observeXxx()) }.catch{}` wrappers — they convert sync repo throws into in-stream errors `.catch` can handle. | kotlin, coroutines, flow, repository, error-handling |
+| L-2026-04-30-04 | Keep ViewModel handlers Flow-shaped (`launch { someFlow.onStart{…}.catch{…}.collect{…} }`) — don't lower to imperative `try/catch`. | kotlin, coroutines, flow, viewmodel, architecture |
+| L-2026-04-30-03 | Put integration tests inside the module that owns the `internal` collaborators — never add a test-only factory in `main/` to expose them. | testing, multi-module, mockwebserver, internal-visibility |
+| L-2026-04-30-02 | Set CI's `setup-java` `java-version` ≥ `compileOptions.targetCompatibility` — Hilt's `JavaCompile` doesn't use the Kotlin toolchain. | ci, gradle, hilt, jdk, github-actions |
+| L-2026-04-30-01 | When the port lives in `:domain` and the `@Provides` impl in `:remote:*`, `:app` must depend on every `:remote:*` so Hilt sees the modules. | hilt, di, multi-module, ports-and-adapters, architecture |
+| L-2026-04-27-01 | In Flow chains, prefer the `catchAndContinue(default, action)` helper over `runCatching` — keeps error handling on the Flow itself. | kotlin, coroutines, flow, error-handling |
+| L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
 
 ### L-2026-05-18-07 · Room `@Query` Flow observation makes repository write-method return values structurally redundant
+**TL;DR:** Default fix for return-value-checker drops on Room write methods is `@IgnorableReturnValue`, not Unit-return.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** room, kmp, architecture, reactive
 **Applies to:** Repository / DAO methods that mutate Room tables whose state is also observed via `@Query` Flows
 
@@ -17,6 +109,7 @@ In this codebase the UI never consumes the Boolean from `FavouritesRepository.to
 **Source:** `FavouritesRepository.toggleFavourite` triage during `-Xreturn-value-checker=full` rollout
 
 ### L-2026-05-18-06 · Kotlin 2.3 `-Xreturn-value-checker=full` is warning-level; kotlinx.coroutines/stdlib pre-annotate the common drops
+**TL;DR:** `-Xreturn-value-checker=full` is warning-level — add `-Werror` to fail builds; coroutines/stdlib already annotate common drops.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kotlin-2.3, compiler-flags, coroutines, kmp
 **Applies to:** Adopting or tuning `-Xreturn-value-checker` in any KMP / Android module
 
@@ -25,6 +118,7 @@ In this codebase the UI never consumes the Boolean from `FavouritesRepository.to
 **Source:** PR adopting `-Xreturn-value-checker=full` (commit 192bf84) and the noise-vs-prediction triage during rollout
 
 ### L-2026-05-18-05 · `iosSimulatorArm64Test` `Index N out of bounds for length 2` failures are Gradle 9 ↔ KGP 2.3 generic-report deserialization
+**TL;DR:** Disable `reports.html.required` and `reports.junitXml.required` on every `KotlinNativeTest` to dodge the Gradle 9 ↔ KGP 2.3 report bug.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** gradle-9, kgp, kotlin-native, ios, test-reports, tooling-bug
 **Applies to:** Any `KotlinNativeTest` task (`iosSimulatorArm64Test`, `iosArm64Test`) on Gradle 9.x + KGP 2.3.x — independent of whether tests use throwing mocks
 
@@ -33,6 +127,7 @@ Gradle 9 introduced new "generic" test report infrastructure (`org.gradle.api.in
 **Source:** Post-Kotlin-2.3 migration follow-up — full diagnosis via `--stacktrace --info` traced to `BaseSerializerFactory$EnumSerializer.read`; failure pattern matched four feature modules independent of mock usage
 
 ### L-2026-05-18-04 · Kotlin 2.3 `-Xexplicit-backing-fields` propagates pre-release status — every consumer needs the flag
+**TL;DR:** Every Kotlin compilation consuming klibs built with `-Xexplicit-backing-fields` needs the same flag — audit the whole graph.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kotlin-2.3, kmp, gradle, convention-plugins, experimental-features
 **Applies to:** Any opt-in to Kotlin 2.3 experimental language features (KEEP-278 explicit backing fields, and similar future opt-ins) in a multi-module project
 
@@ -41,6 +136,7 @@ Adding `freeCompilerArgs.add("-Xexplicit-backing-fields")` to producer modules s
 **Source:** ViewModels migration to KEEP-278 — `:app:compileReleaseKotlin` failed first (missed app plugin); `:iosApp:compileKotlinIosArm64` failed second (missed iosApp build script)
 
 ### L-2026-05-18-03 · Compose compiler trusts an `@Immutable` parent class as authoritative — nested `data class` fields don't need their own annotation
+**TL;DR:** Compose trusts `@Immutable` on a parent as authoritative — nested `data class` fields inside it can drop their own annotation.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** compose, stability, kotlin, k2
 **Applies to:** Adding `@Immutable` to cross-module domain models (companion to L-2026-05-17-01)
 
@@ -49,6 +145,7 @@ When a data class `Parent` carries an `@Immutable` annotation, the Compose compi
 **Source:** PR #174 K2 inference cleanup — dropped 8 of 18 `@Immutable` annotations from PR #166 without any composable flipping to unstable
 
 ### L-2026-05-18-02 · Coil 3.x `AsyncImage(model = null)` logs `NullRequestDataException` even when a Painter `error`/`fallback` is set
+**TL;DR:** Don't pass `null` to Coil 3.x `AsyncImage(model = …)` — guard the call site and render a placeholder `Image` instead.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** coil, compose, logging, kmp
 **Applies to:** Any `AsyncImage` call whose `model` is reached through `?.` chains (i.e. a value that may be null on the first composition before a ViewModel emits)
 
@@ -57,6 +154,7 @@ The Painter-level `error` and `fallback` parameters render the placeholder corre
 **Source:** :feature:store StoreScreen banner bug — surfaced via R8'd release-build logcat smoke test
 
 ### L-2026-05-18-01 · Check the upstream's own `libs.versions.toml` to predict KLIB ABI compatibility for a KMP Gradle plugin
+**TL;DR:** Before adopting a KMP Gradle plugin, read its own `libs.versions.toml` for the `kotlin = "…"` pin — that's the real klib ABI source.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-18 · **Tags:** kmp, gradle, klib, dependencies, kotlin
 **Applies to:** Picking a version of a Gradle plugin that publishes KMP runtime klibs (iosArm64, etc.) for a project on a specific Kotlin version
 
@@ -65,6 +163,7 @@ A plugin's release notes claim a Kotlin version pin only for the *source*. Its p
 **Source:** PR #173 Compose Stability Analyzer 0.7.5 revival — picked 0.7.5 by reading upstream's own catalog (`kotlin = "2.3.21"`) at HEAD before adopting
 
 ### L-2026-05-17-16 · Local `connectedAndroidDeviceTest` needs `adb shell settings put global mdevx.grpc_guest_port 8554` for `androidx.test.espresso.device` to find the emulator gRPC service
+**TL;DR:** After launching an AVD for `connectedAndroidDeviceTest` locally, run `adb shell settings put global mdevx.grpc_guest_port 8554` once.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** instrumented-tests, espresso-device, emulator, local-dev, ci-parity
 **Applies to:** Running `connectedAndroidDeviceTest` locally on a standard Android-Studio-launched emulator (not via Gradle Managed Devices) when any test uses `androidx.test.espresso.device 1.1.0+`
 
@@ -73,6 +172,7 @@ The espresso-device API reads the emulator's gRPC control port from a `Settings.
 **Source:** chore/upgrade-kotlin-2.3-kmp · post-migration `connectedAndroidDeviceTest` run — 9 of 81 tests initially failed with the gRPC error, fixed by setting the property locally to match CI
 
 ### L-2026-05-17-15 · Under the AGP 9 KMP-library plugin, gate `withDeviceTestBuilder { }` on a real `src/androidDeviceTest/` directory
+**TL;DR:** Gate `withDeviceTestBuilder { }` on `project.file("src/androidDeviceTest").exists()` so modules without tests skip the device-test pipeline.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, instrumented-tests, conditional-config
 **Applies to:** Writing a convention plugin that applies `com.android.kotlin.multiplatform.library` to library modules where some have device tests and some don't (the typical pattern in a multi-module Android+KMP project)
 
@@ -81,6 +181,7 @@ If the convention plugin calls `withDeviceTestBuilder { }.configure { instrument
 **Source:** chore/upgrade-kotlin-2.3-kmp · `:common`, `:domain`, `:logging`, `:testing`, `:remote*`, `:feature:favourites` all hit the runner-class-not-found crash on first `connectedAndroidDeviceTest` run; gating fixed it without touching any module's build file
 
 ### L-2026-05-17-14 · Under the AGP 9 KMP-library plugin, Compose Multiplatform resources require `androidResources { enable = true }` explicitly
+**TL;DR:** Set `androidResources { enable = true }` on every `com.android.kotlin.multiplatform.library` target, or Compose Resources fails.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, compose-multiplatform, compose-resources, gradle-config
 **Applies to:** Any KMP module that applies `com.android.kotlin.multiplatform.library` + Compose Multiplatform Resources (i.e. `org.jetbrains.compose` with `compose.components.resources`), which in this repo is every module applying `gamedeals.kmp.library.compose`
 
@@ -89,6 +190,7 @@ AGP 9's KMP-library plugin disables Android resource processing by default — d
 **Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui:copyAndroidDeviceTestComposeResourcesToAndroidAssets FAILED` on first `connectedAndroidDeviceTest` invocation; one-line convention plugin fix unblocked everything downstream
 
 ### L-2026-05-17-13 · Under the AGP 9 KMP-library plugin, dex-merge across many `androidDeviceTest` APKs OOMs at the 4GB default heap
+**TL;DR:** Bump `org.gradle.jvmargs` to `-Xmx8192m` — AGP 9 KMP-library dex-merge across many androidDeviceTest APKs OOMs at the 4 GB default.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, dex-merge, jvm-heap, gradle-properties, instrumented-tests
 **Applies to:** Running `connectedAndroidDeviceTest` on a multi-module project (7+ library modules with device tests) after migrating to `com.android.kotlin.multiplatform.library`
 
@@ -97,6 +199,7 @@ The new plugin produces one `androidDeviceTest` test APK per library module that
 **Source:** chore/upgrade-kotlin-2.3-kmp · first `connectedAndroidDeviceTest` run with 4GB heap reproducibly OOM'd in 4 simultaneous `mergeExtDexAndroidDeviceTest` workers (`:common:ui`, `:feature:favourites`, `:feature:game`, `:feature:giveaways`); 8GB bump cleared it
 
 ### L-2026-05-17-11 · CMP 1.11 requires Kotlin 2.3 on iOS targets and removes `iosX64` (Apple x86_64) entirely
+**TL;DR:** CMP 1.11 needs Kotlin 2.3 on iOS targets and removes `iosX64()` — drop it from every KMP target list and matching KSP per-target deps.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose-multiplatform, kotlin-native, ios, kmp, target-removal, upgrade
 **Applies to:** Any bump of `org.jetbrains.compose` to 1.11.0+ in a KMP project with iOS targets, especially convention plugins that still declare `iosX64()`
 
@@ -105,6 +208,7 @@ Two coupled requirements: (1) Kotlin 2.3+ is mandatory for native/iOS targets wh
 **Source:** chore/upgrade-kotlin-2.3-kmp · linker failures on first CMP 1.11 + iOS compile pointed at the `iosX64()` declarations
 
 ### L-2026-05-17-10 · KSP 2.3.x writes to `kotlin.sourceSets` but AGP 9 built-in Kotlin disallows it — set `android.disallowKotlinSourceSets=false`
+**TL;DR:** On AGP 9 + KSP 2.3.x, set `android.disallowKotlinSourceSets=false` in `gradle.properties` to unblock KSP's source-set registration.
 **Status:** tentative · **Confidence:** confirmed for KSP 2.3.8 / AGP 9.1.1 · **Added:** 2026-05-17 · **Tags:** ksp, agp-9, kotlin-built-in, gradle-properties, workaround
 **Applies to:** Any project on AGP 9.x + Kotlin built-in support (`android.builtInKotlin=true`, the AGP-9 default) where KSP 2.3.x is applied to an Android-target module
 
@@ -113,6 +217,7 @@ Configuration fails with `"Using kotlin.sourceSets DSL to add Kotlin sources is 
 **Source:** chore/upgrade-kotlin-2.3-kmp · first failure after dropping `org.jetbrains.kotlin.android` from the application convention plugin
 
 ### L-2026-05-17-09 · AGP 9 KMP-library is single-variant — `debugImplementation`, `buildTypes.release { proguardFiles }`, and `buildFeatures.buildConfig` are all gone
+**TL;DR:** AGP 9 KMP-library is single-variant — `debugImplementation`, library `buildTypes.release { proguardFiles }`, and `buildConfig` are gone.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, build-variants, compose-tooling, buildconfig, proguard
 **Applies to:** Any module migrated from `com.android.library` to `com.android.kotlin.multiplatform.library` under AGP 9.1+
 
@@ -121,6 +226,7 @@ The new plugin produces one variant per module; everything keyed on `debug`/`rel
 **Source:** chore/upgrade-kotlin-2.3-kmp · `:common:ui` failed `debugImplementation` resolution; `:remote` lost `BuildConfig.BUILD_TYPE` access; central convention plugin needed both fixes
 
 ### L-2026-05-17-08 · AGP 9 KMP-library plugin renames test source sets AND Gradle test tasks — propagates to CI
+**TL;DR:** AGP 9 KMP-library renames `androidUnitTest`→`androidHostTest` and `androidInstrumentedTest`→`androidDeviceTest` — update files & CI.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, source-sets, gradle-tasks, ci, instrumented-tests
 **Applies to:** Every KMP module migrated to `com.android.kotlin.multiplatform.library` and every Gradle task name referenced from CI, scripts, or docs
 
@@ -129,6 +235,7 @@ Source-set names: `androidUnitTest` → `androidHostTest`; `androidInstrumentedT
 **Source:** chore/upgrade-kotlin-2.3-kmp · first surfaced as `"KotlinSourceSet with name 'androidUnitTest' not found"` at `:common:build.gradle.kts:33` configuration time; CI workflow needed a paired edit
 
 ### L-2026-05-17-07 · `com.android.kotlin.multiplatform.library` DSL accessor: `android {}` from build scripts, `targets.withType<KotlinMultiplatformAndroidLibraryTarget>` from convention plugins
+**TL;DR:** Build scripts: `android {}`. Convention plugins: `targets.withType<KotlinMultiplatformAndroidLibraryTarget>().configureEach { … }`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** agp-9, kmp-library-plugin, convention-plugins, dsl, kotlin-multiplatform
 **Applies to:** Writing or migrating precompiled convention plugins in `build-logic` for projects on AGP 8.12+ that use the new `com.android.kotlin.multiplatform.library` plugin
 
@@ -137,6 +244,7 @@ Per Android dev docs: the configuration block was called `androidLibrary {}` in 
 **Source:** chore/upgrade-kotlin-2.3-kmp · two failed compile attempts (one each on `androidLibrary { }` and `android { }`) before discovering the typed-API path via `developer.android.com/kotlin/multiplatform/kmp-integration`. The repo's older `docs/kotlin-2.3-upgrade-findings.md` recommended `androidLibrary { }` and was outdated.
 
 ### L-2026-05-17-05 · Validate KMP-targeted Gradle plugins on an iOS-target compile task before pushing — Android-only smoke tests miss KLIB ABI mismatches
+**TL;DR:** Before pushing a KMP Gradle plugin, run an iOS-target compile (`:…:compileKotlinIosArm64`) — Android smoke tests miss klib ABI skew.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** kmp, gradle, kotlin-native, klib, ci
 **Applies to:** Adopting any third-party Gradle plugin that publishes a multiplatform runtime (e.g. a `*-runtime-iosArm64` klib alongside the JVM/Android artifact) into a Kotlin Multiplatform project — especially when the plugin's release notes claim a Kotlin-version pin
 
@@ -145,6 +253,7 @@ A plugin's "Kotlin 2.2 language level" pin in release notes only covers the **Gr
 **Source:** PR #167 (closed) — compose-stability-analyzer integration attempt
 
 ### L-2026-05-17-06 · Gradle 9.x rejects implicit compile-output reads; wire missing `dependsOn` in a convention plugin as a workaround
+**TL;DR:** Wire missing `dependsOn(compileXxxKotlin)` in a convention plugin to satisfy Gradle 9's strict task validator for third-party plugins.
 **Status:** active · **Confidence:** tentative · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-compile, task-validation, convention-plugin
 **Applies to:** Adopting a third-party Gradle plugin whose tasks read other tasks' outputs (typically `compileXxxKotlin[Android]`) without declaring the dependency — Gradle 9.x's task validator hard-fails this with `Task ':X' uses this output of task ':Y' without declaring an explicit or implicit dependency`
 
@@ -161,6 +270,7 @@ Call from each convention plugin that applies the upstream plugin. Mark the help
 **Source:** PR #167 (closed) — compose-stability-analyzer integration attempt
 
 ### L-2026-05-17-01 · K2 Compose plugin (Kotlin 2.2.21) does NOT auto-infer cross-module data classes as stable
+**TL;DR:** K2 in Kotlin 2.2.21 doesn't infer cross-module `data class` stability — annotate cross-module domain models with `@Immutable` explicitly.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, kmp, kotlin-2-2, k2
 **Applies to:** Any `data class` defined in a module that does not apply the Compose compiler plugin (e.g. `:domain` is pure KMP) and is consumed as a parameter — directly or transitively — by a `@Composable` in a feature module
 
@@ -169,6 +279,7 @@ The Compose stability classifier treats cross-module data classes as `Stability.
 **Source:** PR #166 — Compose stability retype + metrics
 
 ### L-2026-05-17-02 · `@Immutable` is strictly stronger than a `stability_config.conf` entry — prefer it when feasible
+**TL;DR:** Prefer `@Immutable` over `stability_config.conf` — only `@Immutable` enables Compose lambda memoization and static-expression detection.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, recomposition, lambda-memoization, annotations
 **Applies to:** Deciding between (a) annotating a model `@Immutable` (with the Compose-runtime dep cost on the module that owns the class) and (b) listing the class in a `stability_config.conf` / `composeCompiler.stabilityConfigurationFiles` entry
 
@@ -177,6 +288,7 @@ Both paths flip the class to `Stability.Stable` so per-row composables become `@
 **Source:** PR #166 — choosing between strategies during plan-mode
 
 ### L-2026-05-17-03 · Stability-fix verification needs `--rerun-tasks` (or per-module `build/compose-reports/` cleanup)
+**TL;DR:** Verifying a Compose stability fix needs `--rerun-tasks` (or `rm -rf */build/compose-reports/`) — incremental compile skips regen.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** compose, stability, gradle, incremental-compile, ci, verification
 **Applies to:** Verifying a Compose stability change by re-reading `<module>/build/compose-reports/*-classes.txt` / `*-composables.txt` after annotating or retyping an upstream `:domain` type
 
@@ -185,6 +297,7 @@ When the only change to an upstream module is a `@Immutable` annotation (no beha
 **Source:** PR #166 — caught a false-negative diff during Step 9 verification
 
 ### L-2026-05-17-04 · `./gradlew testDebugUnitTest` does NOT compile `androidInstrumentedTest` sources — CI will surface the gap
+**TL;DR:** Run `./gradlew compileDebugAndroidTestKotlinAndroid` before signature sweeps — `testDebugUnitTest` skips the instrumented-test source set.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** testing, instrumented-tests, gradle, ci, signature-change
 **Applies to:** Any change that alters a public Composable parameter type or ViewModel `StateFlow` shape — i.e. anything that would force a test fixture or mockk stub to update
 
@@ -193,6 +306,7 @@ When the only change to an upstream module is a `@Immutable` annotation (no beha
 **Source:** PR #166 — CI red after the first push; four `MutableStateFlow(emptySet())` / `listOf(...)` literals in instrumented-tests had been missed
 
 ### L-2026-05-15-08 · When a bug-hunt finding's error path is practically unreachable, drop the fix or relabel — don't infrastructure-wrap a dead branch
+**TL;DR:** Before adding retry infrastructure for a bug-hunt finding, check the error path can actually fire — Room observation flows rarely throw.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** scope, bug-hunt, error-handling, viewmodel, refactor
 **Applies to:** Implementing a `severity:low`/`severity:medium` bug-hunt finding that recommends adding retry/recovery infrastructure to an error path — before adding `retryTrigger` + `flatMapLatest` + hoisted `onRetry` lambdas + preview proliferation, ask whether the error path can realistically fire
 
@@ -201,6 +315,7 @@ Before implementing the literal "option (a): add a retry method" route for a bug
 **Source:** Issue #145 / PR #159 — first pass added a full `retryTrigger`-driven retry to both StoreViewModel (legitimate: contains a one-shot `getStoreDetails` HTTP call) and FavouritesViewModel (unreachable: only observes a Room flow). User pushback led to dropping the Favourites half (revert VM + test to dev; relabel snackbar action to "Back" reusing existing string); kept Store's retry. Net diff fell from ~174 LoC to ~92 LoC.
 
 ### L-2026-05-15-07 · `Dispatchers.IO` is internal on Kotlin/Native in every source set — commonMain AND iosMain
+**TL;DR:** `Dispatchers.IO` is `internal` on Kotlin/Native — in `iosMain` use `Dispatchers.Default` or inject the dispatcher per platform.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kmp, coroutines, kotlin-native, dispatchers, ios
 **Applies to:** any K/N-targeting source set that wants an IO-tagged dispatcher — commonMain, iosMain, macosMain, etc.
 
@@ -209,6 +324,7 @@ Before implementing the literal "option (a): add a retry method" route for a bug
 **Source:** Issue #146 / PR #158 — Room `setQueryCoroutineContext` fix. Sub-agent followed the older lesson's wording, tried `Dispatchers.IO` in `iosMain`, hit the internal-access compile error, switched to `Dispatchers.Default`.
 
 ### L-2026-05-15-06 · Room `@Transaction suspend fun` default methods on `interface` DAOs work cleanly on Room 2.8.x KMP — both Android and iOS KSP
+**TL;DR:** Use `@Transaction suspend fun` default methods on `interface` DAOs for atomic RMW — Room 2.8.x KMP accepts them on Android and iOS.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** room, kmp, ksp, dao, transaction, atomicity, sqlite
 **Applies to:** Any `FooDao` `interface` in `:domain` that needs atomic read-modify-write (e.g. toggle, conditional-insert, upsert with a side check) — and would otherwise tempt you into a non-atomic `.first()` + `add()` shape in the repository
 
@@ -219,6 +335,7 @@ One operational note: when pushing logic from the repo into a DAO, factor any wa
 **Source:** Issue #150 / PR #161 — `FavouritesRepository.toggleFavourite` previously did `observeIsFavourite(gameId).first()` + `add`/`remove` (TOCTOU). Replaced with `FavouritesDao.toggleFavourite` `@Transaction` default method; KSP accepted on both Android and iOS without complaint.
 
 ### L-2026-05-15-05 · `Pair<A, B>` in a Compose parameter type is unstable regardless of `ImmutableList` wrapping
+**TL;DR:** Replace `Pair<A, B>` in any Compose parameter with a small named `@Immutable data class` — `Pair` is unstable even inside `ImmutableList`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** compose, stability, recomposition, immutable, pair, kotlinx-collections-immutable
 **Applies to:** Any `@Composable` whose parameter type is `List<Pair<A, B>>` or `ImmutableList<Pair<A, B>>` (including types nested inside `@Immutable data class` UI-state holders consumed by a composable)
 
@@ -227,6 +344,7 @@ One operational note: when pushing logic from the repo into a DAO, factor any wa
 **Source:** Issue #147 / PR #163 — `GameViewModel.dealDetails: ImmutableList<Pair<Store, GameDetails.GameDeal>>` was claimed "correctly typed" in closed #80 but actually still defeated skipping. Replaced with `ImmutableList<StoreDealPair>` (`@Immutable data class StoreDealPair(val store: Store, val deal: GameDetails.GameDeal)`); same pattern applied to `DealBottomSheetData.cheaperStores` via `StoreCheaperStorePair`.
 
 ### L-2026-05-15-04 · `SharingStarted.Eagerly` → `WhileSubscribed(5_000)` swap on a VM's `uiState` is NOT test-transparent
+**TL;DR:** Swapping `Eagerly` for `WhileSubscribed(5_000)` on a VM `uiState` is not test-transparent — emission counts and trigger order shift.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** testing, stateflow, sharingstarted, viewmodel, coroutines-test, mokkery, eagerly, whilesubscribed
 **Applies to:** Any future migration of a ViewModel's `uiState = upstream.stateIn(viewModelScope, SharingStarted.Eagerly, initialValue)` to `SharingStarted.WhileSubscribed(5_000)` — relevant when the project's `Eagerly` outliers are aligned with the prevailing convention
 
@@ -240,6 +358,7 @@ In the Giveaways migration, 5 of 11 existing tests required adjustment under one
 **Source:** Issue #149 / PR #162 — switched `GiveawaysViewModel.uiState` from `Eagerly` to `WhileSubscribed(5_000)`; broke 5 tests, all fixed via the two patterns above.
 
 ### L-2026-05-15-03 · `actual` implementations must agree on whether system state is read live per call or cached
+**TL;DR:** Where one platform's `actual` reads live OS state, the other's must too — default `expect`/`actual` pairs to per-call reads, never cached.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kmp, expect-actual, platform-parity, system-state, locale, timezone
 **Applies to:** Any `expect`/`actual` pair where the function reads OS-provided state (locale, timezone, theme, network status, screen metrics) — the `actual`s on different platforms must agree on the read strategy.
 
@@ -248,6 +367,7 @@ If one platform's `actual` reads live OS state on every call (e.g. iOS `formatLo
 **Source:** Issue #143 / PR #154 — Android `formatLocaleAwareDate` built a `private val DateTimeFormatter` once with `Locale.getDefault()` + `ZoneId.systemDefault()` at class load while the iOS actual read both per call. Fix: construct the formatter inside the function on each call.
 
 ### L-2026-05-15-02 · `CGRectMake` and `cValue<T>.useContents { ... }` require file-level `@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)`
+**TL;DR:** Add `@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)` whenever `iosMain` uses `CGRectMake`/`useContents` or cinterop APIs.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kotlin-native, cinterop, opt-in, ios, uikit
 **Applies to:** Any K/N `iosMain` code that builds a C value via the `*Make` helpers (`CGRectMake`, `CGPointMake`, `CGSizeMake`), reads from a `cValue<T>` via `useContents { ... }`, or otherwise touches the `kotlinx.cinterop` foreign-API surface in current Kotlin/Native (2.2.x).
 
@@ -256,6 +376,7 @@ These APIs are gated behind `kotlinx.cinterop.ExperimentalForeignApi`. Without a
 **Source:** Issue #144 / PR #155 — `IosPlatformActions.share` configures `popoverPresentationController.sourceRect` via `CGRectMake(...)` and reads `keyWindow.bounds.useContents { ... }`; first compile failed on the opt-in until a file-level `@file:OptIn` was added.
 
 ### L-2026-05-15-01 · K/N exposes Objective-C **category** properties as top-level extension properties, not as members
+**TL;DR:** ObjC category properties (e.g. `popoverPresentationController`) are bridged as top-level Kotlin extensions — add an explicit `import`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-15 · **Tags:** kotlin-native, ios, uikit, objc-interop, imports
 **Applies to:** K/N `iosMain` code reading any property that Apple defined via an Objective-C category on a UIKit (or Foundation) class — common examples include `UIViewController.popoverPresentationController`, `UIView.safeAreaInsets`, or anything from `UIKit/UIView+Additions.h`-style headers.
 
@@ -264,6 +385,7 @@ Regular Objective-C members on a class are bridged as Kotlin member access (`vie
 **Source:** Issue #144 / PR #155 — `UIActivityViewController.popoverPresentationController?.sourceView` failed to compile until `import platform.UIKit.popoverPresentationController` was added. `sourceView` and `sourceRect` on `UIPopoverPresentationController` itself are regular members and needed no import.
 
 ### L-2026-05-14-02 · Per-test-class `ScreenSemantics` + `setupCompose` in instrumented UI tests
+**TL;DR:** In `*ScreenTest.kt`, hoist `stringResource` lookups into a per-class `ScreenSemantics` and wrap `setContent` in `setupCompose(...)`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, boilerplate
 **Applies to:** Any new instrumented `*ScreenTest.kt` with ≥2 string-resource lookups or ≥2 `setContent` blocks
 
@@ -274,6 +396,7 @@ Full pattern with code samples and pointers to all six refactored test files liv
 **Source:** May 2026 — applied across `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, `:feature:home`, and `:common:ui`'s `DealBottomSheetTest` after the testTag refactor surfaced the duplication. Pattern shape borrowed from a sibling project's `CoachingWidgetTest`.
 
 ### L-2026-05-14-01 · Find Compose nodes by visible text or content description, never `testTag`
+**TL;DR:** Never use `testTag` in production or tests — find nodes by `onNodeWithText`, `onNodeWithContentDescription`, or role matchers.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-14 · **Tags:** testing, compose, instrumented, accessibility, content-description
 **Applies to:** Any new `@Composable` screen, any new instrumented `*ScreenTest.kt`, and any edit that adds a clickable surface or unlabeled control to existing screens
 
@@ -284,6 +407,7 @@ Full policy with examples, "Seen in" pointers, and rationale lives in `docs/patt
 **Source:** May 2026 — codebase-wide campaign to remove `testTag`. First pass landed `:feature:game`, `:feature:search`, `:feature:store`, `:feature:giveaways`, and the `:app` journey test after trialling four approaches; the policy then covered `:feature:home`, `:feature:favourites`, and `:common:ui`'s `DealBottomSheet` in the same branch. As of 2026-05-14 no production composable or instrumented test in this codebase carries a `testTag`.
 
 ### L-2026-05-13-02 · Preview the modal-sheet body inside `Surface`, not via `ModalBottomSheet`
+**TL;DR:** Preview a `ModalBottomSheet`'s body composable directly inside `Surface { … }` — `ModalBottomSheet` itself renders blank in `@Preview`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, preview, material3, modal-bottom-sheet
 **Applies to:** Any feature with a filter/detail UI built on `ModalBottomSheet` (giveaways `Filters`, search `Filters`, `DealBottomSheet` in `:common:ui`)
 
@@ -292,6 +416,7 @@ Full policy with examples, "Seen in" pointers, and rationale lives in `docs/patt
 **Source:** Phase preview-enablement — giveaways, search, deal
 
 ### L-2026-05-13-01 · In commonMain previews, use the JetBrains-named `@Preview` import — not the AndroidX-named one the deprecation warning recommends
+**TL;DR:** In commonMain previews use the JetBrains `Preview` import + `@file:Suppress("DEPRECATION")` — the AndroidX one won't resolve on iOS.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-13 · **Tags:** compose, kmp, preview, jetbrains-compose, deprecation
 **Applies to:** Any `@Preview`-annotated composable placed in `commonMain` (i.e. the standard pattern in this project)
 
@@ -300,6 +425,7 @@ Use `import org.jetbrains.compose.ui.tooling.preview.Preview` with `@file:Suppre
 **Source:** Phase preview-enablement, all 6 feature screens + `:common:ui` `DealBottomSheet`
 
 ### L-2026-05-11-05 · New collected VM `StateFlow` requires updating MockK stubs in instrumented `*ScreenTest.kt`
+**TL;DR:** Adding a collected `StateFlow` to a ViewModel breaks strict MockK in `*ScreenTest.kt` — backfill `every { vm.newFlow } returns …` stubs.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mockk, instrumentation, viewmodel, compose
 **Applies to:** Changes that add a `StateFlow`/`SharedFlow` property to a ViewModel that an existing Composable will `collectAsStateWithLifecycle()`; matters for `androidInstrumentedTest` `*ScreenTest.kt` files that mock the VM via strict MockK
 
@@ -308,6 +434,7 @@ Adding `val newFlow: StateFlow<...>` to a VM and reading it in a Composable will
 **Source:** Favourite Games — `StoreScreenTest` latent break discovered while wiring (and later reverting) swipe-to-favourite
 
 ### L-2026-05-11-04 · For `.catch`-recovery tests, mock upstream as `flow { throw … }`, not `every { … } throws`
+**TL;DR:** To test a Flow consumer's `.catch` recovery, return `flow { throw … }` from the Mokkery stub — not `every { … } throws`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mokkery, flow, kmp
 **Applies to:** Any test that needs to verify a `Flow` consumer's `.catch { emit(default) }` recovery branch
 
@@ -316,6 +443,7 @@ Mokkery's `every { repo.observeXxx() } throws Exception()` makes the **function 
 **Source:** Favourite Games — `FavouritesViewModelTest` ERROR case and `favouriteIds`/`favourites` recovery tests in Home/Store VM tests
 
 ### L-2026-05-11-03 · Mokkery `MockMode.autoUnit` only auto-stubs Unit-returning calls
+**TL;DR:** Mokkery's `MockMode.autoUnit` no-ops only Unit returns — stub every non-Unit call with `everySuspend { … } returns <default>`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** testing, mokkery, kmp, commontest
 **Applies to:** Any `mock(MockMode.autoUnit)` in `commonTest` whose subject has non-Unit methods that the system-under-test invokes
 
@@ -324,6 +452,7 @@ Mokkery's `every { repo.observeXxx() } throws Exception()` makes the **function 
 **Source:** Favourite Games — test backfill for `toggleFavouriteFromDeal`
 
 ### L-2026-05-11-02 · Compose host bootstrap must be applied in BOTH `:app:MainActivity` AND `:iosApp:MainViewController`
+**TL;DR:** Any new Koin module or `CompositionLocalProvider` must be wired in BOTH `:app:MainActivity` AND `:iosApp:MainViewController`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** kmp, compose-multiplatform, koin, composition-local, ios, dual-host
 **Applies to:** Any new root-scope wiring — Koin modules added to `startKoin { modules(...) }`, `CompositionLocalProvider(LocalX provides …)` around the NavHost — introduced for a feature
 
@@ -334,6 +463,7 @@ When combined with a no-op `CompositionLocal` default (see L-2026-05-11-01), for
 **Source:** PR #135 (share feature) — iOS share path was silently no-op until `MainViewController.kt` got the matching `CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions())`.
 
 ### L-2026-05-11-01 · `staticCompositionLocalOf { error(...) }` crashes `@Preview`
+**TL;DR:** Use a no-op singleton default for shared `staticCompositionLocalOf` — `error(...)` defaults crash every `@Preview` that reads the local.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-11 · **Tags:** compose, composition-local, preview, kmp
 **Applies to:** Any new `staticCompositionLocalOf<T>` introduced for a host-provided service in `:common:ui` (or anywhere a `@Preview` may render a consumer)
 
@@ -344,6 +474,7 @@ Trade-off: "fail-loud on missing provider" is lost. A missing host wiring become
 **Source:** PR #135 (share feature) — initial `error(...)` default caught in review.
 
 ### L-2026-05-06-05 · `TopAppBarDefaults.pinnedScrollBehavior` allocates per recomposition via the default `canScroll` lambda, not the wrapper
+**TL;DR:** Pass `canScroll = remember { { true } }` to `TopAppBarDefaults.pinnedScrollBehavior(...)` — the default lambda re-allocates each frame.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, recomposition, top-app-bar, material3, stable-lambda
 **Applies to:** Any code calling `TopAppBarDefaults.pinnedScrollBehavior(...)` (or `enterAlwaysScrollBehavior`, `exitUntilCollapsedScrollBehavior`) directly inside a composable body
 
@@ -354,6 +485,7 @@ The actual cause of per-recomposition allocation is the default `canScroll = { t
 **Source:** 2026-05-06-bug-hunt-severity-low batch (issue #125 / PR #134). The original bug-hunt finding misidentified the cause; worker investigated Material3 source to find the real one.
 
 ### L-2026-05-06-04 · Test mocking library is Mokkery, not MockK
+**TL;DR:** This project uses Mokkery for all `commonTest` mocking — MockK is JVM-only and is not used; the patterns doc on this is stale.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** testing, mokkery, mockk, kmp, commontest
 **Applies to:** Any test in a `*/src/commonTest/**` source set; by convention, all tests in this codebase
 
@@ -364,6 +496,7 @@ This codebase uses Mokkery (`dev.mokkery:mokkery`) for mocking, not MockK. Mokke
 **Source:** Wave 1 of campaign `2026-05-06-bug-hunt-severity-medium` — issue #124 / PR #132. The worker prompt and issue body referenced MockK based on the stale patterns doc; the worker noticed the existing test file used Mokkery and adapted.
 
 ### L-2026-05-06-02 · `compose.material3` does NOT bring in `material-icons-core`
+**TL;DR:** Keep `compose.materialIconsExtended` — `compose.material3` doesn't pull in `material-icons-core`, so `Icons.*` fails to resolve.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** compose, compose-multiplatform, gradle, dependencies
 **Applies to:** Compose Multiplatform modules referencing `androidx.compose.material.icons.Icons` (e.g. `Icons.Filled.ArrowBack`)
 
@@ -372,6 +505,7 @@ The `Icons` API surface (`androidx.compose.material.icons.*`) is in `material-ic
 **Source:** Phase-2 Compose-runtime lift in convention plugin — assumed material3 included the icons surface; broke the build, restored extended.
 
 ### L-2026-05-06-01 · iOS-simulator test serializer BuildService must bind to `KotlinNativeTest`
+**TL;DR:** Register the cross-module iOS-test-serialization `BuildService` against `KotlinNativeTest`, not `KotlinNativeHostTest` (excludes simulator).
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** gradle, kmp, kotlin-native, ios, build-service
 **Applies to:** Convention-plugin BuildService that serializes `iosSimulatorArm64Test` across modules
 
@@ -380,6 +514,7 @@ When wiring the cross-module test-serialization BuildService from L-2026-05-05-0
 **Source:** Code-quality cleanup of feature/kmp-migration — prior selector had been masking the race for weeks.
 
 ### L-2026-05-05-04 · `sentry-kotlin-multiplatform` SPM-only integration breaks Kotlin/Native test linking
+**TL;DR:** Don't integrate sentry-kotlin-multiplatform via Xcode SPM — K/N tests fail to link. Use the Gradle plugin or CocoaPods instead.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, gradle, version-skew
 **Applies to:** A KMP project considering integrating `sentry-kotlin-multiplatform` on iOS — choosing between SPM, CocoaPods, or the SDK's official Gradle plugin
 
@@ -390,6 +525,7 @@ Two SPM gotchas worth preserving in case you return to that path: (1) pin Sentry
 **Source:** Phase-7e iOS Sentry wire-up — SPM integration succeeded for the app but broke `:common:linkDebugTestIosSimulatorArm64` and every other iOS test target; reverted in `6037a7a`.
 
 ### L-2026-05-05-01 · `kotlin.test` annotations don't resolve in `commonMain` of a non-test KMP fixtures module
+**TL;DR:** Don't put `@BeforeTest`/`@AfterTest` on a KMP fixtures module's commonMain — `kotlin("test")` resolves them only in test source sets.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** kmp, kotlin-test, source-sets, testing, fixtures-module
 **Applies to:** A KMP "test fixtures" module (e.g. `:testing`) that publishes test helpers via its `commonMain` (consumed by other modules as `commonTestImplementation(project(":testing"))`) — specifically attempts to put `@BeforeTest`/`@AfterTest`-annotated methods on a superclass in that `commonMain`.
 
@@ -398,6 +534,7 @@ Adding `implementation(kotlin("test"))` to the fixtures module's `commonMain.dep
 **Source:** Phase-A6 simplify pass — attempted to lift `@BeforeTest`/`@AfterTest` into `:testing/commonMain/.../MainDispatcherTest.kt` for 6 feature ViewModel tests.
 
 ### L-2026-05-04-07 · Pick JetBrains-AndroidX-fork versions by reading the iOS dep tree first
+**TL;DR:** Before adding an `org.jetbrains.androidx.*` artifact, read the existing transitive version from `:iosApp:dependencies` and pin to that.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, kotlin-native, jetbrains-androidx-fork, version-skew, gradle
 **Applies to:** Adding any `org.jetbrains.androidx.*` artifact (navigation-compose, lifecycle-viewmodel, savedstate, etc.) to a KMP project that already has them transitively
 
@@ -406,6 +543,7 @@ The JetBrains AndroidX KMP forks publish dozens of alpha/beta versions, most of 
 **Source:** Phase 7.6 retry — JetBrains nav-compose fork. Same lesson applies to any future `org.jetbrains.androidx.*` adoption.
 
 ### L-2026-05-04-06 · `NSLog` from Kotlin/Native must use the single-arg pattern — varargs don't bridge
+**TL;DR:** From K/N, call `NSLog(line.replace("%","%%"))` — the vararg `%@` form crashes at runtime; `String` doesn't bridge to `NSString *`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kotlin-native, ios, nslog, foundation, interop
 **Applies to:** Any Kotlin/Native iOS code calling `platform.Foundation.NSLog` with format-and-args style
 
@@ -414,6 +552,7 @@ The JetBrains AndroidX KMP forks publish dozens of alpha/beta versions, most of 
 **Source:** Phase 7.2 — first iOS log line through `IosConsoleLoggingListener` after HomeScreen wired up.
 
 ### L-2026-05-04-05 · Koin 4.0 references Android-only AndroidX lifecycle symbols on iOS
+**TL;DR:** Use Koin 4.1.0+ for `koinViewModel()` from iOS Composables — 4.0.0 references `androidx.lifecycle.SavedStateHandle` and crashes on K/N.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** koin, kmp, kotlin-native, lifecycle, irlinkageerror, koin-compose-viewmodel
 **Applies to:** Any KMP project using `koin-compose-viewmodel` to call `koinViewModel()` from a Composable that runs on iOS
 
@@ -422,6 +561,7 @@ Koin 4.0.0's `AndroidParametersHolder` references `androidx.lifecycle.SavedState
 **Source:** Phase 6.7d — first iOS render of a real feature Composable.
 
 ### L-2026-05-04-04 · Ktor version skew silently breaks Native, silently works on JVM
+**TL;DR:** Align every Ktor artifact via the catalog BOM — a transitive forcing a higher core version causes Native `IrLinkageError` at first call.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** ktor, kmp, kotlin-native, version-skew, irlinkageerror
 **Applies to:** Any KMP project pulling Ktor in alongside transitives (sandwich-ktor, coil3-network-ktor3, etc.) that may force a Ktor version higher than the BOM in `libs.versions.toml`
 
@@ -430,6 +570,7 @@ JVM resolves missing/changed symbols at link time per-class, so a transitive for
 **Source:** Phase 6.7c — first iOS network round-trip surfaced the skew.
 
 ### L-2026-05-04-03 · Two-Koin-module split is the right shape for platform-specific construction in KMP
+**TL;DR:** Prefer a commonMain Koin module + a platform module seeding the platform binding over `expect`/`actual` for platform-specific construction.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, koin, di, room
 **Applies to:** A KMP module that needs platform-specific construction (database Builder, file-path resolution, platform context, native handle) — i.e. a binding that can't live in commonMain because it touches `androidContext()`/`NSHomeDirectory()`/etc.
 
@@ -438,6 +579,7 @@ Prefer two Koin modules over `expect`/`actual` for this case: `xModule` in commo
 **Source:** Phase 5.16 — `:domain` DI module split.
 
 ### L-2026-05-04-02 · `BoxWithConstraints { maxWidth < 600.dp }` substitutes for `WindowWidthSizeClass` in CMP
+**TL;DR:** For phone-vs-wider in commonMain, wrap in `BoxWithConstraints` + check `maxWidth < 600.dp` — `WindowWidthSizeClass` is Android-only.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, compose-multiplatform, adaptive-layout
 **Applies to:** Lifting an Android Composable that branches on window size class to commonMain
 
@@ -446,6 +588,7 @@ Prefer two Koin modules over `expect`/`actual` for this case: `xModule` in commo
 **Source:** Phase 5.10 — `:feature:game` migration.
 
 ### L-2026-05-04-01 · `androidx.paging` is split: `paging-common` is KMP, `paging-compose` is not
+**TL;DR:** `paging-common` 3.3+ is KMP; `paging-compose` is Android-only. Put the paging ViewModel in commonMain, the Screen in androidMain.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-04 · **Tags:** kmp, paging, compose-multiplatform
 **Applies to:** Migrating a feature module that uses paging to KMP
 
@@ -454,6 +597,7 @@ When migrating a paging-using feature, `androidx.paging:paging-common` (3.3+) is
 **Source:** Phase 5.13 — `:feature:store` migration.
 
 ### L-2026-05-03-06 · Same-named `.kt` files across KMP source sets generate duplicate JVM class names
+**TL;DR:** Same-named top-level `.kt` files in commonMain and androidMain need `@file:JvmName("…")` on one side, else duplicate JVM classes.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** kmp, kotlin, jvm, source-sets, file-naming
 **Applies to:** KMP modules where commonMain and androidMain (or any two source sets reaching the same target) both contain a top-level-functions file with the same filename — typical when splitting a file into a commonMain core + androidMain platform-specific implementation
 
@@ -462,6 +606,7 @@ Kotlin generates one `<FileName>Kt` JVM class per top-level-functions file. When
 **Source:** Phase 5.4e — Theme.kt split (schemes/locals to commonMain; `GameDealsTheme` Composable stays androidMain).
 
 ### L-2026-05-03-05 · `pluginManager.apply()` in precompiled convention plugins requires `implementation` deps, not `compileOnly`
+**TL;DR:** In a convention plugin that calls `pluginManager.apply("third.party")`, declare the upstream plugin as `implementation`, not `compileOnly`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, build-logic, convention-plugins, kmp, compose-multiplatform
 **Applies to:** Precompiled convention plugins in `:build-logic:convention` that call `pluginManager.apply("third.party.id")` from inside `Plugin<Project>.apply()`
 
@@ -470,6 +615,7 @@ A `compileOnly(libs.foo.gradle.plugin)` in build-logic is enough for the convent
 **Source:** Phase 5.4a — `:common:ui` first module to apply `kmp.library.compose`; build-logic had `compose-multiplatform-gradle-plugin` as `compileOnly`.
 
 ### L-2026-05-03-04 · Removing a Hilt module (esp. `hilt-navigation-compose`) silently strips Compose runtime from KSP classpath
+**TL;DR:** When removing Hilt from a module that uses `@Immutable`, explicitly add `implementation(libs.androidx.compose.runtime)` — KSP needs it.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ksp, room, hilt-removal, compose-runtime, transitive-deps, kmp
 **Applies to:** Modules removing `androidx.hilt:hilt-navigation-compose` (or any Hilt-navigation dep) that contain Room `@Entity` classes annotated with Compose stability annotations like `@Immutable`.
 
@@ -478,6 +624,7 @@ A `compileOnly(libs.foo.gradle.plugin)` in build-logic is enough for the convent
 **Source:** Phase 4.2 of the KMP migration; `:domain` → Koin; bisected during Hilt removal.
 
 ### L-2026-05-03-03 · Ktor `parameter()` always encodes — use `encodedParameters` for already-encoded values
+**TL;DR:** For already-encoded query values use `url { encodedParameters.append(...) }` — `parameter(...)` always re-encodes and produces 404s.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, retrofit-migration, url-encoding, networking, kmp
 **Applies to:** Any Retrofit `@Query("name", encoded = true)` — or any other API surface where a query/path value is supplied already percent-encoded — being ported to Ktor `HttpRequestBuilder.parameter(...)`.
 
@@ -486,6 +633,7 @@ Ktor's `parameter("name", value)` always URL-encodes the value, with no opt-out 
 **Source:** Phase 4 smoke-test catch on `DealsApi.getDeal` (commit `012d27b`); pre-Phase-3 had `@Query("id", encoded = true)` (verified at `git show a8bacbd^`); regression test in `DealsApiTest`.
 
 ### L-2026-05-03-02 · Ktor `Logging { level = LogLevel.BODY }` + OkHttp engine hangs `body<T>()`
+**TL;DR:** Set Ktor `Logging` to `LogLevel.HEADERS` on the OkHttp engine — `LogLevel.BODY` consumes the one-shot body and hangs `body<T>()`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** ktor, ktor-logging, okhttp-engine, content-negotiation, networking, kmp
 **Applies to:** Any HttpClient that installs both `Logging` at `LogLevel.BODY` and `ContentNegotiation`, on the OkHttp engine
 
@@ -494,6 +642,7 @@ The Logging plugin at `LogLevel.BODY` reads the response body to log it; on OkHt
 **Source:** Phase 3 of the KMP migration, swapping Retrofit → Ktor in `:remote:*` modules.
 
 ### L-2026-05-03-01 · Module that opts out of the convention plugin silently loses inherited test-runtime deps
+**TL;DR:** A module opting out of the convention plugin must declare `debugImplementation(libs.androidx.compose.test)` or `createComposeRule` fails.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-03 · **Tags:** gradle, convention-plugins, build-logic, compose-testing, ui-test-manifest, test-infra
 **Applies to:** Any feature module that does not apply `gamedeals.android.feature` (or whichever convention plugin the rest of the modules use); audits checking whether existing instrumentation/Compose tests are actually runnable
 
@@ -512,6 +661,7 @@ Long-term fix shapes: either bring the divergent module under the convention plu
 **Source:** Wave 2 of campaign `2026-05-02-bug-hunt-3` (issue #101 → PR #108); discovered when the wave-2 worker for #101 found `:feature:webview:connectedDebugAndroidTest` failing with `No compose hierarchies found` and traced it to the missing `ui-test-manifest` dep that other feature modules pick up via the convention plugin.
 
 ### L-2026-05-02-10 · Re-verify findings against `origin/<merge-target>` HEAD before working them
+**TL;DR:** Re-verify bug-hunt findings against `origin/<merge-target>` HEAD before working them — wave branches drift while `dev` moves on.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** workflow, planner-agents, worker-agents, merge-target-drift, github-sync, github-issue-waves
 **Applies to:** Planner/worker sub-agents in `github-issue-waves`; bug-hunt-to-issues filing in `github-sync`; any flow that reads issues filed from a feature/wave branch and acts on them later
 
@@ -528,6 +678,7 @@ The signature-line check is fuzzy on purpose — exact line matches break under 
 **Source:** Wave 1 of campaign `2026-05-02-bug-hunt-2` (issue #90 → PR #94); pairs with the `Step 2.5 — Verify each finding against the merge target` section in `.claude/skills/android-bug-hunting-github-sync/SKILL.md`
 
 ### L-2026-05-02-09 · Wall-clock time in suspend helpers breaks test virtual time
+**TL;DR:** Don't mix `currentTimeMillis()` with `delay()` in suspend helpers — `runTest` virtualizes only `delay`, so wall-clock checks break tests.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** coroutines, test-virtual-time, runtest, dispatchers, common-helpers
 **Applies to:** Any `coroutineScope`-shaped helper in `:common` (or any module) that pads a minimum duration / debounce floor / rate-limit floor; new "minimum loading time" / "settle" / "throttle" utilities
 
@@ -553,6 +704,7 @@ Audit checklist when adding a new "minimum duration"-style helper:
 **Source:** Wave 1 PR #59 (issue #45 — `mapDelayAtLeast` / `flatMapLatestDelayAtLeast`); Wave 1 PR #93 (issue #91 — `withMinimumDuration` was the missed companion in the same pattern)
 
 ### L-2026-05-02-08 · `combine`-with-trigger flows: reason explicitly about write-order between trigger updates and downstream `_uiState` mutations
+**TL;DR:** When one function writes both upstream of `combine` and into `_uiState`, do the upstream write first — combine propagates synchronously.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** stateflow, combine, viewmodel, race-conditions, ordering, source-of-truth
 **Applies to:** Feature ViewModel handlers that both (a) update an upstream `MutableStateFlow`/`MutableSharedFlow` feeding a `combine(...)` source-of-truth flow, AND (b) directly write `_uiState.update {}` or `_uiState.emit(...)` in the same function body
 
@@ -575,6 +727,7 @@ If the previous outcome was `Error`, write (1) causes `combine` to re-emit `SUCC
 **Source:** Wave 2 PR #89 (issues #75/#77 — `RefreshOutcome` flow combined into `GiveawaysViewModel` source-of-truth)
 
 ### L-2026-05-02-07 · `StateFlow` conflation of identical-equals emissions: fix at the flow boundary, not by breaking `equals`
+**TL;DR:** Fix StateFlow conflation by swapping to `MutableSharedFlow(replay = 1, DROP_OLDEST)` — never break `equals` on the model type.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** stateflow, sharedflow, conflation, compose, stability, equals-override, anti-pattern
 **Applies to:** Any `MutableStateFlow<T>` whose producer needs identical-equals successive emissions to *still* trigger downstream — typically when downstream is `flatMapLatest`, a `LaunchedEffect` keyed on the value, or any `combine`/`zip` that should re-fire on every "user-pressed-go-again"
 
@@ -598,6 +751,7 @@ Note: `MutableSharedFlow(replay=1)` has empty replay until the first `emit`, whe
 **Source:** Wave 2 PR #88 (issue #76 — `SearchParameters.equals = false` defeated Compose skipping); pairs with L-2026-05-02-05 (test-side analogue: `flowOf` vs `MutableSharedFlow` for hot sources)
 
 ### L-2026-05-02-06 · Compose `LaunchedEffect` capturing a caller-provided lambda must wrap it in `rememberUpdatedState`
+**TL;DR:** Wrap caller lambdas in `rememberUpdatedState` before capturing in `LaunchedEffect` — otherwise it keeps firing the launch-time copy.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** compose, launchedeffect, rememberupdatedstate, stale-capture, lambda-capture
 **Applies to:** Any helper of the shape `LaunchedEffect(key) { … callback(it) }` (or `repeatOnLifecycle { … callback(it) }`) where `callback` arrives via composable parameter and the parent is expected to recompose
 
@@ -617,6 +771,7 @@ This is a textbook D7 idiom and applies symmetrically to `DisposableEffect` (cle
 **Source:** Wave 1 PR #85 (issue #74 — `SingleEventEffect` captures `collector` lambda without `rememberUpdatedState`)
 
 ### L-2026-05-02-05 · Hot-source races need `MutableSharedFlow` in tests, not `flowOf(...)` — `flowOf` completes after one emission and masks second-emission bugs
+**TL;DR:** Stub hot Flow sources with `MutableSharedFlow`, not `flowOf(...)` — `flowOf` completes after one emission and hides second-emission races.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** testing, coroutines, flow, room, race-conditions, test-fixtures
 **Applies to:** Test stubs for repository methods that return a hot `Flow` in production (Room `@Query` flows, `MutableSharedFlow`-backed signals, `callbackFlow`-driven sources) — i.e. anywhere the production flow does not complete
 
@@ -627,6 +782,7 @@ This is a structural test-shape rule, not a per-bug fix — applying it eagerly 
 **Source:** Wave 1 PR #86 (issue #72 — `GiveawaysViewModel.loadGiveaway` leaks long-lived Room collector)
 
 ### L-2026-05-02-04 · `try { ... } catch (Throwable)` blocks containing suspending work must rethrow `CancellationException` first
+**TL;DR:** In any `catch (Throwable)` whose body suspends, rethrow `CancellationException` first — otherwise structured cancellation breaks silently.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** coroutines, cancellation, structured-concurrency, error-handling, crashlytics
 **Applies to:** Any `try { … } catch (t: Throwable) { … }` whose catch body suspends (calls `emit`, `withContext`, `delay`, etc.) — or logs as fatal — inside `viewModelScope`, `lifecycleScope`, or any structured-concurrency scope where the host can be cancelled mid-work
 
@@ -646,6 +802,7 @@ Apply at every catch site that meets the criterion above, including nested fallb
 **Source:** Wave 1 PR #84 (issue #71 — `DealDetailsController.load` swallows `CancellationException` across both catch sites)
 
 ### L-2026-05-02-03 · Gradle `implementation` is non-transitive on compile classpath: when a `:domain` type adopts a third-party type/extension, consumer modules need the dep added explicitly
+**TL;DR:** When a shared type adopts a third-party type/extension, add the dep to every consumer module — `implementation` doesn't propagate.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** gradle, modularization, kotlinx-collections-immutable, dependency-graph, build-config
 **Applies to:** Any refactor that retypes a public field on a `:domain` (or other shared) data class to use a third-party type — `ImmutableList<T>`, `Instant`, `BigDecimal`, etc. — where consumer modules will call extension functions on the type
 
@@ -656,6 +813,7 @@ Same gotcha will apply to any future migration of this shape (e.g. `kotlinx.date
 **Source:** Wave 2 PR #83 (issue #80 — GameDetails.deals → ImmutableList migration); also surfaced in PR #82 (issue #79) where `:feature:giveaways` already had the dep so the gotcha was masked
 
 ### L-2026-05-02-02 · `@Immutable` + `ImmutableList<…>` on every domain model used as a composable parameter
+**TL;DR:** Mark every `:domain` `data class` used as a Composable parameter `@Immutable` and retype its `List<…>` fields to `ImmutableList<…>`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** compose, stability, recomposition, immutable-collections, kotlinx-serialization
 **Applies to:** `data class` types in `:domain` whose fields include raw `kotlin.collections.List<…>` and that are read inside a composable (or nested inside another type that is)
 
@@ -666,6 +824,7 @@ Compose marks raw `List` unstable, so any composable taking such a type can't sk
 **Source:** Wave 1 PR #82 (issue #79 — GiveawaySearchParameters @Immutable + ImmutableList migration); also #38 (PR #70) and pending #80
 
 ### L-2026-05-02-01 · `MutableStateFlow.update { it.copy(...) }` for field-level merges; `emit(...)` only for full-state replacements
+**TL;DR:** Use `_uiState.update { it.copy(...) }` for field-level merges; reserve `emit(...)` for full-state replacements driven by an upstream Flow.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-02 · **Tags:** viewmodel, stateflow, coroutines, race-conditions, atomicity
 **Applies to:** Feature ViewModel handlers in `feature/*/src/main/.../ui/*ViewModel.kt` that mutate `_uiState`
 
@@ -676,6 +835,7 @@ Side note: when the LOADING transition moves out of a flow chain into a side-eff
 **Source:** Wave 1 PR #81 (issue #78 — ViewModels read-modify-write `_uiState.value.copy(...)`)
 
 ### L-2026-05-01-09 · `AndroidView` lifecycle: hoist clients via `remember`, wire `onRelease` for true teardown
+**TL;DR:** `remember` clients outside `AndroidView`'s `factory` and wire `onRelease` to tear the native view down (e.g. `WebView.destroy()`).
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** compose, androidview, webview, lifecycle, memory-leak
 **Applies to:** Any `AndroidView { }` wrapping a stateful native view (`WebView`, `MapView`, `VideoView`, `ExoPlayer`'s `PlayerView`) — anywhere the view holds session/network/JS state that must be cleaned up when the composable leaves composition
 
@@ -701,6 +861,7 @@ The `loadUrl("about:blank")` is not cosmetic — it forces the WebView to abando
 **Source:** Wave 3 PR #67 (issue #30 — WebView never destroyed when composable leaves composition)
 
 ### L-2026-05-01-08 · Use `ApplicationInfo.FLAG_DEBUGGABLE`, not `BuildConfig.DEBUG`, for one-off debug-only logic
+**TL;DR:** For one-off debug-build checks, use `(applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0` — avoids opting into BuildConfig.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** android, agp, buildconfig, debug-gate, gradle
 **Applies to:** Any module wanting a single "is this a debug build" boolean — `StrictMode` policies, debug-only logging, dev-only feature flags
 
@@ -709,6 +870,7 @@ This project's modules don't enable `android.buildFeatures.buildConfig`, so AGP 
 **Source:** Wave 1 PR #63 (issue #42 — Storage suspend / StrictMode gate)
 
 ### L-2026-05-01-07 · ViewModel emission tests under `UnconfinedTestDispatcher` should expect `size == 1` for steady state — not `[initial, current]`
+**TL;DR:** Under `UnconfinedTestDispatcher`, a correctly-shaped VM emits one steady `uiState` — don't assert `[initial, current]`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** viewmodel, stateflow, coroutines, testing, unconfined-test-dispatcher
 **Applies to:** Tests in `feature/*/src/test/.../ui/*ViewModelTest.kt` that collect a ViewModel's `uiState`/`screenState` flow into a list (e.g. `viewModel.uiState.take(N).toList()`) under `runTest` with the project's standard `UnconfinedTestDispatcher` rule
 
@@ -719,6 +881,7 @@ Three of six existing VM test files in this repo (`HomeViewModelTest`, `Giveaway
 **Source:** Wave 2 PR #66 (issue #37 — six ViewModels redundant `stateIn`)
 
 ### L-2026-05-01-06 · In `:common:ui`, reach for the Activity via `LocalActivity.current` (null-safe) — never `view.context as Activity`
+**TL;DR:** In `:common:ui`, get the host Activity via nullable `LocalActivity.current` — `view.context as Activity` crashes `@Preview` and tests.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** compose, theme, activity, common-ui, preview-safety
 **Applies to:** Code in `:common:ui` (and any other shared Compose module) that needs the host Activity to mutate window state — `WindowCompat`, `WindowInsetsController`, status-bar styling, `setRequestedOrientation`, etc.
 
@@ -727,6 +890,7 @@ Three of six existing VM test files in this repo (`HomeViewModelTest`, `Giveaway
 **Source:** Wave 1 PR #61 (issue #41 — GameDealsTheme casts view.context as Activity)
 
 ### L-2026-05-01-05 · Don't mix `System.currentTimeMillis()` with `delay()` in Flow operators — `runTest` virtualizes only `delay`
+**TL;DR:** In Flow operators that may run under `TestDispatcher`, pad via parallel `launch { delay(...) }`/join — never `currentTimeMillis()`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** kotlin, coroutines, flow, testing, virtual-time
 **Applies to:** Custom Flow operators in `common/.../FlowExtensions.kt` (and any new ones) that implement "at least N millis" / minimum-loading / rate-limit semantics
 
@@ -748,6 +912,7 @@ Generalization: never mix wall-clock measurement with `delay()` in coroutine cod
 **Source:** Wave 2 PR #59 (issue #45 — *DelayAtLeast operators virtual-time)
 
 ### L-2026-05-01-04 · Don't `.catch` after `.cachedIn` on a Paging Flow — let `LoadState.Error` surface load failures
+**TL;DR:** Don't `.catch` after `.cachedIn(...)` on a Paging Flow — let `LoadState.Error` surface load failures or the Flow pins to its last cache.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** paging, coroutines, flow, viewmodel, error-handling
 **Applies to:** Feature ViewModels that expose `Flow<PagingData<T>>` to the UI via `collectAsLazyPagingItems()` — Store, Search, Giveaways, etc.
 
@@ -756,6 +921,7 @@ A `Pager` data Flow does not throw on load failures — those are surfaced as `L
 **Source:** Wave 1 PR #55 (issue #46 — StoreViewModel `.catch` after `.cachedIn`)
 
 ### L-2026-05-01-01 · Don't call `SavedStateHandle.toRoute<>()` inside ViewModels — use `savedStateHandle.get<Primitive>("propName")`
+**TL;DR:** Read nav args in VMs via `savedStateHandle.get<Primitive>("propName")` — `toRoute<>()` round-trips through `Bundle` and breaks JVM tests.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** navigation, compose, viewmodel, testing
 **Applies to:** Feature ViewModels in this project that consume args seeded by typed Compose Navigation destinations (`composable<Destination.X>` / `navController.navigate(Destination.X(...))`)
 
@@ -764,6 +930,7 @@ A `Pager` data Flow does not throw on load failures — those are surfaced as `L
 **Source:** Wave 1 PR #50 (issue #23 — typed Compose Navigation)
 
 ### L-2026-05-01-02 · Robolectric is not used in this project — find a JVM-only path or move the test to `androidTest`
+**TL;DR:** Don't add Robolectric — find a JVM-only path or move the test to `androidTest`. Robolectric is rejected for this project.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** testing, robolectric, project-policy
 **Applies to:** Any decision to add a test dependency that brings an Android runtime into plain JVM unit tests
 
@@ -772,6 +939,7 @@ If a JVM unit test fails because some Android API is unimplemented (most commonl
 **Source:** Wave 1 PR #50 review
 
 ### L-2026-05-01-03 · When dropping a public interface in `:domain` whose `@Inject` impl took internal-typed Daos, mark the renamed concrete class's constructor `internal`
+**TL;DR:** When dropping a `:domain` interface whose `@Inject` impl took internal Daos, mark the renamed concrete class `@Inject internal constructor`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-05-01 · **Tags:** hilt, di, kotlin-visibility, multi-module
 **Applies to:** Refactors that delete a public interface in `:domain` whose `@Inject` impl took `internal`-typed Daos / collaborators
 
@@ -780,6 +948,7 @@ While the public interface existed, the impl was free to keep a public construct
 **Source:** Wave 1 PR #49 (issue #16 — drop single-impl Repository interfaces)
 
 ### L-2026-04-30-06 · `_uiState.stateIn(WhileSubscribed, initial)` is the wrong shape — use `_uiState.asStateFlow()`
+**TL;DR:** Expose VM `uiState` via `_uiState.asStateFlow()` — `stateIn(WhileSubscribed, …)` wraps produce a spurious LOADING flash on resume.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** viewmodel, stateflow, coroutines, compose
 **Applies to:** New screen ViewModels in `feature/*` modules; copying the existing convention from Home/Store/Giveaways/Search/Game/DealDetails ViewModels.
 
@@ -788,6 +957,7 @@ The current convention `private val _uiState = MutableStateFlow(initial); val ui
 **Source:** android-bug-hunting-dispatcher audit (issues #30–#48)
 
 ### L-2026-04-30-05 · `flow { emitAll(repo.observeXxx()) }` is intentional — preserves synchronous-throw safety
+**TL;DR:** Keep `flow { emitAll(repo.observeXxx()) }.catch{}` wrappers — they convert sync repo throws into in-stream errors `.catch` can handle.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** kotlin, coroutines, flow, repository, error-handling
 **Applies to:** ViewModel code that consumes a repository `observeXxx()` Flow returned by `:domain` repositories
 
@@ -796,6 +966,7 @@ When you see `flow { emitAll(repo.observeXxx()) }.map{…}.catch{…}`, do not "
 **Source:** PR refactor/18-24-screen-state revert
 
 ### L-2026-04-30-04 · Keep ViewModel functions Flow-shaped; don't lower to `viewModelScope.launch { try/catch }`
+**TL;DR:** Keep ViewModel handlers Flow-shaped (`launch { someFlow.onStart{…}.catch{…}.collect{…} }`) — don't lower to imperative `try/catch`.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** kotlin, coroutines, flow, viewmodel, architecture
 **Applies to:** Any feature ViewModel function in this project that triggers work in response to a UI event
 
@@ -804,6 +975,7 @@ In this project, ViewModel handlers are deliberately structured as `viewModelSco
 **Source:** PR refactor/18-24-screen-state revert
 
 ### L-2026-04-30-03 · Test internals from inside the owning module, not via test-only factories
+**TL;DR:** Put integration tests inside the module that owns the `internal` collaborators — never add a test-only factory in `main/` to expose them.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** testing, multi-module, mockwebserver, internal-visibility
 **Applies to:** Multi-module Android projects where a facade/data-source has `internal` collaborators (Retrofit `*Api` types, KSP-generated artifacts) that an outside test wants to construct against `MockWebServer`.
 
@@ -812,6 +984,7 @@ Do not introduce a test-only `Factory.create(...)` in `main/` to give a downstre
 **Source:** PR #27 (refactor/15-remote-source-facade)
 
 ### L-2026-04-30-02 · GitHub Actions JDK must match `compileOptions.targetCompatibility`, not just the Kotlin toolchain
+**TL;DR:** Set CI's `setup-java` `java-version` ≥ `compileOptions.targetCompatibility` — Hilt's `JavaCompile` doesn't use the Kotlin toolchain.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** ci, gradle, hilt, jdk, github-actions
 **Applies to:** Android projects with Hilt where the workflow JDK is older than the project's `compileOptions.targetCompatibility`
 
@@ -820,6 +993,7 @@ When the project's `compileOptions.targetCompatibility` (and matching Kotlin `jv
 **Source:** Wave 1 PR #25 (Hilt KAPT → KSP)
 
 ### L-2026-04-30-01 · Ports in `:domain`, adapters in `:remote:*`, wiring in `:app`
+**TL;DR:** When the port lives in `:domain` and the `@Provides` impl in `:remote:*`, `:app` must depend on every `:remote:*` so Hilt sees the modules.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-30 · **Tags:** hilt, di, multi-module, ports-and-adapters, architecture
 **Applies to:** Any refactor that lifts an interface from a remote/data module up into `:domain` so `:domain` no longer depends on `:remote:*`
 
@@ -828,6 +1002,7 @@ When you move a Source/Repository *interface* up to `:domain` (the port) but lea
 **Source:** Wave 2 PR #29 (issue #17 — Remote→Domain mapper relocation)
 
 ### L-2026-04-27-01 · Prefer flow-native error helpers over `runCatching` inside Flow chains
+**TL;DR:** In Flow chains, prefer the `catchAndContinue(default, action)` helper over `runCatching` — keeps error handling on the Flow itself.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-27 · **Tags:** kotlin, coroutines, flow, error-handling
 **Applies to:** ViewModel/repository code that wraps a single suspend call inside a Flow pipeline
 
@@ -836,6 +1011,7 @@ When lifting a `suspend` call into a Flow, prefer `flow { emit(call()) }` plus t
 **Source:** CommitmentPackagesViewModel FAQ refactor
 
 ### L-2026-04-20-01 · On migration branches, map conflicting *features* not *files*
+**TL;DR:** When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature.
 **Status:** active · **Confidence:** confirmed · **Added:** 2026-04-20 · **Tags:** merge-conflicts, migration, di, architecture
 **Applies to:** Any long-running branch refactoring infrastructure (DI, networking, shared modules) while `main` ships features
 
@@ -846,6 +1022,7 @@ Don't resolve merge conflicts file-by-file. First identify which *features* land
 ## Archive
 
 ### L-2026-05-17-12 · Gradle 9.3.1 K/N test report aggregator chokes on Mokkery 3.x stdout for `throws`-mock tests
+**TL;DR:** (superseded) Don't gate CI on iOS test report aggregation under Gradle 9.3.1 + Mokkery 3.x `throws` mocks — aggregator misparses stdout.
 **Status:** superseded by L-2026-05-18-05 · **Confidence:** confirmed · **Added:** 2026-05-17 · **Tags:** gradle, kotlin-native, mokkery, testing, ios, tooling-bug
 **Applies to:** Any iOS-target unit test (`iosSimulatorArm64Test`) on a module whose Mokkery mocks use the `everySuspend { ... } throws Exception()` (or `every { ... } throws ...`) pattern under Gradle 9.3.1 + Mokkery 3.x + Kotlin 2.3.x
 
@@ -854,6 +1031,7 @@ Gradle's K/N test runner fails the task with `"Index N out of bounds for length 
 **Source:** chore/upgrade-kotlin-2.3-kmp · post-bump verification of `./gradlew allTests` + targeted `:feature:game:iosSimulatorArm64Test --rerun-tasks`
 
 ### L-2026-05-06-03 · `Dispatchers.IO` is not accessible from `commonMain` in coroutines 1.10.x
+**TL;DR:** (superseded) Don't default a commonMain constructor's dispatcher to `Dispatchers.IO` — internal on K/N; inject per platform instead.
 **Status:** superseded by L-2026-05-15-07 · **Confidence:** confirmed · **Added:** 2026-05-06 · **Tags:** kmp, coroutines, kotlin-native, dispatchers
 **Applies to:** KMP commonMain code that wants an IO-tagged dispatcher for blocking work
 
@@ -862,6 +1040,7 @@ Gradle's K/N test runner fails the task with `"Index N out of bounds for length 
 **Source:** Phase-3 Storage commonization — wanted `Dispatchers.IO` as default for `StorageImpl.ioDispatcher`; hit "Cannot access 'val IO' — internal in 'kotlinx.coroutines.Dispatchers'".
 
 ### L-2026-05-05-03 · `sentry-kotlin-multiplatform` via Sentry-Cocoa SPM needs an exact version pin and the `Sentry-Dynamic` product
+**TL;DR:** (superseded) For sentry-kotlin-multiplatform 0.13.0 via SPM, pin Sentry-Cocoa to exactly `8.36.0` and pick the `Sentry-Dynamic` product.
 **Status:** superseded by L-2026-05-05-04 · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** sentry, sentry-kotlin-multiplatform, sentry-cocoa, kmp, kotlin-native, spm, xcode-26, version-skew
 **Applies to:** A KMP project integrating `sentry-kotlin-multiplatform` on iOS by adding `https://github.com/getsentry/sentry-cocoa` as a Swift Package Manager dependency in `iosApp.xcodeproj` (rather than via CocoaPods)
 
@@ -872,6 +1051,7 @@ Two more SPM gotchas worth knowing up front: (1) pick the **Sentry-Dynamic** SPM
 **Source:** Phase-7e iOS Sentry wire-up — three rounds of unresolved-symbol errors before isolating the dynamic product and the exact 8.36.0 pin.
 
 ### L-2026-05-05-02 · Serialize racy cross-module Gradle tasks via shared BuildService, not `--max-workers=1`
+**TL;DR:** (superseded) Serialize racy cross-module Gradle tasks via a shared `BuildService` with `maxParallelUsages.set(1)` — not `--max-workers=1`.
 **Status:** superseded by L-2026-05-06-01 · **Confidence:** confirmed · **Added:** 2026-05-05 · **Tags:** gradle, kmp, kotlin-native, ios, build-service, test-parallelism
 **Applies to:** Any KMP project where the same task type (e.g. `KotlinNativeHostTest`/`iosSimulatorArm64Test`) runs concurrently across modules and races on a non-thread-safe writer — the Gradle 9.1 + Kotlin 2.2.21 test-result XML reporter is the canonical case, failing with `Could not write XML test results for ... .xml` while the test itself passed.
 
