@@ -68,6 +68,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_yes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_game_image
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_header_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_metacritic_score_label
@@ -75,7 +76,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_release_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steam_reviews_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_no
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_yes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_details_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
@@ -120,32 +120,45 @@ private fun DealContent(
             .wrapContentHeight()
             .navigationBarsPadding()
     ) {
+        val headerCd = stringResource(
+            Res.string.deal_details_header_description,
+            data.store.storeName,
+            data.gameSalesPriceDenominated,
+            data.gameName,
+        )
         Row(
             modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = data.store.images.logo,
-                contentDescription = stringResource(Res.string.deal_details_store_thumbnail, data.store.storeName),
-                error = painterResource(Res.drawable.videogame_thumb),
-                contentScale = ContentScale.Fit,
+            Row(
                 modifier = Modifier
-                    .size(48.dp)
-                    .padding(GameDealsCustomTheme.spacing.small)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) { contentDescription = headerCd },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AsyncImage(
+                    model = data.store.images.logo,
+                    contentDescription = null,
+                    error = painterResource(Res.drawable.videogame_thumb),
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = GameDealsCustomTheme.spacing.small),
-                    text = stringResource(Res.string.deal_details_title_label, data.store.storeName, data.gameSalesPriceDenominated),
+                        .size(48.dp)
+                        .padding(GameDealsCustomTheme.spacing.small)
                 )
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = GameDealsCustomTheme.spacing.small),
-                    text = data.gameName
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = GameDealsCustomTheme.spacing.small),
+                        text = stringResource(Res.string.deal_details_title_label, data.store.storeName, data.gameSalesPriceDenominated),
+                    )
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = GameDealsCustomTheme.spacing.small),
+                        text = data.gameName
+                    )
+                }
             }
             IconButton(
                 enabled = data is DealBottomSheetData.DealDetailsData,
@@ -237,7 +250,7 @@ private fun GameDetails(
                     Row(
                         modifier = Modifier
                             .clickable(role = Role.Button) { goToWeb(cheapsharkDealRedirectUrl(it.cheaperStore.dealID), data.gameName) }
-                            .semantics { contentDescription = cheaperStoreRowCd },
+                            .semantics(mergeDescendants = true) { contentDescription = cheaperStoreRowCd },
                     ) {
                         AsyncImage(
                             model = it.store.images.logo,

@@ -13,6 +13,7 @@
     <string name="deal_details_cheaper_store_thumbnail">%1$s Cheaper store thumbnail</string>
 
     <string name="deal_details_title_label">%1$s - %2$s</string>
+    <string name="deal_details_header_description">%1$s - %2$s, %3$s</string>
     <string name="deal_details_cheapest_yes">Yes</string>
     <string name="deal_details_cheapest_no">No</string>
     <string name="deal_details_cheapest_store_label">Cheapest Store: </string>
