@@ -21,13 +21,15 @@ class DomainDatabaseMigrationTest {
 
         val registered = DOMAIN_MIGRATIONS
             .map { it.startVersion to it.endVersion }
-            .toSet()
+            .toSet() + DOMAIN_AUTO_MIGRATIONS
 
         for (from in FIRST_EXPORTED_VERSION until DOMAIN_DB_VERSION) {
             val transition = from to from + 1
             assertTrue(
                 "DomainDatabase is at v$DOMAIN_DB_VERSION but no migration from v$from to v${from + 1} " +
                     "is registered. Add a Migration($from, ${from + 1}) to DOMAIN_MIGRATIONS, " +
+                    "or declare @AutoMigration(from = $from, to = ${from + 1}) on @Database and " +
+                    "add $from to ${from + 1} to DOMAIN_AUTO_MIGRATIONS, " +
                     "or accept data loss by extending fallbackToDestructiveMigrationFrom in DomainModule.",
                 transition in registered,
             )
