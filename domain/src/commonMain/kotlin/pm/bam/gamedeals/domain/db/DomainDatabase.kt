@@ -21,7 +21,7 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-@Database(version = 5, entities = [Deal::class, Game::class, Store::class, Release::class, Giveaway::class, FavouriteGame::class], exportSchema = false)
+@Database(version = 5, entities = [Deal::class, Game::class, Store::class, Release::class, Giveaway::class, FavouriteGame::class], exportSchema = true)
 @TypeConverters(StoreImagesConverter::class, GiveawayPlatformsConverter::class, LocalDatetimeConverter::class)
 @ConstructedBy(DomainDatabaseConstructor::class)
 abstract class DomainDatabase : RoomDatabase() {
