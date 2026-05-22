@@ -11,6 +11,8 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-05-22-01 | `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them. | room, kmp, testing, migrations |
+| L-2026-05-22-02 | Every visible MigrationTestHelper constructor in androidHostTest requires an Instrumentation — needs Robolectric or skip the runtime test. | room, kmp, testing, migrations, robolectric |
 | L-2026-05-18-07 | Default fix for return-value-checker drops on Room write methods is `@IgnorableReturnValue`, not Unit-return. | room, kmp, architecture, reactive |
 | L-2026-05-18-06 | `-Xreturn-value-checker=full` is warning-level — add `-Werror` to fail builds; coroutines/stdlib already annotate common drops. | kotlin-2.3, compiler-flags, coroutines, kmp |
 | L-2026-05-18-05 | Disable `reports.html.required` and `reports.junitXml.required` on every `KotlinNativeTest` to dodge the Gradle 9 ↔ KGP 2.3 report bug. | gradle-9, kgp, kotlin-native, ios, test-reports, tooling-bug |
@@ -98,6 +100,24 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-05-22-01 · Room `@Database` is CLASS-retention — not reflectable at runtime
+**TL;DR:** `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them.
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-22 · **Tags:** room, kmp, testing, migrations
+**Applies to:** Tests or runtime code that need to know the current Room DB version or which @AutoMigration pairs are declared
+
+`DomainDatabase::class.java.getAnnotation(Database::class.java)` returns `null` at runtime because `androidx.room.Database` is declared `@Retention(CLASS)`. Same for `androidx.room.AutoMigration`. Don't try to reflect them. Lift the version into a `const val DOMAIN_DB_VERSION` referenced from `@Database(version = …)`, and mirror auto-migration pairs into a `Set<Pair<Int,Int>>` next to the manual `Migration` registry. The duplication is the price for a runtime-reachable single source of truth.
+
+**Source:** Setting up the Layer B structural guard for forgotten Room migrations.
+
+### L-2026-05-22-02 · Room MigrationTestHelper needs Instrumentation in androidHostTest
+**TL;DR:** Every visible MigrationTestHelper constructor in androidHostTest requires an Instrumentation — needs Robolectric or skip the runtime test.
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-22 · **Tags:** room, kmp, testing, migrations, robolectric
+**Applies to:** Adding MigrationTestHelper-backed tests in a KMP module's androidHostTest source set
+
+In Room 2.8.3 the driver-based KMP `MigrationTestHelper` constructor is not exposed from the Android source set — only the four Instrumentation-based constructors are. Without Robolectric, `MigrationTestHelper` cannot be instantiated in pure-JVM `androidHostTest`. If runtime SQL-validity testing isn't worth a Robolectric dep, fall back to a structural test that walks committed schema JSON plus a manual migration registry — catches "forgot to write a migration" but not "the migration SQL is wrong."
+
+**Source:** Layer B migration guard — tried MigrationTestHelper first, hit the constructor wall, fell back to a structural test.
 
 ### L-2026-05-18-07 · Room `@Query` Flow observation makes repository write-method return values structurally redundant
 **TL;DR:** Default fix for return-value-checker drops on Room write methods is `@IgnorableReturnValue`, not Unit-return.
