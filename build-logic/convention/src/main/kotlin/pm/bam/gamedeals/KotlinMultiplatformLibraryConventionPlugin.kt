@@ -108,6 +108,12 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
                         sourceSetTreeName = "test"
                     }.configure {
                         instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+                        // JaCoCo offline instrumentation for the device-test variant.
+                        // Kover 0.9.x doesn't consume the resulting `.ec` files
+                        // (tracked at kotlinx-kover#96), so the root project's
+                        // `jacocoAndroidTestReport` task aggregates them into a
+                        // parallel report alongside Kover's JVM coverage.
+                        enableCoverage = true
                     }
                 }
 

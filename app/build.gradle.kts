@@ -66,6 +66,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Pair flag for the KMP-library `enableCoverage = true`; see the
+            // root `jacocoAndroidTestReport` task for how the resulting
+            // `coverage.ec` files are aggregated into the parallel JaCoCo
+            // report alongside Kover's JVM coverage.
+            enableAndroidTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
