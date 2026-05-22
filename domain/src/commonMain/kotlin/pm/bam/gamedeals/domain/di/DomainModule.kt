@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.di
 
 import androidx.room.RoomDatabase
 import org.koin.dsl.module
+import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
@@ -28,7 +29,8 @@ val domainModule = module {
 
     single<DomainDatabase> {
         get<RoomDatabase.Builder<DomainDatabase>>()
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(*DOMAIN_MIGRATIONS)
+            .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2, 3, 4)
             .addTypeConverter(get<StoreImagesConverter>())
             .addTypeConverter(get<GiveawayPlatformsConverter>())
             .addTypeConverter(get<LocalDatetimeConverter>())
