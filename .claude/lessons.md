@@ -11,6 +11,7 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-05-22-03 | Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage. | kover, jacoco, android-test, coverage, kmp |
 | L-2026-05-22-01 | `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them. | room, kmp, testing, migrations |
 | L-2026-05-22-02 | Every visible MigrationTestHelper constructor in androidHostTest requires an Instrumentation — needs Robolectric or skip the runtime test. | room, kmp, testing, migrations, robolectric |
 | L-2026-05-18-07 | Default fix for return-value-checker drops on Room write methods is `@IgnorableReturnValue`, not Unit-return. | room, kmp, architecture, reactive |
@@ -100,6 +101,15 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-05-22-03 · Kover 0.9.x ignores instrumented coverage; use JaCoCo task
+**TL;DR:** Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage.
+**Status:** active · **Confidence:** confirmed · **Added:** 2026-05-22 · **Tags:** kover, jacoco, android-test, coverage, kmp
+**Applies to:** Any KMP/Android project where instrumented test coverage matters.
+
+Kover 0.9.x's `koverHtmlReportAndroid` only collects host-test `.ic` files. `enableCoverage = true` (KMP-library device-test) and `enableAndroidTestCoverage = true` (`com.android.application` debug) make AGP write `coverage.ec` per module — but Kover discards them. Add a root-level `JacocoReport` task that aggregates the `.ec` files into `build/reports/jacoco/androidTest/` alongside the Kover host-test report. Two reports, no merge. Kover (FQN wildcards) and JaCoCo (Ant globs) filter sets must be aligned by hand. Track Kover #96 to retire this.
+
+**Source:** Adding instrumented Compose-UI test coverage when Kover wouldn't accept the AGP outputs.
 
 ### L-2026-05-22-01 · Room `@Database` is CLASS-retention — not reflectable at runtime
 **TL;DR:** `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them.
