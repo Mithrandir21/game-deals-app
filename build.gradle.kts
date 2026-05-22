@@ -1,9 +1,10 @@
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import pm.bam.gamedeals.CoverageFilters
 
+// `apply false` entries establish each plugin's version on the build classpath without applying them at root — module and convention scripts then apply by
+// id without repeating the version. Don't add `org.jetbrains.kotlin.android` back; AGP 9's built-in Kotlin support replaces it (applying both would clash).
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.jetbrains.kotlin) apply false
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.kotlinx.serialization) apply false
     alias(libs.plugins.kotlin.ksp) apply false
