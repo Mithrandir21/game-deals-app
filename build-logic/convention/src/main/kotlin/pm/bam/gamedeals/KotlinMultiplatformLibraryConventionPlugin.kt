@@ -47,8 +47,7 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             jvmToolchain(21)
 
             compilerOptions {
-                freeCompilerArgs.add("-Xexplicit-backing-fields")
-                freeCompilerArgs.add("-Xreturn-value-checker=full")
+                freeCompilerArgs.addAll(sharedFreeCompilerArgs)
             }
 
             iosArm64()
@@ -89,17 +88,7 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
                     }
                 }
 
-                // Packaging excludes for the test APK. Mokkery 3.x + JUnit 4 pull in transitive junit-jupiter artifacts that each ship their own
-                // META-INF/LICENSE.md, colliding at merge time. The AGP-9 KMP-library plugin's `packaging { resources { ... } }` block sets these on
-                // the target's outputs.
-                packaging.resources.excludes.addAll(
-                    listOf(
-                        "META-INF/LICENSE.md",
-                        "META-INF/LICENSE-notice.md",
-                        "META-INF/{AL2.0,LGPL2.1}",
-                        "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
-                    )
-                )
+                packaging.resources.excludes.addAll(sharedPackagingExcludes)
             }
         }
 

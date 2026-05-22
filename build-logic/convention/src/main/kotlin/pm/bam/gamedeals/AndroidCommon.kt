@@ -28,15 +28,7 @@ internal fun Project.configureAndroidCommon(extension: CommonExtension) {
             targetCompatibility = JavaVersion.VERSION_21
         }
 
-        packaging.resources.apply {
-            excludes += "/META-INF/LICENSE.md"
-            excludes += "/META-INF/LICENSE-notice.md"
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-
-            // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and
-            // com.squareup.okhttp3:logging-interceptor:5.2.1
-            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-        }
+        packaging.resources.excludes.addAll(sharedPackagingExcludes)
     }
 
     // Required by Mockk's inline mock-maker / byte-buddy agent attach on JDK 21+.

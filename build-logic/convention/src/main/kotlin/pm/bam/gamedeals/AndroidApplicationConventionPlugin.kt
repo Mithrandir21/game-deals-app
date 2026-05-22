@@ -31,8 +31,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             jvmToolchain(21)
 
             compilerOptions {
-                freeCompilerArgs.add("-Xexplicit-backing-fields")
-                freeCompilerArgs.add("-Xreturn-value-checker=full")
+                freeCompilerArgs.addAll(sharedFreeCompilerArgs)
             }
         }
 
