@@ -8,22 +8,9 @@ import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
- * Convention plugin for KMP feature modules. Composes the KMP library + Compose
- * conventions and applies KSP, then wires the dependency surface area every
- * feature module needs (Koin + lifecycle + Coil + nav + the standard test
- * stack).
- *
- * `compose.*` runtime declarations and the module-level mokkery plugin stay in
- * each module's build.gradle.kts — the compose accessor isn't available from a
- * precompiled plugin, and mokkery is already declared per-module.
- *
- * Test source sets under the AGP 9 KMP library plugin: `androidUnitTest` was
- * renamed to `androidHostTest` and `androidInstrumentedTest` to
- * `androidDeviceTest`. The old `testOptions.emulatorControl.enable` block
- * (used by `androidx.test.espresso.device 1.1.0` for landscape-orientation
- * tests) is not exposed by the new plugin; if a regression surfaces in the
- * espresso-device tests we'll need to find the replacement DSL or skip those
- * tests on CI.
+ * Convention plugin for KMP feature modules. Composes the KMP library + Compose conventions, applies KSP, and wires the shared feature-module dependency
+ * surface (Koin, lifecycle, Coil, nav, common test stack). Mokkery stays per-module; the device-test deps block is gated on `src/androidDeviceTest/`
+ * existing so feature modules without device tests skip the source set entirely.
  */
 class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
@@ -69,10 +56,7 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("koin-android"))
                     implementation(lib("koin-androidx-compose"))
 
-                    // Compose tooling moved here from debugImplementation:
-                    // the new KMP-library plugin is single-variant so there's
-                    // no `debug` configuration on library modules. Slight
-                    // binary bloat in release is acceptable for libraries.
+                    // AGP 9's KMP-library plugin is single-variant — no `debug` configuration on library modules. Slight release bloat is acceptable.
                     implementation(lib("androidx-ui-tooling"))
                 }
 
@@ -87,12 +71,8 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("mockk"))
                 }
 
-                // The androidDeviceTest source set only exists when the
-                // library convention plugin opted into withDeviceTestBuilder,
-                // which it does only when `src/androidDeviceTest/` exists.
-                // Feature modules without device tests (e.g. :feature:favourites)
-                // therefore have no source set to configure, and `getByName`
-                // would fail. Gate this block on the same condition.
+                // Gate must match the device-test opt-in in [KotlinMultiplatformLibraryConventionPlugin]: if `src/androidDeviceTest/` is absent, the
+                // source set doesn't exist and `getByName` would fail.
                 if (project.file("src/androidDeviceTest").exists()) {
                     getByName("androidDeviceTest").dependencies {
                         implementation(project(":testing"))
@@ -101,10 +81,6 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                         implementation(lib("androidx-runner"))
                         implementation(lib("androidx-espresso-core"))
                         implementation(lib("androidx-compose-junit4"))
-                        // Compose UI test manifest moved here from debugImplementation:
-                        // the new KMP-library plugin is single-variant, so there's no
-                        // `debug` configuration on library modules. The test manifest
-                        // is only needed for the androidDeviceTest variant anyway.
                         implementation(lib("androidx-compose-test"))
                     }
                 }

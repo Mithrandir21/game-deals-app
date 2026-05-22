@@ -11,18 +11,9 @@ import org.jetbrains.compose.resources.ResourcesExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
- * Adds Compose Multiplatform to a Kotlin Multiplatform library that already
- * applies `pm.bam.gamedeals.kmp.library`.
- *
- * Applies the Kotlin Compose Compiler plugin and the JetBrains Compose
- * Multiplatform Gradle plugin, wires the universal Compose runtime quartet
- * (runtime / foundation / material3 / ui) plus components.resources into
- * commonMain, and configures `compose.resources` to derive
- * `packageOfResClass` from the module's path-derived namespace.
- *
- * Under the AGP 9 KMP library plugin there is no `LibraryExtension.buildFeatures.compose`
- * to flip — the Compose plugin alone enables composition. Namespace is
- * derived from `project.path` (matches the KMP-library convention plugin).
+ * Adds Compose Multiplatform on top of `pm.bam.gamedeals.kmp.library`. Applies the Compose Compiler + JetBrains Compose Multiplatform plugins, wires the
+ * universal Compose runtime artifacts (runtime / foundation / material3 / ui / icons / resources / preview) into commonMain, and configures
+ * `compose.resources` with a path-derived `packageOfResClass`.
  */
 class KotlinMultiplatformLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
