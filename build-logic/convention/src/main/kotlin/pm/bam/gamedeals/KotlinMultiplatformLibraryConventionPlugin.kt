@@ -144,5 +144,7 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             reports.html.required.set(false)
             reports.junitXml.required.set(false)
         }
+
+        configureKover()
     }
 }

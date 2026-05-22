@@ -40,5 +40,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         }
 
         configureComposeCompilerReports()
+        configureKover()
     }
 }

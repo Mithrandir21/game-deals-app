@@ -19,6 +19,7 @@ dependencies {
     compileOnly(libs.ksp.gradle.plugin)
     compileOnly(libs.compose.gradle.plugin)
     compileOnly(libs.compose.stability.analyzer.gradle.plugin)
+    compileOnly(libs.kover.gradle.plugin)
     implementation(libs.compose.multiplatform.gradle.plugin)
 }
 
