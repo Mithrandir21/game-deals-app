@@ -1,5 +1,9 @@
 @AGENTS.md
 
+## Code style
+
+- **Line length: 160 characters.** Use the full width — don't wrap at 80/100/120. This applies to Kotlin code, KDoc, and inline comments. Only wrap when a line genuinely exceeds 160 chars, or when a natural break (chained calls, long parameter lists) reads better split.
+
 ## Code comments
 
 Prefer **no comments**. Well-named functions, variables, and types should carry the meaning on their own. When a comment *is* useful, keep it short.
