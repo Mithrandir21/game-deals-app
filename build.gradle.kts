@@ -1,6 +1,6 @@
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import pm.bam.gamedeals.CoverageFilters
 
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.jetbrains.kotlin) apply false
@@ -8,37 +8,12 @@ plugins {
     alias(libs.plugins.kotlinx.serialization) apply false
     alias(libs.plugins.kotlin.ksp) apply false
     alias(libs.plugins.compose.stability.analyzer) apply false
-    alias(libs.plugins.kotlinx.kover)
-    jacoco
+    alias(libs.plugins.gamedeals.coverage.root)
 }
 
-jacoco {
-    toolVersion = "0.8.13"
-}
-
-// Aggregated coverage report. Filters match the per-module set in build-logic/convention/.../Kover.kt — keep them in sync.
-kover {
-    reports {
-        filters {
-            excludes {
-                packages(
-                    "*.di",
-                    "*.generated.resources",
-                )
-                classes(
-                    "*BuildConfig",
-                    "*ComposableSingletons*",
-                    "*\$\$serializer",
-                )
-                annotatedBy("*Generated*")
-            }
-        }
-    }
-}
-
+// Kover aggregator: every module that applies the kover convention contributes here. When adding a new module via :kmp-library / :android-application,
+// list it here and it folds into the root `koverHtmlReport`.
 dependencies {
-    // Aggregate Kover reports across every module that applies the plugin via a convention (KMP library / Android application). Adding a new module: if it's
-    // via :kmp-library or :android-application, list it here and it'll fold into the root koverHtmlReport.
     kover(project(":app"))
     kover(project(":common"))
     kover(project(":common:ui"))
@@ -70,19 +45,6 @@ val jacocoCoveredModulePaths = listOf(
     ":feature:webview",
 )
 
-// JaCoCo path-based excludes — keep aligned with the Kover filter set in Kover.kt + the `kover {}` block above. Kover uses class-FQN wildcards, JaCoCo
-// uses Ant-style globs against .class file paths.
-val jacocoClassExcludes = listOf(
-    "**/di/**",
-    "**/generated/resources/**",
-    "**/*BuildConfig*",
-    "**/*ComposableSingletons*",
-    "**/*\$\$serializer*",
-    "**/R.class",
-    "**/R\$*.class",
-    "**/Manifest*.*",
-)
-
 tasks.register<JacocoReport>("jacocoAndroidTestReport") {
     group = "verification"
     description = "Aggregate JaCoCo coverage from `connectedAndroidDeviceTest` " +
@@ -104,8 +66,8 @@ tasks.register<JacocoReport>("jacocoAndroidTestReport") {
         files(coveredProjects.map { p ->
             p.fileTree(p.layout.buildDirectory) {
                 // JaCoCo refuses already-instrumented bytecode. AGP-9 keeps *instrumented* copies at `intermediates/classes/debug/jacocoDebug/dirs/`
-                // (for `:app`) and `.transforms/.../transformed/instrumented_classes/` (for KMP-library). The original bytecode the report needs
-                // lives at the compiler outputs below.
+                // (for `:app`) and `.transforms/.../transformed/instrumented_classes/` (for KMP-library). The original bytecode the report needs lives
+                // at the compiler outputs below.
                 include(
                     // :app (com.android.application) — Kotlin compile output, pre-instrumentation.
                     "intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/**/*.class",
@@ -114,7 +76,7 @@ tasks.register<JacocoReport>("jacocoAndroidTestReport") {
                     // KMP-library Android target — Kotlin compile output.
                     "classes/kotlin/android/main/**/*.class",
                 )
-                exclude(jacocoClassExcludes)
+                exclude(CoverageFilters.jacocoPathGlobs)
             }
         })
     )

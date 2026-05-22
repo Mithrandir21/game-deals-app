@@ -19,7 +19,7 @@ dependencies {
     compileOnly(libs.ksp.gradle.plugin)
     compileOnly(libs.compose.gradle.plugin)
     compileOnly(libs.compose.stability.analyzer.gradle.plugin)
-    compileOnly(libs.kover.gradle.plugin)
+    implementation(libs.kover.gradle.plugin)
     implementation(libs.compose.multiplatform.gradle.plugin)
 }
 
@@ -44,6 +44,10 @@ gradlePlugin {
         register("kmpFeature") {
             id = "pm.bam.gamedeals.kmp.feature"
             implementationClass = "pm.bam.gamedeals.KotlinMultiplatformFeatureConventionPlugin"
+        }
+        register("rootCoverage") {
+            id = "pm.bam.gamedeals.coverage.root"
+            implementationClass = "pm.bam.gamedeals.RootCoverageConventionPlugin"
         }
     }
 }

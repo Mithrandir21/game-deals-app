@@ -173,10 +173,12 @@ gamedeals-kmp-library = { id = "pm.bam.gamedeals.kmp.library" }
 gamedeals-kmp-library-compose = { id = "pm.bam.gamedeals.kmp.library.compose" }
 gamedeals-kmp-ksp = { id = "pm.bam.gamedeals.kmp.ksp" }
 gamedeals-kmp-feature = { id = "pm.bam.gamedeals.kmp.feature" }
+gamedeals-coverage-root = { id = "pm.bam.gamedeals.coverage.root" }
 
-# Compose Multiplatform plugin (applied transitively by the kmp.library.compose
-# convention; aliased here so build-logic can resolve it on the classpath).
-compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+# Compose Multiplatform plugin. The build-logic included build pulls in the gradle plugin as an `implementation` dep, so the version is supplied by the
+# classpath wherever the build-logic JAR is loaded — same arrangement as `kotlin-multiplatform` above. Leaving `version.ref` off avoids
+# "plugin is already on the classpath with an unknown version" in `iosApp`, the only direct consumer.
+compose-multiplatform = { id = "org.jetbrains.compose" }
 
 # KMP-friendly mocking plugin. MockK stays for androidUnitTest; Mokkery is
 # applied to test source sets in modules that participate in commonTest
