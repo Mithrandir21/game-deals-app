@@ -506,6 +506,51 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertEquals(4, giveaways.first().id)
     }
 
+    @Test
+    fun loadNewReleases_failure_does_not_crash_uiState_pipeline() = runTest {
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flow { throw Exception("releases boom") }
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        // The .catch on loadNewReleases swaps the failure for an empty list, so the outer
+        // pipeline still produces SUCCESS — not ERROR — even though releases threw mid-stream.
+        assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
+        assertEquals(0, emissions.last().releases.size)
+    }
+
+    @Test
+    fun loadGiveaways_failure_does_not_crash_uiState_pipeline() = runTest {
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(listOf())
+        every { giveawaysRepository.observeGiveaways() } returns flow { throw Exception("giveaways boom") }
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        // Same shape as loadNewReleases above — the per-source .catch isolates the failure so
+        // the rest of the screen still resolves to SUCCESS with an empty giveaways list.
+        assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
+        assertEquals(0, emissions.last().giveaways.size)
+    }
+
+    @Test
+    fun loadGiveaways_failure_in_refreshGiveaways_does_not_crash_uiState_pipeline() = runTest {
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(listOf())
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+        everySuspend { giveawaysRepository.refreshGiveaways() } throws Exception("refresh boom")
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
+        val emissions = observeStates()
+
+        // refreshGiveaways is called inside `.onStart { ... }` and a throw there is caught
+        // by the outer `.catch` on the loadGiveaways flow.
+        assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
+    }
+
     private fun TestScope.observeStates() =
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
 }

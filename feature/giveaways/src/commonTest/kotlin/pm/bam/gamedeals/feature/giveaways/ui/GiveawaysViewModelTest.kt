@@ -17,6 +17,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
@@ -264,6 +265,58 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         assertEquals(filteredOne, emissions.last().giveaways.first())
     }
 
+
+    @Test
+    fun rapid_reloadGiveaways_calls_each_trigger_refreshGiveaways() = runTest {
+        val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
+        var refreshCount = 0
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshCount++ }
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        unfilteredRoom.emit(emptyList())
+        observeStates(viewModel)
+
+        // reloadGiveaways launches into viewModelScope each time; there is no cancellation
+        // gate, so three rapid invocations must each reach refreshGiveaways. Confirms we don't
+        // accidentally introduce a flatMapLatest-style collapse on the reload path.
+        viewModel.reloadGiveaways()
+        viewModel.reloadGiveaways()
+        viewModel.reloadGiveaways()
+        runCurrent()
+
+        assertEquals(3, refreshCount)
+    }
+
+    @Test
+    fun loadGiveaway_then_a_refresh_failure_keeps_filtered_results_visible_while_emitting_ERROR() = runTest {
+        val filteredResult = giveaway(id = 7, status = "Active")
+        val filteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
+        every { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
+        everySuspend { giveawaysRepository.refreshGiveaways() } throws Exception()
+
+        val para = GiveawaySearchParameters(
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true)),
+            sortBy = GiveawaySortBy.DATE
+        )
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        viewModel.loadGiveaway(para)
+        filteredRoom.emit(listOf(filteredResult))
+
+        viewModel.reloadGiveaways()
+        runCurrent()
+
+        val emissions = observeStates(viewModel)
+        // Even with the ERROR status flag, the most recently observed list must remain visible
+        // — a stale-data-vs-fresh-error pattern that the screen relies on to show "couldn't
+        // refresh, here's what we last had".
+        assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
+        assertEquals(1, emissions.last().giveaways.size)
+        assertEquals(filteredResult, emissions.last().giveaways.first())
+    }
 
     private fun TestScope.observeStates(viewModel: GiveawaysViewModel) =
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)

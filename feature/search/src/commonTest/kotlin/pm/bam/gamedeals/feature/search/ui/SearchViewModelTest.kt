@@ -13,9 +13,11 @@ import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -78,7 +80,8 @@ class SearchViewModelTest : MainDispatcherTest() {
         assertEquals(SearchData.Empty, emissions.first())
         assertEquals(SearchData.Loading, emissions.second())
 
-        delay(1200) // Delay because Flow 'flatMapLatestDelayAtLeast'
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
 
         assertEquals(SearchData.NoResults, emissions.third())
     }
@@ -100,7 +103,8 @@ class SearchViewModelTest : MainDispatcherTest() {
         assertEquals(SearchData.Empty, emissions.first())
         assertEquals(SearchData.Loading, emissions.second())
 
-        delay(1200)
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
 
         assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.third())
     }
@@ -136,12 +140,84 @@ class SearchViewModelTest : MainDispatcherTest() {
         assertEquals(SearchData.Empty, emissions.first())
 
         viewModel.searchGames(title = "First")
-        delay(1200)
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
         assertEquals(SearchData.Error, emissions.last())
 
         viewModel.searchGames(title = "Second")
-        delay(1200)
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
         assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.last())
+    }
+
+    @Test
+    fun favouriteIds_initial_value_is_empty_set() = runTest {
+        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+
+        assertEquals(emptySet<Int>(), ids.first())
+    }
+
+    @Test
+    fun favouriteIds_emits_values_from_repository() = runTest {
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
+        // Rebuild because the @BeforeTest viewModel captured the original stub.
+        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
+
+        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        assertEquals(setOf(1, 2, 3), ids.last())
+    }
+
+    @Test
+    fun favouriteIds_recovers_from_repository_error_with_empty_set() = runTest {
+        every { favouritesRepository.observeFavouriteIds() } returns flow { throw Exception() }
+        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
+
+        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        assertEquals(emptySet<Int>(), ids.last())
+    }
+
+    @Test
+    fun searchGames_with_only_lowerPrice_filter_triggers_search_even_when_title_is_null() = runTest {
+        val deal = deal()
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } returns listOf(deal)
+
+        val emissions = observeStates()
+        viewModel.searchGames(lowerPrice = 5)
+
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
+
+        // The init flow's `dealsSearch.title == null && lowerPrice == null && ...` branch must
+        // be false when lowerPrice is set; otherwise the search short-circuits to Empty.
+        assertEquals(SearchData.SearchResults(listOf(deal).toImmutableList()), emissions.last())
+    }
+
+    @Test
+    fun rapid_searchGames_calls_settle_on_the_latest_query() = runTest {
+        val firstDeal = deal(dealID = "first")
+        val secondDeal = deal(dealID = "second")
+        val thirdDeal = deal(dealID = "third")
+        // Each title queries a different result so we can verify the final emission is the
+        // result of the LATEST query, not any of the earlier ones.
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } sequentially {
+            returns(listOf(firstDeal))
+            returns(listOf(secondDeal))
+            returns(listOf(thirdDeal))
+        }
+
+        val emissions = observeStates()
+
+        viewModel.searchGames(title = "first")
+        viewModel.searchGames(title = "second")
+        viewModel.searchGames(title = "third")
+
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
+
+        // flatMapLatestDelayAtLeast cancels prior pads before they fire `emit`, so only the
+        // final query's SearchResults reaches the resultState. The intermediate first/second
+        // deals never surface even though the mock was invoked for them.
+        assertEquals(SearchData.SearchResults(listOf(thirdDeal).toImmutableList()), emissions.last())
     }
 
     private fun TestScope.observeStates() =

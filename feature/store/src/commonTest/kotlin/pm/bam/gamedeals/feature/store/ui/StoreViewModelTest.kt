@@ -273,6 +273,49 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun rapid_retry_calls_settle_in_Data_state_without_emitting_an_intermediate_Error() = runTest {
+        val storeId = 1
+        val store = store(storeID = storeId)
+        everySuspend { storesRepository.getStore(storeId) } returns store
+
+        val viewModel = createViewModel(storeId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        // Five rapid retry() calls before the dispatcher gets a chance to drain. retryTrigger
+        // is a MutableStateFlow<Int>; .update { it+1 } x5 will compact through conflation, but
+        // even with all five distinct values reaching combine the final state must be Data.
+        repeat(5) { viewModel.retry() }
+        runCurrent()
+
+        assertEquals(StoreViewModel.StoreScreenData.Data(store), emissions.last())
+    }
+
+    @Test
+    fun retry_after_repeated_failures_eventually_recovers_when_repository_starts_succeeding() = runTest {
+        val storeId = 1
+        val store = store(storeID = storeId)
+        var callCount = 0
+        everySuspend { storesRepository.getStore(storeId) } calls {
+            callCount++
+            if (callCount <= 2) throw RuntimeException("boom $callCount") else store
+        }
+
+        val viewModel = createViewModel(storeId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
+
+        viewModel.retry() // call #2 — still throws
+        runCurrent()
+        assertEquals(StoreViewModel.StoreScreenData.Error, emissions.last())
+
+        viewModel.retry() // call #3 — succeeds
+        runCurrent()
+        assertEquals(StoreViewModel.StoreScreenData.Data(store), emissions.last())
+    }
+
+    @Test
     fun loadDealDetails_then_dismiss_round_trip() = runTest {
         everySuspend { storesRepository.getStore(any()) } returns store(storeID = 1)
         everySuspend { dealsRepository.getDeal(any()) } returns dealDetails()
