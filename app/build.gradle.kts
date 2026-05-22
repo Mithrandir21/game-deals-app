@@ -67,10 +67,8 @@ android {
 
     buildTypes {
         debug {
-            // Pair flag for the KMP-library `enableCoverage = true`; see the
-            // root `jacocoAndroidTestReport` task for how the resulting
-            // `coverage.ec` files are aggregated into the parallel JaCoCo
-            // report alongside Kover's JVM coverage.
+            // Pair flag for the KMP-library `enableCoverage = true`; the root `jacocoAndroidTestReport` task folds the resulting `coverage.ec`
+            // files into the parallel JaCoCo report alongside Kover's JVM coverage.
             enableAndroidTestCoverage = true
         }
         release {
@@ -89,8 +87,7 @@ dependencies {
     implementation(project(":common:ui"))
     implementation(project(":domain"))
 
-    // Remote source adapters — wired in Koin at the app boundary so :domain
-    // stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
+    // Remote source adapters — wired in Koin at the app boundary so :domain stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
     implementation(project(":remote:cheapshark"))
     implementation(project(":remote:gamerpower"))
 

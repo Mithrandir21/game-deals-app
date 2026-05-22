@@ -307,10 +307,9 @@ class GameViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        // The reloadTrigger is a DROP_OLDEST SharedFlow with extraBufferCapacity=1; rapid emits
-        // collapse rather than queue. flatMapLatest cancels any in-flight inner flow before
-        // relaunching it. The combined effect is that the burst settles back into Data without
-        // emitting an intermediate Error or losing the final state.
+        // The reloadTrigger is a DROP_OLDEST SharedFlow with extraBufferCapacity=1; rapid emits collapse rather than queue. flatMapLatest cancels any in-flight
+        // inner flow before relaunching it. The combined effect is that the burst settles back into Data without emitting an intermediate Error or losing the
+        // final state.
         viewModel.reloadGameDetails()
         viewModel.reloadGameDetails()
         viewModel.reloadGameDetails()

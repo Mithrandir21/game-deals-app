@@ -187,8 +187,8 @@ class SearchViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        // The init flow's `dealsSearch.title == null && lowerPrice == null && ...` branch must
-        // be false when lowerPrice is set; otherwise the search short-circuits to Empty.
+        // The init flow's `dealsSearch.title == null && lowerPrice == null && ...` branch must be false when lowerPrice is set; otherwise the search
+        // short-circuits to Empty.
         assertEquals(SearchData.SearchResults(listOf(deal).toImmutableList()), emissions.last())
     }
 
@@ -197,8 +197,7 @@ class SearchViewModelTest : MainDispatcherTest() {
         val firstDeal = deal(dealID = "first")
         val secondDeal = deal(dealID = "second")
         val thirdDeal = deal(dealID = "third")
-        // Each title queries a different result so we can verify the final emission is the
-        // result of the LATEST query, not any of the earlier ones.
+        // Each title queries a different result so we can verify the final emission is the result of the LATEST query, not any of the earlier ones.
         everySuspend { gamesRepository.searchGames(searchParameters = any()) } sequentially {
             returns(listOf(firstDeal))
             returns(listOf(secondDeal))
@@ -214,9 +213,8 @@ class SearchViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        // flatMapLatestDelayAtLeast cancels prior pads before they fire `emit`, so only the
-        // final query's SearchResults reaches the resultState. The intermediate first/second
-        // deals never surface even though the mock was invoked for them.
+        // flatMapLatestDelayAtLeast cancels prior pads before they fire `emit`, so only the final query's SearchResults reaches the resultState. The
+        // intermediate first/second deals never surface even though the mock was invoked for them.
         assertEquals(SearchData.SearchResults(listOf(thirdDeal).toImmutableList()), emissions.last())
     }
 

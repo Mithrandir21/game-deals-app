@@ -16,8 +16,7 @@ jacoco {
     toolVersion = "0.8.13"
 }
 
-// Aggregated coverage report. Filters match the per-module set in
-// build-logic/convention/.../Kover.kt — keep them in sync.
+// Aggregated coverage report. Filters match the per-module set in build-logic/convention/.../Kover.kt — keep them in sync.
 kover {
     reports {
         filters {
@@ -38,10 +37,8 @@ kover {
 }
 
 dependencies {
-    // Aggregate Kover reports across every module that applies the plugin
-    // via a convention (KMP library / Android application). Adding a new
-    // module: if it's via :kmp-library or :android-application, list it here
-    // and it'll fold into the root koverHtmlReport.
+    // Aggregate Kover reports across every module that applies the plugin via a convention (KMP library / Android application). Adding a new module: if it's
+    // via :kmp-library or :android-application, list it here and it'll fold into the root koverHtmlReport.
     kover(project(":app"))
     kover(project(":common"))
     kover(project(":common:ui"))
@@ -60,9 +57,8 @@ dependencies {
     kover(project(":feature:favourites"))
 }
 
-// Modules whose connectedAndroidDeviceTest / connectedDebugAndroidTest
-// outputs feed the parallel JaCoCo report. Add a module here when it
-// gains an `androidDeviceTest` (or `androidTest` for `:app`) source set.
+// Modules whose connectedAndroidDeviceTest / connectedDebugAndroidTest outputs feed the parallel JaCoCo report. Add a module here when it gains an
+// `androidDeviceTest` (or `androidTest` for `:app`) source set.
 val jacocoCoveredModulePaths = listOf(
     ":app",
     ":common:ui",
@@ -74,9 +70,8 @@ val jacocoCoveredModulePaths = listOf(
     ":feature:webview",
 )
 
-// JaCoCo path-based excludes — keep aligned with the Kover filter set in
-// Kover.kt + the `kover {}` block above. Kover uses class-FQN wildcards,
-// JaCoCo uses Ant-style globs against .class file paths.
+// JaCoCo path-based excludes — keep aligned with the Kover filter set in Kover.kt + the `kover {}` block above. Kover uses class-FQN wildcards, JaCoCo
+// uses Ant-style globs against .class file paths.
 val jacocoClassExcludes = listOf(
     "**/di/**",
     "**/generated/resources/**",
@@ -108,10 +103,8 @@ tasks.register<JacocoReport>("jacocoAndroidTestReport") {
     classDirectories.setFrom(
         files(coveredProjects.map { p ->
             p.fileTree(p.layout.buildDirectory) {
-                // JaCoCo refuses already-instrumented bytecode. AGP-9 keeps
-                // *instrumented* copies at `intermediates/classes/debug/jacocoDebug/dirs/`
-                // (for `:app`) and `.transforms/.../transformed/instrumented_classes/`
-                // (for KMP-library). The original bytecode the report needs
+                // JaCoCo refuses already-instrumented bytecode. AGP-9 keeps *instrumented* copies at `intermediates/classes/debug/jacocoDebug/dirs/`
+                // (for `:app`) and `.transforms/.../transformed/instrumented_classes/` (for KMP-library). The original bytecode the report needs
                 // lives at the compiler outputs below.
                 include(
                     // :app (com.android.application) — Kotlin compile output, pre-instrumentation.

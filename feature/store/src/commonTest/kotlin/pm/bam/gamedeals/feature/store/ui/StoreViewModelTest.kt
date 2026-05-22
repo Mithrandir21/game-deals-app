@@ -232,8 +232,8 @@ class StoreViewModelTest : MainDispatcherTest() {
         val store = store(storeID = storeId)
         everySuspend { storesRepository.getStore(storeId) } returns store
 
-        // Use MutableSharedFlow for the hot 'observeStoreDeals' source — flowOf would complete
-        // after one emission and mask second-emission/re-subscription behaviour (L-2026-05-02-05).
+        // Use MutableSharedFlow for the hot 'observeStoreDeals' source — flowOf would complete after one emission and mask second-emission/re-subscription
+        // behaviour (L-2026-05-02-05).
         val dealsFlow = MutableSharedFlow<List<Deal>>(replay = 1)
         every { dealsRepository.observeStoreDeals(storeId) } returns dealsFlow
 
@@ -262,8 +262,8 @@ class StoreViewModelTest : MainDispatcherTest() {
         viewModel.retry()
         advanceUntilIdle()
 
-        // After retry the chain re-runs onStart { emit(Loading) } before the catch lands again.
-        // The user-visible flow is Loading→Error→Loading→Error, with at least one Loading mid-stream.
+        // After retry the chain re-runs onStart { emit(Loading) } before the catch lands again. The user-visible flow is Loading→Error→Loading→Error, with at
+        // least one Loading mid-stream.
         assertEquals(
             true,
             emissions.contains(StoreViewModel.StoreScreenData.Loading),
@@ -282,9 +282,8 @@ class StoreViewModelTest : MainDispatcherTest() {
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         runCurrent()
 
-        // Five rapid retry() calls before the dispatcher gets a chance to drain. retryTrigger
-        // is a MutableStateFlow<Int>; .update { it+1 } x5 will compact through conflation, but
-        // even with all five distinct values reaching combine the final state must be Data.
+        // Five rapid retry() calls before the dispatcher gets a chance to drain. retryTrigger is a MutableStateFlow<Int>; .update { it+1 } x5 will compact
+        // through conflation, but even with all five distinct values reaching combine the final state must be Data.
         repeat(5) { viewModel.retry() }
         runCurrent()
 

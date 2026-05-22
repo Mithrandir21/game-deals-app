@@ -612,8 +612,7 @@ private fun SearchScreenContent_NoResults_Preview() {
 @Preview
 @Composable
 private fun SearchFilters_Preview() {
-    // Preview the Filters body directly; ModalBottomSheet does not render
-    // reliably in static previews.
+    // Preview the Filters body directly; ModalBottomSheet does not render reliably in static previews.
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Filters(

@@ -239,8 +239,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         val storeTwo = store(storeID = topStores[1])
         val storesFlow = MutableSharedFlow<List<Store>>(replay = 1)
 
-        // The single-threaded TestScope means a regular `var` works as the in-flight counter
-        // (no JVM AtomicInteger required for KMP portability).
+        // The single-threaded TestScope means a regular `var` works as the in-flight counter (no JVM AtomicInteger required for KMP portability).
         var activeFetches = 0
         val gateOne = CompletableDeferred<List<Deal>>()
         val gateTwo = CompletableDeferred<List<Deal>>()
@@ -515,8 +514,8 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
 
-        // The .catch on loadNewReleases swaps the failure for an empty list, so the outer
-        // pipeline still produces SUCCESS — not ERROR — even though releases threw mid-stream.
+        // The .catch on loadNewReleases swaps the failure for an empty list, so the outer pipeline still produces SUCCESS — not ERROR — even though releases
+        // threw mid-stream.
         assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
         assertEquals(0, emissions.last().releases.size)
     }
@@ -530,8 +529,8 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
 
-        // Same shape as loadNewReleases above — the per-source .catch isolates the failure so
-        // the rest of the screen still resolves to SUCCESS with an empty giveaways list.
+        // Same shape as loadNewReleases above — the per-source .catch isolates the failure so the rest of the screen still resolves to SUCCESS with an empty
+        // giveaways list.
         assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
         assertEquals(0, emissions.last().giveaways.size)
     }
@@ -546,8 +545,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
 
-        // refreshGiveaways is called inside `.onStart { ... }` and a throw there is caught
-        // by the outer `.catch` on the loadGiveaways flow.
+        // refreshGiveaways is called inside `.onStart { ... }` and a throw there is caught by the outer `.catch` on the loadGiveaways flow.
         assertEquals(HomeScreenStatus.SUCCESS, emissions.last().state)
     }
 

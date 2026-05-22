@@ -63,8 +63,8 @@ class FavouritesViewModelTest : MainDispatcherTest() {
 
     @Test
     fun initial_emission_is_LOADING_when_no_repository_value_yet() = runTest {
-        // Hot SharedFlow that never emits → the onStart-emitted default LOADING is what the
-        // subscriber sees first. Documents the LOADING entry-point of the stateIn.Eagerly chain.
+        // Hot SharedFlow that never emits → the onStart-emitted default LOADING is what the subscriber sees first. Documents the LOADING entry-point of the
+        // stateIn.Eagerly chain.
         val source = MutableSharedFlow<List<pm.bam.gamedeals.domain.models.FavouriteGame>>(replay = 0)
         every { favouritesRepository.observeFavourites() } returns source
         val viewModel = FavouritesViewModel(TestingLoggingListener(), favouritesRepository)

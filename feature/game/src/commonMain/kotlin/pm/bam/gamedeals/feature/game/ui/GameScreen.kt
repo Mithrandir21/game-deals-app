@@ -109,9 +109,8 @@ internal fun GameScreen(
         }
     }
 
-    // BoxWithConstraints is multiplatform — replaces the Android-only
-    // currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches
-    // the Material3 Compact-vs-Medium boundary.
+    // BoxWithConstraints is multiplatform — replaces the Android-only currentWindowAdaptiveInfo() / WindowWidthSizeClass split. 600.dp matches the Material3
+    // Compact-vs-Medium boundary.
     BoxWithConstraints {
         GameScreenContent(
             isCompact = maxWidth < 600.dp,

@@ -71,8 +71,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
-        // Subscribe before triggering reload so LOADING is observable under
-        // SharingStarted.WhileSubscribed semantics.
+        // Subscribe before triggering reload so LOADING is observable under SharingStarted.WhileSubscribed semantics.
         val emissions = observeStates(viewModel)
         viewModel.reloadGiveaways()
 
@@ -89,8 +88,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
-        // Subscribe before triggering reload so LOADING is observable under
-        // SharingStarted.WhileSubscribed semantics.
+        // Subscribe before triggering reload so LOADING is observable under SharingStarted.WhileSubscribed semantics.
         val emissions = observeStates(viewModel)
         viewModel.reloadGiveaways()
 
@@ -142,9 +140,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     fun cancelled_reload_does_not_set_ERROR() = runTest {
         val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
-        // Simulate an in-flight reload being cancelled (e.g. viewModelScope cleared while
-        // refreshGiveaways() is suspended). The CancellationException must propagate, not be
-        // swallowed into a RefreshOutcome.Error.
+        // Simulate an in-flight reload being cancelled (e.g. viewModelScope cleared while refreshGiveaways() is suspended). The CancellationException must
+        // propagate, not be swallowed into a RefreshOutcome.Error.
         everySuspend { giveawaysRepository.refreshGiveaways() } throws CancellationException("scope cleared")
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
@@ -153,9 +150,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         viewModel.reloadGiveaways()
 
         val emissions = observeStates(viewModel)
-        // Pre-fix this would be ERROR (the bare catch swallowed the CE and wrote
-        // RefreshOutcome.Error). After the fix the CE is rethrown and refreshOutcomeFlow
-        // stays Idle, so the surviving status must not be ERROR.
+        // Pre-fix this would be ERROR (the bare catch swallowed the CE and wrote RefreshOutcome.Error). After the fix the CE is rethrown and
+        // refreshOutcomeFlow stays Idle, so the surviving status must not be ERROR.
         assertNotEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
     }
 
@@ -277,9 +273,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         unfilteredRoom.emit(emptyList())
         observeStates(viewModel)
 
-        // reloadGiveaways launches into viewModelScope each time; there is no cancellation
-        // gate, so three rapid invocations must each reach refreshGiveaways. Confirms we don't
-        // accidentally introduce a flatMapLatest-style collapse on the reload path.
+        // reloadGiveaways launches into viewModelScope each time; there is no cancellation gate, so three rapid invocations must each reach refreshGiveaways.
+        // Confirms we don't accidentally introduce a flatMapLatest-style collapse on the reload path.
         viewModel.reloadGiveaways()
         viewModel.reloadGiveaways()
         viewModel.reloadGiveaways()
@@ -310,9 +305,8 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         val emissions = observeStates(viewModel)
-        // Even with the ERROR status flag, the most recently observed list must remain visible
-        // — a stale-data-vs-fresh-error pattern that the screen relies on to show "couldn't
-        // refresh, here's what we last had".
+        // Even with the ERROR status flag, the most recently observed list must remain visible — a stale-data-vs-fresh-error pattern that the screen relies
+        // on to show "couldn't refresh, here's what we last had".
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
         assertEquals(1, emissions.last().giveaways.size)
         assertEquals(filteredResult, emissions.last().giveaways.first())

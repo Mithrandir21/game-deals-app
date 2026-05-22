@@ -13,44 +13,30 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
 /**
- * Marker [BuildService] used to serialize Kotlin/Native iOS-simulator test
- * tasks across modules. Originally introduced as a workaround for what
- * looked like a parallel test-result XML race; later diagnosis showed the
- * actual failure was Gradle 9's `GenericHtmlTestReportGenerator`
- * mis-deserializing the binary event stream written by KGP's
- * `TCServiceMessagesClient` (an `ArrayIndexOutOfBoundsException` reading
- * `TestOutputEvent.Destination` ordinals). That report-generator crash is
- * now mitigated separately by disabling `reports.html.required` on every
- * `KotlinNativeTest` task below. The serializer is kept because forcing
- * sequential iOS-sim test execution is still useful (concurrent simulator
- * sessions are flaky on macOS) — but it is no longer the load-bearing fix
- * for the test-report failure.
+ * Marker [BuildService] used to serialize Kotlin/Native iOS-simulator test tasks across modules. Originally introduced as a workaround for what looked like
+ * a parallel test-result XML race; later diagnosis showed the actual failure was Gradle 9's `GenericHtmlTestReportGenerator` mis-deserializing the binary
+ * event stream written by KGP's `TCServiceMessagesClient` (an `ArrayIndexOutOfBoundsException` reading `TestOutputEvent.Destination` ordinals). That
+ * report-generator crash is now mitigated separately by disabling `reports.html.required` on every `KotlinNativeTest` task below. The serializer is kept
+ * because forcing sequential iOS-sim test execution is still useful (concurrent simulator sessions are flaky on macOS) — but it is no longer the
+ * load-bearing fix for the test-report failure.
  */
 abstract class IosSimulatorTestSerializer : BuildService<BuildServiceParameters.None>
 
 /**
  * Convention plugin for Kotlin Multiplatform library modules with an Android target.
  *
- * - Applies `kotlin.multiplatform` and `com.android.kotlin.multiplatform.library`
- *   (the AGP 9 KMP library plugin; the AGP-8 `androidTarget()` +
+ * - Applies `kotlin.multiplatform` and `com.android.kotlin.multiplatform.library` (the AGP 9 KMP library plugin; the AGP-8 `androidTarget()` +
  *   `com.android.library` combo is incompatible with AGP 9 + Kotlin 2.3).
- * - Registers iOS targets (`iosArm64`, `iosSimulatorArm64`). The Android
- *   target is added automatically by the KMP-library plugin; it's
- *   configured below via `targets.withType<KotlinMultiplatformAndroidLibraryTarget>`.
- *   `iosX64` (Intel Mac simulator) is not supported under CMP 1.11 + Kotlin 2.3;
+ * - Registers iOS targets (`iosArm64`, `iosSimulatorArm64`). The Android target is added automatically by the KMP-library plugin; it's configured
+ *   below via `targets.withType<KotlinMultiplatformAndroidLibraryTarget>`. `iosX64` (Intel Mac simulator) is not supported under CMP 1.11 + Kotlin 2.3;
  *   Apple-Silicon Mac sim is covered by `iosSimulatorArm64`.
  * - `jvmToolchain(21)`, Android `compileSdk=36`, `minSdk=26`.
- * - Namespace is path-derived in the convention plugin
- *   (`:feature:home` -> `pm.bam.gamedeals.feature.home`), so per-module
- *   `extensions.configure<LibraryExtension> { namespace = ... }` blocks
- *   should be dropped.
- * - Mockk needs `-XX:+EnableDynamicAgentLoading` for inline-mock byte-buddy
- *   agent attach on JDK 21+ — applied to every `Test` task.
- * - Test source sets are renamed by the new plugin: `androidUnitTest` ->
- *   `androidHostTest`, `androidInstrumentedTest` -> `androidDeviceTest`.
+ * - Namespace is path-derived in the convention plugin (`:feature:home` -> `pm.bam.gamedeals.feature.home`), so per-module
+ *   `extensions.configure<LibraryExtension> { namespace = ... }` blocks should be dropped.
+ * - Mockk needs `-XX:+EnableDynamicAgentLoading` for inline-mock byte-buddy agent attach on JDK 21+ — applied to every `Test` task.
+ * - Test source sets are renamed by the new plugin: `androidUnitTest` -> `androidHostTest`, `androidInstrumentedTest` -> `androidDeviceTest`.
  *
- * Does NOT apply Compose or KSP. Modules opt into those by also applying
- * `pm.bam.gamedeals.kmp.library.compose` and/or `pm.bam.gamedeals.kmp.ksp`.
+ * Does NOT apply Compose or KSP. Modules opt into those by also applying `pm.bam.gamedeals.kmp.library.compose` and/or `pm.bam.gamedeals.kmp.ksp`.
  */
 class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
@@ -68,19 +54,12 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             iosArm64()
             iosSimulatorArm64()
 
-            // The Android target is added automatically by
-            // `com.android.kotlin.multiplatform.library`. From a precompiled
-            // convention plugin we can't use the `android { }` / `androidLibrary { }`
-            // DSL accessor (those are project-script auto-accessors); instead we
-            // reach it via `targets.withType<KotlinMultiplatformAndroidLibraryTarget>()`.
-            // The new KMP-library plugin's `withDeviceTestBuilder { }` opt-in
-            // creates a `connectedAndroidDeviceTest` task even for modules
-            // with no device-test source files; that empty test APK then
-            // fails on the device with `ClassNotFoundException:
-            // androidx.test.runner.AndroidJUnitRunner` because androidx-runner
-            // is only declared in the feature convention's androidDeviceTest
-            // deps. Gate the opt-in on a real `src/androidDeviceTest/`
-            // directory so non-test library modules (e.g. :common, :domain,
+            // The Android target is added automatically by `com.android.kotlin.multiplatform.library`. From a precompiled convention plugin we can't
+            // use the `android { }` / `androidLibrary { }` DSL accessor (those are project-script auto-accessors); instead we reach it via
+            // `targets.withType<KotlinMultiplatformAndroidLibraryTarget>()`. The new KMP-library plugin's `withDeviceTestBuilder { }` opt-in creates a
+            // `connectedAndroidDeviceTest` task even for modules with no device-test source files; that empty test APK then fails on the device with
+            // `ClassNotFoundException: androidx.test.runner.AndroidJUnitRunner` because androidx-runner is only declared in the feature convention's
+            // androidDeviceTest deps. Gate the opt-in on a real `src/androidDeviceTest/` directory so non-test library modules (e.g. :common, :domain,
             // :logging, :testing) skip the device-test pipeline cleanly.
             val hasDeviceTests = project.file("src/androidDeviceTest").exists()
 
@@ -89,15 +68,10 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
                 compileSdk = 36
                 minSdk = 26
 
-                // AGP 9's KMP-library plugin disables Android resources by
-                // default. Compose Multiplatform resources (used in modules
-                // applying the compose convention) require the pipeline to
-                // be enabled — without this, the
-                // CopyResourcesToAndroidAssetsTask for androidDeviceTest is
-                // generated without an outputDirectory and the connected
-                // tests fail to configure. Enabling here unconditionally
-                // keeps the convention plugin uniform; modules that don't
-                // use Compose Resources just have an empty pipeline.
+                // AGP 9's KMP-library plugin disables Android resources by default. Compose Multiplatform resources (used in modules applying the
+                // compose convention) require the pipeline to be enabled — without this, the CopyResourcesToAndroidAssetsTask for androidDeviceTest is
+                // generated without an outputDirectory and the connected tests fail to configure. Enabling here unconditionally keeps the convention
+                // plugin uniform; modules that don't use Compose Resources just have an empty pipeline.
                 androidResources {
                     enable = true
                 }
@@ -108,20 +82,16 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
                         sourceSetTreeName = "test"
                     }.configure {
                         instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-                        // JaCoCo offline instrumentation for the device-test variant.
-                        // Kover 0.9.x doesn't consume the resulting `.ec` files
-                        // (tracked at kotlinx-kover#96), so the root project's
-                        // `jacocoAndroidTestReport` task aggregates them into a
-                        // parallel report alongside Kover's JVM coverage.
+                        // JaCoCo offline instrumentation for the device-test variant. Kover 0.9.x doesn't consume the resulting `.ec` files (tracked at
+                        // kotlinx-kover#96), so the root project's `jacocoAndroidTestReport` task aggregates them into a parallel report alongside
+                        // Kover's JVM coverage.
                         enableCoverage = true
                     }
                 }
 
-                // Packaging excludes for the test APK. Mokkery 3.x + JUnit 4
-                // pull in transitive junit-jupiter artifacts that each ship
-                // their own META-INF/LICENSE.md, colliding at merge time.
-                // The AGP-9 KMP-library plugin's `packaging { resources { ... } }`
-                // block sets these on the target's outputs.
+                // Packaging excludes for the test APK. Mokkery 3.x + JUnit 4 pull in transitive junit-jupiter artifacts that each ship their own
+                // META-INF/LICENSE.md, colliding at merge time. The AGP-9 KMP-library plugin's `packaging { resources { ... } }` block sets these on
+                // the target's outputs.
                 packaging.resources.excludes.addAll(
                     listOf(
                         "META-INF/LICENSE.md",

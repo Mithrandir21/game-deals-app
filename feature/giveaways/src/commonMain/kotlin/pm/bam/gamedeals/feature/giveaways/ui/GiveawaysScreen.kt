@@ -514,9 +514,8 @@ private fun GiveawaysScreen_Loading_Preview() {
 @Preview
 @Composable
 private fun GiveawayFilters_Preview() {
-    // Preview the Filters body directly. ModalBottomSheet does not render
-    // reliably in static previews, so we skip GiveawayFilters() and call
-    // its content composable instead.
+    // Preview the Filters body directly. ModalBottomSheet does not render reliably in static previews, so we skip GiveawayFilters() and call its content
+    // composable instead.
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Filters(
