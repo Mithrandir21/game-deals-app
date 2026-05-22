@@ -66,6 +66,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Enable JaCoCo offline instrumentation for `:app` device tests so the
+            // androidTest/ journey suite folds into Kover's aggregated report.
+            enableAndroidTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
