@@ -37,6 +37,7 @@ import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 class GameDealsApplication : Application(), SingletonImageLoader.Factory {
 
@@ -66,7 +67,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 commonUiModule,
                 domainModule,
                 domainAndroidModule,
-                remoteModule,
+                remoteModule(currentRemoteBuildType()),
                 cheapsharkNetworkModule,
                 cheapsharkRemoteModule,
                 gamerpowerNetworkModule,
@@ -152,4 +153,9 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     private companion object {
         const val SENTRY_DSN = ""
     }
+}
+
+private fun currentRemoteBuildType(): RemoteBuildType = when (BuildConfig.BUILD_TYPE) {
+    "release" -> RemoteBuildType.RELEASE
+    else -> RemoteBuildType.DEBUG
 }
