@@ -26,7 +26,6 @@ internal class ReleasesRepositoryImpl(
             .onError { fatal(logger, it) }
 
     override suspend fun refreshReleases() {
-        cheapsharkSource.fetchReleases()
-            .let { releasesDao.addReleases(*it.toTypedArray()) }
+        releasesDao.replaceAll(cheapsharkSource.fetchReleases())
     }
 }

@@ -27,7 +27,7 @@ class ReleasesRepositoryTest {
     private val impl = ReleasesRepositoryImpl(logger, releasesDao, cheapsharkSource)
 
     @Test
-    fun observe_releases_with_refresh_called() = runTest {
+    fun observeReleases_triggers_refresh_that_replaces_stale_rows() = runTest {
         val release = Release(title = "Test Release", date = 0, image = "thumb.png")
 
         every { releasesDao.observeAllReleases() } returns flowOf(listOf(release))
@@ -38,11 +38,11 @@ class ReleasesRepositoryTest {
 
         verify(exactly(1)) { releasesDao.observeAllReleases() }
         verifySuspend(exactly(1)) { cheapsharkSource.fetchReleases() }
-        verifySuspend(exactly(1)) { releasesDao.addReleases(release) }
+        verifySuspend(exactly(1)) { releasesDao.replaceAll(listOf(release)) }
     }
 
     @Test
-    fun refresh_releases_skips_dao_observe_path() = runTest {
+    fun refreshReleases_swaps_table_contents_via_dao_replaceAll() = runTest {
         val release = Release(title = "Test Release", date = 0, image = "thumb.png")
 
         everySuspend { cheapsharkSource.fetchReleases() } returns listOf(release)
@@ -51,6 +51,6 @@ class ReleasesRepositoryTest {
 
         verify(exactly(0)) { releasesDao.observeAllReleases() }
         verifySuspend(exactly(1)) { cheapsharkSource.fetchReleases() }
-        verifySuspend(exactly(1)) { releasesDao.addReleases(release) }
+        verifySuspend(exactly(1)) { releasesDao.replaceAll(listOf(release)) }
     }
 }

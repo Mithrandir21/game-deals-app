@@ -52,15 +52,15 @@ class GiveawaysRepositoryTest {
     }
 
     @Test
-    fun refresh_giveaways() = runTest {
-        val giveaway = giveaway()
+    fun refresh_giveaways_swaps_table_contents_via_dao_replaceAll() = runTest {
+        val item = giveaway()
 
-        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(giveaway)
+        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(item)
 
         impl.refreshGiveaways()
 
         verifySuspend(exactly(1)) { gamerPowerSource.fetchGiveaways() }
-        verifySuspend(exactly(1)) { giveawaysDao.addGiveaways(giveaway) }
+        verifySuspend(exactly(1)) { giveawaysDao.replaceAll(listOf(item)) }
     }
 
     @Test

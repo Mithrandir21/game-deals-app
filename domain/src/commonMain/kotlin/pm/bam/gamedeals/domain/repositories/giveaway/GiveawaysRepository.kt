@@ -57,7 +57,6 @@ internal class GiveawaysRepositoryImpl(
     }
 
     override suspend fun refreshGiveaways() {
-        gamerPowerSource.fetchGiveaways()
-            .let { giveawaysDao.addGiveaways(*it.toTypedArray()) }
+        giveawaysDao.replaceAll(gamerPowerSource.fetchGiveaways())
     }
 }
