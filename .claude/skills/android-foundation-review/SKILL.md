@@ -130,6 +130,9 @@ detailed review checklist and grading rubric.
 3. If something falls outside your remit, note it as `OUT_OF_SCOPE: see {other_agent}`
    and move on — don't try to cover everything yourself.
 4. Write your findings to: {WORKSPACE}/findings-{AGENT_SLUG}.md
+5. **Hard cap: keep the entire findings file under 800 words.** Be terse — one or two
+   sentences per checklist item is enough. Prioritize concrete `file:line` evidence
+   and a specific recommendation over prose. The synthesizer needs signal, not essays.
 
 Format findings as Markdown with H2 headings per checklist item.
 Be blunt and precise. Your audience is a staff-level Android engineer who has seen
