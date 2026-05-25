@@ -24,6 +24,7 @@ import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 /**
  * Application class swapped in by [KoinTestRunner] for instrumented tests. Loads the
@@ -44,7 +45,7 @@ class TestGameDealsApplication : Application() {
                 commonUiModule,
                 domainModule,
                 domainAndroidModule,
-                remoteModule,
+                remoteModule(RemoteBuildType.RELEASE),
                 cheapsharkNetworkModule,
                 cheapsharkRemoteModule,
                 gamerpowerNetworkModule,

@@ -65,6 +65,8 @@ android {
         }
     }
 
+    buildFeatures.buildConfig = true
+
     buildTypes {
         debug {
             // Pair flag for the KMP-library `enableCoverage = true`; the root `jacocoAndroidTestReport` task folds the resulting `coverage.ec`
