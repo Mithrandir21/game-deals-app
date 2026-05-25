@@ -1,0 +1,41 @@
+campaign_slug: "2026-05-25-bug"
+labels: ["bug"]
+created: "2026-05-25"
+status: "in_progress"
+current_wave: 1
+notes:
+  - "Started after both 2026-05-06 bug-hunt campaigns were closed out. No remaining `bug-hunt` issues; this campaign targets the standard `bug` label."
+  - "#148 (sealed Destination / SKIE adoption) was dropped from the candidate pool — informational, recommended fix is project-wide SKIE adoption. Re-labeled (removed `bug`, kept `tech-debt` + `area:kmp`) so future `bug` queries skip it."
+issues:
+  - number: 170
+    title: "Inject build type into :remote from :app via Koin (drop hardcoded DEBUG)"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-25-bug/issue-170-inject-build-type"
+    pr: 175
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/175"
+    commit: "15a1fe6"
+    status: "open"
+    note: "Worker added `buildFeatures.buildConfig = true` to app/build.gradle.kts (re-enable BuildConfig generation for :app); not in planner's declared scope but a necessary corollary of reading BuildConfig.BUILD_TYPE. Worker initially edited the parent project paths (path-mixup), then redid edits in the worktree and reverted the parent — verified parent project clean of #170-related changes. 9 files, +26/-41."
+    planned_files:
+      - "remote/src/commonMain/kotlin/pm/bam/gamedeals/remote/logic/RemoteBuildUtil.kt"
+      - "remote/src/commonMain/kotlin/pm/bam/gamedeals/remote/di/RemoteModule.kt"
+      - "remote/src/androidMain/kotlin/pm/bam/gamedeals/remote/logic/RemoteBuildUtil.android.kt"
+      - "remote/src/iosMain/kotlin/pm/bam/gamedeals/remote/logic/RemoteBuildUtil.ios.kt"
+      - "app/src/main/java/pm/bam/gamedeals/di/AppModule.kt"
+      - "app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt"
+      - "iosApp/src/iosMain/kotlin/pm/bam/gamedeals/iosApp/MainViewController.kt"
+      - "app/src/androidTest/java/pm/bam/gamedeals/di/TestNetworkOverridesModule.kt"
+  - number: 171
+    title: "Gradle 9.3.1 + Mokkery 3.x test reporter chokes on K/N stdout for throws-mock tests"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-25-bug/issue-171-mokkery-throws-workaround"
+    status: "dispatched"
+    planned_files:
+      - "feature/game/src/commonTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
+      - "feature/giveaways/src/commonTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+deferred:
+  - number: 148
+    title: "Sealed Destination loses Swift exhaustiveness (no SKIE)"
+    reason: "Informational; recommended fix is project-wide SKIE adoption, not a wave-style code change. Re-labeled to remove `bug`."
