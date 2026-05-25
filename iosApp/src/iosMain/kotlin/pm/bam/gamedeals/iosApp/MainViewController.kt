@@ -10,6 +10,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import kotlin.experimental.ExperimentalNativeApi
+import kotlin.native.Platform
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import platform.Foundation.NSDate
@@ -44,6 +46,7 @@ import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 @Suppress("FunctionName", "unused")
 fun MainViewController(): UIViewController {
@@ -74,7 +77,7 @@ private fun bootstrapKoin() {
             commonUiModule,
             domainModule,
             domainIosModule,
-            remoteModule,
+            remoteModule(currentRemoteBuildType()),
             cheapsharkNetworkModule,
             cheapsharkRemoteModule,
             gamerpowerNetworkModule,
@@ -143,3 +146,6 @@ private fun AppNavHost() {
     }
 }
 
+@OptIn(ExperimentalNativeApi::class)
+private fun currentRemoteBuildType(): RemoteBuildType =
+    if (Platform.isDebugBinary) RemoteBuildType.DEBUG else RemoteBuildType.RELEASE

@@ -24,12 +24,12 @@ import pm.bam.gamedeals.remote.logic.gameDealsHttpClient
 val testNetworkOverridesModule = module {
     // RELEASE-mode build util suppresses the production Logging plugin install,
     // matching the prior hand-rolled HttpClient shape.
-    val testBuildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE }
+    single<RemoteBuildUtil> { RemoteBuildUtil { RemoteBuildType.RELEASE } }
 
     single<HttpClient>(CHEAPSHARK_QUALIFIER) {
         gameDealsHttpClient(
             json = get(),
-            buildUtil = testBuildUtil,
+            buildUtil = get(),
             baseUrl = "https://www.cheapshark.com",
             engine = MockEngine { request -> handle(request) },
         )
@@ -38,7 +38,7 @@ val testNetworkOverridesModule = module {
     single<HttpClient>(GAMERPOWER_QUALIFIER) {
         gameDealsHttpClient(
             json = get(),
-            buildUtil = testBuildUtil,
+            buildUtil = get(),
             baseUrl = "https://www.gamerpower.com",
             engine = MockEngine { request -> handle(request) },
         )
