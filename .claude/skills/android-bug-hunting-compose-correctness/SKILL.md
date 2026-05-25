@@ -22,9 +22,7 @@ that look like "weird UI behaviour" rather than crashes — duplicated effects, 
 missed updates, infinite recomposition, jank from over-recomposition. This skill encodes
 the well-known antipatterns and looks for each one.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
-Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
-Recommended Fix, Confidence Rationale.
+**Output format.** Use the shared Bug Report Format. Read `.claude/skills/android-bug-hunting-dispatcher/references/report-format.md` before writing findings.
 
 ---
 

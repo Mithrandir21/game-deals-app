@@ -80,7 +80,7 @@ Spawn each relevant specialist **in the same turn**. Each receives:
 1. The shared project profile from Step 0.
 2. The path to its dedicated SKILL.md.
 3. A workspace path for findings: `<workspace>/findings-<specialist-slug>.md`.
-4. The shared **Bug Report Format** below.
+4. Instruction to Read the shared Bug Report Format (see Step 2).
 
 ### Specialist prompt template
 
@@ -93,80 +93,23 @@ Read your detailed playbook at {SPECIALIST_SKILL_PATH}/SKILL.md and follow it.
 {PROJECT_PROFILE_FROM_STEP_0}
 
 ## Output format
-Use the shared Bug Report Format. Every finding must include all fields:
-Severity, Category, Location, Effort, Confidence, Description, Impact,
-Evidence, Recommended Fix, Confidence Rationale.
+Before writing findings, Read:
+`.claude/skills/android-bug-hunting-dispatcher/references/report-format.md`
+It defines the finding template plus the Severity, Effort, and Confidence rubrics.
+Every finding must use that exact format.
 
 Write findings to: {WORKSPACE}/findings-{SPECIALIST_SLUG}.md
-
-## Discipline
-- Only report things you can point to with concrete file:line evidence.
-- Do not pad with stylistic suggestions or architectural opinions.
-- If you are not sure something is a real defect, mark Confidence Low and
-  explain what context could make it a false positive — do not omit it,
-  but do not inflate it either.
-- Prefer fewer high-confidence findings to many speculative ones.
 ```
 
 ---
 
 ## Step 2 — Shared Bug Report Format
 
-**Every** specialist uses this exact format. The dispatcher relies on it for aggregation.
+The canonical finding template, plus the Severity / Effort / Confidence rubrics, lives in:
 
-```markdown
-### BUG-{NNN}: {Short title}
+`.claude/skills/android-bug-hunting-dispatcher/references/report-format.md`
 
-| Field | Value |
-|---|---|
-| **Severity** | Critical / High / Medium / Low |
-| **Category** | e.g. "Memory leak", "Race condition", "Lifecycle violation" |
-| **Location** | `path/to/File.kt:LINE` (or `Class.method`) |
-| **Effort** | Trivial / Small / Medium / Large |
-| **Confidence** | High / Medium / Low |
-
-**Description.** One to three sentences stating exactly what is wrong.
-
-**Impact.** What happens at runtime. Be concrete: "Activity is retained after rotation,
-leaking ~4MB per rotation"; "Crashes with `IllegalStateException` when user backgrounds
-the app during checkout"; "ANR after ~3s when network is slow on cold start".
-
-**Evidence.**
-```kotlin
-// minimal snippet (≤ 15 lines) demonstrating the antipattern
-```
-
-**Recommended fix.** A concrete change. Show before/after when helpful, or describe the
-exact API/pattern to use instead.
-
-**Confidence rationale.** Why this is (or might not be) a real bug. Note any context
-that would change the verdict.
-```
-
-### Severity rubric
-
-- **Critical** — crashes in normal use, data loss, security breach, ANRs reachable on
-  common code paths, leaks that grow unboundedly with normal usage.
-- **High** — leaks bounded but significant, races that produce wrong state intermittently,
-  broken features for a meaningful subset of users, missing cancellation that leaks
-  coroutines after lifecycle end.
-- **Medium** — performance issues, sporadic incorrect behaviour under specific conditions,
-  resource leaks bounded to a single screen.
-- **Low** — minor inefficiency, latent issue that is not currently reachable but would
-  become a bug under foreseeable changes.
-
-### Effort rubric
-
-- **Trivial** — under 30 minutes, single-file change, no behaviour change to test.
-- **Small** — under 4 hours, clear local pattern fix, light testing.
-- **Medium** — 1–2 days, refactor across a few files, needs new tests.
-- **Large** — more than 2 days, architectural or cross-module change.
-
-### Confidence rubric
-
-- **High** — well-known antipattern with clear runtime evidence; would surface in code review.
-- **Medium** — likely a bug, but depends on calling context the analyzer cannot fully see.
-- **Low** — suspicious; flag for human judgment. Always pair with an explicit rationale.
+Every specialist Reads that file before writing findings. The dispatcher relies on the format for aggregation in Step 3.
 
 ---
 
