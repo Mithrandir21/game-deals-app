@@ -11,6 +11,7 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-05-25-01 | `@Insert(REPLACE)` only refreshes rows whose keys still appear upstream — clear before insert in a `@Transaction` or stale rows accumulate forever. | room, kmp, dao, cache, transaction |
 | L-2026-05-22-03 | Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage. | kover, jacoco, android-test, coverage, kmp |
 | L-2026-05-22-01 | `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them. | room, kmp, testing, migrations |
 | L-2026-05-22-02 | Every visible MigrationTestHelper constructor in androidHostTest requires an Instrumentation — needs Robolectric or skip the runtime test. | room, kmp, testing, migrations, robolectric |
@@ -101,6 +102,17 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-05-25-01 · Mirror rotating remote feeds with clear+insert in a DAO @Transaction
+**TL;DR:** `@Insert(REPLACE)` only refreshes rows whose keys still appear upstream — clear before insert in a `@Transaction` or stale rows accumulate forever.
+`active` · `confirmed` · 2026-05-25 · `room` `kmp` `dao` `cache` `transaction`
+**Applies to:** Room DAOs that mirror a "trending"/"latest N" remote list
+
+For DAOs mirroring a rotating remote list (today's "new releases", current giveaways), naive refresh via `@Insert(REPLACE)` leaks entries that drop off the upstream — `REPLACE` only fires on key collisions, so rotated-out rows are never deleted.
+
+Wrap `clearAll() + addAll(...)` in a `@Transaction` default method on the DAO so observers never see an empty intermediate state. Push the transaction up into the repo only when each row needs per-row computation before insert (e.g. stamping a cache `expires` from a clock) — otherwise the DAO owns its own consistency.
+
+**Source:** `:domain`'s `ReleasesDao` and `GiveawaysDao` — weeks of stale "New Releases" accumulated on the home screen before being noticed.
 
 ### L-2026-05-22-03 · Kover 0.9.x ignores instrumented coverage; use JaCoCo task
 **TL;DR:** Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage.
