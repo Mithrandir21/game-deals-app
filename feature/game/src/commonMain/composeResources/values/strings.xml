@@ -19,7 +19,6 @@
     <string name="game_screen_share_action">Share %1$s deal</string>
     <string name="game_screen_store_deal_row_description">%1$s, save %2$s\%%, %3$s</string>
 
-    <string name="game_screen_about_label">About</string>
     <string name="game_screen_summary_read_more">Read more</string>
     <string name="game_screen_summary_show_less">Show less</string>
 

@@ -139,10 +139,23 @@ private fun CompactGameDealsDetails(
     ) {
         CompactGameDetail(data.gameDetails)
 
-        data.igdbGame?.summary?.let { summary -> IgdbSummarySection(summary) }
+        data.igdbGame?.summary?.let { summary ->
+            IgdbSummarySection(
+                summary = summary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large)
+            )
+        }
 
         Column(
-            modifier = Modifier.padding(PaddingValues(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large)),
+            modifier = Modifier.padding(
+                PaddingValues(
+                    start = GameDealsCustomTheme.spacing.large,
+                    end = GameDealsCustomTheme.spacing.large,
+                    bottom = GameDealsCustomTheme.spacing.large
+                )
+            ),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
             data.dealDetails.forEach {

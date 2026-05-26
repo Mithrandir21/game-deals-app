@@ -4,7 +4,9 @@ package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -24,15 +26,14 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.game.generated.resources.Res
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_about_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_read_more
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_show_less
 
 /**
  * IGDB-sourced summary shown above the deal list on the game-details screen. Wrapped in a Card
- * with an "About" header for visual separation from the price block and deal rows. Long summaries
- * are clamped to [COLLAPSED_LINES] lines with a Read more / Show less toggle; short summaries
- * (no overflow) suppress the toggle.
+ * for visual separation from the price block and deal rows. Long summaries are clamped to
+ * [COLLAPSED_LINES] lines with a Read more / Show less toggle; short summaries (no overflow)
+ * suppress the toggle.
  */
 @Composable
 internal fun IgdbSummarySection(
@@ -43,22 +44,16 @@ internal fun IgdbSummarySection(
     var hasOverflow by remember { mutableStateOf(false) }
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = GameDealsCustomTheme.spacing.large,
-                end = GameDealsCustomTheme.spacing.large,
-                bottom = GameDealsCustomTheme.spacing.large,
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+            modifier = Modifier.padding(
+                start = GameDealsCustomTheme.spacing.large,
+                top = GameDealsCustomTheme.spacing.large,
+                end = GameDealsCustomTheme.spacing.large
+            ),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
-            Text(
-                text = stringResource(Res.string.game_screen_about_label),
-                style = MaterialTheme.typography.titleSmall,
-            )
             Text(
                 text = summary,
                 style = MaterialTheme.typography.bodyMedium,
@@ -78,6 +73,8 @@ internal fun IgdbSummarySection(
                         )
                     )
                 }
+            } else {
+                Spacer(modifier = Modifier.height(GameDealsCustomTheme.spacing.large))
             }
         }
     }
@@ -99,11 +96,11 @@ private fun IgdbSummarySection_LongSummary_Preview() {
     GameDealsTheme {
         IgdbSummarySection(
             summary = "The Master Chief returns in Halo Infinite – the next chapter of the legendary franchise. " +
-                "When all hope is lost and humanity's fate hangs in the balance, the Master Chief is ready to confront " +
-                "the most ruthless foe he's ever faced. Step inside the armor of humanity's greatest hero to experience " +
-                "an epic adventure and explore the massive scale of the Halo ring. Across multiple expansive locations, " +
-                "players will engage in iconic combat against a deadly new enemy faction, the Banished. Pilot powerful " +
-                "vehicles, wield a sandbox of legendary weapons, and traverse the largest Halo world ever designed."
+                    "When all hope is lost and humanity's fate hangs in the balance, the Master Chief is ready to confront " +
+                    "the most ruthless foe he's ever faced. Step inside the armor of humanity's greatest hero to experience " +
+                    "an epic adventure and explore the massive scale of the Halo ring. Across multiple expansive locations, " +
+                    "players will engage in iconic combat against a deadly new enemy faction, the Banished. Pilot powerful " +
+                    "vehicles, wield a sandbox of legendary weapons, and traverse the largest Halo world ever designed."
         )
     }
 }
