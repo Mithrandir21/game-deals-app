@@ -31,6 +31,7 @@ import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.favourites.di.favouritesModule
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
+import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
@@ -135,7 +136,9 @@ private fun AppNavHost() {
         gameScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
         )
+        gameDetailsScreen(navController = navController)
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },

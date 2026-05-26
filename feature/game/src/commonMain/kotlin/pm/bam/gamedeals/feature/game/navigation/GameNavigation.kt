@@ -8,12 +8,14 @@ import pm.bam.gamedeals.feature.game.ui.GameScreen
 
 fun NavGraphBuilder.gameScreen(
     navController: NavController,
-    goToWeb: (url: String, gameTitle: String) -> Unit
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
 ) {
     composable<Destination.Game> {
         GameScreen(
             onBack = { navController.popBackStack() },
-            goToWeb = goToWeb
+            goToWeb = goToWeb,
+            goToGameDetails = goToGameDetails,
         )
     }
 }

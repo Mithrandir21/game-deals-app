@@ -8,12 +8,15 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import kotlin.time.Instant
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
@@ -69,6 +72,73 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun fetchGameDetailsBySteamId_posts_rich_query_and_returns_fully_mapped_domain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_DETAILS_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsBySteamId(STEAM_ID)
+
+        val expected = IgdbGame(
+            id = 11140L,
+            name = "Halo Infinite",
+            summary = "Master Chief returns",
+            storyline = "When all hope is lost",
+            coverImageId = "co1n82",
+            screenshotImageIds = persistentListOf("sc1", "sc2"),
+            firstReleaseDate = Instant.fromEpochSeconds(1638921600L),
+            rating = 78.5,
+            ratingCount = 421L,
+            aggregatedRating = 87.0,
+            aggregatedRatingCount = 24L,
+            genres = persistentListOf("Shooter", "Adventure"),
+            themes = persistentListOf("Action", "Science fiction"),
+            involvedCompanies = persistentListOf(
+                IgdbGame.IgdbCompanyRole("343 Industries", IgdbGame.IgdbCompanyRole.Role.Developer),
+                IgdbGame.IgdbCompanyRole("Xbox Game Studios", IgdbGame.IgdbCompanyRole.Role.Publisher),
+                IgdbGame.IgdbCompanyRole("Skybox Labs", IgdbGame.IgdbCompanyRole.Role.Developer),
+                IgdbGame.IgdbCompanyRole("Skybox Labs", IgdbGame.IgdbCompanyRole.Role.Supporting),
+            ),
+            websites = persistentListOf(
+                IgdbGame.IgdbWebsite("https://www.halowaypoint.com", IgdbGame.IgdbWebsite.Category.Official),
+                IgdbGame.IgdbWebsite("https://store.steampowered.com/app/1240440", IgdbGame.IgdbWebsite.Category.Steam),
+                IgdbGame.IgdbWebsite("https://example.com/unknown", IgdbGame.IgdbWebsite.Category.Other),
+            ),
+            similarGames = persistentListOf(
+                IgdbGame.IgdbSimilarGame(id = 1234L, name = "Halo 5: Guardians", coverImageId = "ha5"),
+                IgdbGame.IgdbSimilarGame(id = 5678L, name = "Destiny 2", coverImageId = null),
+            ),
+        )
+        assertEquals(expected, result)
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/external_games", request.url.encodedPath)
+        assertEquals(buildSteamLookupDetailsQuery(STEAM_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsBySteamId_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsBySteamId(STEAM_ID)
+
+        assertNull(result, "Empty list response must surface as null IgdbGame")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
     fun fetchGameBySteamId_propagates_http_500_through_the_unwrap_chain() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -100,6 +170,55 @@ class IgdbSourceImplTest {
         // language=JSON
         const val ONE_GAME_BODY = """[
             {"id":99,"game":{"id":1,"name":"Halo Infinite","summary":"Master Chief stuff"}}
+        ]"""
+
+        // language=JSON
+        const val ONE_GAME_DETAILS_BODY = """[
+            {
+                "id": 99,
+                "game": {
+                    "id": 11140,
+                    "name": "Halo Infinite",
+                    "summary": "Master Chief returns",
+                    "storyline": "When all hope is lost",
+                    "cover": {"id": 12345, "image_id": "co1n82"},
+                    "screenshots": [
+                        {"id": 1, "image_id": "sc1"},
+                        {"id": 2, "image_id": "sc2"}
+                    ],
+                    "first_release_date": 1638921600,
+                    "rating": 78.5,
+                    "rating_count": 421,
+                    "aggregated_rating": 87.0,
+                    "aggregated_rating_count": 24,
+                    "genres": [
+                        {"id": 5, "name": "Shooter"},
+                        {"id": 31, "name": "Adventure"},
+                        {"id": 99}
+                    ],
+                    "themes": [
+                        {"id": 1, "name": "Action"},
+                        {"id": 18, "name": "Science fiction"}
+                    ],
+                    "involved_companies": [
+                        {"id": 100, "company": {"id": 9, "name": "343 Industries"}, "developer": true, "publisher": false, "porting": false, "supporting": false},
+                        {"id": 101, "company": {"id": 10, "name": "Xbox Game Studios"}, "developer": false, "publisher": true, "porting": false, "supporting": false},
+                        {"id": 102, "company": {"id": 11, "name": "Skybox Labs"}, "developer": true, "publisher": false, "porting": false, "supporting": true},
+                        {"id": 103, "developer": true}
+                    ],
+                    "websites": [
+                        {"id": 1, "url": "https://www.halowaypoint.com", "type": {"id": 1, "type": "Official Website"}},
+                        {"id": 2, "url": "https://store.steampowered.com/app/1240440", "type": {"id": 13, "type": "Steam"}},
+                        {"id": 3, "url": "https://example.com/unknown", "type": {"id": 999, "type": "Unknown"}},
+                        {"id": 4, "type": {"id": 1, "type": "Official Website"}}
+                    ],
+                    "similar_games": [
+                        {"id": 1234, "name": "Halo 5: Guardians", "cover": {"id": 50, "image_id": "ha5"}},
+                        {"id": 5678, "name": "Destiny 2"},
+                        {"id": 9999}
+                    ]
+                }
+            }
         ]"""
     }
 }

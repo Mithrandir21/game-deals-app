@@ -23,6 +23,13 @@ internal class IgdbSourceImpl(
             .getOrThrow()
             .toIgdbGameOrNull()
 
+    override suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame? =
+        igdbGamesApi.fetchGameDetailsBySteamId(steamId)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toIgdbGameOrNull()
+
     private companion object {
         private val TAG: String = IgdbSourceImpl::class.simpleName.orEmpty()
     }

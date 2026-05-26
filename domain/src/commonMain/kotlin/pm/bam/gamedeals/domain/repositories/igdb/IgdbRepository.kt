@@ -5,6 +5,7 @@ import pm.bam.gamedeals.domain.source.IgdbSource
 
 interface IgdbRepository {
     suspend fun fetchGameBySteamId(steamId: Int): IgdbGame?
+    suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame?
 }
 
 internal class IgdbRepositoryImpl(
@@ -13,4 +14,7 @@ internal class IgdbRepositoryImpl(
 
     override suspend fun fetchGameBySteamId(steamId: Int): IgdbGame? =
         igdbSource.fetchGameBySteamId(steamId)
+
+    override suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame? =
+        igdbSource.fetchGameDetailsBySteamId(steamId)
 }

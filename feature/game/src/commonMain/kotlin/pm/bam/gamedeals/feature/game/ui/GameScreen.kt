@@ -97,6 +97,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun GameScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,6 +120,7 @@ internal fun GameScreen(
             isFavourite = isFavourite.value,
             onBack = onBack,
             goToWeb = goToWeb,
+            goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onToggleFavourite = { viewModel.toggleFavourite() },
             onRetry = onRetry
@@ -131,6 +133,7 @@ private fun CompactGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Column(
@@ -139,12 +142,22 @@ private fun CompactGameDealsDetails(
     ) {
         CompactGameDetail(data.gameDetails)
 
-        data.igdbGame?.summary?.let { summary ->
-            IgdbSummarySection(
-                summary = summary,
+        val igdb = data.igdbGame
+        val steamId = data.gameDetails.info.steamAppID
+        if (igdb != null && steamId != null) {
+            igdb.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+                IgdbSummarySection(
+                    summary = summary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.medium)
+                )
+            }
+            GameDetailsButton(
+                onClick = { goToGameDetails(steamId) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large)
+                    .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large),
             )
         }
 
@@ -176,6 +189,7 @@ private fun WideGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Row(modifier = modifier) {
@@ -188,7 +202,12 @@ private fun WideGameDealsDetails(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
-            data.igdbGame?.summary?.let { summary -> IgdbSummarySection(summary) }
+            val igdb = data.igdbGame
+            val steamId = data.gameDetails.info.steamAppID
+            if (igdb != null && steamId != null) {
+                igdb.summary?.takeIf { it.isNotBlank() }?.let { summary -> IgdbSummarySection(summary) }
+                GameDetailsButton(onClick = { goToGameDetails(steamId) })
+            }
 
             data.dealDetails.forEach {
                 StoreGameDealRow(
@@ -370,6 +389,7 @@ private fun GameScreenContent(
     isFavourite: Boolean,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
     onRetry: () -> Unit
@@ -454,9 +474,9 @@ private fun GameScreenContent(
 
                     is GameScreenData.Data -> {
                         if (isCompact) {
-                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
+                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
                         } else {
-                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
+                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
                         }
                     }
 
@@ -514,6 +534,7 @@ private fun GameScreenContent_Compact_Success_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -535,6 +556,7 @@ private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -556,6 +578,7 @@ private fun GameScreenContent_Wide_Success_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -573,6 +596,7 @@ private fun GameScreenContent_Loading_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )

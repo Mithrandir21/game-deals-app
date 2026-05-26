@@ -21,5 +21,23 @@
 
     <string name="game_screen_summary_read_more">Read more</string>
     <string name="game_screen_summary_show_less">Show less</string>
+    <string name="game_screen_view_details">Game details</string>
+
+    <string name="game_details_screen_title">Game Details</string>
+    <string name="game_details_cover_image_cd">%1$s cover art</string>
+    <string name="game_details_screenshot_image_cd">%1$s screenshot %2$d</string>
+    <string name="game_details_released_label">Released %1$s</string>
+    <string name="game_details_user_rating_label">Players</string>
+    <string name="game_details_critic_rating_label">Critics</string>
+    <string name="game_details_section_description">Description</string>
+    <string name="game_details_section_storyline">Story</string>
+    <string name="game_details_section_screenshots">Screenshots</string>
+    <string name="game_details_section_companies">Companies</string>
+    <string name="game_details_section_links">Links</string>
+    <string name="game_details_section_similar">You might also like</string>
+    <string name="game_details_company_role_developer">Developer</string>
+    <string name="game_details_company_role_publisher">Publisher</string>
+    <string name="game_details_company_role_porting">Porting</string>
+    <string name="game_details_company_role_supporting">Supporting</string>
 
 </resources>

@@ -56,6 +56,7 @@ class GameScreenTest {
     private val gameInfo: GameDetails.GameInfo = mockk {
         every { thumb } returns "Thumb"
         every { title } returns gameTitle
+        every { steamAppID } returns null
     }
 
     private val dealId = "ID"
@@ -95,6 +96,7 @@ class GameScreenTest {
     private fun setupCompose(
         onBack: () -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
+        goToGameDetails: (Int) -> Unit = {},
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
@@ -102,6 +104,7 @@ class GameScreenTest {
                 GameScreen(
                     onBack = onBack,
                     goToWeb = goToWeb,
+                    goToGameDetails = goToGameDetails,
                     viewModel = viewModel,
                 )
             }
