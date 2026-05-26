@@ -40,4 +40,7 @@
     <string name="game_details_company_role_porting">Porting</string>
     <string name="game_details_company_role_supporting">Supporting</string>
 
+    <string name="game_details_screenshot_viewer_close">Close</string>
+    <string name="game_details_screenshot_viewer_page_indicator">%1$d / %2$d</string>
+
 </resources>

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
 import io.mockk.every
@@ -28,6 +29,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_screen_tit
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_companies
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_close
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
@@ -74,7 +77,7 @@ class GameDetailsScreenTest {
 
     private fun setupCompose(onBack: () -> Unit = {}) {
         composeTestRule.setContent {
-            screenSemantics = ScreenSemantics.load()
+            screenSemantics = ScreenSemantics.load(sampleGame.name)
             GameDealsTheme {
                 GameDetailsScreen(onBack = onBack, viewModel = viewModel)
             }
@@ -125,6 +128,22 @@ class GameDetailsScreenTest {
     }
 
     @Test
+    fun tapping_a_screenshot_opens_fullscreen_viewer() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame)
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.firstScreenshot)
+            .performScrollTo()
+            .performClick()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.viewerClose)
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs
@@ -150,10 +169,12 @@ class GameDetailsScreenTest {
         val companies: String,
         val links: String,
         val similar: String,
+        val firstScreenshot: String,
+        val viewerClose: String,
     ) {
         companion object {
             @Composable
-            fun load(): ScreenSemantics = ScreenSemantics(
+            fun load(gameName: String): ScreenSemantics = ScreenSemantics(
                 title = stringResource(Res.string.game_details_screen_title),
                 errorMsg = stringResource(Res.string.game_screen_data_loading_error_msg),
                 retry = stringResource(Res.string.game_screen_data_loading_error_retry),
@@ -163,6 +184,8 @@ class GameDetailsScreenTest {
                 companies = stringResource(Res.string.game_details_section_companies),
                 links = stringResource(Res.string.game_details_section_links),
                 similar = stringResource(Res.string.game_details_section_similar),
+                firstScreenshot = stringResource(Res.string.game_details_screenshot_image_cd, gameName, 1),
+                viewerClose = stringResource(Res.string.game_details_screenshot_viewer_close),
             )
         }
     }
