@@ -29,6 +29,7 @@ include(":testing")
 include(":remote")
 include(":remote:gamerpower")
 include(":remote:cheapshark")
+include(":remote:igdb")
 include(":domain")
 
 include(":feature:store")

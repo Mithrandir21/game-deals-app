@@ -17,6 +17,10 @@ android {
     var releaseKeyStoreFile = ""
     var releaseKeyStorePassword = ""
 
+    // IGDB credentials — read from the same local.properties (dev) / env-var (CI) sources as the signing keys.
+    var igdbClientId = ""
+    var igdbClientSecret = ""
+
     // First check if the local.properties file exists, meaning non-CI environment.
     if (File(rootProject.rootDir, "local.properties").exists()) {
         // Loading local properties so that we can use them in the build.gradle.kts file and not expose them in the repository
@@ -28,6 +32,9 @@ android {
         releaseKeyPassword = localProperties.getProperty("keyPassword") ?: "FakePassword"
         releaseKeyStoreFile = "../upload_keystore.jks"
         releaseKeyStorePassword = localProperties.getProperty("storePassword") ?: "FakeStorePassword"
+
+        igdbClientId = localProperties.getProperty("igdbClientId") ?: ""
+        igdbClientSecret = localProperties.getProperty("igdbClientSecret") ?: ""
     }
     // Check if environment variables are present, meaning CI environment.
     else if (System.getenv("RELEASE_KEY_ALIAS") != null) {
@@ -38,6 +45,10 @@ android {
         releaseKeyStoreFile = "../upload_keystore.jks"
         releaseKeyStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
     }
+
+    // Env-var fallback for IGDB creds is independent of the signing block so CI can provide IGDB creds without a release key.
+    if (igdbClientId.isEmpty()) igdbClientId = System.getenv("IGDB_CLIENT_ID") ?: ""
+    if (igdbClientSecret.isEmpty()) igdbClientSecret = System.getenv("IGDB_CLIENT_SECRET") ?: ""
 
     // If neither local.properties nor environment variables are present, the release key is not present.
     if(releaseKeyPresent) {
@@ -63,6 +74,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "IGDB_CLIENT_ID", "\"$igdbClientId\"")
+        buildConfigField("String", "IGDB_CLIENT_SECRET", "\"$igdbClientSecret\"")
     }
 
     buildFeatures.buildConfig = true
@@ -92,6 +106,7 @@ dependencies {
     // Remote source adapters — wired in Koin at the app boundary so :domain stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
     implementation(project(":remote:cheapshark"))
     implementation(project(":remote:gamerpower"))
+    implementation(project(":remote:igdb"))
 
     implementation(project(":feature:home"))
     implementation(project(":feature:game"))

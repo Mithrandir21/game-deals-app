@@ -16,6 +16,7 @@ import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import org.koin.dsl.module
 import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.ui.di.commonUiModule
@@ -37,6 +38,9 @@ import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
+import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
+import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 class GameDealsApplication : Application(), SingletonImageLoader.Factory {
@@ -72,6 +76,9 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 cheapsharkRemoteModule,
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
+                igdbNetworkModule,
+                igdbRemoteModule,
+                module { single { IgdbCredentials(BuildConfig.IGDB_CLIENT_ID, BuildConfig.IGDB_CLIENT_SECRET) } },
                 appModule,
                 homeModule,
                 gameModule,
