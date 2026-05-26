@@ -8,21 +8,25 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
-import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
+import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
 
 /**
- * IGDB `/v4/games` endpoint. IGDB uses Apicalypse — a plain-text query language sent as the
- * request body. `Content-Type: text/plain` keeps Ktor's ContentNegotiation from trying to
- * JSON-serialize the raw `String` body. The `Client-ID` header is set on the HttpClient's
- * `defaultRequest`; the `Authorization: Bearer …` header is injected by Ktor's Auth plugin.
+ * IGDB endpoints. IGDB uses Apicalypse — a plain-text query language sent as the request body.
+ * `Content-Type: text/plain` keeps Ktor's ContentNegotiation from trying to JSON-serialize the
+ * raw `String` body. The `Client-ID` header is set on the HttpClient's `defaultRequest`; the
+ * `Authorization: Bearer …` header is injected by Ktor's Auth plugin.
  */
 class IgdbGamesApi(private val httpClient: HttpClient) {
 
-    suspend fun sampleGames(): ApiResponse<List<RemoteIgdbGame>> = try {
+    /**
+     * Look up the IGDB game record matching a Steam app ID via the external_games join.
+     * Returns at most one row; empty list means no IGDB record exists for that Steam title.
+     */
+    suspend fun fetchGameBySteamId(steamAppId: Int): ApiResponse<List<RemoteExternalGameLookup>> = try {
         ApiResponse.Success(
-            httpClient.post("/v4/games") {
+            httpClient.post("/v4/external_games") {
                 contentType(ContentType.Text.Plain)
-                setBody(SAMPLE_QUERY)
+                setBody(buildSteamLookupQuery(steamAppId))
             }.body()
         )
     } catch (e: CancellationException) {
@@ -31,7 +35,12 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
-    private companion object {
-        const val SAMPLE_QUERY = "fields id,name,summary; limit 5;"
+    internal companion object {
+        // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
+        // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
+        // is empty on modern records (e.g. Halo Infinite, Counter-Strike 2), so filtering on
+        // `category = 1` silently returns no rows.
+        internal fun buildSteamLookupQuery(steamAppId: Int): String =
+            """fields game.id,game.name,game.summary; where uid = "$steamAppId" & external_game_source = 1; limit 1;"""
     }
 }

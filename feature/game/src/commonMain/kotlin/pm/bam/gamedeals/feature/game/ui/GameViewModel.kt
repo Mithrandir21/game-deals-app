@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,9 +26,11 @@ import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.toFlow
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
@@ -40,6 +43,7 @@ internal class GameViewModel(
     private val storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val favouritesRepository: FavouritesRepository,
+    private val igdbRepository: IgdbRepository,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
@@ -122,14 +126,24 @@ internal class GameViewModel(
         flowOf(gameId)
             .flatMapLatest { gamesRepository.getGameDetails(it).toFlow() }
             .flatMapLatest { details ->
-                details.deals
+                val dealDetails = details.deals
                     .map { deal -> StoreDealPair(store = storesRepository.getStore(deal.storeID), deal = deal) }
-                    .let { dealDetails -> GameScreenData.Data(details, dealDetails.toImmutableList()) }
-                    .toFlow<GameScreenData>()
+                val igdbGame = details.info.steamAppID?.let { steamId -> fetchIgdbGameSafely(steamId) }
+                GameScreenData.Data(details, dealDetails.toImmutableList(), igdbGame).toFlow<GameScreenData>()
             }
             .onStart { uiState.emit(GameScreenData.Loading) }
             .logFlow(logger)
             .catch { emit(GameScreenData.Error) }
+
+    // IGDB enrichment is best-effort. The deal data is the primary content of the screen; an IGDB
+    // failure (network, auth, rate limit) must NOT hide it. Cancellation still propagates.
+    private suspend fun fetchIgdbGameSafely(steamId: Int): IgdbGame? = try {
+        igdbRepository.fetchGameBySteamId(steamId)
+    } catch (ce: CancellationException) {
+        throw ce
+    } catch (_: Throwable) {
+        null
+    }
 
 
     internal sealed interface GameUiEvent {
@@ -143,7 +157,8 @@ internal class GameViewModel(
         @Immutable
         data class Data(
             val gameDetails: GameDetails,
-            val dealDetails: ImmutableList<StoreDealPair>
+            val dealDetails: ImmutableList<StoreDealPair>,
+            val igdbGame: IgdbGame? = null,
         ) : GameScreenData()
     }
 }

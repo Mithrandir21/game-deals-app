@@ -17,10 +17,12 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
 import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.auth.IgdbTokenProvider
 import pm.bam.gamedeals.remote.igdb.logic.IGDB_HOST
 import pm.bam.gamedeals.remote.igdb.logic.igdbHttpClient
+import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
@@ -33,7 +35,8 @@ import kotlin.test.assertTrue
 /**
  * End-to-end coverage of the IGDB auth chain. One [MockEngine] is shared between the token client
  * and the IGDB client so the entire refresh round-trip can be observed in request order from a
- * single handler.
+ * single handler. The auth chain is endpoint-agnostic; we drive it off the real Phase 3 method
+ * `fetchGameBySteamId` (POST /v4/external_games).
  */
 class IgdbAuthChainTest {
 
@@ -42,17 +45,20 @@ class IgdbAuthChainTest {
         val recorded = mutableListOf<HttpRequestData>()
         val rig = rig(recorded, defaultHandler())
 
-        val result = rig.api.sampleGames().getOrThrow()
+        val result = rig.api.fetchGameBySteamId(STEAM_ID).getOrThrow()
 
-        assertEquals(listOf(RemoteIgdbGame(id = 1L, name = "Halo", summary = "Master Chief stuff")), result)
+        assertEquals(
+            listOf(RemoteExternalGameLookup(id = 99L, game = RemoteIgdbGame(id = 1L, name = "Halo Infinite", summary = "Master Chief stuff"))),
+            result,
+        )
         assertEquals(3, recorded.size, "Expected: IGDB-no-auth → Twitch token → IGDB-with-bearer")
 
         val firstIgdb = recorded[0]
         assertEquals(IGDB_HOST, firstIgdb.url.host)
-        assertEquals("/v4/games", firstIgdb.url.encodedPath)
+        assertEquals(IGDB_LOOKUP_PATH, firstIgdb.url.encodedPath)
         assertEquals(FAKE_CLIENT_ID, firstIgdb.headers[CLIENT_ID_HEADER])
         assertNull(firstIgdb.headers[HttpHeaders.Authorization])
-        assertEquals(SAMPLE_QUERY, (firstIgdb.body as TextContent).text)
+        assertEquals(EXPECTED_QUERY, (firstIgdb.body as TextContent).text)
         val firstContentType = (firstIgdb.body as TextContent).contentType
         assertEquals(ContentType.Text.Plain.contentType, firstContentType.contentType)
         assertEquals(ContentType.Text.Plain.contentSubtype, firstContentType.contentSubtype)
@@ -67,10 +73,10 @@ class IgdbAuthChainTest {
 
         val retriedIgdb = recorded[2]
         assertEquals(IGDB_HOST, retriedIgdb.url.host)
-        assertEquals("/v4/games", retriedIgdb.url.encodedPath)
+        assertEquals(IGDB_LOOKUP_PATH, retriedIgdb.url.encodedPath)
         assertEquals(FAKE_CLIENT_ID, retriedIgdb.headers[CLIENT_ID_HEADER])
         assertEquals("Bearer $FAKE_TOKEN", retriedIgdb.headers[HttpHeaders.Authorization])
-        assertEquals(SAMPLE_QUERY, (retriedIgdb.body as TextContent).text)
+        assertEquals(EXPECTED_QUERY, (retriedIgdb.body as TextContent).text)
     }
 
     @Test
@@ -78,8 +84,8 @@ class IgdbAuthChainTest {
         val recorded = mutableListOf<HttpRequestData>()
         val rig = rig(recorded, defaultHandler())
 
-        rig.api.sampleGames().getOrThrow()
-        rig.api.sampleGames().getOrThrow()
+        rig.api.fetchGameBySteamId(STEAM_ID).getOrThrow()
+        rig.api.fetchGameBySteamId(STEAM_ID).getOrThrow()
 
         val twitchCalls = recorded.count { it.url.host == "id.twitch.tv" }
         assertEquals(1, twitchCalls, "Twitch token endpoint must be called exactly once across two IGDB calls")
@@ -105,7 +111,7 @@ class IgdbAuthChainTest {
         }
         val rig = rig(recorded, handler)
 
-        val response = rig.api.sampleGames()
+        val response = rig.api.fetchGameBySteamId(STEAM_ID)
 
         assertTrue(response is ApiResponse.Failure.Exception, "Expected Failure.Exception, got $response")
         assertTrue(recorded.any { it.url.host == "id.twitch.tv" }, "Twitch endpoint must have been attempted")
@@ -118,9 +124,9 @@ class IgdbAuthChainTest {
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
             )
-            request.url.host == IGDB_HOST && request.url.encodedPath == "/v4/games" -> {
+            request.url.host == IGDB_HOST && request.url.encodedPath == IGDB_LOOKUP_PATH -> {
                 if (request.headers[HttpHeaders.Authorization] == "Bearer $FAKE_TOKEN") respond(
-                    content = """[{"id":1,"name":"Halo","summary":"Master Chief stuff"}]""",
+                    content = """[{"id":99,"game":{"id":1,"name":"Halo Infinite","summary":"Master Chief stuff"}}]""",
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
                 ) else respond(content = "", status = HttpStatusCode.Unauthorized)
@@ -165,6 +171,8 @@ class IgdbAuthChainTest {
         const val FAKE_CLIENT_SECRET = "fake-secret"
         const val FAKE_TOKEN = "FAKE_TOKEN"
         const val CLIENT_ID_HEADER = "Client-ID"
-        const val SAMPLE_QUERY = "fields id,name,summary; limit 5;"
+        const val STEAM_ID = 1240440
+        const val IGDB_LOOKUP_PATH = "/v4/external_games"
+        val EXPECTED_QUERY: String = buildSteamLookupQuery(STEAM_ID)
     }
 }

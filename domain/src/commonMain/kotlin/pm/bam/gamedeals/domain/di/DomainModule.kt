@@ -12,6 +12,8 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -50,4 +52,5 @@ val domainModule = module {
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get()) }
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get()) }
     single<FavouritesRepository> { FavouritesRepositoryImpl(get(), get()) }
+    single<IgdbRepository> { IgdbRepositoryImpl(get()) }
 }
