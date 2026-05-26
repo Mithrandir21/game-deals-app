@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -77,6 +78,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steam_reviews
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_no
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_yes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -91,6 +93,7 @@ fun DealBottomSheet(
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onRetryDealDetails: () -> Unit
 ) {
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -100,7 +103,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, isFavourite, onShare, onToggleFavourite, goToWeb, onRetryDealDetails)
+            DealContent(data, isFavourite, onShare, onToggleFavourite, goToWeb, goToGameDetails, onRetryDealDetails)
         }
     }
 }
@@ -112,6 +115,7 @@ private fun DealContent(
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     retry: () -> Unit
 ) {
     Column(
@@ -201,7 +205,7 @@ private fun DealContent(
                 }
             }
 
-            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb)
+            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb, goToGameDetails)
             is DealBottomSheetData.DealDetailsError -> GameDetailsError(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 retry = retry
@@ -214,7 +218,8 @@ private fun DealContent(
 @Composable
 private fun GameDetails(
     data: DealBottomSheetData.DealDetailsData,
-    goToWeb: (url: String, gameTitle: String) -> Unit
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
 ) {
     Box(modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small)) {
         Row {
@@ -321,6 +326,15 @@ private fun GameDetails(
                     onClick = { goToWeb(cheapsharkDealRedirectUrl(data.dealId), data.gameName) }) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }
+                data.gameInfo.steamAppID?.let { steamAppId ->
+                    OutlinedButton(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.CenterHorizontally),
+                        onClick = { goToGameDetails(steamAppId) }) {
+                        Text(text = stringResource(Res.string.deal_details_view_game_details_label))
+                    }
+                }
                 data.gameInfo.metacriticScore?.let { Text(text = stringResource(Res.string.deal_details_metacritic_score_label, it)) }
                 data.gameInfo.steamRatingPercent?.let { Text(text = stringResource(Res.string.deal_details_steam_reviews_label, it)) }
                 data.gameInfo.releaseDate?.let { Text(text = stringResource(Res.string.deal_details_release_label, it)) }
@@ -393,6 +407,7 @@ private fun DealContent_Success_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
+                goToGameDetails = {},
                 retry = {},
             )
         }
@@ -410,6 +425,7 @@ private fun DealContent_Success_Favourited_Dark_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
+                goToGameDetails = {},
                 retry = {},
             )
         }
@@ -444,6 +460,7 @@ private fun DealContent_WithCheaperStores_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
+                goToGameDetails = {},
                 retry = {},
             )
         }
@@ -467,6 +484,7 @@ private fun DealContent_Loading_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
+                goToGameDetails = {},
                 retry = {},
             )
         }
@@ -490,6 +508,7 @@ private fun DealContent_Error_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
+                goToGameDetails = {},
                 retry = {},
             )
         }

@@ -35,12 +35,14 @@ internal fun NavGraph(
             goToStore = { storeId -> navActions.navigateToStore(storeId) },
             goToGiveaway = { navActions.navigateToGiveaways() },
             goToFavourites = { navActions.navigateToFavourites() },
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
         )
 
         storeScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
         )
 
         gameScreen(

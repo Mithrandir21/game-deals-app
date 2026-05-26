@@ -29,6 +29,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -62,6 +63,7 @@ class DealBottomSheetTest {
         onDismiss: () -> Unit = {},
         onShare: (DealBottomSheetData) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
+        goToGameDetails: (Int) -> Unit = {},
         onRetryDealDetails: () -> Unit = {},
         cheapestOnArgs: Pair<String, String>? = null,
         cheaperStoreRowArgs: Pair<String, String>? = null,
@@ -81,6 +83,7 @@ class DealBottomSheetTest {
                     onDismiss = onDismiss,
                     onShare = onShare,
                     goToWeb = goToWeb,
+                    goToGameDetails = goToGameDetails,
                     onRetryDealDetails = onRetryDealDetails,
                 )
             }
@@ -228,6 +231,67 @@ class DealBottomSheetTest {
         verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(dealId), gameName) }
     }
 
+    @Test
+    fun gameDetailsButton_visible_when_steamAppID_present() {
+        val steamId = 1240440
+        val data = dealDetailsData(steamAppID = steamId)
+
+        setupCompose(data = data)
+
+        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun gameDetailsButton_hidden_when_steamAppID_null() {
+        val data = dealDetailsData(steamAppID = null)
+
+        setupCompose(data = data)
+
+        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun gameDetailsButton_click_invokes_callback_with_steamAppID() {
+        val steamId = 1240440
+        val data = dealDetailsData(steamAppID = steamId)
+        val goToGameDetails: (Int) -> Unit = mockk {
+            every { this@mockk.invoke(any()) } just Runs
+        }
+
+        setupCompose(data = data, goToGameDetails = goToGameDetails)
+
+        verify(exactly = 0) { goToGameDetails.invoke(any()) }
+
+        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
+            .performClick()
+
+        verify(exactly = 1) { goToGameDetails.invoke(steamId) }
+    }
+
+    private fun dealDetailsData(steamAppID: Int?): DealBottomSheetData.DealDetailsData {
+        val gameInfo: DealDetails.GameInfo = mockk {
+            every { this@mockk.thumb } returns "Thumb"
+            every { this@mockk.name } returns "Name"
+            every { this@mockk.metacriticScore } returns null
+            every { this@mockk.steamRatingPercent } returns null
+            every { this@mockk.releaseDate } returns null
+            every { this@mockk.steamAppID } returns steamAppID
+            every { this@mockk.steamworks } returns null
+        }
+        return DealBottomSheetData.DealDetailsData(
+            store = store,
+            gameId = gameId,
+            gameName = gameName,
+            dealId = dealId,
+            gameSalesPriceDenominated = gamePrice,
+            gameInfo = gameInfo,
+            cheaperStores = persistentListOf(),
+            cheapestPrice = null,
+        )
+    }
+
     private fun hasRole(role: Role): SemanticsMatcher =
         SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
 
@@ -238,6 +302,7 @@ class DealBottomSheetTest {
         val cheapestStoreLabel: String,
         val cheapestNo: String,
         val goToDeal: String,
+        val gameDetails: String,
     ) {
         companion object {
             @Composable
@@ -248,6 +313,7 @@ class DealBottomSheetTest {
                 cheapestStoreLabel = stringResource(Res.string.deal_details_cheapest_store_label),
                 cheapestNo = stringResource(Res.string.deal_details_cheapest_no),
                 goToDeal = stringResource(Res.string.deal_details_go_to_deal_label),
+                gameDetails = stringResource(Res.string.deal_details_view_game_details_label),
             )
 
             @Composable

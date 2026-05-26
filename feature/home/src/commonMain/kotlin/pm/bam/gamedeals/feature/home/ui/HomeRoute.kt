@@ -16,6 +16,7 @@ fun HomeRoute(
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
 ) {
     HomeScreen(
         onSearch = onSearch,
@@ -24,5 +25,6 @@ fun HomeRoute(
         onViewGiveaways = onViewGiveaways,
         onViewFavourites = onViewFavourites,
         goToWeb = goToWeb,
+        goToGameDetails = goToGameDetails,
     )
 }

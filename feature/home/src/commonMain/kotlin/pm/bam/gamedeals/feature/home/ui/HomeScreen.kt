@@ -122,6 +122,7 @@ internal fun HomeScreen(
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -156,6 +157,7 @@ internal fun HomeScreen(
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
         goToWeb = goToWeb,
+        goToGameDetails = goToGameDetails,
         onRetry = { viewModel.loadTopStoresDeals() }
     )
 
@@ -249,6 +251,7 @@ private fun HomeScreenContent(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onRetry: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -396,6 +399,7 @@ private fun HomeScreenContent(
                     onShare = { sheetData -> onShareDealDetails(sheetData) },
                     onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
                     goToWeb = goToWeb,
+                    goToGameDetails = goToGameDetails,
                     onRetryDealDetails = {
                         dealDetails?.let {
                             onViewDealDetails(
@@ -710,6 +714,7 @@ private fun HomeScreenContent_Success_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
+            goToGameDetails = {},
             onRetry = {},
         )
     }
@@ -735,6 +740,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
+            goToGameDetails = {},
             onRetry = {},
         )
     }
@@ -760,6 +766,7 @@ private fun HomeScreenContent_Loading_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
+            goToGameDetails = {},
             onRetry = {},
         )
     }
@@ -785,6 +792,7 @@ private fun HomeScreenContent_Error_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
+            goToGameDetails = {},
             onRetry = {},
         )
     }
