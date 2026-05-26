@@ -6,6 +6,8 @@ import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatterImpl
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsingImpl
+import pm.bam.gamedeals.common.favicon.FaviconResolver
+import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
 import pm.bam.gamedeals.common.serializer.Serializer
 import pm.bam.gamedeals.common.serializer.SerializerImpl
 
@@ -19,4 +21,5 @@ val commonModule = module {
     single<Serializer> { SerializerImpl(get()) }
     single<DatetimeParsing> { DatetimeParsingImpl() }
     single<DateTimeFormatter> { DateTimeFormatterImpl(get()) }
+    single<FaviconResolver> { FaviconResolverImpl() }
 }

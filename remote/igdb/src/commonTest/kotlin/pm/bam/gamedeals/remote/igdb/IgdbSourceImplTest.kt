@@ -108,6 +108,8 @@ class IgdbSourceImplTest {
                 IgdbGame.IgdbWebsite("https://www.halowaypoint.com", IgdbGame.IgdbWebsite.Category.Official),
                 IgdbGame.IgdbWebsite("https://store.steampowered.com/app/1240440", IgdbGame.IgdbWebsite.Category.Steam),
                 IgdbGame.IgdbWebsite("https://example.com/unknown", IgdbGame.IgdbWebsite.Category.Other),
+                IgdbGame.IgdbWebsite("https://store.playstation.com/en-us/concept/10018646", IgdbGame.IgdbWebsite.Category.PlayStation),
+                IgdbGame.IgdbWebsite("https://www.nintendo.com/store/products/halo", IgdbGame.IgdbWebsite.Category.Nintendo),
             ),
             similarGames = persistentListOf(
                 IgdbGame.IgdbSimilarGame(id = 1234L, name = "Halo 5: Guardians", coverImageId = "ha5"),
@@ -210,7 +212,9 @@ class IgdbSourceImplTest {
                         {"id": 1, "url": "https://www.halowaypoint.com", "type": {"id": 1, "type": "Official Website"}},
                         {"id": 2, "url": "https://store.steampowered.com/app/1240440", "type": {"id": 13, "type": "Steam"}},
                         {"id": 3, "url": "https://example.com/unknown", "type": {"id": 999, "type": "Unknown"}},
-                        {"id": 4, "type": {"id": 1, "type": "Official Website"}}
+                        {"id": 4, "type": {"id": 1, "type": "Official Website"}},
+                        {"id": 5, "url": "https://store.playstation.com/en-us/concept/10018646", "type": {"id": 998, "type": "PlayStation Store"}},
+                        {"id": 6, "url": "https://www.nintendo.com/store/products/halo", "type": {"id": 997, "type": "Nintendo"}}
                     ],
                     "similar_games": [
                         {"id": 1234, "name": "Halo 5: Guardians", "cover": {"id": 50, "image_id": "ha5"}},

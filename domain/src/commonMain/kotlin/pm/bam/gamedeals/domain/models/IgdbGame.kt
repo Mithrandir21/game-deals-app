@@ -42,7 +42,7 @@ data class IgdbGame(
         enum class Category {
             Official, Wikia, Wikipedia, Facebook, Twitter, Twitch, Instagram, YouTube,
             IPhone, IPad, Android, Steam, Reddit, Itch, EpicStore, GogStore, Discord,
-            Bluesky, Xbox, Other,
+            Bluesky, Xbox, PlayStation, Nintendo, Other,
         }
     }
 

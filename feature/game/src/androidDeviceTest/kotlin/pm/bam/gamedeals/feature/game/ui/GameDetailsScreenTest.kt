@@ -144,6 +144,40 @@ class GameDetailsScreenTest {
     }
 
     @Test
+    fun links_section_renders_chips_for_each_website() {
+        val websites = persistentListOf(
+            WebsiteUiModel(
+                url = "https://store.steampowered.com/app/1240440",
+                category = IgdbGame.IgdbWebsite.Category.Steam,
+                faviconUrl = "https://store.steampowered.com/favicon.ico",
+                faviconCacheKey = "brand:steam",
+            ),
+            WebsiteUiModel(
+                url = "https://en.wikipedia.org/wiki/Halo_Infinite",
+                category = IgdbGame.IgdbWebsite.Category.Wikipedia,
+                faviconUrl = "https://en.wikipedia.org/favicon.ico",
+                faviconCacheKey = "brand:wikipedia",
+            ),
+            WebsiteUiModel(
+                url = "https://discord.gg/Halo",
+                category = IgdbGame.IgdbWebsite.Category.Discord,
+                faviconUrl = null,
+                faviconCacheKey = null,
+            ),
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(game = sampleGame, websites = websites)
+        )
+
+        setupCompose()
+
+        // Links sits below the fold on portrait; scroll the first chip into view, then assert siblings.
+        composeTestRule.onNodeWithText("Steam").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Wikipedia").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Discord").assertIsDisplayed()
+    }
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs

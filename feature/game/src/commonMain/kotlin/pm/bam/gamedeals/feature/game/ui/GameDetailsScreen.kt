@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,7 +65,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.collectAsState
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -173,14 +180,15 @@ private fun GameDetailsScreenContent(
                 }
 
                 is GameDetailsViewModel.GameDetailsScreenData.Data ->
-                    GameDetailsBody(modifier = Modifier.padding(innerPadding), game = data.game)
+                    GameDetailsBody(modifier = Modifier.padding(innerPadding), data = data)
             }
         }
     }
 }
 
 @Composable
-private fun GameDetailsBody(modifier: Modifier, game: IgdbGame) {
+private fun GameDetailsBody(modifier: Modifier, data: GameDetailsViewModel.GameDetailsScreenData.Data) {
+    val game = data.game
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -193,7 +201,7 @@ private fun GameDetailsBody(modifier: Modifier, game: IgdbGame) {
         if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game = game)
         if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game = game)
         if (game.involvedCompanies.isNotEmpty()) CompaniesSection(companies = game.involvedCompanies)
-        if (game.websites.isNotEmpty()) LinksSection(websites = game.websites)
+        if (data.websites.isNotEmpty()) LinksSection(websites = data.websites)
         if (game.similarGames.isNotEmpty()) SimilarGamesSection(games = game.similarGames)
     }
 }
@@ -407,8 +415,9 @@ private fun companyRoleLabel(role: IgdbGame.IgdbCompanyRole.Role): String = when
     IgdbGame.IgdbCompanyRole.Role.Supporting -> stringResource(Res.string.game_details_company_role_supporting)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LinksSection(websites: List<IgdbGame.IgdbWebsite>) {
+private fun LinksSection(websites: List<WebsiteUiModel>) {
     val uriHandler = LocalUriHandler.current
     Card(
         modifier = Modifier
@@ -420,29 +429,48 @@ private fun LinksSection(websites: List<IgdbGame.IgdbWebsite>) {
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
             SectionHeader(stringResource(Res.string.game_details_section_links))
-            websites.forEachIndexed { index, site ->
-                if (index > 0) HorizontalDivider()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = GameDealsCustomTheme.spacing.small),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = site.category.name,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    IconButton(onClick = { uriHandler.openUri(site.url) }) {
-                        Icon(
-                            imageVector = Icons.Filled.OpenInNew,
-                            contentDescription = site.category.name,
-                        )
-                    }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)
+            ) {
+                websites.forEach { site ->
+                    WebsiteChip(site = site, onClick = { uriHandler.openUri(site.url) })
                 }
             }
         }
     }
+}
+
+@Composable
+private fun WebsiteChip(site: WebsiteUiModel, onClick: () -> Unit) {
+    val context = LocalPlatformContext.current
+    val painter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context)
+            .data(site.faviconUrl)
+            .memoryCacheKey(site.faviconCacheKey)
+            .diskCacheKey(site.faviconCacheKey)
+            .build(),
+    )
+    val state by painter.state.collectAsState()
+    // Pass `null` (not an empty composable) for the leading icon when the favicon isn't ready / failed
+    // — `AssistChip` collapses the slot entirely on null, so the chip reads as label-only without the
+    // dead 18 dp gap where the icon would have been. Many sites (Discord, Bluesky, small indie pages)
+    // have no working /favicon.ico at all; the truthful UX is no slot, not a placeholder arrow.
+    val hasIcon = state is AsyncImagePainter.State.Success
+    AssistChip(
+        onClick = onClick,
+        label = { Text(site.category.name) },
+        leadingIcon = if (hasIcon) {
+            {
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                )
+            }
+        } else null,
+    )
 }
 
 @Composable
@@ -514,6 +542,45 @@ private val MONTH_ABBREV = listOf(
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 )
 
+private val previewWebsites = persistentListOf(
+    WebsiteUiModel(
+        url = "https://www.halowaypoint.com",
+        category = IgdbGame.IgdbWebsite.Category.Official,
+        faviconUrl = "https://www.halowaypoint.com/favicon.ico",
+        faviconCacheKey = null,
+    ),
+    WebsiteUiModel(
+        url = "https://store.steampowered.com/app/1240440",
+        category = IgdbGame.IgdbWebsite.Category.Steam,
+        faviconUrl = "https://store.steampowered.com/favicon.ico",
+        faviconCacheKey = "brand:steam",
+    ),
+    WebsiteUiModel(
+        url = "https://en.wikipedia.org/wiki/Halo_Infinite",
+        category = IgdbGame.IgdbWebsite.Category.Wikipedia,
+        faviconUrl = "https://en.wikipedia.org/favicon.ico",
+        faviconCacheKey = "brand:wikipedia",
+    ),
+    WebsiteUiModel(
+        url = "https://www.halowaypoint.com",
+        category = IgdbGame.IgdbWebsite.Category.Official,
+        faviconUrl = "https://www.halowaypoint.com/favicon.ico",
+        faviconCacheKey = null,
+    ),
+    WebsiteUiModel(
+        url = "https://store.steampowered.com/app/1240440",
+        category = IgdbGame.IgdbWebsite.Category.Steam,
+        faviconUrl = "https://store.steampowered.com/favicon.ico",
+        faviconCacheKey = "brand:steam",
+    ),
+    WebsiteUiModel(
+        url = "https://en.wikipedia.org/wiki/Halo_Infinite",
+        category = IgdbGame.IgdbWebsite.Category.Wikipedia,
+        faviconUrl = "https://en.wikipedia.org/favicon.ico",
+        faviconCacheKey = "brand:wikipedia",
+    ),
+)
+
 private val previewIgdbDetails = IgdbGame(
     id = 103281,
     name = "Halo Infinite",
@@ -554,7 +621,7 @@ private val previewIgdbDetails = IgdbGame(
 private fun GameDetailsScreen_Data_Preview() {
     GameDealsTheme {
         GameDetailsScreenContent(
-            data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails),
+            data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails, previewWebsites),
             onBack = {},
             onRetry = {},
         )

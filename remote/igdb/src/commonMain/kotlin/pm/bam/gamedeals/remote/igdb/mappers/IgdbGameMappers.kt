@@ -39,30 +39,40 @@ private fun RemoteIgdbInvolvedCompany.toRoles(): List<IgdbGame.IgdbCompanyRole> 
 
 private fun RemoteIgdbWebsite.toIgdbWebsiteOrNull(): IgdbGame.IgdbWebsite? {
     val u = url ?: return null
-    return IgdbGame.IgdbWebsite(u, mapWebsiteType(type?.id))
+    return IgdbGame.IgdbWebsite(u, mapWebsiteType(type?.id, type?.type))
 }
 
-private fun mapWebsiteType(typeId: Long?): IgdbGame.IgdbWebsite.Category = when (typeId) {
-    1L -> IgdbGame.IgdbWebsite.Category.Official
-    2L -> IgdbGame.IgdbWebsite.Category.Wikia
-    3L -> IgdbGame.IgdbWebsite.Category.Wikipedia
-    4L -> IgdbGame.IgdbWebsite.Category.Facebook
-    5L -> IgdbGame.IgdbWebsite.Category.Twitter
-    6L -> IgdbGame.IgdbWebsite.Category.Twitch
-    8L -> IgdbGame.IgdbWebsite.Category.Instagram
-    9L -> IgdbGame.IgdbWebsite.Category.YouTube
-    10L -> IgdbGame.IgdbWebsite.Category.IPhone
-    11L -> IgdbGame.IgdbWebsite.Category.IPad
-    12L -> IgdbGame.IgdbWebsite.Category.Android
-    13L -> IgdbGame.IgdbWebsite.Category.Steam
-    14L -> IgdbGame.IgdbWebsite.Category.Reddit
-    15L -> IgdbGame.IgdbWebsite.Category.Itch
-    16L -> IgdbGame.IgdbWebsite.Category.EpicStore
-    17L -> IgdbGame.IgdbWebsite.Category.GogStore
-    18L -> IgdbGame.IgdbWebsite.Category.Discord
-    19L -> IgdbGame.IgdbWebsite.Category.Bluesky
-    22L -> IgdbGame.IgdbWebsite.Category.Xbox
-    else -> IgdbGame.IgdbWebsite.Category.Other
+// Stable int IDs come first (these never rename). The `typeName` string fallback catches
+// categories whose IGDB int IDs we haven't enumerated yet (e.g. PlayStation Store, Nintendo) —
+// adding a new Category enum value + a string match here is enough to label them correctly
+// without first needing to discover the integer ID.
+private fun mapWebsiteType(typeId: Long?, typeName: String?): IgdbGame.IgdbWebsite.Category {
+    when (typeId) {
+        1L -> return IgdbGame.IgdbWebsite.Category.Official
+        2L -> return IgdbGame.IgdbWebsite.Category.Wikia
+        3L -> return IgdbGame.IgdbWebsite.Category.Wikipedia
+        4L -> return IgdbGame.IgdbWebsite.Category.Facebook
+        5L -> return IgdbGame.IgdbWebsite.Category.Twitter
+        6L -> return IgdbGame.IgdbWebsite.Category.Twitch
+        8L -> return IgdbGame.IgdbWebsite.Category.Instagram
+        9L -> return IgdbGame.IgdbWebsite.Category.YouTube
+        10L -> return IgdbGame.IgdbWebsite.Category.IPhone
+        11L -> return IgdbGame.IgdbWebsite.Category.IPad
+        12L -> return IgdbGame.IgdbWebsite.Category.Android
+        13L -> return IgdbGame.IgdbWebsite.Category.Steam
+        14L -> return IgdbGame.IgdbWebsite.Category.Reddit
+        15L -> return IgdbGame.IgdbWebsite.Category.Itch
+        16L -> return IgdbGame.IgdbWebsite.Category.EpicStore
+        17L -> return IgdbGame.IgdbWebsite.Category.GogStore
+        18L -> return IgdbGame.IgdbWebsite.Category.Discord
+        19L -> return IgdbGame.IgdbWebsite.Category.Bluesky
+        22L -> return IgdbGame.IgdbWebsite.Category.Xbox
+    }
+    return when (typeName?.lowercase()) {
+        "playstation", "playstation store" -> IgdbGame.IgdbWebsite.Category.PlayStation
+        "nintendo", "nintendo eshop" -> IgdbGame.IgdbWebsite.Category.Nintendo
+        else -> IgdbGame.IgdbWebsite.Category.Other
+    }
 }
 
 private fun RemoteIgdbSimilarGame.toIgdbSimilarGameOrNull(): IgdbGame.IgdbSimilarGame? {
