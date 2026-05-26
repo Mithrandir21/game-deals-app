@@ -5,7 +5,6 @@ package pm.bam.gamedeals.feature.giveaways.ui
 import dev.mokkery.MockMode
 import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
-import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
@@ -15,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -56,7 +56,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
     @Test
     fun initially_error() = runTest {
-        every { giveawaysRepository.observeGiveaways() } throws Exception()
+        every { giveawaysRepository.observeGiveaways() } returns flow { throw Exception() }
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
 
         val emissions = observeStates(viewModel)
@@ -125,7 +125,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     fun failed_reload_sets_ERROR() = runTest {
         val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
-        everySuspend { giveawaysRepository.refreshGiveaways() } throws Exception()
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw Exception() }
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
         unfilteredRoom.emit(emptyList())
@@ -142,7 +142,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
         // Simulate an in-flight reload being cancelled (e.g. viewModelScope cleared while refreshGiveaways() is suspended). The CancellationException must
         // propagate, not be swallowed into a RefreshOutcome.Error.
-        everySuspend { giveawaysRepository.refreshGiveaways() } throws CancellationException("scope cleared")
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw CancellationException("scope cleared") }
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
         unfilteredRoom.emit(emptyList())
@@ -160,7 +160,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val giveaway = giveaway(id = 1)
         val unfilteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
-        everySuspend { giveawaysRepository.refreshGiveaways() } throws Exception()
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw Exception() }
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
         unfilteredRoom.emit(emptyList())
@@ -208,7 +208,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     fun upstream_collector_survives_an_observeGiveaways_failure_and_processes_later_emissions() = runTest {
         val giveaway = giveaway(id = 1)
         val filteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
-        every { giveawaysRepository.observeGiveaways() } throws Exception()
+        every { giveawaysRepository.observeGiveaways() } returns flow { throw Exception() }
         every { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
 
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
@@ -289,7 +289,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val filteredRoom = MutableSharedFlow<List<Giveaway>>(replay = 1)
         every { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
         every { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
-        everySuspend { giveawaysRepository.refreshGiveaways() } throws Exception()
+        everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw Exception() }
 
         val para = GiveawaySearchParameters(
             types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true)),

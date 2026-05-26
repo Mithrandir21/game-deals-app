@@ -2,7 +2,7 @@ campaign_slug: "2026-05-25-bug"
 labels: ["bug"]
 created: "2026-05-25"
 status: "in_progress"
-current_wave: 1
+current_wave: 2
 notes:
   - "Started after both 2026-05-06 bug-hunt campaigns were closed out. No remaining `bug-hunt` issues; this campaign targets the standard `bug` label."
   - "#148 (sealed Destination / SKIE adoption) was dropped from the candidate pool — informational, recommended fix is project-wide SKIE adoption. Re-labeled (removed `bug`, kept `tech-debt` + `area:kmp`) so future `bug` queries skip it."
@@ -31,11 +31,31 @@ issues:
     severity: "low"
     wave: 1
     branch: "wave/2026-05-25-bug/issue-171-mokkery-throws-workaround"
-    status: "dispatched"
+    pr: 176
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/176"
+    commit: "520951f"
+    status: "open"
+    note: "Worker applied workaround option 2 (route throws via `calls { throw … }` for suspend, `returns flow { throw … }` for Flow). 9 setups touched across 2 files, +11/-11. Confirmed iOS test reporter no longer crashes (3 consecutive runs PASSED on :feature:game and :feature:giveaways). Worker noted the AGP 9 KMP-library plugin task name is `testAndroidHostTest`, not `testDebugUnitTest`. Worker also flagged that the same throws pattern exists in :feature:home / :feature:search / :feature:store — follow-up scope, not in this PR. Note for review: GitHub's PR UI initially shows 11 files because baseRefOid is stale; the actual merge introduces exactly the 2 planned test files (verified via local merge-base computation)."
     planned_files:
       - "feature/game/src/commonTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
       - "feature/giveaways/src/commonTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+  - number: null  # follow-up to #171; no separate GitHub issue
+    title: "Extend allTests-aggregator disable + amend L-2026-05-18-05"
+    severity: "n/a"
+    wave: 2
+    branch: "wave/2026-05-25-bug/extend-alltests-aggregator-fix"
+    pr: 177
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/177"
+    commits: ["6128c03", "7744a6e"]
+    status: "open"
+    note: "Spawned from in-campaign investigation of PR #176. Investigation found that L-2026-05-18-05's existing fix only covered `KotlinNativeTest`, missing the `TestReport`/`allTests` aggregator (a second consumer of Gradle 9's broken generic-report deserializer). Verified on `dev` (without PR #176 applied) that the build-config fix alone makes :game/:giveaways/:home/:store :allTests pass. Also amended L-2026-05-18-05: (a) acknowledged TestReport aggregator as second consumer, (b) retracted the false 'modules without throwing mocks reproduce' claim — :feature:home and :feature:store actually do use throws-mode; :feature:favourites is the truly throws-free module that passes, (c) reinstated throws-mode as real-but-not-root-cause contributor that inflates the corrupted-stream blast radius. PR is 2 files, +11/-5, mergeable. Path-mixup happened again — worker initially edited parent project paths before realizing and reverting. Confirmed pattern, not a one-off."
+    planned_files:
+      - "build-logic/convention/src/main/kotlin/pm/bam/gamedeals/KotlinMultiplatformLibraryConventionPlugin.kt"
+      - ".claude/lessons.md"
 deferred:
   - number: 148
     title: "Sealed Destination loses Swift exhaustiveness (no SKIE)"
     reason: "Informational; recommended fix is project-wide SKIE adoption, not a wave-style code change. Re-labeled to remove `bug`."
+follow_ups:
+  - "Sweep :feature:home / :feature:search / :feature:store for the same Mokkery throws → calls { throw } pattern that PR #176 applied to :feature:game and :feature:giveaways. Flagged in PR #176 body; PR #177 makes this less urgent but still useful for stdout-volume reduction. Not filed as a GitHub issue yet."
+  - "Process: the worktree-isolation path-mixup pattern (initial Edit/Write calls landing in the parent project when the prompt cited parent-project absolute paths) hit BOTH wave-1's #170 worker AND wave-2's worker. Worth promoting to the github-issue-waves SKILL.md as a sub-agent prompt hygiene rule."

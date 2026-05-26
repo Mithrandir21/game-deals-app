@@ -4,9 +4,9 @@ package pm.bam.gamedeals.feature.game.ui
 
 import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.sequentially
-import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
@@ -76,7 +76,7 @@ class GameViewModelTest : MainDispatcherTest() {
     @Test
     fun error_state() = runTest {
         val gameId = 1
-        everySuspend { gamesRepository.getGameDetails(gameId) } throws Exception()
+        everySuspend { gamesRepository.getGameDetails(gameId) } calls { throw Exception() }
 
         val viewModel = createViewModel(gameId)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
@@ -202,7 +202,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleFavourite_while_uiState_is_Error_does_not_call_repository() = runTest {
-        everySuspend { gamesRepository.getGameDetails(1) } throws Exception()
+        everySuspend { gamesRepository.getGameDetails(1) } calls { throw Exception() }
 
         val viewModel = createViewModel(gameId = 1)
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
@@ -274,7 +274,7 @@ class GameViewModelTest : MainDispatcherTest() {
         val details = gameDetails(deals = persistentListOf(gameDeal))
 
         everySuspend { gamesRepository.getGameDetails(gameId) } sequentially {
-            throws(Exception())
+            calls { throw Exception() }
             returns(details)
         }
         everySuspend { storesRepository.getStore(storeId) } returns store
