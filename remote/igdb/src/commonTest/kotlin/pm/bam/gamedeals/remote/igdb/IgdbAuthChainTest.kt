@@ -44,7 +44,7 @@ class IgdbAuthChainTest {
 
         val result = rig.api.sampleGames().getOrThrow()
 
-        assertEquals(listOf(RemoteIgdbGame(id = 1L, name = "Halo")), result)
+        assertEquals(listOf(RemoteIgdbGame(id = 1L, name = "Halo", summary = "Master Chief stuff")), result)
         assertEquals(3, recorded.size, "Expected: IGDB-no-auth → Twitch token → IGDB-with-bearer")
 
         val firstIgdb = recorded[0]
@@ -120,7 +120,7 @@ class IgdbAuthChainTest {
             )
             request.url.host == IGDB_HOST && request.url.encodedPath == "/v4/games" -> {
                 if (request.headers[HttpHeaders.Authorization] == "Bearer $FAKE_TOKEN") respond(
-                    content = """[{"id":1,"name":"Halo"}]""",
+                    content = """[{"id":1,"name":"Halo","summary":"Master Chief stuff"}]""",
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
                 ) else respond(content = "", status = HttpStatusCode.Unauthorized)
@@ -165,6 +165,6 @@ class IgdbAuthChainTest {
         const val FAKE_CLIENT_SECRET = "fake-secret"
         const val FAKE_TOKEN = "FAKE_TOKEN"
         const val CLIENT_ID_HEADER = "Client-ID"
-        const val SAMPLE_QUERY = "fields id,name; limit 1;"
+        const val SAMPLE_QUERY = "fields id,name,summary; limit 5;"
     }
 }

@@ -32,6 +32,6 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
     }
 
     private companion object {
-        const val SAMPLE_QUERY = "fields id,name; limit 1;"
+        const val SAMPLE_QUERY = "fields id,name,summary; limit 5;"
     }
 }
