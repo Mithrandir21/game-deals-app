@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.TestReport
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.registerIfAbsent
 import org.gradle.kotlin.dsl.withType
@@ -87,6 +88,11 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             // KGP 2.3 ↔ Gradle 9 incompatibility
             reports.html.required.set(false)
             reports.junitXml.required.set(false)
+        }
+
+        // `allTests` reuses Gradle 9's generic report generator, which mis-deserializes KGP's output-events.bin — same bug as KotlinNativeTest.reports above.
+        tasks.withType(TestReport::class.java).configureEach {
+            enabled = false
         }
 
         configureKover()
