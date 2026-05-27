@@ -69,6 +69,7 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.feature.game.generated.resources.Res
@@ -96,6 +97,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun GameScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,6 +120,7 @@ internal fun GameScreen(
             isFavourite = isFavourite.value,
             onBack = onBack,
             goToWeb = goToWeb,
+            goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onToggleFavourite = { viewModel.toggleFavourite() },
             onRetry = onRetry
@@ -130,6 +133,7 @@ private fun CompactGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Column(
@@ -138,8 +142,33 @@ private fun CompactGameDealsDetails(
     ) {
         CompactGameDetail(data.gameDetails)
 
+        val igdb = data.igdbGame
+        val steamId = data.gameDetails.info.steamAppID
+        if (igdb != null && steamId != null) {
+            igdb.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+                IgdbSummarySection(
+                    summary = summary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.medium)
+                )
+            }
+            GameDetailsButton(
+                onClick = { goToGameDetails(steamId) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large),
+            )
+        }
+
         Column(
-            modifier = Modifier.padding(PaddingValues(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large)),
+            modifier = Modifier.padding(
+                PaddingValues(
+                    start = GameDealsCustomTheme.spacing.large,
+                    end = GameDealsCustomTheme.spacing.large,
+                    bottom = GameDealsCustomTheme.spacing.large
+                )
+            ),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
             data.dealDetails.forEach {
@@ -160,6 +189,7 @@ private fun WideGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Row(modifier = modifier) {
@@ -172,6 +202,13 @@ private fun WideGameDealsDetails(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
+            val igdb = data.igdbGame
+            val steamId = data.gameDetails.info.steamAppID
+            if (igdb != null && steamId != null) {
+                igdb.summary?.takeIf { it.isNotBlank() }?.let { summary -> IgdbSummarySection(summary) }
+                GameDetailsButton(onClick = { goToGameDetails(steamId) })
+            }
+
             data.dealDetails.forEach {
                 StoreGameDealRow(
                     store = it.store,
@@ -352,6 +389,7 @@ private fun GameScreenContent(
     isFavourite: Boolean,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
     onRetry: () -> Unit
@@ -436,9 +474,9 @@ private fun GameScreenContent(
 
                     is GameScreenData.Data -> {
                         if (isCompact) {
-                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
+                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
                         } else {
-                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, onShareDeal)
+                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
                         }
                     }
 
@@ -447,6 +485,15 @@ private fun GameScreenContent(
         }
 }
 
+
+private val previewIgdbGame = IgdbGame(
+    id = 103281,
+    name = "Halo Infinite",
+    summary = "The Master Chief returns in Halo Infinite – the next chapter of the legendary franchise. " +
+        "When all hope is lost and humanity's fate hangs in the balance, the Master Chief is ready to confront the most " +
+        "ruthless foe he's ever faced. Step inside the armor of humanity's greatest hero to experience an epic adventure " +
+        "and explore the massive scale of the Halo ring.",
+)
 
 private val previewGameDealDetails = persistentListOf(
     StoreDealPair(store = PreviewStore, deal = PreviewGameDeal),
@@ -481,11 +528,13 @@ private fun GameScreenContent_Compact_Success_Preview() {
             data = GameViewModel.GameScreenData.Data(
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
+                igdbGame = previewIgdbGame,
             ),
             isFavourite = false,
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -501,11 +550,13 @@ private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
             data = GameViewModel.GameScreenData.Data(
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
+                igdbGame = previewIgdbGame,
             ),
             isFavourite = true,
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -521,11 +572,13 @@ private fun GameScreenContent_Wide_Success_Preview() {
             data = GameViewModel.GameScreenData.Data(
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
+                igdbGame = previewIgdbGame,
             ),
             isFavourite = false,
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -543,6 +596,7 @@ private fun GameScreenContent_Loading_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
+            goToGameDetails = {},
             onToggleFavourite = {},
             onRetry = {},
         )

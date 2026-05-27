@@ -6,6 +6,12 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 
+# iOS local secrets (real xcconfig is gitignored; commit only the .template).
+# Xcode's project-wizard wiring may place the active xcconfig at iosApp/Secrets.xcconfig
+# (next to iosApp.xcodeproj) instead of iosApp/Configuration/ — gitignore both paths.
+iosApp/Secrets.xcconfig
+iosApp/Configuration/Secrets.xcconfig
+
 # Log/OS Files
 *.log
 

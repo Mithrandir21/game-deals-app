@@ -45,6 +45,7 @@ kotlin {
             implementation(project(":remote"))
             implementation(project(":remote:cheapshark"))
             implementation(project(":remote:gamerpower"))
+            implementation(project(":remote:igdb"))
             implementation(libs.androidx.compose.navigation)
             implementation(project(":feature:home"))
             implementation(project(":feature:search"))

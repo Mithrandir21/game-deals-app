@@ -22,8 +22,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -47,6 +49,9 @@ class GameViewModelTest : MainDispatcherTest() {
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
         every { observeIsFavourite(any()) } returns flowOf(false)
     }
+    private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit) {
+        everySuspend { fetchGameBySteamId(any()) } returns null
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -58,6 +63,7 @@ class GameViewModelTest : MainDispatcherTest() {
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         favouritesRepository = favouritesRepository,
+        igdbRepository = igdbRepository,
     )
 
     @Test
@@ -289,6 +295,57 @@ class GameViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         assertEquals(GameViewModel.GameScreenData.Data(details, persistentListOf(StoreDealPair(store = store, deal = gameDeal))), emissions.last())
+    }
+
+    @Test
+    fun game_load_with_steamAppID_enriches_Data_with_IgdbGame() = runTest {
+        val gameId = 1
+        val storeId = 2
+        val steamId = 1240440
+        val store = store(storeID = storeId)
+        val gameDeal = gameDeal(storeID = storeId)
+        val info = GameDetails.GameInfo(title = "Halo Infinite", steamAppID = steamId, thumb = "thumb")
+        val details = gameDetails(info = info, deals = persistentListOf(gameDeal))
+        val igdb = IgdbGame(id = 1L, name = "Halo Infinite", summary = "Master Chief stuff")
+
+        everySuspend { gamesRepository.getGameDetails(gameId) } returns details
+        everySuspend { storesRepository.getStore(storeId) } returns store
+        everySuspend { igdbRepository.fetchGameBySteamId(steamId) } returns igdb
+
+        val viewModel = createViewModel(gameId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
+
+        val last = emissions.last() as GameViewModel.GameScreenData.Data
+        assertEquals(igdb, last.igdbGame)
+        assertEquals(details, last.gameDetails)
+    }
+
+    @Test
+    fun igdb_failure_does_not_hide_Data_screen_igdbGame_is_null() = runTest {
+        val gameId = 1
+        val storeId = 2
+        val steamId = 1240440
+        val store = store(storeID = storeId)
+        val gameDeal = gameDeal(storeID = storeId)
+        val info = GameDetails.GameInfo(title = "Halo Infinite", steamAppID = steamId, thumb = "thumb")
+        val details = gameDetails(info = info, deals = persistentListOf(gameDeal))
+
+        everySuspend { gamesRepository.getGameDetails(gameId) } returns details
+        everySuspend { storesRepository.getStore(storeId) } returns store
+        everySuspend { igdbRepository.fetchGameBySteamId(steamId) } calls { throw Exception("IGDB down") }
+
+        val viewModel = createViewModel(gameId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
+
+        val last = emissions.last() as GameViewModel.GameScreenData.Data
+        assertEquals(null, last.igdbGame, "IGDB failure must NOT hide the deal screen")
+        assertEquals(details, last.gameDetails)
     }
 
     @Test

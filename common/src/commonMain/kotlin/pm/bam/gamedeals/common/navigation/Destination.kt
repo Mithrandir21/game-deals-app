@@ -23,6 +23,12 @@ sealed interface Destination {
     data class Game(val gameId: Int) : Destination
 
     @Serializable
+    data class GameDetails(val steamAppId: Int) : Destination
+
+    @Serializable
+    data class GameDetailsByIgdbId(val igdbGameId: Long) : Destination
+
+    @Serializable
     data object Search : Destination
 
     @Serializable

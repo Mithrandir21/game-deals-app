@@ -1,0 +1,24 @@
+package pm.bam.gamedeals.domain.repositories.igdb
+
+import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.source.IgdbSource
+
+interface IgdbRepository {
+    suspend fun fetchGameBySteamId(steamId: Int): IgdbGame?
+    suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame?
+    suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame?
+}
+
+internal class IgdbRepositoryImpl(
+    private val igdbSource: IgdbSource,
+) : IgdbRepository {
+
+    override suspend fun fetchGameBySteamId(steamId: Int): IgdbGame? =
+        igdbSource.fetchGameBySteamId(steamId)
+
+    override suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame? =
+        igdbSource.fetchGameDetailsBySteamId(steamId)
+
+    override suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame? =
+        igdbSource.fetchGameDetailsByIgdbId(igdbGameId)
+}

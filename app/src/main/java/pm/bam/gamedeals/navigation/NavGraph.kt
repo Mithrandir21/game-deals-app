@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
+import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
@@ -34,18 +35,23 @@ internal fun NavGraph(
             goToStore = { storeId -> navActions.navigateToStore(storeId) },
             goToGiveaway = { navActions.navigateToGiveaways() },
             goToFavourites = { navActions.navigateToFavourites() },
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
         )
 
         storeScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
         )
 
         gameScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) }
         )
+
+        gameDetailsScreen(navController = navController)
 
         searchScreen(
             goToGame = { gameId -> navActions.navigateToGame(gameId) }

@@ -90,6 +90,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,7 +129,8 @@ internal fun StoreScreen(
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
-        goToWeb = goToWeb
+        goToWeb = goToWeb,
+        goToGameDetails = goToGameDetails,
     )
 
     when (uiState) {
@@ -236,6 +238,7 @@ private fun StoreDeals(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGameDetails: (steamAppId: Int) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -265,6 +268,7 @@ private fun StoreDeals(
             data = dealDetails,
             isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
             goToWeb = goToWeb,
+            goToGameDetails = goToGameDetails,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
             onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },

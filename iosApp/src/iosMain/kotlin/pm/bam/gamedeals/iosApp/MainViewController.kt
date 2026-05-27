@@ -14,6 +14,7 @@ import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
+import platform.Foundation.NSBundle
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIViewController
@@ -30,6 +31,7 @@ import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.favourites.di.favouritesModule
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
+import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
@@ -46,6 +48,9 @@ import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
+import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
+import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 @Suppress("FunctionName", "unused")
@@ -67,6 +72,8 @@ private fun bootstrapKoin() {
                 .components { add(KtorNetworkFetcherFactory()) }
                 .build()
         }
+        // IGDB creds come from Info.plist keys IGDBClientId / IGDBClientSecret
+        single { IgdbCredentials(infoPlistString("IGDBClientId"), infoPlistString("IGDBClientSecret")) }
     }
 
     startKoin {
@@ -82,6 +89,8 @@ private fun bootstrapKoin() {
             cheapsharkRemoteModule,
             gamerpowerNetworkModule,
             gamerpowerRemoteModule,
+            igdbNetworkModule,
+            igdbRemoteModule,
             homeModule,
             searchModule,
             gameModule,
@@ -120,6 +129,7 @@ private fun AppNavHost() {
             goToGiveaway = { navController.navigate(Destination.Giveaways) },
             goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
         )
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
@@ -127,7 +137,9 @@ private fun AppNavHost() {
         gameScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
         )
+        gameDetailsScreen(navController = navController)
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
@@ -139,6 +151,7 @@ private fun AppNavHost() {
         storeScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
         )
         webViewScreen(
             onBack = { navController.popBackStack() },
@@ -149,3 +162,6 @@ private fun AppNavHost() {
 @OptIn(ExperimentalNativeApi::class)
 private fun currentRemoteBuildType(): RemoteBuildType =
     if (Platform.isDebugBinary) RemoteBuildType.DEBUG else RemoteBuildType.RELEASE
+
+private fun infoPlistString(key: String): String =
+    (NSBundle.mainBundle.objectForInfoDictionaryKey(key) as? String).orEmpty()

@@ -104,6 +104,7 @@ class HomeScreenTest {
         onViewGiveaways: () -> Unit = {},
         onViewFavourites: () -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
+        goToGameDetails: (Int) -> Unit = { _ -> },
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
@@ -116,6 +117,7 @@ class HomeScreenTest {
                 onViewGiveaways = onViewGiveaways,
                 onViewFavourites = onViewFavourites,
                 goToWeb = goToWeb,
+                goToGameDetails = goToGameDetails,
                 viewModel = viewModel,
             )
         }
