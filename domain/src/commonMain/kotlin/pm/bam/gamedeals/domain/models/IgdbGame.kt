@@ -23,6 +23,7 @@ data class IgdbGame(
     val involvedCompanies: ImmutableList<IgdbCompanyRole> = persistentListOf(),
     val websites: ImmutableList<IgdbWebsite> = persistentListOf(),
     val similarGames: ImmutableList<IgdbSimilarGame> = persistentListOf(),
+    val steamAppId: Int? = null,
 ) {
 
     @Immutable

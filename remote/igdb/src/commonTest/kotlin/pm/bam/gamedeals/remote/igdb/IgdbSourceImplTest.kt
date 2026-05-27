@@ -121,6 +121,7 @@ class IgdbSourceImplTest {
                 IgdbGame.IgdbSimilarGame(id = 1234L, name = "Halo 5: Guardians", coverImageId = "ha5"),
                 IgdbGame.IgdbSimilarGame(id = 5678L, name = "Destiny 2", coverImageId = null),
             ),
+            steamAppId = STEAM_ID,
         )
         assertEquals(expected, result)
         assertEquals(1, recorded.size)
@@ -303,6 +304,53 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun fetchGameDetailsByTitle_retries_exact_with_normalized_title_when_original_misses() = runTest {
+        // CheapShark deal titles often have "- Digital Deluxe Edition" / "- GOTY" suffixes IGDB
+        // doesn't carry. The cascade should: exact-original → empty, exact-normalized → hit.
+        val decorated = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition"
+        val normalized = "Suicide Squad: Kill the Justice League"
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            val body = if (recorded.size == 1) "[]" else ONE_GAME_DIRECT_BODY
+            respond(
+                content = body,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(decorated)
+
+        assertEquals("Hollow Knight", result?.name, "Fixture name is irrelevant here — assert the lookup resolved.")
+        assertEquals(2, recorded.size, "Exact-normalized hit must short-circuit before the search fallback")
+        assertEquals(buildExactNameLookupDetailsQuery(decorated), (recorded[0].body as TextContent).text)
+        assertEquals(buildExactNameLookupDetailsQuery(normalized), (recorded[1].body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_searches_normalized_title_when_both_exact_passes_miss() = runTest {
+        val decorated = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition"
+        val normalized = "Suicide Squad: Kill the Justice League"
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            val body = if (recorded.size < 2) "[]" else ONE_GAME_DIRECT_BODY
+            respond(
+                content = body,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(decorated)
+
+        assertEquals("Hollow Knight", result?.name)
+        assertEquals(3, recorded.size)
+        assertEquals(buildExactNameLookupDetailsQuery(decorated), (recorded[0].body as TextContent).text)
+        assertEquals(buildExactNameLookupDetailsQuery(normalized), (recorded[1].body as TextContent).text)
+        assertEquals(buildSearchLookupDetailsQuery(normalized), (recorded[2].body as TextContent).text)
+    }
+
+    @Test
     fun fetchGameDetailsByTitle_propagates_http_500_through_the_unwrap_chain() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -437,6 +485,8 @@ class IgdbSourceImplTest {
         ]"""
 
         // Response from `/v4/games where id = N` — flat record, no `external_games` wrapper.
+        // `external_games` has only non-Steam sources here, exercising the source = 1 filter
+        // (Hollow Knight ships on GOG and Itch but not Steam in this fixture, so steamAppId stays null).
         // language=JSON
         const val ONE_GAME_DIRECT_BODY = """[
             {
@@ -446,6 +496,10 @@ class IgdbSourceImplTest {
                 "cover": {"id": 7, "image_id": "hkco"},
                 "similar_games": [
                     {"id": 4242, "name": "Ori and the Blind Forest", "cover": {"id": 8, "image_id": "oco"}}
+                ],
+                "external_games": [
+                    {"id": 800, "uid": "hollow-knight-gog", "external_game_source": 5},
+                    {"id": 801, "uid": "hollow-knight-itch", "external_game_source": 36}
                 ]
             }
         ]"""
@@ -496,6 +550,10 @@ class IgdbSourceImplTest {
                         {"id": 1234, "name": "Halo 5: Guardians", "cover": {"id": 50, "image_id": "ha5"}},
                         {"id": 5678, "name": "Destiny 2"},
                         {"id": 9999}
+                    ],
+                    "external_games": [
+                        {"id": 700, "uid": "1240440", "external_game_source": 1},
+                        {"id": 701, "uid": "halo-gog-id", "external_game_source": 5}
                     ]
                 }
             }

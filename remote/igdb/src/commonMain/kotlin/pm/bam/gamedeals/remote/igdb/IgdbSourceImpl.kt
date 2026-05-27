@@ -43,19 +43,37 @@ internal class IgdbSourceImpl(
     override suspend fun fetchGameDetailsByTitle(title: String): IgdbGame? {
         if (title.isBlank()) return null
 
-        val exact = igdbGamesApi.fetchGameDetailsByExactName(title)
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .toIgdbGameOrNull()
-        if (exact != null) return exact
+        // Cascade: exact-original → exact-normalized (skip if same) → search-normalized.
+        // CheapShark deal titles often append edition decorations IGDB doesn't carry, so the
+        // normalized attempt catches "X - Digital Deluxe Edition" → "X" without needing a fuzzy
+        // search round-trip in the happy path.
+        val normalized = normalizeTitleForLookup(title)
 
-        return igdbGamesApi.fetchGameDetailsBySearch(title)
+        val exactOriginal = fetchExact(title)
+        if (exactOriginal != null) return exactOriginal
+
+        if (normalized != title && normalized.isNotBlank()) {
+            val exactNormalized = fetchExact(normalized)
+            if (exactNormalized != null) return exactNormalized
+        }
+
+        val searchTitle = normalized.ifBlank { title }
+        return fetchSearch(searchTitle)
+    }
+
+    private suspend fun fetchExact(title: String): IgdbGame? =
+        igdbGamesApi.fetchGameDetailsByExactName(title)
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .toIgdbGameOrNull()
-    }
+
+    private suspend fun fetchSearch(title: String): IgdbGame? =
+        igdbGamesApi.fetchGameDetailsBySearch(title)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toIgdbGameOrNull()
 
     override suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame> {
         if (title.isBlank()) return persistentListOf()

@@ -123,13 +123,13 @@ private fun AppNavHost() {
         startDestination = Destination.Home,
     ) {
         homeScreen(
-            goToSearch = { navController.navigate(Destination.Search) },
+            goToSearch = { navController.navigate(Destination.Search()) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navController.navigate(Destination.Giveaways) },
             goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
-            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
+            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         searchScreen(
@@ -138,7 +138,7 @@ private fun AppNavHost() {
         gameScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
-            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
+            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
         )
         gameDetailsScreen(navController = navController)
         giveawaysScreen(
@@ -152,7 +152,7 @@ private fun AppNavHost() {
         storeScreen(
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
-            goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
+            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         webViewScreen(

@@ -93,7 +93,7 @@ fun DealBottomSheet(
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     onRetryDealDetails: () -> Unit
 ) {
@@ -116,7 +116,7 @@ private fun DealContent(
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     retry: () -> Unit
 ) {
@@ -221,7 +221,7 @@ private fun DealContent(
 private fun GameDetails(
     data: DealBottomSheetData.DealDetailsData,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     Box(modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small)) {
@@ -335,7 +335,7 @@ private fun GameDetails(
                         .align(Alignment.CenterHorizontally),
                     onClick = {
                         val steamId = data.gameInfo.steamAppID
-                        if (steamId != null) goToGameDetails(steamId)
+                        if (steamId != null) goToGameDetails(steamId, data.gameName)
                         else goToGameDetailsByTitle(data.gameName)
                     },
                 ) {
@@ -413,7 +413,7 @@ private fun DealContent_Success_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
-                goToGameDetails = {},
+                goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
             )
@@ -432,7 +432,7 @@ private fun DealContent_Success_Favourited_Dark_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
-                goToGameDetails = {},
+                goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
             )
@@ -468,7 +468,7 @@ private fun DealContent_WithCheaperStores_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
-                goToGameDetails = {},
+                goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
             )
@@ -493,7 +493,7 @@ private fun DealContent_Loading_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
-                goToGameDetails = {},
+                goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
             )
@@ -518,7 +518,7 @@ private fun DealContent_Error_Preview() {
                 onShare = {},
                 onToggleFavourite = {},
                 goToWeb = { _, _ -> },
-                goToGameDetails = {},
+                goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
             )

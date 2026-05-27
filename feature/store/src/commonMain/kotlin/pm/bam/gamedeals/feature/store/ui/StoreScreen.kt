@@ -90,7 +90,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
 ) {
@@ -240,7 +240,7 @@ private fun StoreDeals(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit = {},
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()

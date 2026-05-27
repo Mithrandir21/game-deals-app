@@ -13,7 +13,7 @@ fun NavGraphBuilder.homeScreen(
     goToGiveaway: () -> Unit,
     goToFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     composable<Destination.Home> {

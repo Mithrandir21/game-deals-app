@@ -36,21 +36,21 @@ internal fun NavGraph(
             goToGiveaway = { navActions.navigateToGiveaways() },
             goToFavourites = { navActions.navigateToFavourites() },
             goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
-            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
+            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
         )
 
         storeScreen(
             navController = navController,
             goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
-            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) },
+            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
         )
 
         gameScreen(
             navController = navController,
             goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
-            goToGameDetails = { steamAppId -> navActions.navigateToGameDetails(steamAppId) }
+            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) }
         )
 
         gameDetailsScreen(navController = navController)

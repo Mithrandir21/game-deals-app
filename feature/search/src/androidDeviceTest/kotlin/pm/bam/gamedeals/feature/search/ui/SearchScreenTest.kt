@@ -49,6 +49,7 @@ class SearchScreenTest {
     @Before
     fun setup() {
         every { searchViewModel.favouriteIds } returns MutableStateFlow(persistentSetOf())
+        every { searchViewModel.initialQuery } returns null
     }
 
     private fun setupCompose(
@@ -158,6 +159,18 @@ class SearchScreenTest {
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
+    }
+
+    @Test
+    fun launched_with_initialQuery_prefills_search_field_with_that_text() {
+        // Use a token unlikely to appear elsewhere on the screen so onNodeWithText resolves uniquely to the field.
+        val prefill = "Halo Infinite Prefill Token"
+        every { searchViewModel.initialQuery } returns prefill
+        every { searchViewModel.resultState } returns MutableStateFlow(SearchViewModel.SearchData.Loading)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(prefill).assertIsDisplayed()
     }
 
     @Test

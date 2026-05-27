@@ -147,7 +147,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 game.genres.name, game.themes.name,
                 game.involved_companies.company.name, game.involved_companies.developer, game.involved_companies.publisher, game.involved_companies.porting, game.involved_companies.supporting,
                 game.websites.url, game.websites.type.id, game.websites.type.type,
-                game.similar_games.id, game.similar_games.name, game.similar_games.cover.image_id;
+                game.similar_games.id, game.similar_games.name, game.similar_games.cover.image_id,
+                game.external_games.uid, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
         """.trimIndent()
 
@@ -163,7 +164,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 genres.name, themes.name,
                 involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
                 websites.url, websites.type.id, websites.type.type,
-                similar_games.id, similar_games.name, similar_games.cover.image_id;
+                similar_games.id, similar_games.name, similar_games.cover.image_id,
+                external_games.uid, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
 

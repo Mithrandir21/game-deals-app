@@ -5,5 +5,5 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.search.ui.SearchViewModel
 
 val searchModule = module {
-    viewModel { SearchViewModel(get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get()) }
 }

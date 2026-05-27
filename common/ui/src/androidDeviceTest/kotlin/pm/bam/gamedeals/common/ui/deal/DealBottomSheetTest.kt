@@ -63,7 +63,7 @@ class DealBottomSheetTest {
         onDismiss: () -> Unit = {},
         onShare: (DealBottomSheetData) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
-        goToGameDetails: (Int) -> Unit = {},
+        goToGameDetails: (Int, String) -> Unit = { _, _ -> },
         goToGameDetailsByTitle: (String) -> Unit = {},
         onRetryDealDetails: () -> Unit = {},
         cheapestOnArgs: Pair<String, String>? = null,
@@ -255,11 +255,11 @@ class DealBottomSheetTest {
     }
 
     @Test
-    fun gameDetailsButton_click_invokes_callback_with_steamAppID() {
+    fun gameDetailsButton_click_invokes_callback_with_steamAppID_and_title() {
         val steamId = 1240440
         val data = dealDetailsData(steamAppID = steamId)
-        val goToGameDetails: (Int) -> Unit = mockk {
-            every { this@mockk.invoke(any()) } just Runs
+        val goToGameDetails: (Int, String) -> Unit = mockk {
+            every { this@mockk.invoke(any(), any()) } just Runs
         }
         val goToGameDetailsByTitle: (String) -> Unit = mockk {
             every { this@mockk.invoke(any()) } just Runs
@@ -271,20 +271,21 @@ class DealBottomSheetTest {
             goToGameDetailsByTitle = goToGameDetailsByTitle,
         )
 
-        verify(exactly = 0) { goToGameDetails.invoke(any()) }
+        verify(exactly = 0) { goToGameDetails.invoke(any(), any()) }
 
         composeTestRule.onNodeWithText(screenSemantics.gameDetails)
             .performClick()
 
-        verify(exactly = 1) { goToGameDetails.invoke(steamId) }
+        // Steam-id path now carries the title for the VM's fallback cascade (handles bundles / sub-ids).
+        verify(exactly = 1) { goToGameDetails.invoke(steamId, gameName) }
         verify(exactly = 0) { goToGameDetailsByTitle.invoke(any()) }
     }
 
     @Test
     fun gameDetailsButton_click_routes_via_title_when_steamAppID_null() {
         val data = dealDetailsData(steamAppID = null)
-        val goToGameDetails: (Int) -> Unit = mockk {
-            every { this@mockk.invoke(any()) } just Runs
+        val goToGameDetails: (Int, String) -> Unit = mockk {
+            every { this@mockk.invoke(any(), any()) } just Runs
         }
         val goToGameDetailsByTitle: (String) -> Unit = mockk {
             every { this@mockk.invoke(any()) } just Runs
@@ -300,7 +301,7 @@ class DealBottomSheetTest {
             .performClick()
 
         verify(exactly = 1) { goToGameDetailsByTitle.invoke(gameName) }
-        verify(exactly = 0) { goToGameDetails.invoke(any()) }
+        verify(exactly = 0) { goToGameDetails.invoke(any(), any()) }
     }
 
     private fun dealDetailsData(steamAppID: Int?): DealBottomSheetData.DealDetailsData {

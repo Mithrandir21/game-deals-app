@@ -122,7 +122,7 @@ internal fun HomeScreen(
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
@@ -253,7 +253,7 @@ private fun HomeScreenContent(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     onRetry: () -> Unit
 ) {
@@ -718,7 +718,7 @@ private fun HomeScreenContent_Success_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             goToGameDetailsByTitle = {},
             onRetry = {},
         )
@@ -745,7 +745,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             goToGameDetailsByTitle = {},
             onRetry = {},
         )
@@ -772,7 +772,7 @@ private fun HomeScreenContent_Loading_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             goToGameDetailsByTitle = {},
             onRetry = {},
         )
@@ -799,7 +799,7 @@ private fun HomeScreenContent_Error_Preview() {
             onShareDealDetails = {},
             onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             goToGameDetailsByTitle = {},
             onRetry = {},
         )

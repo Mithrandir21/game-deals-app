@@ -22,6 +22,8 @@ interface GamesRepository {
 
     suspend fun getGameDetails(dealId: Int): GameDetails
     suspend fun refreshGames()
+
+    suspend fun findCheapsharkGameIdBySteamAppId(steamAppId: Int, title: String): Int?
 }
 
 internal class GamesRepositoryImpl(
@@ -53,4 +55,11 @@ internal class GamesRepositoryImpl(
         cheapsharkSource.fetchGames("")
             .let { gamesDao.addGames(*it.toTypedArray()) }
     }
+
+    override suspend fun findCheapsharkGameIdBySteamAppId(steamAppId: Int, title: String): Int? =
+        runCatching {
+            cheapsharkSource.fetchGames(title = title, steamAppID = steamAppId, limit = 1)
+                .firstOrNull()
+                ?.gameID
+        }.getOrNull()
 }

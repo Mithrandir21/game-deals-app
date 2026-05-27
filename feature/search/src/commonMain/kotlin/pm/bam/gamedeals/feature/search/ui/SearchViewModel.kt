@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.feature.search.ui
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
@@ -32,15 +33,20 @@ import pm.bam.gamedeals.logging.Logger
 @Suppress("NullChecksToSafeCall")
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalSerializationApi::class)
 internal class SearchViewModel(
+    savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
     private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
 
+    val initialQuery: String? = savedStateHandle.get<String>("initialQuery")?.takeIf { it.isNotBlank() }
+
     // We store and react to the Query changes so that only a single search flow can exists.
     // StateFlow gives us atomic read-modify-write via update {} (L-2026-05-02-01) and
     // conflated replay-of-latest semantics, replacing the prior SharedFlow + replayCache RMW.
-    private val searchParametersFlow = MutableStateFlow(SearchParameters())
+    private val searchParametersFlow = MutableStateFlow(
+        if (initialQuery != null) SearchParameters(title = initialQuery) else SearchParameters()
+    )
 
     val resultState: StateFlow<SearchData>
         field = MutableStateFlow<SearchData>(SearchData.Empty)

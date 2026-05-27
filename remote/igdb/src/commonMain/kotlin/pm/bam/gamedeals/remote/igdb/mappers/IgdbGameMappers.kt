@@ -25,7 +25,13 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
     involvedCompanies = involvedCompanies.flatMap { it.toRoles() }.toImmutableList(),
     websites = websites.mapNotNull { it.toIgdbWebsiteOrNull() }.toImmutableList(),
     similarGames = similarGames.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+    steamAppId = externalGames
+        .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
+        ?.uid
+        ?.toIntOrNull(),
 )
+
+private const val STEAM_EXTERNAL_GAME_SOURCE_ID = 1L
 
 private fun RemoteIgdbInvolvedCompany.toRoles(): List<IgdbGame.IgdbCompanyRole> {
     val companyName = company?.name ?: return emptyList()
