@@ -17,6 +17,7 @@ fun HomeRoute(
     onViewFavourites: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     HomeScreen(
         onSearch = onSearch,
@@ -26,5 +27,6 @@ fun HomeRoute(
         onViewFavourites = onViewFavourites,
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
+        goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
 }

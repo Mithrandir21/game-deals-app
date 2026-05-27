@@ -91,6 +91,7 @@ internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -131,6 +132,7 @@ internal fun StoreScreen(
         onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
+        goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
 
     when (uiState) {
@@ -239,6 +241,7 @@ private fun StoreDeals(
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int) -> Unit = {},
+    goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -269,6 +272,7 @@ private fun StoreDeals(
             isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
+            goToGameDetailsByTitle = goToGameDetailsByTitle,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
             onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },

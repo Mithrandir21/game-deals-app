@@ -130,6 +130,7 @@ private fun AppNavHost() {
             goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
             goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
+            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
@@ -152,6 +153,7 @@ private fun AppNavHost() {
             navController = navController,
             goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
             goToGameDetails = { steamAppId -> navController.navigate(Destination.GameDetails(steamAppId)) },
+            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         webViewScreen(
             onBack = { navController.popBackStack() },

@@ -32,4 +32,12 @@ fun NavGraphBuilder.gameDetailsScreen(navController: NavController) {
             onSearchDealsByTitle = navigateToSearch,
         )
     }
+    composable<Destination.GameDetailsByTitle> {
+        GameDetailsScreen(
+            onBack = { navController.popBackStack() },
+            onSimilarGameClick = navigateToSimilar,
+            onViewDealsClick = navigateToGame,
+            onSearchDealsByTitle = navigateToSearch,
+        )
+    }
 }

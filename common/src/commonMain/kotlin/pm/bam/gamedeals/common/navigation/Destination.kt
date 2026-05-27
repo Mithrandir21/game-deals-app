@@ -29,6 +29,9 @@ sealed interface Destination {
     data class GameDetailsByIgdbId(val igdbGameId: Long) : Destination
 
     @Serializable
+    data class GameDetailsByTitle(val title: String) : Destination
+
+    @Serializable
     data class Search(val initialQuery: String? = null) : Destination
 
     @Serializable
