@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -179,25 +180,27 @@ class GameDetailsScreenTest {
 
         setupCompose()
 
-        // Links sits below the fold on portrait; scroll the first chip into view, then assert siblings.
+        // FlowRow may wrap chips across rows on narrower viewports, so scroll each chip into view
+        // individually rather than assuming siblings are visible once the first one is scrolled to.
         composeTestRule.onNodeWithText("Steam").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("Wikipedia").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Discord").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Wikipedia").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Discord").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun tapping_similar_game_tile_invokes_callback_with_igdb_id() {
-        val onSimilarGameClick: (Long) -> Unit = mockk()
-        every { onSimilarGameClick.invoke(987L) } just runs
+        val onSimilarGameClick: (Long) -> Unit = mockk(relaxed = true)
         every { viewModel.uiState } returns MutableStateFlow(
             GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame)
         )
 
         setupCompose(onSimilarGameClick = onSimilarGameClick)
 
-        composeTestRule.onNodeWithContentDescription(screenSemantics.firstSimilarRowCd)
-            .performScrollTo()
-            .performClick()
+        val tile = composeTestRule.onNodeWithContentDescription(screenSemantics.firstSimilarRowCd)
+        tile.performScrollTo()
+        composeTestRule.waitForIdle()
+        tile.assertHasClickAction().performClick()
+        composeTestRule.waitForIdle()
 
         verify(exactly = 1) { onSimilarGameClick.invoke(987L) }
     }
