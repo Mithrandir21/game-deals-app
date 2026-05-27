@@ -96,7 +96,7 @@ class GameScreenTest {
     private fun setupCompose(
         onBack: () -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
-        goToGameDetails: (Int) -> Unit = {},
+        goToGameDetails: (Int, String) -> Unit = { _, _ -> },
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()

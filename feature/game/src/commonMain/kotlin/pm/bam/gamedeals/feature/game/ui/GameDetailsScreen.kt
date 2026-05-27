@@ -109,6 +109,10 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_co
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_message
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_search_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
@@ -159,6 +163,7 @@ internal fun GameDetailsScreen(
         onRetry = onRetry,
         onSimilarGameClick = onSimilarGameClick,
         onDealsCtaClick = onDealsCtaClick,
+        onSearchDealsByTitle = onSearchDealsByTitle,
         onWarningTap = viewModel::onWarningTap,
         onPickerDismiss = viewModel::onPickerDismiss,
         onCandidatePicked = viewModel::onCandidatePicked,
@@ -173,6 +178,7 @@ private fun GameDetailsScreenContent(
     onRetry: () -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onDealsCtaClick: () -> Unit = {},
+    onSearchDealsByTitle: (title: String) -> Unit = {},
     onWarningTap: () -> Unit = {},
     onPickerDismiss: () -> Unit = {},
     onCandidatePicked: (igdbGameId: Long) -> Unit = {},
@@ -238,6 +244,14 @@ private fun GameDetailsScreenContent(
                     val result = snackbarHostState.showSnackbar(message = errorMessage, actionLabel = errorRetry)
                     if (result == SnackbarResult.ActionPerformed) currentOnRetry()
                 }
+
+                is GameDetailsViewModel.GameDetailsScreenData.NoMatch ->
+                    NoMatchSection(
+                        modifier = Modifier.padding(innerPadding),
+                        title = data.title,
+                        onSearch = { onSearchDealsByTitle(data.title) },
+                        onBack = onBack,
+                    )
 
                 is GameDetailsViewModel.GameDetailsScreenData.Data ->
                     GameDetailsBody(
@@ -324,6 +338,55 @@ private fun HeroSection(game: IgdbGame) {
                 )
             }
             RatingsRow(game = game)
+        }
+    }
+}
+
+@Composable
+private fun NoMatchSection(
+    modifier: Modifier,
+    title: String,
+    onSearch: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+            ) {
+                Text(
+                    modifier = Modifier.semantics { heading() },
+                    text = stringResource(Res.string.game_details_no_match_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(Res.string.game_details_no_match_message, title),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        FilledTonalButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onSearch,
+        ) {
+            Text(text = stringResource(Res.string.game_details_no_match_search_button))
+        }
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onBack,
+        ) {
+            Text(text = stringResource(Res.string.game_details_no_match_back_button))
         }
     }
 }
@@ -850,6 +913,21 @@ private fun GameDetailsScreen_Data_NoSteam_Preview() {
     GameDealsTheme {
         GameDetailsScreenContent(
             data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails.copy(steamAppId = null), previewWebsites),
+            onBack = {},
+            onRetry = {},
+            onSimilarGameClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameDetailsScreen_NoMatch_Preview() {
+    GameDealsTheme {
+        GameDetailsScreenContent(
+            data = GameDetailsViewModel.GameDetailsScreenData.NoMatch(
+                title = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition",
+            ),
             onBack = {},
             onRetry = {},
             onSimilarGameClick = {},

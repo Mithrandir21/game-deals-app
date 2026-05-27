@@ -35,7 +35,9 @@ internal class GameDetailsViewModel(
 
     private val steamAppId: Int? = savedStateHandle.get<Int>("steamAppId")
     private val igdbGameId: Long? = savedStateHandle.get<Long>("igdbGameId")
-    private val title: String? = savedStateHandle.get<String>("title")
+    // Treat blank/whitespace-only strings as "no title" so the cascade doesn't waste an HTTP call
+    // and the NoMatch card doesn't render with an empty title fragment.
+    private val title: String? = savedStateHandle.get<String>("title")?.takeIf { it.isNotBlank() }
 
     val uiState: StateFlow<GameDetailsScreenData>
         field = MutableStateFlow<GameDetailsScreenData>(GameDetailsScreenData.Loading)
@@ -61,26 +63,38 @@ internal class GameDetailsViewModel(
 
     private fun loadFlow(): Flow<GameDetailsScreenData> = flow {
         emit(GameDetailsScreenData.Loading)
-        val game = when {
-            steamAppId != null -> igdbRepository.fetchGameDetailsBySteamId(steamAppId)
-            igdbGameId != null -> igdbRepository.fetchGameDetailsByIgdbId(igdbGameId)
-            title != null      -> igdbRepository.fetchGameDetailsByTitle(title)
-            else -> {
-                emit(GameDetailsScreenData.Error)
-                return@flow
-            }
+        if (steamAppId == null && igdbGameId == null && title == null) {
+            emit(GameDetailsScreenData.Error)
+            return@flow
         }
-        val resolvedByTitle = steamAppId == null && igdbGameId == null && title != null
+        // Cascade: Steam id → IGDB id → title. If Steam id misses (e.g. CheapShark's
+        // "steamAppID" is actually a Steam sub/bundle id that IGDB doesn't track) AND we
+        // also have a title, fall back to title lookup. resolvedByTitle is true when the
+        // record we ended up with came via the title path — surfaces the fuzzy-match warning.
+        var resolvedByTitle = false
+        var game = steamAppId?.let { igdbRepository.fetchGameDetailsBySteamId(it) }
+        if (game == null && steamAppId != null && title != null) {
+            game = igdbRepository.fetchGameDetailsByTitle(title)
+            if (game != null) resolvedByTitle = true
+        }
+        if (game == null && igdbGameId != null) {
+            game = igdbRepository.fetchGameDetailsByIgdbId(igdbGameId)
+        }
+        if (game == null && steamAppId == null && igdbGameId == null && title != null) {
+            game = igdbRepository.fetchGameDetailsByTitle(title)
+            if (game != null) resolvedByTitle = true
+        }
+        if (game == null) {
+            // Any path that had a title to display lands on the NoMatch explainer.
+            emit(if (title != null) GameDetailsScreenData.NoMatch(title) else GameDetailsScreenData.Error)
+            return@flow
+        }
         emit(
-            if (game != null) {
-                GameDetailsScreenData.Data(
-                    game = game,
-                    websites = game.websites.map { it.toUi() }.toImmutableList(),
-                    resolvedByTitle = resolvedByTitle,
-                )
-            } else {
-                GameDetailsScreenData.Error
-            }
+            GameDetailsScreenData.Data(
+                game = game,
+                websites = game.websites.map { it.toUi() }.toImmutableList(),
+                resolvedByTitle = resolvedByTitle,
+            )
         )
     }.catch { emit(GameDetailsScreenData.Error) }
 
@@ -164,6 +178,7 @@ internal class GameDetailsViewModel(
     sealed class GameDetailsScreenData {
         data object Loading : GameDetailsScreenData()
         data object Error : GameDetailsScreenData()
+        data class NoMatch(val title: String) : GameDetailsScreenData()
         data class Data(
             val game: IgdbGame,
             val websites: ImmutableList<WebsiteUiModel> = persistentListOf(),

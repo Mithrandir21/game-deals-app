@@ -36,6 +36,10 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_li
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_close
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_message
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_search_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
@@ -131,6 +135,21 @@ class GameDetailsScreenTest {
         // The CTA is gated on Data state — neither label should appear while loading.
         composeTestRule.onNodeWithText(screenSemantics.viewDealsLabel).assertDoesNotExist()
         composeTestRule.onNodeWithText(screenSemantics.searchDealsLabel).assertDoesNotExist()
+    }
+
+    @Test
+    fun noMatchState_does_not_render_deals_cta() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.NoMatch("Some Decorated Title - Definitive Edition")
+        )
+
+        setupCompose()
+
+        // The inline deal CTA (Data state only) carries a "<View|Search> deals for <gameName>"
+        // contentDescription — these never appear in the NoMatch tree, which has its own
+        // Search / Back affordances using the bare "Search deals" / "Go back" labels.
+        composeTestRule.onNodeWithContentDescription(screenSemantics.viewDealsCd).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.searchDealsCd).assertDoesNotExist()
     }
 
     @Test
@@ -390,6 +409,53 @@ class GameDetailsScreenTest {
     private fun stringResource_view_alternative(name: String): String = "View details for $name"
 
     @Test
+    fun noMatchState_renders_explainer_card_with_title_and_both_action_buttons() {
+        val decoratedTitle = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition"
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.NoMatch(decoratedTitle)
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.noMatchTitle).assertIsDisplayed()
+        // Message interpolates the full decorated title — assert the title fragment appears.
+        composeTestRule.onNodeWithText(decoratedTitle, substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.noMatchSearchButton).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.noMatchBackButton).assertIsDisplayed()
+    }
+
+    @Test
+    fun tapping_search_button_in_no_match_invokes_onSearchDealsByTitle_with_title() {
+        val decoratedTitle = "Mystery Game - Definitive Edition"
+        val onSearchDealsByTitle: (String) -> Unit = mockk(relaxed = true)
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.NoMatch(decoratedTitle)
+        )
+
+        setupCompose(onSearchDealsByTitle = onSearchDealsByTitle)
+
+        composeTestRule.onNodeWithText(screenSemantics.noMatchSearchButton).performClick()
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { onSearchDealsByTitle.invoke(decoratedTitle) }
+    }
+
+    @Test
+    fun tapping_back_button_in_no_match_invokes_onBack() {
+        val onBack: () -> Unit = mockk(relaxed = true)
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.NoMatch("Anything")
+        )
+
+        setupCompose(onBack = onBack)
+
+        composeTestRule.onNodeWithText(screenSemantics.noMatchBackButton).performClick()
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { onBack.invoke() }
+    }
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs
@@ -425,6 +491,9 @@ class GameDetailsScreenTest {
         val warningCd: String,
         val pickerTitle: String,
         val pickerExplanation: String,
+        val noMatchTitle: String,
+        val noMatchSearchButton: String,
+        val noMatchBackButton: String,
     ) {
         companion object {
             @Composable
@@ -448,6 +517,9 @@ class GameDetailsScreenTest {
                 warningCd = stringResource(Res.string.game_details_title_match_warning_cd),
                 pickerTitle = stringResource(Res.string.game_details_title_match_picker_title),
                 pickerExplanation = stringResource(Res.string.game_details_title_match_picker_explanation),
+                noMatchTitle = stringResource(Res.string.game_details_no_match_title),
+                noMatchSearchButton = stringResource(Res.string.game_details_no_match_search_button),
+                noMatchBackButton = stringResource(Res.string.game_details_no_match_back_button),
             )
         }
     }

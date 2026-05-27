@@ -434,15 +434,151 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun title_returning_null_emits_Error() = runTest {
+    fun steamAppId_miss_with_title_falls_back_to_title_lookup_and_marks_resolvedByTitle_true() = runTest {
+        // CheapShark's "steamAppID" can actually be a Steam sub/bundle id IGDB doesn't track
+        // (e.g. "Middle-earth: The Shadow Bundle" with steamAppID=648168, which is a /subs/ id).
+        // When the Steam-id query returns null and a title was passed alongside, fall back to
+        // title lookup so the user reaches the details screen instead of a dead-end Error.
+        val steamId = 648168
+        val title = "Middle-earth: The Shadow Bundle"
+        val igdb = igdbDetails(name = "Middle-earth: Shadow of Mordor")
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns null
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdb
+
+        val viewModel = GameDetailsViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("steamAppId" to steamId, "title" to title)),
+            logger = TestingLoggingListener(),
+            igdbRepository = igdbRepository,
+            gamesRepository = gamesRepository,
+            faviconResolver = FaviconResolverImpl(),
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val last = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(igdb, last.game)
+        assertEquals(true, last.resolvedByTitle, "Game came via title fallback — warn the user with the fuzzy-match indicator")
+    }
+
+    @Test
+    fun steamAppId_miss_without_title_emits_Error_no_title_fallback_attempted() = runTest {
+        val steamId = 648168
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns null
+
+        val viewModel = createViewModel(steamId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByTitle(any()) }
+    }
+
+    @Test
+    fun steamAppId_miss_with_title_that_also_misses_emits_NoMatch_with_title() = runTest {
+        val steamId = 648168
+        val title = "Middle-earth: The Shadow Bundle"
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns null
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns null
+
+        val viewModel = GameDetailsViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("steamAppId" to steamId, "title" to title)),
+            logger = TestingLoggingListener(),
+            igdbRepository = igdbRepository,
+            gamesRepository = gamesRepository,
+            faviconResolver = FaviconResolverImpl(),
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.NoMatch(title), emissions.last())
+    }
+
+    @Test
+    fun blank_title_in_savedState_is_treated_as_no_title_and_emits_Error() = runTest {
+        // Defensive: if a destination ever carries an empty/whitespace title, don't fire a
+        // wasted IGDB call or render a NoMatch card with an empty title fragment.
+        val viewModel = GameDetailsViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("title" to "   ")),
+            logger = TestingLoggingListener(),
+            igdbRepository = igdbRepository,
+            gamesRepository = gamesRepository,
+            faviconResolver = FaviconResolverImpl(),
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByTitle(any()) }
+    }
+
+    @Test
+    fun reload_from_NoMatch_state_re_attempts_the_cascade_and_recovers_on_subsequent_success() = runTest {
         val title = "Mystery Game"
+        val igdb = igdbDetails(name = title)
+        // First fetch returns null → NoMatch. Reload returns a game → Data.
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } sequentially {
+            returns(null)
+            returns(igdb)
+        }
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.NoMatch(title), emissions.last())
+
+        viewModel.reload()
+        runCurrent()
+
+        val last = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(igdb, last.game)
+    }
+
+    @Test
+    fun resolveDealsAction_returns_null_when_state_is_NoMatch() = runTest {
+        val title = "Mystery Game"
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns null
+
+        val viewModel = createViewModelByTitle(title)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        // Sanity — state should be NoMatch so the CTA-absence + null-action guards behave.
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.NoMatch(title), viewModel.uiState.value)
+        assertNull(viewModel.resolveDealsAction())
+    }
+
+    @Test
+    fun steamAppId_miss_then_title_fallback_throws_emits_Error() = runTest {
+        val steamId = 648168
+        val title = "Middle-earth: The Shadow Bundle"
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns null
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } calls { throw Exception("IGDB down") }
+
+        val viewModel = GameDetailsViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("steamAppId" to steamId, "title" to title)),
+            logger = TestingLoggingListener(),
+            igdbRepository = igdbRepository,
+            gamesRepository = gamesRepository,
+            faviconResolver = FaviconResolverImpl(),
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        // Exception from the title fallback bubbles into loadFlow.catch{} and surfaces as Error,
+        // not as NoMatch. NoMatch is reserved for the deterministic empty-result case.
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun title_returning_null_emits_NoMatch_with_the_title_for_the_explainer_card() = runTest {
+        val title = "Mystery Game - Definitive Edition"
         everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns null
 
         val viewModel = createViewModelByTitle(title)
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         runCurrent()
 
-        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.NoMatch(title), emissions.last())
     }
 
     @Test

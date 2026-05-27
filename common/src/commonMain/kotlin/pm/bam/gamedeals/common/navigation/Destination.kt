@@ -23,7 +23,7 @@ sealed interface Destination {
     data class Game(val gameId: Int) : Destination
 
     @Serializable
-    data class GameDetails(val steamAppId: Int) : Destination
+    data class GameDetails(val steamAppId: Int, val title: String? = null) : Destination
 
     @Serializable
     data class GameDetailsByIgdbId(val igdbGameId: Long) : Destination

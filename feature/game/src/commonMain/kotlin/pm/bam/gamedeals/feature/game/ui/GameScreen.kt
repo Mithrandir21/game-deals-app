@@ -97,7 +97,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun GameScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -133,7 +133,7 @@ private fun CompactGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Column(
@@ -154,7 +154,7 @@ private fun CompactGameDealsDetails(
                 )
             }
             GameDetailsButton(
-                onClick = { goToGameDetails(steamId) },
+                onClick = { goToGameDetails(steamId, data.gameDetails.info.title) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.large),
@@ -189,7 +189,7 @@ private fun WideGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
     Row(modifier = modifier) {
@@ -206,7 +206,7 @@ private fun WideGameDealsDetails(
             val steamId = data.gameDetails.info.steamAppID
             if (igdb != null && steamId != null) {
                 igdb.summary?.takeIf { it.isNotBlank() }?.let { summary -> IgdbSummarySection(summary) }
-                GameDetailsButton(onClick = { goToGameDetails(steamId) })
+                GameDetailsButton(onClick = { goToGameDetails(steamId, data.gameDetails.info.title) })
             }
 
             data.dealDetails.forEach {
@@ -389,7 +389,7 @@ private fun GameScreenContent(
     isFavourite: Boolean,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int) -> Unit,
+    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
     onRetry: () -> Unit
@@ -534,7 +534,7 @@ private fun GameScreenContent_Compact_Success_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -556,7 +556,7 @@ private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -578,7 +578,7 @@ private fun GameScreenContent_Wide_Success_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             onToggleFavourite = {},
             onRetry = {},
         )
@@ -596,7 +596,7 @@ private fun GameScreenContent_Loading_Preview() {
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },
-            goToGameDetails = {},
+            goToGameDetails = { _, _ -> },
             onToggleFavourite = {},
             onRetry = {},
         )

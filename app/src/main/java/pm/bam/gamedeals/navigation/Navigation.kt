@@ -38,8 +38,8 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
-    fun navigateToGameDetails(steamAppId: Int) {
-        navController.navigate(Destination.GameDetails(steamAppId))
+    fun navigateToGameDetails(steamAppId: Int, title: String? = null) {
+        navController.navigate(Destination.GameDetails(steamAppId, title))
     }
 
     fun navigateToGameDetailsByTitle(title: String) {
