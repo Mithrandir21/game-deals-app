@@ -82,6 +82,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_a
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_remove_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
@@ -454,12 +455,14 @@ private fun GameScreenContent(
                 },
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
             ) { innerPadding: PaddingValues ->
+                val loadingCd = stringResource(Res.string.game_screen_loading_indicator)
                 when (data) {
                     GameScreenData.Loading -> CircularProgressIndicator(
                         modifier = Modifier
                             .padding(innerPadding)
                             .fillMaxSize()
                             .wrapContentSize(Alignment.Center)
+                            .semantics { contentDescription = loadingCd }
                     )
 
                     GameScreenData.Error -> LaunchedEffect(snackbarHostState) {

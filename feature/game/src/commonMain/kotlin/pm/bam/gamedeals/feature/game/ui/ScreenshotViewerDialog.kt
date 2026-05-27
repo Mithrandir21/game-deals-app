@@ -21,6 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
@@ -36,6 +40,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_close
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_page_indicator
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_page_indicator_cd
 
 @Composable
 internal fun ScreenshotViewerDialog(
@@ -88,6 +93,11 @@ internal fun ScreenshotViewerDialog(
             }
 
             if (screenshotImageIds.size > 1) {
+                val pageIndicatorCd = stringResource(
+                    Res.string.game_details_screenshot_viewer_page_indicator_cd,
+                    pagerState.currentPage + 1,
+                    screenshotImageIds.size,
+                )
                 Text(
                     text = stringResource(
                         Res.string.game_details_screenshot_viewer_page_indicator,
@@ -100,7 +110,11 @@ internal fun ScreenshotViewerDialog(
                         .align(Alignment.BottomCenter)
                         .padding(GameDealsCustomTheme.spacing.large)
                         .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                        .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.extraSmall),
+                        .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.extraSmall)
+                        .semantics {
+                            contentDescription = pageIndicatorCd
+                            liveRegion = LiveRegionMode.Polite
+                        },
                 )
             }
         }

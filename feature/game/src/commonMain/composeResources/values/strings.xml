@@ -6,6 +6,7 @@
     <string name="game_screen_navigation_back_button">Back</string>
 
     <string name="game_screen_toolbar_title_loading">Loading…</string>
+    <string name="game_screen_loading_indicator">Loading game</string>
     <string name="game_screen_cheapest_value_label">(%1$s and up)</string>
     <string name="game_screen_cheapest_ever_label">Cheapest Ever:</string>
     <string name="game_screen_cheapest_ever_on_date_label">%1$s on %2$s</string>
@@ -24,6 +25,7 @@
     <string name="game_screen_view_details">Game details</string>
 
     <string name="game_details_screen_title">Game Details</string>
+    <string name="game_details_loading_indicator">Loading game details</string>
     <string name="game_details_cover_image_cd">%1$s cover art</string>
     <string name="game_details_screenshot_image_cd">%1$s screenshot %2$d</string>
     <string name="game_details_released_label">Released %1$s</string>
@@ -43,6 +45,7 @@
 
     <string name="game_details_screenshot_viewer_close">Close</string>
     <string name="game_details_screenshot_viewer_page_indicator">%1$d / %2$d</string>
+    <string name="game_details_screenshot_viewer_page_indicator_cd">Screenshot %1$d of %2$d</string>
 
     <string name="game_details_view_deals_cta">View deals</string>
     <string name="game_details_search_deals_cta">Search deals</string>

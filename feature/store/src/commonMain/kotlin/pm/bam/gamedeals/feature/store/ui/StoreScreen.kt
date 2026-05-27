@@ -81,7 +81,6 @@ import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description_favourite
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_game_image
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_navigation_back_icon
-import pm.bam.gamedeals.feature.store.generated.resources.store_screen_store_banner
 import pm.bam.gamedeals.feature.store.ui.StoreViewModel.StoreScreenData
 
 private val AlwaysScrollable: () -> Boolean = { true }
@@ -303,7 +302,7 @@ private fun StoreToolbar(
             ) {
                 AsyncImage(
                     model = storeDetails?.images?.banner,
-                    contentDescription = stringResource(Res.string.store_screen_store_banner, storeDetails?.storeName ?: ""),
+                    contentDescription = null,
                     error = painterResource(CommonRes.drawable.videogame_thumb),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier

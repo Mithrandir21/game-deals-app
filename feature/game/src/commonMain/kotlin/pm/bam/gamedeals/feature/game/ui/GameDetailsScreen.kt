@@ -102,6 +102,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_ro
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_supporting
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_cover_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_critic_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_loading_indicator
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_released_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screen_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
@@ -232,12 +233,14 @@ private fun GameDetailsScreenContent(
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { innerPadding: PaddingValues ->
+            val loadingCd = stringResource(Res.string.game_details_loading_indicator)
             when (data) {
                 GameDetailsViewModel.GameDetailsScreenData.Loading -> CircularProgressIndicator(
                     modifier = Modifier
                         .padding(innerPadding)
                         .fillMaxSize()
-                        .wrapContentSize(Alignment.Center),
+                        .wrapContentSize(Alignment.Center)
+                        .semantics { contentDescription = loadingCd },
                 )
 
                 GameDetailsViewModel.GameDetailsScreenData.Error -> LaunchedEffect(snackbarHostState) {
@@ -520,7 +523,7 @@ private fun ScreenshotsSection(game: IgdbGame) {
                         .aspectRatio(SCREENSHOT_ASPECT_RATIO)
                         .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
                         .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .clickable { openIndex = index },
+                        .clickable(role = Role.Button) { openIndex = index },
                 )
             }
         }
