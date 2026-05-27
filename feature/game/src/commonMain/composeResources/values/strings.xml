@@ -44,4 +44,9 @@
     <string name="game_details_screenshot_viewer_close">Close</string>
     <string name="game_details_screenshot_viewer_page_indicator">%1$d / %2$d</string>
 
+    <string name="game_details_view_deals_cta">View deals</string>
+    <string name="game_details_search_deals_cta">Search deals</string>
+    <string name="game_details_view_deals_cta_cd">View deals for %1$s</string>
+    <string name="game_details_search_deals_cta_cd">Search deals for %1$s</string>
+
 </resources>

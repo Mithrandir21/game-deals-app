@@ -10,16 +10,26 @@ fun NavGraphBuilder.gameDetailsScreen(navController: NavController) {
     val navigateToSimilar: (Long) -> Unit = { igdbGameId ->
         navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId))
     }
+    val navigateToGame: (Int) -> Unit = { gameId ->
+        navController.navigate(Destination.Game(gameId))
+    }
+    val navigateToSearch: (String) -> Unit = { title ->
+        navController.navigate(Destination.Search(initialQuery = title))
+    }
     composable<Destination.GameDetails> {
         GameDetailsScreen(
             onBack = { navController.popBackStack() },
             onSimilarGameClick = navigateToSimilar,
+            onViewDealsClick = navigateToGame,
+            onSearchDealsByTitle = navigateToSearch,
         )
     }
     composable<Destination.GameDetailsByIgdbId> {
         GameDetailsScreen(
             onBack = { navController.popBackStack() },
             onSimilarGameClick = navigateToSimilar,
+            onViewDealsClick = navigateToGame,
+            onSearchDealsByTitle = navigateToSearch,
         )
     }
 }

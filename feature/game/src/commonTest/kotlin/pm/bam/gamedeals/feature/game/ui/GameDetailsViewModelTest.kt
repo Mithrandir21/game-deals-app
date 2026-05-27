@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -33,6 +34,7 @@ import kotlin.test.assertNull
 class GameDetailsViewModelTest : MainDispatcherTest() {
 
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -41,6 +43,7 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         savedStateHandle = if (steamAppId == null) SavedStateHandle() else SavedStateHandle(mapOf("steamAppId" to steamAppId)),
         logger = TestingLoggingListener(),
         igdbRepository = igdbRepository,
+        gamesRepository = gamesRepository,
         faviconResolver = FaviconResolverImpl(),
     )
 
@@ -48,6 +51,7 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         savedStateHandle = SavedStateHandle(mapOf("igdbGameId" to igdbGameId)),
         logger = TestingLoggingListener(),
         igdbRepository = igdbRepository,
+        gamesRepository = gamesRepository,
         faviconResolver = FaviconResolverImpl(),
     )
 
@@ -261,5 +265,64 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         name: String = "Halo Infinite",
         summary: String? = "Master Chief stuff",
         websites: ImmutableList<IgdbGame.IgdbWebsite> = persistentListOf(),
-    ): IgdbGame = IgdbGame(id = id, name = name, summary = summary, websites = websites)
+        steamAppId: Int? = null,
+    ): IgdbGame = IgdbGame(id = id, name = name, summary = summary, websites = websites, steamAppId = steamAppId)
+
+    @Test
+    fun resolveDealsAction_returns_OpenGame_when_steamAppId_present_and_cheapshark_match() = runTest {
+        val steamId = 1240440
+        val igdb = igdbDetails(steamAppId = steamId)
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdb
+        everySuspend { gamesRepository.findCheapsharkGameIdBySteamAppId(steamId, "Halo Infinite") } returns 12345
+
+        val viewModel = createViewModel(steamId)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val action = viewModel.resolveDealsAction()
+        assertEquals(GameDetailsViewModel.DealsAction.OpenGame(12345), action)
+    }
+
+    @Test
+    fun resolveDealsAction_returns_SearchByTitle_when_steamAppId_present_but_cheapshark_empty() = runTest {
+        val steamId = 1240440
+        val igdb = igdbDetails(steamAppId = steamId)
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdb
+        everySuspend { gamesRepository.findCheapsharkGameIdBySteamAppId(steamId, "Halo Infinite") } returns null
+
+        val viewModel = createViewModel(steamId)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val action = viewModel.resolveDealsAction()
+        assertEquals(GameDetailsViewModel.DealsAction.SearchByTitle("Halo Infinite"), action)
+    }
+
+    @Test
+    fun resolveDealsAction_returns_SearchByTitle_when_steamAppId_absent() = runTest {
+        val igdbId = 3151L
+        val igdb = igdbDetails(id = igdbId, name = "Hollow Knight", steamAppId = null)
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(igdbId) } returns igdb
+
+        val viewModel = createViewModelByIgdbId(igdbId)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val action = viewModel.resolveDealsAction()
+        assertEquals(GameDetailsViewModel.DealsAction.SearchByTitle("Hollow Knight"), action)
+        verifySuspend(exactly(0)) { gamesRepository.findCheapsharkGameIdBySteamAppId(any(), any()) }
+    }
+
+    @Test
+    fun resolveDealsAction_returns_null_when_state_is_not_Data() = runTest {
+        val steamId = 1240440
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns null
+
+        val viewModel = createViewModel(steamId)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val action = viewModel.resolveDealsAction()
+        assertNull(action)
+    }
 }

@@ -119,8 +119,12 @@ internal fun SearchScreen(
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
     val favouriteIds = searchViewModel.favouriteIds.collectAsStateWithLifecycle()
 
+    val initialTitle = searchViewModel.initialQuery
+
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    var existingParameters by rememberSaveable(stateSaver = parametersSaver) { mutableStateOf(SearchParameters()) }
+    var existingParameters by rememberSaveable(stateSaver = parametersSaver) {
+        mutableStateOf(SearchParameters(title = initialTitle))
+    }
 
     val onSearch: () -> Unit = {
         searchViewModel.searchGames(
@@ -141,6 +145,7 @@ internal fun SearchScreen(
             }
         },
         existingSearchParameters = existingParameters,
+        initialTitle = initialTitle,
         searchData = data.value,
         favouriteIds = favouriteIds.value,
         onSearchTitleChanged = {
@@ -161,6 +166,7 @@ private fun SearchScreenContent(
     showFilters: Boolean,
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
     existingSearchParameters: SearchParameters,
+    initialTitle: String? = null,
     searchData: SearchViewModel.SearchData,
     favouriteIds: ImmutableSet<Int>,
     onSearchTitleChanged: (text: String) -> Unit,
@@ -178,7 +184,13 @@ private fun SearchScreenContent(
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
-            topBar = { SearchField(onSearchTitleChanged = { onSearchTitleChanged(it) }, onShowFilters = { onShowFiltersChanged(!showFilters) }) },
+            topBar = {
+                SearchField(
+                    initialTitle = initialTitle,
+                    onSearchTitleChanged = { onSearchTitleChanged(it) },
+                    onShowFilters = { onShowFiltersChanged(!showFilters) },
+                )
+            },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         )
         { innerPadding: PaddingValues ->
@@ -309,13 +321,14 @@ private fun SearchResultListItem(
 
 @Composable
 private fun SearchField(
+    initialTitle: String? = null,
     onSearchTitleChanged: (text: String) -> Unit,
-    onShowFilters: () -> Unit
+    onShowFilters: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
 
     val keyboardController = LocalSoftwareKeyboardController.current
-    var title by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf(initialTitle.orEmpty()) }
     val searchAction: () -> Unit = {
         onSearchTitleChanged(title)
         keyboardController?.hide()

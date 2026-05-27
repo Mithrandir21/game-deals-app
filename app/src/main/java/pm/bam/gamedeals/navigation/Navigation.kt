@@ -43,7 +43,7 @@ internal class NavigationActions(private val navController: NavHostController) {
     }
 
     fun navigateToSearch() {
-        navController.navigate(Destination.Search) {
+        navController.navigate(Destination.Search()) {
             restoreState = true
         }
     }

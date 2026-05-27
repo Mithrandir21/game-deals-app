@@ -123,7 +123,7 @@ private fun AppNavHost() {
         startDestination = Destination.Home,
     ) {
         homeScreen(
-            goToSearch = { navController.navigate(Destination.Search) },
+            goToSearch = { navController.navigate(Destination.Search()) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navController.navigate(Destination.Giveaways) },

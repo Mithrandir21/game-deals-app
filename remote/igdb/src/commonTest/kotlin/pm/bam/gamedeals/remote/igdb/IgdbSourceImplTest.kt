@@ -116,6 +116,7 @@ class IgdbSourceImplTest {
                 IgdbGame.IgdbSimilarGame(id = 1234L, name = "Halo 5: Guardians", coverImageId = "ha5"),
                 IgdbGame.IgdbSimilarGame(id = 5678L, name = "Destiny 2", coverImageId = null),
             ),
+            steamAppId = STEAM_ID,
         )
         assertEquals(expected, result)
         assertEquals(1, recorded.size)
@@ -225,6 +226,8 @@ class IgdbSourceImplTest {
         ]"""
 
         // Response from `/v4/games where id = N` — flat record, no `external_games` wrapper.
+        // `external_games` has only non-Steam sources here, exercising the source = 1 filter
+        // (Hollow Knight ships on GOG and Itch but not Steam in this fixture, so steamAppId stays null).
         // language=JSON
         const val ONE_GAME_DIRECT_BODY = """[
             {
@@ -234,6 +237,10 @@ class IgdbSourceImplTest {
                 "cover": {"id": 7, "image_id": "hkco"},
                 "similar_games": [
                     {"id": 4242, "name": "Ori and the Blind Forest", "cover": {"id": 8, "image_id": "oco"}}
+                ],
+                "external_games": [
+                    {"id": 800, "uid": "hollow-knight-gog", "external_game_source": 5},
+                    {"id": 801, "uid": "hollow-knight-itch", "external_game_source": 36}
                 ]
             }
         ]"""
@@ -284,6 +291,10 @@ class IgdbSourceImplTest {
                         {"id": 1234, "name": "Halo 5: Guardians", "cover": {"id": 50, "image_id": "ha5"}},
                         {"id": 5678, "name": "Destiny 2"},
                         {"id": 9999}
+                    ],
+                    "external_games": [
+                        {"id": 700, "uid": "1240440", "external_game_source": 1},
+                        {"id": 701, "uid": "halo-gog-id", "external_game_source": 5}
                     ]
                 }
             }

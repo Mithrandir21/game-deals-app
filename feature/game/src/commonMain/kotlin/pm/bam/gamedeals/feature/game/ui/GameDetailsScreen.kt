@@ -32,6 +32,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -74,6 +76,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -98,8 +101,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_co
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_view_deals_cta
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_view_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
@@ -113,15 +120,28 @@ import kotlin.time.Instant
 internal fun GameDetailsScreen(
     onBack: () -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
+    onViewDealsClick: (cheapsharkGameId: Int) -> Unit = {},
+    onSearchDealsByTitle: (title: String) -> Unit = {},
     viewModel: GameDetailsViewModel = koinViewModel(),
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reload() }
+    val scope = rememberCoroutineScope()
+    val onDealsCtaClick: () -> Unit = {
+        scope.launch {
+            when (val action = viewModel.resolveDealsAction()) {
+                is GameDetailsViewModel.DealsAction.OpenGame -> onViewDealsClick(action.cheapsharkGameId)
+                is GameDetailsViewModel.DealsAction.SearchByTitle -> onSearchDealsByTitle(action.title)
+                null -> Unit
+            }
+        }
+    }
     GameDetailsScreenContent(
         data = state.value,
         onBack = onBack,
         onRetry = onRetry,
         onSimilarGameClick = onSimilarGameClick,
+        onDealsCtaClick = onDealsCtaClick,
     )
 }
 
@@ -132,6 +152,7 @@ private fun GameDetailsScreenContent(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onDealsCtaClick: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -189,6 +210,7 @@ private fun GameDetailsScreenContent(
                         modifier = Modifier.padding(innerPadding),
                         data = data,
                         onSimilarGameClick = onSimilarGameClick,
+                        onDealsCtaClick = onDealsCtaClick,
                     )
             }
         }
@@ -200,6 +222,7 @@ private fun GameDetailsBody(
     modifier: Modifier,
     data: GameDetailsViewModel.GameDetailsScreenData.Data,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onDealsCtaClick: () -> Unit = {},
 ) {
     val game = data.game
     Column(
@@ -210,6 +233,7 @@ private fun GameDetailsBody(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
         HeroSection(game = game)
+        DealsCtaSection(game = game, onClick = onDealsCtaClick)
         if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game = game)
         if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game = game)
         if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game = game)
@@ -258,6 +282,23 @@ private fun HeroSection(game: IgdbGame) {
             }
             RatingsRow(game = game)
         }
+    }
+}
+
+@Composable
+private fun DealsCtaSection(game: IgdbGame, onClick: () -> Unit) {
+    val hasSteamMapping = game.steamAppId != null
+    val labelRes = if (hasSteamMapping) Res.string.game_details_view_deals_cta else Res.string.game_details_search_deals_cta
+    val cdRes = if (hasSteamMapping) Res.string.game_details_view_deals_cta_cd else Res.string.game_details_search_deals_cta_cd
+    val cd = stringResource(cdRes, game.name)
+    FilledTonalButton(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = GameDealsCustomTheme.spacing.large)
+            .semantics { contentDescription = cd },
+        onClick = onClick,
+    ) {
+        Text(text = stringResource(labelRes))
     }
 }
 
@@ -634,6 +675,7 @@ private val previewIgdbDetails = IgdbGame(
         IgdbGame.IgdbSimilarGame(25657, "Destiny 2", "cobj1z"),
         IgdbGame.IgdbSimilarGame(3225, "No Man's Sky", "coacrk"),
     ),
+    steamAppId = 1240440,
 )
 
 @Preview
@@ -642,6 +684,19 @@ private fun GameDetailsScreen_Data_Preview() {
     GameDealsTheme {
         GameDetailsScreenContent(
             data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails, previewWebsites),
+            onBack = {},
+            onRetry = {},
+            onSimilarGameClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameDetailsScreen_Data_NoSteam_Preview() {
+    GameDealsTheme {
+        GameDetailsScreenContent(
+            data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails.copy(steamAppId = null), previewWebsites),
             onBack = {},
             onRetry = {},
             onSimilarGameClick = {},

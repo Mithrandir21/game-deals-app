@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -35,8 +36,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_li
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_close
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_search_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_view_deals_cta
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_view_deals_cta_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
@@ -82,6 +87,8 @@ class GameDetailsScreenTest {
     private fun setupCompose(
         onBack: () -> Unit = {},
         onSimilarGameClick: (Long) -> Unit = {},
+        onViewDealsClick: (Int) -> Unit = {},
+        onSearchDealsByTitle: (String) -> Unit = {},
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load(sampleGame.name)
@@ -89,6 +96,8 @@ class GameDetailsScreenTest {
                 GameDetailsScreen(
                     onBack = onBack,
                     onSimilarGameClick = onSimilarGameClick,
+                    onViewDealsClick = onViewDealsClick,
+                    onSearchDealsByTitle = onSearchDealsByTitle,
                     viewModel = viewModel,
                 )
             }
@@ -105,6 +114,27 @@ class GameDetailsScreenTest {
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.uiState }
+    }
+
+    @Test
+    fun loadingState_does_not_render_deals_cta() {
+        every { viewModel.uiState } returns MutableStateFlow(GameDetailsViewModel.GameDetailsScreenData.Loading)
+
+        setupCompose()
+
+        // The CTA is gated on Data state — neither label should appear while loading.
+        composeTestRule.onNodeWithText(screenSemantics.viewDealsLabel).assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.searchDealsLabel).assertDoesNotExist()
+    }
+
+    @Test
+    fun errorState_does_not_render_deals_cta() {
+        every { viewModel.uiState } returns MutableStateFlow(GameDetailsViewModel.GameDetailsScreenData.Error)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.viewDealsLabel).assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.searchDealsLabel).assertDoesNotExist()
     }
 
     @Test
@@ -209,6 +239,63 @@ class GameDetailsScreenTest {
     }
 
     @Test
+    fun dataState_with_steamAppId_shows_view_deals_label() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame.copy(steamAppId = 1240440))
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.viewDealsLabel).assertIsDisplayed()
+    }
+
+    @Test
+    fun dataState_without_steamAppId_shows_search_deals_label() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame.copy(steamAppId = null))
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.searchDealsLabel).assertIsDisplayed()
+    }
+
+    @Test
+    fun tapping_view_deals_with_steam_match_invokes_onViewDealsClick_with_cheapshark_id() {
+        val onViewDealsClick: (Int) -> Unit = mockk(relaxed = true)
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame.copy(steamAppId = 1240440))
+        )
+        coEvery { viewModel.resolveDealsAction() } returns GameDetailsViewModel.DealsAction.OpenGame(99)
+
+        setupCompose(onViewDealsClick = onViewDealsClick)
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.viewDealsCd)
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { onViewDealsClick.invoke(99) }
+    }
+
+    @Test
+    fun tapping_search_deals_without_steam_invokes_onSearchDealsByTitle_with_game_name() {
+        val onSearchDealsByTitle: (String) -> Unit = mockk(relaxed = true)
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame.copy(steamAppId = null))
+        )
+        coEvery { viewModel.resolveDealsAction() } returns
+            GameDetailsViewModel.DealsAction.SearchByTitle(sampleGame.name)
+
+        setupCompose(onSearchDealsByTitle = onSearchDealsByTitle)
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.searchDealsCd)
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { onSearchDealsByTitle.invoke(sampleGame.name) }
+    }
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs
@@ -237,6 +324,10 @@ class GameDetailsScreenTest {
         val firstScreenshot: String,
         val viewerClose: String,
         val firstSimilarRowCd: String,
+        val viewDealsLabel: String,
+        val searchDealsLabel: String,
+        val viewDealsCd: String,
+        val searchDealsCd: String,
     ) {
         companion object {
             @Composable
@@ -253,6 +344,10 @@ class GameDetailsScreenTest {
                 firstScreenshot = stringResource(Res.string.game_details_screenshot_image_cd, gameName, 1),
                 viewerClose = stringResource(Res.string.game_details_screenshot_viewer_close),
                 firstSimilarRowCd = stringResource(Res.string.game_details_similar_game_row_description, "Halo 3"),
+                viewDealsLabel = stringResource(Res.string.game_details_view_deals_cta),
+                searchDealsLabel = stringResource(Res.string.game_details_search_deals_cta),
+                viewDealsCd = stringResource(Res.string.game_details_view_deals_cta_cd, gameName),
+                searchDealsCd = stringResource(Res.string.game_details_search_deals_cta_cd, gameName),
             )
         }
     }

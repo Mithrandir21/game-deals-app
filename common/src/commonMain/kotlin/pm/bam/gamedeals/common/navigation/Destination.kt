@@ -29,7 +29,7 @@ sealed interface Destination {
     data class GameDetailsByIgdbId(val igdbGameId: Long) : Destination
 
     @Serializable
-    data object Search : Destination
+    data class Search(val initialQuery: String? = null) : Destination
 
     @Serializable
     data class WebView(val url: String, val gameTitle: String) : Destination

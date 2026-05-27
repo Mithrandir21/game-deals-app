@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.games
 
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
+import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
@@ -64,5 +65,34 @@ class GamesRepositoryTest {
 
         verifySuspend(exactly(1)) { cheapsharkSource.fetchGames("") }
         verifySuspend(exactly(1)) { gamesDao.addGames(game) }
+    }
+
+    @Test
+    fun find_cheapshark_game_id_by_steam_app_id_returns_gameID_when_match_found() = runTest {
+        val match = game().copy(gameID = 12345)
+        everySuspend { cheapsharkSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } returns listOf(match)
+
+        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+
+        assertEquals(12345, result)
+        verifySuspend(exactly(1)) { cheapsharkSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) }
+    }
+
+    @Test
+    fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_no_match() = runTest {
+        everySuspend { cheapsharkSource.fetchGames(title = "Unknown Game", steamAppID = 999999, limit = 1) } returns emptyList()
+
+        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 999999, title = "Unknown Game")
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_source_throws() = runTest {
+        everySuspend { cheapsharkSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } throws Exception("network down")
+
+        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+
+        assertEquals(null, result, "runCatching must swallow the exception and surface null")
     }
 }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.favicon.FaviconResolver
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.logging.Logger
 
@@ -28,6 +29,7 @@ internal class GameDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val igdbRepository: IgdbRepository,
+    private val gamesRepository: GamesRepository,
     private val faviconResolver: FaviconResolver,
 ) : ViewModel() {
 
@@ -78,6 +80,16 @@ internal class GameDetailsViewModel(
         )
     }.catch { emit(GameDetailsScreenData.Error) }
 
+    suspend fun resolveDealsAction(): DealsAction? {
+        val data = (uiState.value as? GameDetailsScreenData.Data) ?: return null
+        val steamAppId = data.game.steamAppId
+        if (steamAppId != null) {
+            val cheapsharkGameId = gamesRepository.findCheapsharkGameIdBySteamAppId(steamAppId, data.game.name)
+            if (cheapsharkGameId != null) return DealsAction.OpenGame(cheapsharkGameId)
+        }
+        return DealsAction.SearchByTitle(data.game.name)
+    }
+
     // Member extension — has access to `faviconResolver` via the enclosing class.
     private fun IgdbGame.IgdbWebsite.toUi(): WebsiteUiModel {
         val ref = faviconResolver.resolve(url)
@@ -96,6 +108,11 @@ internal class GameDetailsViewModel(
             val game: IgdbGame,
             val websites: ImmutableList<WebsiteUiModel> = persistentListOf(),
         ) : GameDetailsScreenData()
+    }
+
+    sealed class DealsAction {
+        data class OpenGame(val cheapsharkGameId: Int) : DealsAction()
+        data class SearchByTitle(val title: String) : DealsAction()
     }
 }
 

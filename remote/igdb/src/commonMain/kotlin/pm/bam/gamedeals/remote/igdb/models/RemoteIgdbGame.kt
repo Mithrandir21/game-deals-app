@@ -21,6 +21,13 @@ data class RemoteIgdbGame(
     @SerialName("involved_companies") val involvedCompanies: List<RemoteIgdbInvolvedCompany> = emptyList(),
     val websites: List<RemoteIgdbWebsite> = emptyList(),
     @SerialName("similar_games") val similarGames: List<RemoteIgdbSimilarGame> = emptyList(),
+    @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteIgdbExternalGame(
+    val uid: String? = null,
+    @SerialName("external_game_source") val externalGameSource: Long? = null,
 )
 
 @Serializable

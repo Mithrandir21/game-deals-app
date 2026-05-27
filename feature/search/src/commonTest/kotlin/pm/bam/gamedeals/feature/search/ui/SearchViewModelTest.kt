@@ -2,6 +2,7 @@
 
 package pm.bam.gamedeals.feature.search.ui
 
+import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.sequentially
@@ -45,7 +46,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     @BeforeTest
     fun setup() {
         installMainDispatcher()
-        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -161,7 +162,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     fun favouriteIds_emits_values_from_repository() = runTest {
         every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
         // Rebuild because the @BeforeTest viewModel captured the original stub.
-        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
 
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(setOf(1, 2, 3), ids.last())
@@ -170,7 +171,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     @Test
     fun favouriteIds_recovers_from_repository_error_with_empty_set() = runTest {
         every { favouritesRepository.observeFavouriteIds() } returns flow { throw Exception() }
-        viewModel = SearchViewModel(TestingLoggingListener(), gamesRepository, favouritesRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
 
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(emptySet<Int>(), ids.last())
@@ -216,6 +217,46 @@ class SearchViewModelTest : MainDispatcherTest() {
         // flatMapLatestDelayAtLeast cancels prior pads before they fire `emit`, so only the final query's SearchResults reaches the resultState. The
         // intermediate first/second deals never surface even though the mock was invoked for them.
         assertEquals(SearchData.SearchResults(listOf(thirdDeal).toImmutableList()), emissions.last())
+    }
+
+    @Test
+    fun initialQuery_in_saved_state_seeds_search_parameters_and_triggers_search() = runTest {
+        val deal = deal()
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } returns listOf(deal)
+
+        viewModel = SearchViewModel(
+            SavedStateHandle(mapOf("initialQuery" to "Halo Infinite")),
+            TestingLoggingListener(),
+            gamesRepository,
+            favouritesRepository,
+        )
+
+        assertEquals("Halo Infinite", viewModel.initialQuery)
+
+        val emissions = observeStates()
+        // The seed flow already fired before observeStates; first replay shows Loading.
+        assertEquals(SearchData.Loading, emissions.first())
+
+        testScheduler.advanceTimeBy(1200)
+        runCurrent()
+
+        assertEquals(SearchData.SearchResults(listOf(deal).toImmutableList()), emissions.last())
+    }
+
+    @Test
+    fun blank_initialQuery_does_not_seed_search() = runTest {
+        viewModel = SearchViewModel(
+            SavedStateHandle(mapOf("initialQuery" to "")),
+            TestingLoggingListener(),
+            gamesRepository,
+            favouritesRepository,
+        )
+
+        assertEquals(null, viewModel.initialQuery)
+
+        val emissions = observeStates()
+        assertEquals(1, emissions.size)
+        assertEquals(SearchData.Empty, emissions.first())
     }
 
     private fun TestScope.observeStates() =
