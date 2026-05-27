@@ -11,6 +11,7 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-05-27-01 | If `assertHasClickAction` passes but `performClick + verify` fails only on emulator, use `performSemanticsAction(SemanticsActions.OnClick)`. | testing, compose, instrumented, emulator |
 | L-2026-05-25-01 | `@Insert(REPLACE)` only refreshes rows whose keys still appear upstream — clear before insert in a `@Transaction` or stale rows accumulate forever. | room, kmp, dao, cache, transaction |
 | L-2026-05-22-03 | Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage. | kover, jacoco, android-test, coverage, kmp |
 | L-2026-05-22-01 | `@Database` and `@AutoMigration` use `RetentionPolicy.CLASS`; mirror values into a `const val` and a `Set<Pair<Int,Int>>` so tests can see them. | room, kmp, testing, migrations |
@@ -102,6 +103,15 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-05-27-01 · performSemanticsAction beats performClick for emulator-flaky clicks
+**TL;DR:** If `assertHasClickAction` passes but `performClick + verify` fails only on emulator, use `performSemanticsAction(SemanticsActions.OnClick)`.
+`active` · `confirmed` · 2026-05-27 · `testing` `compose` `instrumented` `emulator`
+**Applies to:** Compose device tests that scroll-then-click a LazyRow tile or other merged-semantics clickable and fail only on a specific emulator.
+
+On the PR-CI Pixel 5 API-34 emulator, `performScrollTo().performClick()` on a `LazyRow` tile using `Modifier.clickable {}.semantics(mergeDescendants = true) { contentDescription = ... }` passed `assertHasClickAction()` but the touch dispatch missed the pointer-input layer — the production `clickable {}` lambda never fired and the test failed at `verify`. Local physical Pixel 5 passed every run; `waitForIdle()` and `mockk(relaxed = true)` did not help. Switch to `performSemanticsAction(SemanticsActions.OnClick)` — same path TalkBack uses on double-tap, no coordinate math. Reserve for emulator-flaky clicks; prefer `performClick` everywhere else for fidelity.
+
+**Source:** Stabilizing `GameDetailsScreenTest.tapping_similar_game_tile_invokes_callback_with_igdb_id` on PR #178 after CI failures that didn't reproduce on a physical Pixel 5.
 
 ### L-2026-05-25-01 · Mirror rotating remote feeds with clear+insert in a DAO @Transaction
 **TL;DR:** `@Insert(REPLACE)` only refreshes rows whose keys still appear upstream — clear before insert in a `@Transaction` or stale rows accumulate forever.
