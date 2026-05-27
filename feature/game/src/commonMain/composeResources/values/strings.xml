@@ -44,4 +44,14 @@
     <string name="game_details_screenshot_viewer_close">Close</string>
     <string name="game_details_screenshot_viewer_page_indicator">%1$d / %2$d</string>
 
+    <string name="game_details_title_match_warning_cd">Fuzzy match — tap to see alternative games</string>
+    <string name="game_details_title_match_picker_title">Possible matches</string>
+    <string name="game_details_title_match_picker_explanation">This deal didn\'t carry a precise game ID, so we searched IGDB by name. The result might not be the exact game you expected. Pick a different match if needed.</string>
+    <string name="game_details_title_match_picker_empty">No alternative matches found.</string>
+    <string name="game_details_title_match_picker_loading_cd">Loading possible matches</string>
+    <string name="game_details_title_match_picker_error">Could not load alternative matches.</string>
+    <string name="game_details_title_match_picker_retry">Try again</string>
+    <string name="game_details_title_match_picker_close">Close</string>
+    <string name="game_details_title_match_picker_current_tile_cd">%1$s (currently shown)</string>
+
 </resources>

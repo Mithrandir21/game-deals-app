@@ -244,7 +244,7 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun title_in_savedState_calls_fetchGameDetailsByTitle_and_emits_Data() = runTest {
+    fun title_in_savedState_calls_fetchGameDetailsByTitle_and_emits_Data_with_resolvedByTitle_true() = runTest {
         val title = "Genshin Impact"
         val igdb = igdbDetails(id = 9999L, name = title)
         everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdb
@@ -253,10 +253,179 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         runCurrent()
 
-        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Data(igdb), emissions.last())
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(igdb, data.game)
+        assertEquals(true, data.resolvedByTitle, "Title path must surface the fuzzy-match flag")
+        assertEquals(GameDetailsViewModel.CandidatesState.Idle, data.candidatesState)
+        assertEquals(false, data.showPicker)
         verifySuspend(exactly(1)) { igdbRepository.fetchGameDetailsByTitle(title) }
         verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsBySteamId(any()) }
         verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByIgdbId(any()) }
+    }
+
+    @Test
+    fun steamAppId_path_sets_resolvedByTitle_false() = runTest {
+        val steamId = 1240440
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdbDetails()
+
+        val viewModel = createViewModel(steamId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(false, data.resolvedByTitle)
+    }
+
+    @Test
+    fun igdbGameId_path_sets_resolvedByTitle_false() = runTest {
+        val igdbId = 3151L
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(igdbId) } returns igdbDetails(id = igdbId)
+
+        val viewModel = createViewModelByIgdbId(igdbId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(false, data.resolvedByTitle)
+    }
+
+    @Test
+    fun onWarningTap_fires_candidate_query_when_state_is_Idle() = runTest {
+        val title = "Tomb Raider"
+        val igdb = igdbDetails(id = 100L, name = title)
+        val candidates = persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 11L, name = "Tomb Raider", coverImageId = "c1"),
+            IgdbGame.IgdbSimilarGame(id = 22L, name = "Tomb Raider II", coverImageId = null),
+        )
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdb
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } returns candidates
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        viewModel.onWarningTap()
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(true, data.showPicker)
+        assertEquals(GameDetailsViewModel.CandidatesState.Loaded(candidates), data.candidatesState)
+        verifySuspend(exactly(1)) { igdbRepository.fetchSearchCandidatesByTitle(title) }
+    }
+
+    @Test
+    fun onWarningTap_does_not_re_fire_query_when_already_Loaded() = runTest {
+        val title = "Tomb Raider"
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdbDetails(id = 100L, name = title)
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } returns persistentListOf()
+
+        val viewModel = createViewModelByTitle(title)
+        viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        viewModel.onWarningTap()
+        runCurrent()
+        viewModel.onPickerDismiss()
+        runCurrent()
+        viewModel.onWarningTap()
+        runCurrent()
+
+        verifySuspend(exactly(1)) { igdbRepository.fetchSearchCandidatesByTitle(title) }
+    }
+
+    @Test
+    fun onWarningTap_with_query_failure_emits_CandidatesState_Error() = runTest {
+        val title = "Tomb Raider"
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdbDetails(id = 100L, name = title)
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } calls { throw Exception("IGDB down") }
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        viewModel.onWarningTap()
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(GameDetailsViewModel.CandidatesState.Error, data.candidatesState)
+        assertEquals(true, data.showPicker, "Sheet stays open so the user can retry")
+    }
+
+    @Test
+    fun onCandidatePicked_swaps_game_via_fetchGameDetailsByIgdbId_and_preserves_resolvedByTitle() = runTest {
+        val title = "Tomb Raider"
+        val original = igdbDetails(id = 100L, name = "Tomb Raider")
+        val picked = igdbDetails(id = 22L, name = "Tomb Raider II")
+        val candidates = persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 100L, name = "Tomb Raider", coverImageId = null),
+            IgdbGame.IgdbSimilarGame(id = 22L, name = "Tomb Raider II", coverImageId = null),
+        )
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns original
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } returns candidates
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(22L) } returns picked
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+        viewModel.onWarningTap()
+        runCurrent()
+
+        viewModel.onCandidatePicked(22L)
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(picked, data.game)
+        assertEquals(true, data.resolvedByTitle, "Warning + picker must remain available after swap")
+        assertEquals(GameDetailsViewModel.CandidatesState.Loaded(candidates), data.candidatesState)
+        assertEquals(false, data.showPicker, "Picker closes on successful swap")
+        verifySuspend(exactly(1)) { igdbRepository.fetchGameDetailsByIgdbId(22L) }
+    }
+
+    @Test
+    fun onCandidatePicked_with_same_id_just_dismisses_picker_without_refetch() = runTest {
+        val title = "Tomb Raider"
+        val original = igdbDetails(id = 100L, name = title)
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns original
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } returns persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 100L, name = title, coverImageId = null),
+        )
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+        viewModel.onWarningTap()
+        runCurrent()
+
+        viewModel.onCandidatePicked(100L)
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(original, data.game)
+        assertEquals(false, data.showPicker)
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByIgdbId(any()) }
+    }
+
+    @Test
+    fun onPickerDismiss_flips_showPicker_false_but_preserves_loaded_candidates() = runTest {
+        val title = "Tomb Raider"
+        val candidates = persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 11L, name = "Tomb Raider", coverImageId = null),
+        )
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdbDetails(id = 100L, name = title)
+        everySuspend { igdbRepository.fetchSearchCandidatesByTitle(title) } returns candidates
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+        viewModel.onWarningTap()
+        runCurrent()
+
+        viewModel.onPickerDismiss()
+        runCurrent()
+
+        val data = emissions.last() as GameDetailsViewModel.GameDetailsScreenData.Data
+        assertEquals(false, data.showPicker)
+        assertEquals(GameDetailsViewModel.CandidatesState.Loaded(candidates), data.candidatesState, "Loaded list survives dismissal so re-opening is instant")
     }
 
     @Test

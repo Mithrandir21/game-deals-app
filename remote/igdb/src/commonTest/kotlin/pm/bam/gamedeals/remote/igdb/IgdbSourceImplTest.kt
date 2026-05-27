@@ -18,6 +18,7 @@ import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildExactNameLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildIgdbIdLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchCandidatesQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
@@ -333,6 +334,69 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun fetchSearchCandidatesByTitle_posts_query_with_limit_10_and_returns_mapped_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = THREE_CANDIDATES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchSearchCandidatesByTitle("Tomb Raider")
+
+        assertEquals(3, result.size)
+        assertEquals(11L, result[0].id)
+        assertEquals("Tomb Raider", result[0].name)
+        assertEquals("tr1cover", result[0].coverImageId)
+        assertEquals(22L, result[1].id)
+        assertEquals("Tomb Raider II", result[1].name)
+        assertNull(result[1].coverImageId, "Missing cover should map to null, not skip the candidate")
+        assertEquals(33L, result[2].id)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(buildSearchCandidatesQuery("Tomb Raider"), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchSearchCandidatesByTitle_returns_empty_list_when_response_is_empty() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        val result = impl.fetchSearchCandidatesByTitle("Genshin Impact")
+
+        assertTrue(result.isEmpty(), "Empty response must surface as empty list, not null")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchSearchCandidatesByTitle_short_circuits_blank_title_with_no_http_call() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        assertTrue(impl.fetchSearchCandidatesByTitle("").isEmpty())
+        assertTrue(impl.fetchSearchCandidatesByTitle("   ").isEmpty())
+        assertEquals(0, recorded.size, "Blank/whitespace titles must not fire any IGDB request")
+    }
+
+    @Test
+    fun buildSearchCandidatesQuery_uses_lean_fields_and_limit_10() {
+        val q = buildSearchCandidatesQuery("Halo Infinite")
+        assertTrue("""search "Halo Infinite";""" in q)
+        assertTrue("fields id, name, cover.image_id;" in q)
+        assertTrue("limit 10;" in q)
+        // Must NOT pull the rich fields used by the details lookup — keeps the picker payload small.
+        assertTrue("summary" !in q, "Candidate query must stay lean: $q")
+        assertTrue("involved_companies" !in q)
+        assertTrue("similar_games" !in q)
+    }
+
+    @Test
     fun escapeApicalypseString_escapes_backslash_first_then_quote() {
         assertEquals("""abc""", escapeApicalypseString("abc"))
         assertEquals("""a\"b""", escapeApicalypseString("""a"b"""))
@@ -359,6 +423,13 @@ class IgdbSourceImplTest {
         const val STEAM_ID = 1240440
         const val IGDB_ID = 3151L
         const val TITLE = "Hollow Knight"
+
+        // language=JSON
+        const val THREE_CANDIDATES_BODY = """[
+            {"id":11,"name":"Tomb Raider","cover":{"id":7,"image_id":"tr1cover"}},
+            {"id":22,"name":"Tomb Raider II"},
+            {"id":33,"name":"Tomb Raider: Anniversary","cover":{"id":8,"image_id":"tracover"}}
+        ]"""
 
         // language=JSON
         const val ONE_GAME_BODY = """[

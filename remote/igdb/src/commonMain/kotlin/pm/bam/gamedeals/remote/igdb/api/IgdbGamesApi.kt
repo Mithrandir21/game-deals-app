@@ -93,15 +93,34 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
 
     /**
      * Fuzzy fallback against `/v4/games`. Apicalypse `search` cannot be combined with `sort`;
-     * IGDB orders by relevance by default. `where category = 0` keeps the result restricted to
-     * a "main game", so we never accidentally resolve a DLC or expansion when the deal title
-     * happens to share a prefix.
+     * IGDB orders by relevance by default. Returns the single most-relevant rich hit — the
+     * candidate-picker path uses [fetchSearchCandidatesByTitle] instead when surfacing
+     * alternative matches.
      */
     suspend fun fetchGameDetailsBySearch(title: String): ApiResponse<List<RemoteIgdbGame>> = try {
         ApiResponse.Success(
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildSearchLookupDetailsQuery(title))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /**
+     * Lean ranked candidate list — `search "<title>"; fields id, name, cover.image_id; limit 10;`
+     * Used to populate the fuzzy-match candidate picker on the game-details screen when the deal
+     * navigated by title. Each candidate's full payload is fetched on demand via
+     * [fetchGameDetailsByIgdbId] when the user picks it.
+     */
+    suspend fun fetchSearchCandidatesByTitle(title: String): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildSearchCandidatesQuery(title))
             }.body()
         )
     } catch (e: CancellationException) {
@@ -190,6 +209,15 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     websites.url, websites.type.id, websites.type.type,
                     similar_games.id, similar_games.name, similar_games.cover.image_id;
                 limit 1;
+            """.trimIndent()
+        }
+
+        internal fun buildSearchCandidatesQuery(title: String): String {
+            val escaped = escapeApicalypseString(title)
+            return """
+                search "$escaped";
+                fields id, name, cover.image_id;
+                limit 10;
             """.trimIndent()
         }
     }

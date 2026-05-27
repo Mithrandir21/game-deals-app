@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.igdb
 
+import kotlinx.collections.immutable.ImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.source.IgdbSource
 
@@ -8,6 +9,7 @@ interface IgdbRepository {
     suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame?
     suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame?
     suspend fun fetchGameDetailsByTitle(title: String): IgdbGame?
+    suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame>
 }
 
 internal class IgdbRepositoryImpl(
@@ -25,4 +27,7 @@ internal class IgdbRepositoryImpl(
 
     override suspend fun fetchGameDetailsByTitle(title: String): IgdbGame? =
         igdbSource.fetchGameDetailsByTitle(title)
+
+    override suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame> =
+        igdbSource.fetchSearchCandidatesByTitle(title)
 }
