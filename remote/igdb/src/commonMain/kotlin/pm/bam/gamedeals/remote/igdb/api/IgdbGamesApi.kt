@@ -73,6 +73,43 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /**
+     * Exact-name lookup against `/v4/games`. Deterministic — `where name = "<title>"` is
+     * whitespace- and case-sensitive on IGDB, so titles with edition suffixes or store-key
+     * decoration will miss here and fall through to [fetchGameDetailsBySearch].
+     */
+    suspend fun fetchGameDetailsByExactName(title: String): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildExactNameLookupDetailsQuery(title))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /**
+     * Fuzzy fallback against `/v4/games`. Apicalypse `search` cannot be combined with `sort`;
+     * IGDB orders by relevance by default. `where category = 0` keeps the result restricted to
+     * a "main game", so we never accidentally resolve a DLC or expansion when the deal title
+     * happens to share a prefix.
+     */
+    suspend fun fetchGameDetailsBySearch(title: String): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildSearchLookupDetailsQuery(title))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     internal companion object {
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
@@ -110,5 +147,50 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 similar_games.id, similar_games.name, similar_games.cover.image_id;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
+
+        // Apicalypse strings are double-quoted. Backslash MUST be escaped before quote — escaping
+        // quote first would double-escape the backslashes introduced by the quote-replacement.
+        internal fun escapeApicalypseString(value: String): String =
+            value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+        // The legacy `category` enum is empty on modern IGDB records (see the same pitfall noted
+        // above for `category = 1` on external_games). IGDB now exposes the equivalent via
+        // `game_type`, but its id values are not the same and aren't documented as stable. We
+        // accept that the exact-name + search-fallback chain may occasionally resolve to a DLC
+        // when the deal title literally matches one — the details screen still renders correctly.
+        internal fun buildExactNameLookupDetailsQuery(title: String): String {
+            val escaped = escapeApicalypseString(title)
+            return """
+                fields
+                    id, name, summary, storyline,
+                    cover.image_id,
+                    screenshots.image_id,
+                    first_release_date,
+                    rating, rating_count, aggregated_rating, aggregated_rating_count,
+                    genres.name, themes.name,
+                    involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
+                    websites.url, websites.type.id, websites.type.type,
+                    similar_games.id, similar_games.name, similar_games.cover.image_id;
+                where name = "$escaped"; limit 1;
+            """.trimIndent()
+        }
+
+        internal fun buildSearchLookupDetailsQuery(title: String): String {
+            val escaped = escapeApicalypseString(title)
+            return """
+                search "$escaped";
+                fields
+                    id, name, summary, storyline,
+                    cover.image_id,
+                    screenshots.image_id,
+                    first_release_date,
+                    rating, rating_count, aggregated_rating, aggregated_rating_count,
+                    genres.name, themes.name,
+                    involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
+                    websites.url, websites.type.id, websites.type.type,
+                    similar_games.id, similar_games.name, similar_games.cover.image_id;
+                limit 1;
+            """.trimIndent()
+        }
     }
 }

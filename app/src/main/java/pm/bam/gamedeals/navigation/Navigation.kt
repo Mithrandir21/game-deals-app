@@ -42,6 +42,10 @@ internal class NavigationActions(private val navController: NavHostController) {
         navController.navigate(Destination.GameDetails(steamAppId))
     }
 
+    fun navigateToGameDetailsByTitle(title: String) {
+        navController.navigate(Destination.GameDetailsByTitle(title))
+    }
+
     fun navigateToSearch() {
         navController.navigate(Destination.Search) {
             restoreState = true

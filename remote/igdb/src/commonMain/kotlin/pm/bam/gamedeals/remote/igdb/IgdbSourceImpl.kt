@@ -37,6 +37,23 @@ internal class IgdbSourceImpl(
             .getOrThrow()
             .toIgdbGameOrNull()
 
+    override suspend fun fetchGameDetailsByTitle(title: String): IgdbGame? {
+        if (title.isBlank()) return null
+
+        val exact = igdbGamesApi.fetchGameDetailsByExactName(title)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toIgdbGameOrNull()
+        if (exact != null) return exact
+
+        return igdbGamesApi.fetchGameDetailsBySearch(title)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toIgdbGameOrNull()
+    }
+
     private companion object {
         private val TAG: String = IgdbSourceImpl::class.simpleName.orEmpty()
     }

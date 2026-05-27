@@ -7,6 +7,7 @@ interface IgdbRepository {
     suspend fun fetchGameBySteamId(steamId: Int): IgdbGame?
     suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame?
     suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame?
+    suspend fun fetchGameDetailsByTitle(title: String): IgdbGame?
 }
 
 internal class IgdbRepositoryImpl(
@@ -21,4 +22,7 @@ internal class IgdbRepositoryImpl(
 
     override suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame? =
         igdbSource.fetchGameDetailsByIgdbId(igdbGameId)
+
+    override suspend fun fetchGameDetailsByTitle(title: String): IgdbGame? =
+        igdbSource.fetchGameDetailsByTitle(title)
 }
