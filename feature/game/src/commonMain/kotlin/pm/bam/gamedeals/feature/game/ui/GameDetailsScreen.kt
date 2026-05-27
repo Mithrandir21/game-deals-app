@@ -58,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -98,6 +99,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_de
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
@@ -110,6 +112,7 @@ import kotlin.time.Instant
 @Composable
 internal fun GameDetailsScreen(
     onBack: () -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
     viewModel: GameDetailsViewModel = koinViewModel(),
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,6 +121,7 @@ internal fun GameDetailsScreen(
         data = state.value,
         onBack = onBack,
         onRetry = onRetry,
+        onSimilarGameClick = onSimilarGameClick,
     )
 }
 
@@ -127,6 +131,7 @@ private fun GameDetailsScreenContent(
     data: GameDetailsViewModel.GameDetailsScreenData,
     onBack: () -> Unit,
     onRetry: () -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -180,14 +185,22 @@ private fun GameDetailsScreenContent(
                 }
 
                 is GameDetailsViewModel.GameDetailsScreenData.Data ->
-                    GameDetailsBody(modifier = Modifier.padding(innerPadding), data = data)
+                    GameDetailsBody(
+                        modifier = Modifier.padding(innerPadding),
+                        data = data,
+                        onSimilarGameClick = onSimilarGameClick,
+                    )
             }
         }
     }
 }
 
 @Composable
-private fun GameDetailsBody(modifier: Modifier, data: GameDetailsViewModel.GameDetailsScreenData.Data) {
+private fun GameDetailsBody(
+    modifier: Modifier,
+    data: GameDetailsViewModel.GameDetailsScreenData.Data,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
+) {
     val game = data.game
     Column(
         modifier = modifier
@@ -202,7 +215,7 @@ private fun GameDetailsBody(modifier: Modifier, data: GameDetailsViewModel.GameD
         if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game = game)
         if (game.involvedCompanies.isNotEmpty()) CompaniesSection(companies = game.involvedCompanies)
         if (data.websites.isNotEmpty()) LinksSection(websites = data.websites)
-        if (game.similarGames.isNotEmpty()) SimilarGamesSection(games = game.similarGames)
+        if (game.similarGames.isNotEmpty()) SimilarGamesSection(games = game.similarGames, onSimilarGameClick = onSimilarGameClick)
     }
 }
 
@@ -474,7 +487,10 @@ private fun WebsiteChip(site: WebsiteUiModel, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SimilarGamesSection(games: List<IgdbGame.IgdbSimilarGame>) {
+private fun SimilarGamesSection(
+    games: List<IgdbGame.IgdbSimilarGame>,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(
             text = stringResource(Res.string.game_details_section_similar),
@@ -486,8 +502,12 @@ private fun SimilarGamesSection(games: List<IgdbGame.IgdbSimilarGame>) {
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
             items(games, key = { it.id }) { similar ->
+                val rowCd = stringResource(Res.string.game_details_similar_game_row_description, similar.name)
                 Column(
-                    modifier = Modifier.width(112.dp),
+                    modifier = Modifier
+                        .width(112.dp)
+                        .clickable(role = Role.Button) { onSimilarGameClick(similar.id) }
+                        .semantics(mergeDescendants = true) { contentDescription = rowCd },
                     verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
                 ) {
                     Box(
@@ -624,6 +644,7 @@ private fun GameDetailsScreen_Data_Preview() {
             data = GameDetailsViewModel.GameDetailsScreenData.Data(previewIgdbDetails, previewWebsites),
             onBack = {},
             onRetry = {},
+            onSimilarGameClick = {},
         )
     }
 }
@@ -636,6 +657,7 @@ private fun GameDetailsScreen_Loading_Preview() {
             data = GameDetailsViewModel.GameDetailsScreenData.Loading,
             onBack = {},
             onRetry = {},
+            onSimilarGameClick = {},
         )
     }
 }

@@ -33,6 +33,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_viewer_close
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
@@ -75,11 +76,18 @@ class GameDetailsScreenTest {
         every { viewModel.reload() } just runs
     }
 
-    private fun setupCompose(onBack: () -> Unit = {}) {
+    private fun setupCompose(
+        onBack: () -> Unit = {},
+        onSimilarGameClick: (Long) -> Unit = {},
+    ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load(sampleGame.name)
             GameDealsTheme {
-                GameDetailsScreen(onBack = onBack, viewModel = viewModel)
+                GameDetailsScreen(
+                    onBack = onBack,
+                    onSimilarGameClick = onSimilarGameClick,
+                    viewModel = viewModel,
+                )
             }
         }
     }
@@ -178,6 +186,23 @@ class GameDetailsScreenTest {
     }
 
     @Test
+    fun tapping_similar_game_tile_invokes_callback_with_igdb_id() {
+        val onSimilarGameClick: (Long) -> Unit = mockk()
+        every { onSimilarGameClick.invoke(987L) } just runs
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame)
+        )
+
+        setupCompose(onSimilarGameClick = onSimilarGameClick)
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.firstSimilarRowCd)
+            .performScrollTo()
+            .performClick()
+
+        verify(exactly = 1) { onSimilarGameClick.invoke(987L) }
+    }
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs
@@ -205,6 +230,7 @@ class GameDetailsScreenTest {
         val similar: String,
         val firstScreenshot: String,
         val viewerClose: String,
+        val firstSimilarRowCd: String,
     ) {
         companion object {
             @Composable
@@ -220,6 +246,7 @@ class GameDetailsScreenTest {
                 similar = stringResource(Res.string.game_details_section_similar),
                 firstScreenshot = stringResource(Res.string.game_details_screenshot_image_cd, gameName, 1),
                 viewerClose = stringResource(Res.string.game_details_screenshot_viewer_close),
+                firstSimilarRowCd = stringResource(Res.string.game_details_similar_game_row_description, "Halo 3"),
             )
         }
     }

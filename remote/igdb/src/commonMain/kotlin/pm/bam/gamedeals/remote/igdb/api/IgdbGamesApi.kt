@@ -9,6 +9,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 
 /**
  * IGDB endpoints. IGDB uses Apicalypse — a plain-text query language sent as the request body.
@@ -53,6 +54,25 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /**
+     * Rich lookup by IGDB game id — same expansion as [fetchGameDetailsBySteamId] but targets
+     * `/v4/games` directly, so the response is a flat list of [RemoteIgdbGame] (no
+     * `external_games` wrapper). Used by the similar-games row, where each tile already carries
+     * an IGDB id and a Steam-id detour would silently drop console-exclusive / indie titles.
+     */
+    suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildIgdbIdLookupDetailsQuery(igdbGameId))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     internal companion object {
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
@@ -73,6 +93,22 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 game.websites.url, game.websites.type.id, game.websites.type.type,
                 game.similar_games.id, game.similar_games.name, game.similar_games.cover.image_id;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
+        """.trimIndent()
+
+        // Same field set as the Steam-id query, minus the `game.` prefix — this query targets
+        // `/v4/games` directly so each field is already on the top-level record.
+        internal fun buildIgdbIdLookupDetailsQuery(igdbGameId: Long): String = """
+            fields
+                id, name, summary, storyline,
+                cover.image_id,
+                screenshots.image_id,
+                first_release_date,
+                rating, rating_count, aggregated_rating, aggregated_rating_count,
+                genres.name, themes.name,
+                involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
+                websites.url, websites.type.id, websites.type.type,
+                similar_games.id, similar_games.name, similar_games.cover.image_id;
+            where id = $igdbGameId; limit 1;
         """.trimIndent()
     }
 }

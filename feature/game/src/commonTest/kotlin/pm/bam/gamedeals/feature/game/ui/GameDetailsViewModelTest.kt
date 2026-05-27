@@ -44,6 +44,13 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         faviconResolver = FaviconResolverImpl(),
     )
 
+    private fun createViewModelByIgdbId(igdbGameId: Long): GameDetailsViewModel = GameDetailsViewModel(
+        savedStateHandle = SavedStateHandle(mapOf("igdbGameId" to igdbGameId)),
+        logger = TestingLoggingListener(),
+        igdbRepository = igdbRepository,
+        faviconResolver = FaviconResolverImpl(),
+    )
+
     @Test
     fun initially_emits_Loading_while_fetch_in_flight() = runTest {
         val steamId = 1240440
@@ -188,6 +195,45 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         // steamcommunity.com is normalised to the same Steam brand-key as the store subdomain.
         assertEquals("https://store.steampowered.com/favicon.ico", data.websites[3].faviconUrl)
         assertEquals("brand:steam", data.websites[3].faviconCacheKey)
+    }
+
+    @Test
+    fun igdbGameId_in_savedState_calls_fetchGameDetailsByIgdbId_and_emits_Data() = runTest {
+        val igdbId = 3151L
+        val igdb = igdbDetails(id = igdbId, name = "Hollow Knight")
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(igdbId) } returns igdb
+
+        val viewModel = createViewModelByIgdbId(igdbId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Data(igdb), emissions.last())
+        verifySuspend(exactly(1)) { igdbRepository.fetchGameDetailsByIgdbId(igdbId) }
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsBySteamId(any()) }
+    }
+
+    @Test
+    fun igdbGameId_returning_null_emits_Error() = runTest {
+        val igdbId = 3151L
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(igdbId) } returns null
+
+        val viewModel = createViewModelByIgdbId(igdbId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun igdbGameId_exception_during_fetch_emits_Error() = runTest {
+        val igdbId = 3151L
+        everySuspend { igdbRepository.fetchGameDetailsByIgdbId(igdbId) } calls { throw Exception("IGDB down") }
+
+        val viewModel = createViewModelByIgdbId(igdbId)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
     }
 
     @Test

@@ -35,6 +35,7 @@
     <string name="game_details_section_companies">Companies</string>
     <string name="game_details_section_links">Links</string>
     <string name="game_details_section_similar">You might also like</string>
+    <string name="game_details_similar_game_row_description">View details for %1$s</string>
     <string name="game_details_company_role_developer">Developer</string>
     <string name="game_details_company_role_publisher">Publisher</string>
     <string name="game_details_company_role_porting">Porting</string>

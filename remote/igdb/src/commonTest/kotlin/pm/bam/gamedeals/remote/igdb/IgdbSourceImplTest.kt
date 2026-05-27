@@ -16,6 +16,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildIgdbIdLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -141,6 +142,54 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun fetchGameDetailsByIgdbId_posts_query_to_games_endpoint_and_returns_mapped_domain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_DIRECT_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByIgdbId(IGDB_ID)
+
+        assertEquals(
+            IgdbGame(
+                id = IGDB_ID,
+                name = "Hollow Knight",
+                summary = "Indie metroidvania",
+                coverImageId = "hkco",
+                similarGames = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 4242L, name = "Ori and the Blind Forest", coverImageId = "oco"),
+                ),
+            ),
+            result,
+        )
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(buildIgdbIdLookupDetailsQuery(IGDB_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByIgdbId_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByIgdbId(IGDB_ID)
+
+        assertNull(result, "Empty list response must surface as null IgdbGame")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
     fun fetchGameBySteamId_propagates_http_500_through_the_unwrap_chain() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -168,10 +217,25 @@ class IgdbSourceImplTest {
 
     private companion object {
         const val STEAM_ID = 1240440
+        const val IGDB_ID = 3151L
 
         // language=JSON
         const val ONE_GAME_BODY = """[
             {"id":99,"game":{"id":1,"name":"Halo Infinite","summary":"Master Chief stuff"}}
+        ]"""
+
+        // Response from `/v4/games where id = N` — flat record, no `external_games` wrapper.
+        // language=JSON
+        const val ONE_GAME_DIRECT_BODY = """[
+            {
+                "id": 3151,
+                "name": "Hollow Knight",
+                "summary": "Indie metroidvania",
+                "cover": {"id": 7, "image_id": "hkco"},
+                "similar_games": [
+                    {"id": 4242, "name": "Ori and the Blind Forest", "cover": {"id": 8, "image_id": "oco"}}
+                ]
+            }
         ]"""
 
         // language=JSON

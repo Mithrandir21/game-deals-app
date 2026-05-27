@@ -15,4 +15,11 @@ interface IgdbSource {
      * Returns null when no IGDB record matches the given Steam app ID.
      */
     suspend fun fetchGameDetailsBySteamId(steamId: Int): IgdbGame?
+
+    /**
+     * Rich lookup keyed by IGDB game id (not Steam). Same payload as [fetchGameDetailsBySteamId].
+     * Used when navigating from a similar-games tile — tiles already carry an IGDB id, and going
+     * through Steam would silently drop games without a Steam mapping.
+     */
+    suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame?
 }

@@ -32,6 +32,7 @@ internal class GameDetailsViewModel(
 ) : ViewModel() {
 
     private val steamAppId: Int? = savedStateHandle.get<Int>("steamAppId")
+    private val igdbGameId: Long? = savedStateHandle.get<Long>("igdbGameId")
 
     val uiState: StateFlow<GameDetailsScreenData>
         field = MutableStateFlow<GameDetailsScreenData>(GameDetailsScreenData.Loading)
@@ -56,12 +57,15 @@ internal class GameDetailsViewModel(
     }
 
     private fun loadFlow(): Flow<GameDetailsScreenData> = flow {
-        if (steamAppId == null) {
-            emit(GameDetailsScreenData.Error)
-            return@flow
-        }
         emit(GameDetailsScreenData.Loading)
-        val game = igdbRepository.fetchGameDetailsBySteamId(steamAppId)
+        val game = when {
+            steamAppId != null -> igdbRepository.fetchGameDetailsBySteamId(steamAppId)
+            igdbGameId != null -> igdbRepository.fetchGameDetailsByIgdbId(igdbGameId)
+            else -> {
+                emit(GameDetailsScreenData.Error)
+                return@flow
+            }
+        }
         emit(
             if (game != null) {
                 GameDetailsScreenData.Data(
