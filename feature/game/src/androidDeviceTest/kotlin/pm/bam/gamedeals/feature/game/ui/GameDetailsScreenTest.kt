@@ -37,6 +37,9 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_explanation
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_warning_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
@@ -77,6 +80,9 @@ class GameDetailsScreenTest {
     @Before
     fun setup() {
         every { viewModel.reload() } just runs
+        every { viewModel.onWarningTap() } just runs
+        every { viewModel.onPickerDismiss() } just runs
+        every { viewModel.onCandidatePicked(any()) } just runs
     }
 
     private fun setupCompose(
@@ -209,6 +215,94 @@ class GameDetailsScreenTest {
     }
 
     @Test
+    fun warning_icon_absent_when_resolvedByTitle_false() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(game = sampleGame, resolvedByTitle = false)
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.warningCd).assertDoesNotExist()
+    }
+
+    @Test
+    fun warning_icon_visible_when_resolvedByTitle_true() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(game = sampleGame, resolvedByTitle = true)
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.warningCd).assertIsDisplayed()
+    }
+
+    @Test
+    fun tapping_warning_invokes_onWarningTap() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(game = sampleGame, resolvedByTitle = true)
+        )
+
+        setupCompose()
+
+        val warning = composeTestRule.onNodeWithContentDescription(screenSemantics.warningCd)
+        warning.assertHasClickAction()
+        warning.performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { viewModel.onWarningTap() }
+    }
+
+    @Test
+    fun picker_renders_explanation_and_candidate_tiles_when_showPicker_true() {
+        val candidates = persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 100L, name = "Tomb Raider", coverImageId = null),
+            IgdbGame.IgdbSimilarGame(id = 22L, name = "Tomb Raider II", coverImageId = null),
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(
+                game = sampleGame.copy(id = 100L, name = "Tomb Raider"),
+                resolvedByTitle = true,
+                candidatesState = GameDetailsViewModel.CandidatesState.Loaded(candidates),
+                showPicker = true,
+            )
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.pickerTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.pickerExplanation).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Tomb Raider II").assertIsDisplayed()
+    }
+
+    @Test
+    fun tapping_a_candidate_tile_invokes_onCandidatePicked_with_id() {
+        val candidates = persistentListOf(
+            IgdbGame.IgdbSimilarGame(id = 100L, name = "Tomb Raider", coverImageId = null),
+            IgdbGame.IgdbSimilarGame(id = 22L, name = "Tomb Raider II", coverImageId = null),
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            GameDetailsViewModel.GameDetailsScreenData.Data(
+                game = sampleGame.copy(id = 100L, name = "Tomb Raider"),
+                resolvedByTitle = true,
+                candidatesState = GameDetailsViewModel.CandidatesState.Loaded(candidates),
+                showPicker = true,
+            )
+        )
+
+        setupCompose()
+
+        val tileCd = stringResource_view_alternative("Tomb Raider II")
+        val tile = composeTestRule.onNodeWithContentDescription(tileCd)
+        tile.assertHasClickAction()
+        tile.performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 1) { viewModel.onCandidatePicked(22L) }
+    }
+
+    private fun stringResource_view_alternative(name: String): String = "View details for $name"
+
+    @Test
     fun back_button_invokes_onBack() {
         val onBack: () -> Unit = mockk()
         every { onBack.invoke() } just runs
@@ -237,6 +331,9 @@ class GameDetailsScreenTest {
         val firstScreenshot: String,
         val viewerClose: String,
         val firstSimilarRowCd: String,
+        val warningCd: String,
+        val pickerTitle: String,
+        val pickerExplanation: String,
     ) {
         companion object {
             @Composable
@@ -253,6 +350,9 @@ class GameDetailsScreenTest {
                 firstScreenshot = stringResource(Res.string.game_details_screenshot_image_cd, gameName, 1),
                 viewerClose = stringResource(Res.string.game_details_screenshot_viewer_close),
                 firstSimilarRowCd = stringResource(Res.string.game_details_similar_game_row_description, "Halo 3"),
+                warningCd = stringResource(Res.string.game_details_title_match_warning_cd),
+                pickerTitle = stringResource(Res.string.game_details_title_match_picker_title),
+                pickerExplanation = stringResource(Res.string.game_details_title_match_picker_explanation),
             )
         }
     }

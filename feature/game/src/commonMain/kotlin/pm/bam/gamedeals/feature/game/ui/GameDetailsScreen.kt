@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +32,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +42,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -45,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -101,6 +109,15 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_sc
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_close
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_current_tile_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_explanation
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_loading_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_warning_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
@@ -122,6 +139,9 @@ internal fun GameDetailsScreen(
         onBack = onBack,
         onRetry = onRetry,
         onSimilarGameClick = onSimilarGameClick,
+        onWarningTap = viewModel::onWarningTap,
+        onPickerDismiss = viewModel::onPickerDismiss,
+        onCandidatePicked = viewModel::onCandidatePicked,
     )
 }
 
@@ -132,6 +152,9 @@ private fun GameDetailsScreenContent(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onWarningTap: () -> Unit = {},
+    onPickerDismiss: () -> Unit = {},
+    onCandidatePicked: (igdbGameId: Long) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -167,6 +190,17 @@ private fun GameDetailsScreenContent(
                             )
                         }
                     },
+                    actions = {
+                        if (data is GameDetailsViewModel.GameDetailsScreenData.Data && data.resolvedByTitle) {
+                            IconButton(onClick = onWarningTap) {
+                                Icon(
+                                    imageVector = Icons.Filled.Warning,
+                                    contentDescription = stringResource(Res.string.game_details_title_match_warning_cd),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    },
                 )
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -192,6 +226,15 @@ private fun GameDetailsScreenContent(
                     )
             }
         }
+    }
+
+    if (data is GameDetailsViewModel.GameDetailsScreenData.Data && data.showPicker) {
+        CandidatePickerSheet(
+            data = data,
+            onDismiss = onPickerDismiss,
+            onCandidatePicked = onCandidatePicked,
+            onRetry = onWarningTap,
+        )
     }
 }
 
@@ -502,35 +545,145 @@ private fun SimilarGamesSection(
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
             items(games, key = { it.id }) { similar ->
-                val rowCd = stringResource(Res.string.game_details_similar_game_row_description, similar.name)
-                Column(
-                    modifier = Modifier
-                        .width(112.dp)
-                        .clickable(role = Role.Button) { onSimilarGameClick(similar.id) }
-                        .semantics(mergeDescendants = true) { contentDescription = rowCd },
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-                ) {
+                IgdbGameTile(
+                    game = similar,
+                    onClick = onSimilarGameClick,
+                    modifier = Modifier.width(112.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IgdbGameTile(
+    game: IgdbGame.IgdbSimilarGame,
+    onClick: (igdbGameId: Long) -> Unit,
+    modifier: Modifier = Modifier,
+    isCurrent: Boolean = false,
+) {
+    val baseCd = stringResource(Res.string.game_details_similar_game_row_description, game.name)
+    val currentCd = stringResource(Res.string.game_details_title_match_picker_current_tile_cd, game.name)
+    val rowCd = if (isCurrent) currentCd else baseCd
+    val borderModifier = if (isCurrent) {
+        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+    } else Modifier
+    Column(
+        modifier = modifier
+            .clickable(role = Role.Button) { onClick(game.id) }
+            .semantics(mergeDescendants = true) { contentDescription = rowCd },
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(COVER_ASPECT_RATIO)
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                .then(borderModifier),
+        ) {
+            game.coverImageId?.let { imageId ->
+                AsyncImage(
+                    model = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
+                    contentDescription = stringResource(Res.string.game_details_cover_image_cd, game.name),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Text(
+            text = game.name,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CandidatePickerSheet(
+    data: GameDetailsViewModel.GameDetailsScreenData.Data,
+    onDismiss: () -> Unit,
+    onCandidatePicked: (igdbGameId: Long) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            Text(
+                text = stringResource(Res.string.game_details_title_match_picker_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(Res.string.game_details_title_match_picker_explanation),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            when (val state = data.candidatesState) {
+                GameDetailsViewModel.CandidatesState.Idle,
+                GameDetailsViewModel.CandidatesState.Loading -> {
+                    val loadingCd = stringResource(Res.string.game_details_title_match_picker_loading_cd)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(COVER_ASPECT_RATIO)
-                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+                            .height(160.dp),
                     ) {
-                        similar.coverImageId?.let { imageId ->
-                            AsyncImage(
-                                model = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
-                                contentDescription = stringResource(Res.string.game_details_cover_image_cd, similar.name),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .semantics { contentDescription = loadingCd },
+                        )
+                    }
+                }
+                is GameDetailsViewModel.CandidatesState.Loaded -> {
+                    if (state.items.isEmpty()) {
+                        Text(text = stringResource(Res.string.game_details_title_match_picker_empty))
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(420.dp),
+                        ) {
+                            gridItems(state.items, key = { it.id }) { candidate ->
+                                IgdbGameTile(
+                                    game = candidate,
+                                    onClick = onCandidatePicked,
+                                    isCurrent = candidate.id == data.game.id,
+                                )
+                            }
                         }
                     }
+                }
+                GameDetailsViewModel.CandidatesState.Error -> {
                     Text(
-                        text = similar.name,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        text = stringResource(Res.string.game_details_title_match_picker_error),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
                     )
+                    TextButton(onClick = onRetry) {
+                        Text(text = stringResource(Res.string.game_details_title_match_picker_retry))
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(Res.string.game_details_title_match_picker_close))
                 }
             }
         }
