@@ -11,6 +11,8 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-05-27-03 | Delimit suffix with `\s+[-–—]\s+`, match keyword via `endsWith` on the lowercased tail, iterate to stable. | igdb, parsing, regex |
+| L-2026-05-27-02 | When IGDB external_games returns empty for a Steam id from CheapShark, the id may be a /subs/ id — fall back to title lookup. | igdb, cheapshark, kmp |
 | L-2026-05-27-01 | If `assertHasClickAction` passes but `performClick + verify` fails only on emulator, use `performSemanticsAction(SemanticsActions.OnClick)`. | testing, compose, instrumented, emulator |
 | L-2026-05-25-01 | `@Insert(REPLACE)` only refreshes rows whose keys still appear upstream — clear before insert in a `@Transaction` or stale rows accumulate forever. | room, kmp, dao, cache, transaction |
 | L-2026-05-22-03 | Kover 0.9.x can't read instrumented `.ec` files (kotlinx-kover#96); add a root `JacocoReport` task for device coverage. | kover, jacoco, android-test, coverage, kmp |
@@ -103,6 +105,24 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-05-27-03 · Strip store-decorated title suffixes with space-padded-dash heuristic
+**TL;DR:** Delimit suffix with `\s+[-–—]\s+`, match keyword via `endsWith` on the lowercased tail, iterate to stable.
+`active` · `confirmed` · 2026-05-27 · `igdb` `parsing` `regex`
+**Applies to:** Cleaning CheapShark / store deal titles before an external-API name lookup.
+
+Three rules make the heuristic robust against real game names with internal hyphens and false-positive subtitles: (1) Delimiter regex `\s+[-–—]\s+` — the dash must be space-padded, so "Half-Life 2", "Spider-Man", "X-COM" are not clipped. (2) Keyword test is `tail.lowercase().endsWith(kw)` not `contains` — preserves "Game - The Edition Strikes Back" from a false strip. (3) Iterate until stable — multi-tier suffixes like "X - GOTY - Remaster" need two passes. Diagnostic harness in `TitleNormalizerEdgeCaseDiagnostics` covers 25 cases.
+
+**Source:** Building `TitleNormalizer` for the deals-bridge feature; iterated after edge cases surfaced.
+
+### L-2026-05-27-02 · CheapShark `steamAppID` can be a Steam sub/bundle id IGDB doesn't track
+**TL;DR:** When IGDB external_games returns empty for a Steam id from CheapShark, the id may be a /subs/ id — fall back to title lookup.
+`active` · `confirmed` · 2026-05-27 · `igdb` `cheapshark` `kmp`
+**Applies to:** Resolving a CheapShark deal's `gameInfo.steamAppID` against IGDB's `external_games` table.
+
+CheapShark's `RemoteGameInfo.steamAppID` is whatever id Steam exposes for the listing, which for Steam bundles is a **subscription** id (`store.steampowered.com/store_item_assets/steam/subs/<id>/`), not an app id. IGDB's `external_games` only carries Steam app ids (`external_game_source = 1`), so the bundle lookup deterministically returns `[]`. Don't surface Error — fall back to `fetchGameDetailsByTitle(gameName)` using the deal's `gameName`, then to a `NoMatch` UI if that also misses. The `/subs/` substring in `thumb` is the diagnostic signature.
+
+**Source:** Implementing the deals-bridge cascade after the `Middle-earth: The Shadow Bundle` deal hit an Error snackbar.
 
 ### L-2026-05-27-01 · performSemanticsAction beats performClick for emulator-flaky clicks
 **TL;DR:** If `assertHasClickAction` passes but `performClick + verify` fails only on emulator, use `performSemanticsAction(SemanticsActions.OnClick)`.
