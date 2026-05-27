@@ -51,6 +51,13 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         faviconResolver = FaviconResolverImpl(),
     )
 
+    private fun createViewModelByTitle(title: String): GameDetailsViewModel = GameDetailsViewModel(
+        savedStateHandle = SavedStateHandle(mapOf("title" to title)),
+        logger = TestingLoggingListener(),
+        igdbRepository = igdbRepository,
+        faviconResolver = FaviconResolverImpl(),
+    )
+
     @Test
     fun initially_emits_Loading_while_fetch_in_flight() = runTest {
         val steamId = 1240440
@@ -234,6 +241,66 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun title_in_savedState_calls_fetchGameDetailsByTitle_and_emits_Data() = runTest {
+        val title = "Genshin Impact"
+        val igdb = igdbDetails(id = 9999L, name = title)
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns igdb
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Data(igdb), emissions.last())
+        verifySuspend(exactly(1)) { igdbRepository.fetchGameDetailsByTitle(title) }
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsBySteamId(any()) }
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByIgdbId(any()) }
+    }
+
+    @Test
+    fun title_returning_null_emits_Error() = runTest {
+        val title = "Mystery Game"
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } returns null
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun title_exception_during_fetch_emits_Error() = runTest {
+        val title = "Mystery Game"
+        everySuspend { igdbRepository.fetchGameDetailsByTitle(title) } calls { throw Exception("IGDB down") }
+
+        val viewModel = createViewModelByTitle(title)
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Error, emissions.last())
+    }
+
+    @Test
+    fun steamAppId_takes_precedence_over_title_when_both_are_present() = runTest {
+        val steamId = 1240440
+        val igdb = igdbDetails()
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdb
+
+        val viewModel = GameDetailsViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("steamAppId" to steamId, "title" to "Halo Infinite")),
+            logger = TestingLoggingListener(),
+            igdbRepository = igdbRepository,
+            faviconResolver = FaviconResolverImpl(),
+        )
+        val emissions = viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(GameDetailsViewModel.GameDetailsScreenData.Data(igdb), emissions.last())
+        verifySuspend(exactly(1)) { igdbRepository.fetchGameDetailsBySteamId(steamId) }
+        verifySuspend(exactly(0)) { igdbRepository.fetchGameDetailsByTitle(any()) }
     }
 
     @Test

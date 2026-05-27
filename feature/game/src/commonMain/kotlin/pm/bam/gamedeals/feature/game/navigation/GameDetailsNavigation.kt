@@ -22,4 +22,10 @@ fun NavGraphBuilder.gameDetailsScreen(navController: NavController) {
             onSimilarGameClick = navigateToSimilar,
         )
     }
+    composable<Destination.GameDetailsByTitle> {
+        GameDetailsScreen(
+            onBack = { navController.popBackStack() },
+            onSimilarGameClick = navigateToSimilar,
+        )
+    }
 }

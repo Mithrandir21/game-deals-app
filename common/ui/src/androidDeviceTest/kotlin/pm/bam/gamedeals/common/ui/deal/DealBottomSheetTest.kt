@@ -64,6 +64,7 @@ class DealBottomSheetTest {
         onShare: (DealBottomSheetData) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
         goToGameDetails: (Int) -> Unit = {},
+        goToGameDetailsByTitle: (String) -> Unit = {},
         onRetryDealDetails: () -> Unit = {},
         cheapestOnArgs: Pair<String, String>? = null,
         cheaperStoreRowArgs: Pair<String, String>? = null,
@@ -84,6 +85,7 @@ class DealBottomSheetTest {
                     onShare = onShare,
                     goToWeb = goToWeb,
                     goToGameDetails = goToGameDetails,
+                    goToGameDetailsByTitle = goToGameDetailsByTitle,
                     onRetryDealDetails = onRetryDealDetails,
                 )
             }
@@ -243,13 +245,13 @@ class DealBottomSheetTest {
     }
 
     @Test
-    fun gameDetailsButton_hidden_when_steamAppID_null() {
+    fun gameDetailsButton_visible_when_steamAppID_null_so_non_Steam_deals_can_route_by_title() {
         val data = dealDetailsData(steamAppID = null)
 
         setupCompose(data = data)
 
         composeTestRule.onNodeWithText(screenSemantics.gameDetails)
-            .assertDoesNotExist()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -259,8 +261,15 @@ class DealBottomSheetTest {
         val goToGameDetails: (Int) -> Unit = mockk {
             every { this@mockk.invoke(any()) } just Runs
         }
+        val goToGameDetailsByTitle: (String) -> Unit = mockk {
+            every { this@mockk.invoke(any()) } just Runs
+        }
 
-        setupCompose(data = data, goToGameDetails = goToGameDetails)
+        setupCompose(
+            data = data,
+            goToGameDetails = goToGameDetails,
+            goToGameDetailsByTitle = goToGameDetailsByTitle,
+        )
 
         verify(exactly = 0) { goToGameDetails.invoke(any()) }
 
@@ -268,6 +277,30 @@ class DealBottomSheetTest {
             .performClick()
 
         verify(exactly = 1) { goToGameDetails.invoke(steamId) }
+        verify(exactly = 0) { goToGameDetailsByTitle.invoke(any()) }
+    }
+
+    @Test
+    fun gameDetailsButton_click_routes_via_title_when_steamAppID_null() {
+        val data = dealDetailsData(steamAppID = null)
+        val goToGameDetails: (Int) -> Unit = mockk {
+            every { this@mockk.invoke(any()) } just Runs
+        }
+        val goToGameDetailsByTitle: (String) -> Unit = mockk {
+            every { this@mockk.invoke(any()) } just Runs
+        }
+
+        setupCompose(
+            data = data,
+            goToGameDetails = goToGameDetails,
+            goToGameDetailsByTitle = goToGameDetailsByTitle,
+        )
+
+        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
+            .performClick()
+
+        verify(exactly = 1) { goToGameDetailsByTitle.invoke(gameName) }
+        verify(exactly = 0) { goToGameDetails.invoke(any()) }
     }
 
     private fun dealDetailsData(steamAppID: Int?): DealBottomSheetData.DealDetailsData {
