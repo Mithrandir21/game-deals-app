@@ -134,18 +134,11 @@ class SearchScreenTest {
 
     @Test
     fun onResults() {
-        val dealId = "Id"
         val dealTitle = "Title"
-        val dealSalePriceDenominated = "Price"
-
-        val singleDeal: Deal = mockk {
-            every { dealID } returns dealId
-            every { gameID } returns 1
-            every { title } returns dealTitle
-            every { salePriceDenominated } returns dealSalePriceDenominated
-            every { thumb } returns "Thumb"
-        }
-        val data = SearchViewModel.SearchData.SearchResults(persistentListOf(singleDeal))
+        val singleDeal = makeMockDeal(dealId = "Id", gameId = 1, title = dealTitle)
+        val data = SearchViewModel.SearchData.SearchResults(
+            persistentListOf(GroupedSearchResult(gameID = 1, cheapestDeal = singleDeal, totalDealCount = 1))
+        )
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
 
@@ -159,6 +152,42 @@ class SearchScreenTest {
 
         verify(exactly = 0) { searchViewModel.searchGames(any()) }
         verify(exactly = 1) { searchViewModel.resultState }
+    }
+
+    @Test
+    fun groupedResult_with_multiple_deals_renders_deal_count_badge() {
+        val groupedDeal = makeMockDeal(dealId = "Id", gameId = 7, title = "Batman")
+        val data = SearchViewModel.SearchData.SearchResults(
+            persistentListOf(GroupedSearchResult(gameID = 7, cheapestDeal = groupedDeal, totalDealCount = 5))
+        )
+
+        every { searchViewModel.resultState } returns MutableStateFlow(data)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText("5 deals").assertIsDisplayed()
+    }
+
+    @Test
+    fun groupedResult_with_single_deal_does_not_render_deal_count_badge() {
+        val singleDeal = makeMockDeal(dealId = "Id", gameId = 7, title = "Solo Game")
+        val data = SearchViewModel.SearchData.SearchResults(
+            persistentListOf(GroupedSearchResult(gameID = 7, cheapestDeal = singleDeal, totalDealCount = 1))
+        )
+
+        every { searchViewModel.resultState } returns MutableStateFlow(data)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText("1 deals").assertDoesNotExist()
+    }
+
+    private fun makeMockDeal(dealId: String, gameId: Int, title: String): Deal = mockk {
+        every { dealID } returns dealId
+        every { gameID } returns gameId
+        every { this@mockk.title } returns title
+        every { salePriceDenominated } returns "Price"
+        every { thumb } returns "Thumb"
     }
 
     @Test

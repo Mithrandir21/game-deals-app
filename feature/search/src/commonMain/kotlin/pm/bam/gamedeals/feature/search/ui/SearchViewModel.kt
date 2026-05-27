@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -65,10 +64,10 @@ internal class SearchViewModel(
                         else -> flowOf(dealsSearch)
                             .onEach { resultState.emit(SearchData.Loading) }
                             .flatMapLatestDelayAtLeast(1000) { gamesRepository.searchGames(it) }
-                            .map {
-                                when (it.isEmpty()) {
+                            .map { deals ->
+                                when (deals.isEmpty()) {
                                     true -> SearchData.NoResults
-                                    false -> SearchData.SearchResults(it.toImmutableList())
+                                    false -> SearchData.SearchResults(deals.groupByGame().toImmutableList())
                                 }
                             }
                             .catch { emit(SearchData.Error) }
@@ -105,7 +104,7 @@ internal class SearchViewModel(
 
         @Immutable
         data class SearchResults(
-            val searchResults: ImmutableList<Deal>
+            val searchResults: ImmutableList<GroupedSearchResult>
         ) : SearchData()
     }
 }

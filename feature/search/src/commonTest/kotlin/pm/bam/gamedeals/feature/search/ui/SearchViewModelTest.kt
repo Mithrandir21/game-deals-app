@@ -107,7 +107,7 @@ class SearchViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.third())
+        assertEquals(SearchData.SearchResults(deals.groupByGame().toImmutableList()), emissions.third())
     }
 
     @Test
@@ -148,7 +148,7 @@ class SearchViewModelTest : MainDispatcherTest() {
         viewModel.searchGames(title = "Second")
         testScheduler.advanceTimeBy(1200)
         runCurrent()
-        assertEquals(SearchData.SearchResults(deals.toImmutableList()), emissions.last())
+        assertEquals(SearchData.SearchResults(deals.groupByGame().toImmutableList()), emissions.last())
     }
 
     @Test
@@ -190,7 +190,7 @@ class SearchViewModelTest : MainDispatcherTest() {
 
         // The init flow's `dealsSearch.title == null && lowerPrice == null && ...` branch must be false when lowerPrice is set; otherwise the search
         // short-circuits to Empty.
-        assertEquals(SearchData.SearchResults(listOf(deal).toImmutableList()), emissions.last())
+        assertEquals(SearchData.SearchResults(listOf(deal).groupByGame().toImmutableList()), emissions.last())
     }
 
     @Test
@@ -216,7 +216,7 @@ class SearchViewModelTest : MainDispatcherTest() {
 
         // flatMapLatestDelayAtLeast cancels prior pads before they fire `emit`, so only the final query's SearchResults reaches the resultState. The
         // intermediate first/second deals never surface even though the mock was invoked for them.
-        assertEquals(SearchData.SearchResults(listOf(thirdDeal).toImmutableList()), emissions.last())
+        assertEquals(SearchData.SearchResults(listOf(thirdDeal).groupByGame().toImmutableList()), emissions.last())
     }
 
     @Test
@@ -240,7 +240,7 @@ class SearchViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        assertEquals(SearchData.SearchResults(listOf(deal).toImmutableList()), emissions.last())
+        assertEquals(SearchData.SearchResults(listOf(deal).groupByGame().toImmutableList()), emissions.last())
     }
 
     @Test

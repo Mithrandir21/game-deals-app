@@ -100,9 +100,12 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_rating_range_slider_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_game_image
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_empty_state_label
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_deal_count
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite_with_count
+import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_with_count
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_no_results_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_loading_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_field_label
@@ -226,13 +229,15 @@ private fun SearchScreenContent(
                         modifier = Modifier.padding(innerPadding),
                         content = {
                             items(
-                                key = { index -> searchData.searchResults[index].dealID },
+                                key = { index -> searchData.searchResults[index].gameID },
                                 count = searchData.searchResults.size
                             ) {
+                                val group = searchData.searchResults[it]
                                 SearchResultListItem(
-                                    deal = searchData.searchResults[it],
-                                    isFavourite = searchData.searchResults[it].gameID in favouriteIds,
-                                    onGame = { onSearchedGame(searchData.searchResults[it].gameID) },
+                                    deal = group.cheapestDeal,
+                                    dealCount = group.totalDealCount,
+                                    isFavourite = group.gameID in favouriteIds,
+                                    onGame = { onSearchedGame(group.gameID) },
                                 )
                             }
                         }
@@ -268,15 +273,23 @@ private fun SearchScreenContent(
 @Composable
 private fun SearchResultListItem(
     deal: Deal,
+    dealCount: Int,
     isFavourite: Boolean,
     onGame: () -> Unit
 ) {
-    val rowCd = stringResource(
-        if (isFavourite) Res.string.search_screen_list_item_row_description_favourite
-        else Res.string.search_screen_list_item_row_description,
-        deal.title,
-        deal.salePriceDenominated,
-    )
+    val showBadge = dealCount > 1
+    val rowCd = when {
+        isFavourite && showBadge -> stringResource(
+            Res.string.search_screen_list_item_row_description_favourite_with_count,
+            deal.title, deal.salePriceDenominated, dealCount,
+        )
+        isFavourite -> stringResource(Res.string.search_screen_list_item_row_description_favourite, deal.title, deal.salePriceDenominated)
+        showBadge -> stringResource(
+            Res.string.search_screen_list_item_row_description_with_count,
+            deal.title, deal.salePriceDenominated, dealCount,
+        )
+        else -> stringResource(Res.string.search_screen_list_item_row_description, deal.title, deal.salePriceDenominated)
+    }
     ListItem(
         headlineContent = { Text(deal.title) },
         supportingContent = { Text(stringResource(Res.string.search_screen_list_item_label, deal.salePriceDenominated)) },
@@ -309,6 +322,9 @@ private fun SearchResultListItem(
                 }
             }
         },
+        trailingContent = if (showBadge) {
+            { DealCountBadge(count = dealCount) }
+        } else null,
         modifier = Modifier
             .clickable(role = Role.Button) { onGame() }
             .fillMaxWidth()
@@ -316,6 +332,24 @@ private fun SearchResultListItem(
             .semantics(mergeDescendants = true) { contentDescription = rowCd }
     )
     HorizontalDivider()
+}
+
+@Composable
+private fun DealCountBadge(count: Int) {
+    Surface(
+        shape = RoundedCornerShape(GameDealsCustomTheme.spacing.small),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Text(
+            text = stringResource(Res.string.search_screen_list_item_deal_count, count),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(
+                horizontal = GameDealsCustomTheme.spacing.small,
+                vertical = GameDealsCustomTheme.spacing.extraSmall,
+            ),
+        )
+    }
 }
 
 
@@ -527,18 +561,16 @@ internal const val SearchFilterRateSteps = 10
 
 
 private val previewSearchResults = persistentListOf(
-    PreviewDeal,
-    PreviewDeal.copy(
-        dealID = "deal-2",
-        title = "Hollow Knight",
-        salePriceDenominated = "$7.49",
+    GroupedSearchResult(gameID = PreviewDeal.gameID, cheapestDeal = PreviewDeal, totalDealCount = 5),
+    GroupedSearchResult(
         gameID = 222,
+        cheapestDeal = PreviewDeal.copy(dealID = "deal-2", title = "Hollow Knight", salePriceDenominated = "$7.49", gameID = 222),
+        totalDealCount = 1,
     ),
-    PreviewDeal.copy(
-        dealID = "deal-3",
-        title = "Stardew Valley",
-        salePriceDenominated = "$8.99",
+    GroupedSearchResult(
         gameID = 333,
+        cheapestDeal = PreviewDeal.copy(dealID = "deal-3", title = "Stardew Valley", salePriceDenominated = "$8.99", gameID = 333),
+        totalDealCount = 3,
     ),
 )
 
