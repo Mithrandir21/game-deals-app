@@ -8,8 +8,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.espresso.device.action.ScreenOrientation
 import androidx.test.espresso.device.rules.ScreenOrientationRule
 import io.mockk.every
@@ -196,10 +198,11 @@ class GameDetailsScreenTest {
 
         setupCompose(onSimilarGameClick = onSimilarGameClick)
 
+        // Invoke OnClick via semantics (the same path TalkBack uses) rather than a touch gesture —
+        // performClick's touch-coordinate dispatch misses the LazyRow tile on the Pixel 5 API-34 emulator.
         val tile = composeTestRule.onNodeWithContentDescription(screenSemantics.firstSimilarRowCd)
-        tile.performScrollTo()
-        composeTestRule.waitForIdle()
-        tile.assertHasClickAction().performClick()
+        tile.assertHasClickAction()
+        tile.performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.waitForIdle()
 
         verify(exactly = 1) { onSimilarGameClick.invoke(987L) }
