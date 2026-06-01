@@ -2,6 +2,7 @@ package pm.bam.gamedeals.iosApp
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -118,6 +119,7 @@ private fun App() {
 @Composable
 private fun AppNavHost() {
     val navController = rememberNavController()
+    val uriHandler = LocalUriHandler.current
     NavHost(
         navController = navController,
         startDestination = Destination.Home,
@@ -128,7 +130,7 @@ private fun AppNavHost() {
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navController.navigate(Destination.Giveaways) },
             goToFavourites = { navController.navigate(Destination.Favourites) },
-            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
@@ -137,13 +139,13 @@ private fun AppNavHost() {
         )
         gameScreen(
             navController = navController,
-            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
         )
         gameDetailsScreen(navController = navController)
         giveawaysScreen(
             navController = navController,
-            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
         )
         favouritesScreen(
             navController = navController,
@@ -151,7 +153,7 @@ private fun AppNavHost() {
         )
         storeScreen(
             navController = navController,
-            goToWeb = { url, gameTitle -> navController.navigate(Destination.WebView(url, gameTitle)) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
