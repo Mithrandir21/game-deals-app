@@ -3,6 +3,7 @@ package pm.bam.gamedeals.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -23,6 +24,7 @@ internal fun NavGraph(
     startDestination: Any = Destination.Home,
     navActions: NavigationActions = remember(navController) { NavigationActions(navController) }
 ) {
+    val uriHandler = LocalUriHandler.current
 
     NavHost(
         navController = navController,
@@ -35,21 +37,21 @@ internal fun NavGraph(
             goToStore = { storeId -> navActions.navigateToStore(storeId) },
             goToGiveaway = { navActions.navigateToGiveaways() },
             goToFavourites = { navActions.navigateToFavourites() },
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
         )
 
         storeScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
         )
 
         gameScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) },
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) }
         )
 
@@ -65,7 +67,7 @@ internal fun NavGraph(
 
         giveawaysScreen(
             navController = navController,
-            goToWeb = { url: String, gameTitle: String -> navActions.navigateToWeb(url, gameTitle) }
+            goToWeb = { url, _ -> uriHandler.openUri(url) }
         )
 
         favouritesScreen(

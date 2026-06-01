@@ -52,12 +52,6 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
-    fun navigateToWeb(url: String, gameTitle: String) {
-        navController.navigate(Destination.WebView(url = url, gameTitle = gameTitle)) {
-            restoreState = true
-        }
-    }
-
     fun navigateToGiveaways() {
         navController.navigate(Destination.Giveaways) {
             restoreState = true
