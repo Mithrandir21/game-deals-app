@@ -107,16 +107,22 @@ internal class HomeViewModel(
 
     fun onReleaseGame(releaseTitle: String) {
         viewModelScope.launch {
-            flow { emit(gamesRepository.getReleaseGameId(releaseTitle)) }
+            flow { emit(gamesRepository.getReleaseDeal(releaseTitle)) }
                 .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
                 .onError { fatal(logger, it) }
                 .catch { uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) } }
-                .collect { gameId ->
-                    if (gameId == null) {
+                .collect { deal ->
+                    if (deal == null) {
                         uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
                     } else {
                         uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
-                        events.emit(HomeUiEvent.NavigateToGame(gameId))
+                        loadDealDetails(
+                            dealId = deal.dealID,
+                            dealStoreId = deal.storeID,
+                            dealGameId = deal.gameID,
+                            dealTitle = deal.title,
+                            dealPriceDenominated = deal.salePriceDenominated,
+                        )
                     }
                 }
         }
@@ -200,7 +206,6 @@ internal class HomeViewModel(
             .catch { emit(emptyList()) }
 
     internal sealed interface HomeUiEvent {
-        data class NavigateToGame(val gameId: Int) : HomeUiEvent
         data class ShareDeal(val text: String) : HomeUiEvent
     }
 

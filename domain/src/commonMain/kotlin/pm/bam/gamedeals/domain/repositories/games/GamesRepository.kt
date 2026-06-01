@@ -18,7 +18,7 @@ interface GamesRepository {
     suspend fun searchGames(searchParameters: SearchParameters): List<Deal>
 
     @ExperimentalSerializationApi
-    suspend fun getReleaseGameId(gameTitle: String): Int?
+    suspend fun getReleaseDeal(gameTitle: String): Deal?
 
     suspend fun getGameDetails(dealId: Int): GameDetails
     suspend fun refreshGames()
@@ -43,10 +43,9 @@ internal class GamesRepositoryImpl(
         cheapsharkSource.fetchDealsForStore(searchParameters)
 
     @ExperimentalSerializationApi
-    override suspend fun getReleaseGameId(gameTitle: String): Int? =
+    override suspend fun getReleaseDeal(gameTitle: String): Deal? =
         cheapsharkSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
             .firstOrNull()
-            ?.gameID
 
     override suspend fun getGameDetails(dealId: Int): GameDetails =
         cheapsharkSource.fetchGameDetails(dealId.toString())

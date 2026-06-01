@@ -168,7 +168,6 @@ internal fun HomeScreen(
     // Collect one-shot UI events and dispatch them
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is HomeViewModel.HomeUiEvent.NavigateToGame -> goToGame(event.gameId)
             is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
         }
     }

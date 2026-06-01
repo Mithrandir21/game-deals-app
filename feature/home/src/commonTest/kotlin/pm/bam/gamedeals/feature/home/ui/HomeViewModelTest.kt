@@ -135,31 +135,33 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun onReleaseGame_title_success() = runTest {
+    fun onReleaseGame_resolves_deal_and_opens_bottom_sheet() = runTest {
         val releaseTitle = "title"
-        val gameId = 1
+        val releaseDeal = deal(dealID = "deal-1", storeID = 1, gameID = 42, title = "Halo", salePriceDenominated = "$9.99")
 
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
-        everySuspend { gamesRepository.getReleaseGameId(releaseTitle) } returns gameId
+        everySuspend { gamesRepository.getReleaseDeal(releaseTitle) } returns releaseDeal
+        everySuspend { storesRepository.getStore(any()) } returns store(storeID = 1)
+        everySuspend { dealsRepository.getDeal(any()) } returns dealDetails()
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
-        val emissions = observeStates()
+        val dealEmissions = viewModel.dealDetails.observeEmissions(this.backgroundScope, testDispatcher)
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
         viewModel.onReleaseGame(releaseTitle)
+        advanceUntilIdle()
 
-        assertEquals(1, emissions.size)
-        assertNotNull(emissions.first())
-        assertEquals(HomeScreenData(state = HomeScreenStatus.SUCCESS), emissions.first())
+        val loaded = assertNotNull(dealEmissions.last())
+        assertIs<DealBottomSheetData.DealDetailsData>(loaded)
+        assertEquals(42, loaded.gameId)
+        assertEquals("Halo", loaded.gameName)
 
-        assertEquals(1, events.size)
-        assertNotNull(events.first())
-        assertEquals(HomeViewModel.HomeUiEvent.NavigateToGame(gameId), events.first())
+        assertNull(events.firstOrNull())
 
         verify(exactly(1)) { storesRepository.observeStores() }
-        verifySuspend(exactly(1)) { gamesRepository.getReleaseGameId(releaseTitle) }
+        verifySuspend(exactly(1)) { gamesRepository.getReleaseDeal(releaseTitle) }
     }
 
     @Test
@@ -169,7 +171,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
-        everySuspend { gamesRepository.getReleaseGameId(any()) } throws Exception()
+        everySuspend { gamesRepository.getReleaseDeal(any()) } throws Exception()
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
@@ -181,7 +183,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertNull(events.firstOrNull())
 
         verify(exactly(1)) { storesRepository.observeStores() }
-        verifySuspend(exactly(1)) { gamesRepository.getReleaseGameId(releaseTitle) }
+        verifySuspend(exactly(1)) { gamesRepository.getReleaseDeal(releaseTitle) }
     }
 
     @Test
@@ -191,7 +193,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
-        everySuspend { gamesRepository.getReleaseGameId(releaseTitle) } returns null
+        everySuspend { gamesRepository.getReleaseDeal(releaseTitle) } returns null
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val emissions = observeStates()
@@ -203,7 +205,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertNull(events.firstOrNull())
 
         verify(exactly(1)) { storesRepository.observeStores() }
-        verifySuspend(exactly(1)) { gamesRepository.getReleaseGameId(releaseTitle) }
+        verifySuspend(exactly(1)) { gamesRepository.getReleaseDeal(releaseTitle) }
     }
 
     @Test
