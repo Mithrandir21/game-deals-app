@@ -116,6 +116,17 @@ import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus.LOADING
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus.SUCCESS
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 
+// Stable contentType tokens for the Home LazyColumn. Supplying a contentType lets Compose recycle the
+// composition/layout of a scrolled-off item for a newly-visible item of the same type during a fast fling,
+// instead of composing every appearing item from scratch — the main fix for fling jank on this mixed list.
+private const val CONTENT_TYPE_SECTION_HEADER = "section_header"
+private const val CONTENT_TYPE_RELEASE = "release"
+private const val CONTENT_TYPE_FAVOURITE = "favourite"
+private const val CONTENT_TYPE_GIVEAWAY = "giveaway"
+private const val CONTENT_TYPE_STORE_HEADER = "store_header"
+private const val CONTENT_TYPE_DEAL = "deal"
+private const val CONTENT_TYPE_VIEW_ALL_BUTTON = "view_all_button"
+
 @Composable
 internal fun HomeScreen(
     onSearch: () -> Unit,
@@ -313,27 +324,29 @@ private fun HomeScreenContent(
                     modifier = Modifier.padding(innerPadding),
                     content = {
                         if (data.releases.isNotEmpty()) {
-                            item { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
+                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
 
                             items(
                                 count = data.releases.size,
-                                key = { index -> "release-${data.releases[index].title}" }
+                                key = { index -> "release-${data.releases[index].title}" },
+                                contentType = { CONTENT_TYPE_RELEASE }
                             ) { index ->
                                 ReleaseRow(data.releases[index], onReleaseTitle)
                             }
                         }
 
                         if (favourites.isNotEmpty()) {
-                            item { SectionHeader(stringResource(Res.string.home_screen_favourites_label)) }
+                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_favourites_label)) }
 
                             items(
                                 count = favourites.size,
-                                key = { index -> "favourite-${favourites[index].gameID}" }
+                                key = { index -> "favourite-${favourites[index].gameID}" },
+                                contentType = { CONTENT_TYPE_FAVOURITE }
                             ) { index ->
                                 FavouriteRow(favourites[index]) { goToFavouriteGame(favourites[index].gameID) }
                             }
 
-                            item {
+                            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) {
                                 Button(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -346,16 +359,17 @@ private fun HomeScreenContent(
                         }
 
                         if (data.giveaways.isNotEmpty()) {
-                            item { SectionHeader(stringResource(Res.string.home_screen_giveaways_label)) }
+                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_giveaways_label)) }
 
                             items(
                                 count = data.giveaways.size,
-                                key = { index -> "giveaway-${data.giveaways[index].id}" }
+                                key = { index -> "giveaway-${data.giveaways[index].id}" },
+                                contentType = { CONTENT_TYPE_GIVEAWAY }
                             ) { index ->
                                 GiveawayRow(data.giveaways[index]) { url -> goToWeb(url, data.giveaways[index].title) }
                             }
 
-                            item {
+                            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) {
                                 Button(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -376,6 +390,13 @@ private fun HomeScreenContent(
                                         is DealData -> "deal-${itemData.deal.dealID}"
                                         is ViewAllData -> "all-${itemData.store.storeID}"
                                     }
+                                },
+                                contentType = { index ->
+                                    when (data.items[index]) {
+                                        is StoreData -> CONTENT_TYPE_STORE_HEADER
+                                        is DealData -> CONTENT_TYPE_DEAL
+                                        is ViewAllData -> CONTENT_TYPE_VIEW_ALL_BUTTON
+                                    }
                                 }
                             ) { index ->
                                 when (val itemData = data.items[index]) {
@@ -392,7 +413,7 @@ private fun HomeScreenContent(
                                 }
                             }
                         } else {
-                            item { SectionHeader(stringResource(Res.string.home_screen_loading_label)) }
+                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_loading_label)) }
                         }
                     }
                 )
@@ -516,22 +537,24 @@ private fun GiveawayRow(
     onGiveawayTitle: (url: String) -> Unit,
 ) {
     val typeLabel = giveaway.type.displayLabel()
+    val freeLabel = stringResource(Res.string.home_screen_giveaway_free_label)
     val worth = giveaway.worthDenominated
-    val platforms = giveaway.platforms
+    // Built once per giveaway (keyed on the platform list), not on every recomposition.
+    val platformsLabel = remember(giveaway.platforms) {
+        giveaway.platforms.joinToString(", ") { it.platformValue }
+    }
     val rowCd = when {
-        worth != null && platforms.isNotEmpty() -> stringResource(
+        worth != null && platformsLabel.isNotEmpty() -> stringResource(
             Res.string.home_screen_giveaway_row_description,
-            giveaway.title, worth, typeLabel,
-            platforms.joinToString(", ") { it.platformValue },
+            giveaway.title, worth, typeLabel, platformsLabel,
         )
         worth != null -> stringResource(
             Res.string.home_screen_giveaway_row_description_no_platforms,
             giveaway.title, worth, typeLabel,
         )
-        platforms.isNotEmpty() -> stringResource(
+        platformsLabel.isNotEmpty() -> stringResource(
             Res.string.home_screen_giveaway_row_description_no_worth,
-            giveaway.title, typeLabel,
-            platforms.joinToString(", ") { it.platformValue },
+            giveaway.title, typeLabel, platformsLabel,
         )
         else -> stringResource(
             Res.string.home_screen_giveaway_row_description_no_worth_no_platforms,
@@ -539,6 +562,22 @@ private fun GiveawayRow(
         )
     }
     val opensExternallyCd = stringResource(Res.string.home_screen_giveaway_opens_externally)
+    // The annotated subtitle is allocation-heavy (builder + spans); memoize it on its rendered inputs.
+    val giveawaySubtitle = remember(worth, typeLabel, platformsLabel, freeLabel) {
+        buildAnnotatedString {
+            append(freeLabel)
+            worth?.let {
+                append(" ")
+                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(it) }
+            }
+            append(" - ")
+            append(typeLabel)
+            if (platformsLabel.isNotEmpty()) {
+                append(" · ")
+                append(platformsLabel)
+            }
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -571,19 +610,7 @@ private fun GiveawayRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = buildAnnotatedString {
-                    append(stringResource(Res.string.home_screen_giveaway_free_label))
-                    giveaway.worthDenominated?.let {
-                        append(" ")
-                        withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(it) }
-                    }
-                    append(" - ")
-                    append(giveaway.type.displayLabel())
-                    if (giveaway.platforms.isNotEmpty()) {
-                        append(" · ")
-                        append(giveaway.platforms.joinToString(", ") { it.platformValue })
-                    }
-                },
+                text = giveawaySubtitle,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
