@@ -26,6 +26,7 @@
 
     <string name="giveaway_screen_list_item_row_description">FREE, %1$s</string>
     <string name="giveaway_screen_list_item_row_description_worth">FREE, %1$s, originally %2$s</string>
+    <string name="giveaway_screen_list_item_opens_externally">opens in browser</string>
 
     <string name="giveaway_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="giveaway_screen_data_loading_error_retry">Retry</string>

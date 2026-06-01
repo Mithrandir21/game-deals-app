@@ -30,6 +30,7 @@
     <string name="home_screen_giveaway_row_description_no_platforms">FREE, %1$s, originally %2$s, %3$s</string>
     <string name="home_screen_giveaway_row_description_no_worth">FREE, %1$s, %2$s on %3$s</string>
     <string name="home_screen_giveaway_row_description_no_worth_no_platforms">FREE, %1$s, %2$s</string>
+    <string name="home_screen_giveaway_opens_externally">opens in browser</string>
 
     <string name="home_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="home_screen_data_loading_error_retry">Retry</string>

@@ -74,6 +74,7 @@ import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -95,6 +96,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_se
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_platforms
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_worth
@@ -537,12 +539,13 @@ private fun GiveawayRow(
             giveaway.title, typeLabel,
         )
     }
+    val opensExternallyCd = stringResource(Res.string.home_screen_giveaway_opens_externally)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button) { onGiveawayTitle(giveaway.gamerpowerUrl) }
             .padding(vertical = GameDealsCustomTheme.spacing.medium)
-            .semantics(mergeDescendants = true) { contentDescription = rowCd },
+            .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensExternallyCd" },
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -587,6 +590,14 @@ private fun GiveawayRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        Icon(
+            painter = painterResource(CommonRes.drawable.open_in_new),
+            contentDescription = null, // decorative; the row's contentDescription carries the spoken hint
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
+                .size(20.dp),
+        )
     }
 }
 

@@ -32,6 +32,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
@@ -197,6 +198,7 @@ class HomeScreenTest {
 
         composeTestRule.onNodeWithText("Rich Giveaway").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE $59.99 - Game · PC, Steam").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.opensExternally, substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -216,6 +218,7 @@ class HomeScreenTest {
 
         composeTestRule.onNodeWithText("Free Beta").assertIsDisplayed()
         composeTestRule.onNodeWithText("FREE - Early Access · PC").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.opensExternally, substring = true).assertIsDisplayed()
     }
 
     private fun aGiveaway(
@@ -248,6 +251,7 @@ class HomeScreenTest {
         val loading: String,
         val errorMsg: String,
         val retry: String,
+        val opensExternally: String,
     ) {
         companion object {
             @Composable
@@ -255,6 +259,7 @@ class HomeScreenTest {
                 loading = stringResource(Res.string.home_screen_loading_indicator),
                 errorMsg = stringResource(Res.string.home_screen_data_loading_error_msg),
                 retry = stringResource(Res.string.home_screen_data_loading_error_retry),
+                opensExternally = stringResource(Res.string.home_screen_giveaway_opens_externally),
             )
 
             @Composable

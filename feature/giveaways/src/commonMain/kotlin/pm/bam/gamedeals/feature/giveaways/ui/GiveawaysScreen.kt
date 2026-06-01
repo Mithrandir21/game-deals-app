@@ -94,11 +94,13 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_fi
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_type_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_game_image
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_externally
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description_worth
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_navigation_back_button
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
@@ -257,12 +259,13 @@ private fun GiveawayListItem(
     val rowCd = giveaway.worthDenominated?.let {
         stringResource(Res.string.giveaway_screen_list_item_row_description_worth, giveaway.title, it)
     } ?: stringResource(Res.string.giveaway_screen_list_item_row_description, giveaway.title)
+    val opensExternallyCd = stringResource(Res.string.giveaway_screen_list_item_opens_externally)
     ListItem(
         modifier = Modifier
             .clickable(role = Role.Button) { onGiveaway() }
             .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .semantics(mergeDescendants = true) { contentDescription = rowCd },
+            .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensExternallyCd" },
         headlineContent = { Text(giveaway.title) },
         supportingContent = {
             giveaway.worthDenominated?.let {
@@ -287,6 +290,13 @@ private fun GiveawayListItem(
                     .height(60.dp)
                     .width(100.dp)
                     .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+            )
+        },
+        trailingContent = {
+            Icon(
+                painter = painterResource(CommonRes.drawable.open_in_new),
+                contentDescription = null, // decorative; the row's contentDescription carries the spoken hint
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     )

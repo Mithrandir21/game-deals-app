@@ -11,6 +11,7 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-06-01-01 | Each `Res.drawable.X`/`Res.string.X` is an extension property — a missing import reads as "Unresolved reference X", not a resource-gen failure. | compose-resources, kmp, imports, build-error |
 | L-2026-05-27-03 | Delimit suffix with `\s+[-–—]\s+`, match keyword via `endsWith` on the lowercased tail, iterate to stable. | igdb, parsing, regex |
 | L-2026-05-27-02 | When IGDB external_games returns empty for a Steam id from CheapShark, the id may be a /subs/ id — fall back to title lookup. | igdb, cheapshark, kmp |
 | L-2026-05-27-01 | If `assertHasClickAction` passes but `performClick + verify` fails only on emulator, use `performSemanticsAction(SemanticsActions.OnClick)`. | testing, compose, instrumented, emulator |
@@ -105,6 +106,15 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-06-01-01 · Import each Compose Resources accessor — they're extension properties
+**TL;DR:** Each `Res.drawable.X`/`Res.string.X` is an extension property — a missing import reads as "Unresolved reference X", not a resource-gen failure.
+`active` · `confirmed` · 2026-06-01 · `compose-resources` `kmp` `imports` `build-error`
+**Applies to:** Referencing a Compose Multiplatform resource accessor (`CommonRes.drawable.X`, `Res.string.Y`) from any module, especially a freshly added resource.
+
+Compose Multiplatform generates each `Res.drawable.X` / `Res.string.X` as an extension property, so every one must be imported individually (e.g. `import …generated.resources.open_in_new`) — importing `Res` alone isn't enough. A missing import fails with `Unresolved reference 'X'`, which mimics a resource-generation or stale-cache failure and tempts a needless `--rerun-tasks`/clean. The tell: a sibling accessor (`videogame_thumb`) resolves while the new one doesn't, and the generated file under `build/generated/compose/…` already contains the symbol. Check the import first.
+
+**Source:** Adding `open_in_new.xml` to `:common:ui` and referencing `CommonRes.drawable.open_in_new` from `:feature:home`/`:feature:giveaways` commonMain — first compile failed until the accessor was imported.
 
 ### L-2026-05-27-03 · Strip store-decorated title suffixes with space-padded-dash heuristic
 **TL;DR:** Delimit suffix with `\s+[-–—]\s+`, match keyword via `endsWith` on the lowercased tail, iterate to stable.

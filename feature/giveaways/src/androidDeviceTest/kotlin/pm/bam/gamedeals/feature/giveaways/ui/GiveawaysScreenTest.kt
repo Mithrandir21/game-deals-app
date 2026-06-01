@@ -23,6 +23,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_da
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_externally
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 
 class GiveawaysScreenTest {
@@ -103,6 +104,7 @@ class GiveawaysScreenTest {
 
         composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
         composeTestRule.onNodeWithText(giveawayTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(screenSemantics.opensExternally, substring = true).assertIsDisplayed()
 
         verify(exactly = 0) { viewModel.loadGiveaway(any()) }
         verify(exactly = 0) { viewModel.reloadGiveaways() }
@@ -130,6 +132,7 @@ class GiveawaysScreenTest {
         val retry: String,
         val filtersIcon: String,
         val platformLabel: String,
+        val opensExternally: String,
     ) {
         companion object {
             @Composable
@@ -139,6 +142,7 @@ class GiveawaysScreenTest {
                 retry = stringResource(Res.string.giveaway_screen_data_loading_error_retry),
                 filtersIcon = stringResource(Res.string.giveaway_screen_filters_icon),
                 platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label),
+                opensExternally = stringResource(Res.string.giveaway_screen_list_item_opens_externally),
             )
         }
     }
