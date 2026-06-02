@@ -150,7 +150,6 @@ class ItadSourceImplTest {
 
     @Test
     fun dealsSource_methods_blocked_by_the_model_gap_throw_until_phase_2() = runTest {
-        assertFailsWith<UnsupportedOperationException> { impl.fetchReleases() }
         assertFailsWith<UnsupportedOperationException> { impl.fetchDealDetails("x") }
         assertFailsWith<UnsupportedOperationException> { impl.fetchGames("x", null, null, null) }
         assertFailsWith<UnsupportedOperationException> { impl.fetchGameDetails("x") }

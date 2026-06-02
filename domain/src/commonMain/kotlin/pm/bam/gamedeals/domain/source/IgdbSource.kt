@@ -2,8 +2,16 @@ package pm.bam.gamedeals.domain.source
 
 import kotlinx.collections.immutable.ImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.Release
 
 interface IgdbSource {
+
+    /**
+     * Recently-released games for the Home "new releases" strip (epic #205, Phase 2c). IGDB is the
+     * source of releases now — ITAD has no releases endpoint and the old CheapShark one is gone.
+     * Returns a capped, newest-first list (empty on miss).
+     */
+    suspend fun fetchNewReleases(): List<Release>
     /**
      * Lean lookup — only `id`, `name`, `summary` are populated. Drives the deal-screen summary
      * card. Returns null when no IGDB record matches the given Steam app ID.

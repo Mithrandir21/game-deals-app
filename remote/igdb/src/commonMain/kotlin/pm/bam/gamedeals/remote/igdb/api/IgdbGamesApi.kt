@@ -129,6 +129,24 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /**
+     * Recently-released games for the Home "new releases" strip (epic #205, Phase 2c — replaces the
+     * CheapShark releases endpoint, which ITAD has no equivalent for). Returns games whose
+     * `first_release_date` is already in the past and that have a cover, newest first.
+     */
+    suspend fun fetchNewReleases(nowEpochSeconds: Long, limit: Int): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildNewReleasesQuery(nowEpochSeconds, limit))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     internal companion object {
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
@@ -222,5 +240,16 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 limit 10;
             """.trimIndent()
         }
+
+        // Home "new releases": most-recently-released games that have a cover (the cover filter drops
+        // the long tail of cover-less DB stubs). first_release_date is Unix seconds; the `<= now`
+        // cutoff keeps out not-yet-released (future-dated) games. Sorted newest-first.
+        internal fun buildNewReleasesQuery(nowEpochSeconds: Long, limit: Int): String =
+            """
+            fields name, cover.image_id, first_release_date;
+            where first_release_date != null & first_release_date <= $nowEpochSeconds & cover != null;
+            sort first_release_date desc;
+            limit $limit;
+            """.trimIndent()
     }
 }

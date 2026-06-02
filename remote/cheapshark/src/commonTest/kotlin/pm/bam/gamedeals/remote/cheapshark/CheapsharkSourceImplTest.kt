@@ -12,7 +12,6 @@ import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
-import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
@@ -74,7 +73,6 @@ class CheapsharkSourceImplTest {
             logger = logger,
             dealsApi = DealsApi(httpClient),
             gamesApi = GamesApi(httpClient),
-            releaseApi = ReleaseApi(httpClient),
             storesApi = StoresApi(httpClient),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
             currencyTransformation = currencyTransformation,
@@ -120,16 +118,6 @@ class CheapsharkSourceImplTest {
 
         assertEquals(1, recordedRequests.size)
         assertEquals("/api/1.0/stores", recordedRequests.first().url.encodedPath)
-    }
-
-    @Test
-    fun fetchReleases_hits_releases_endpoint_and_decodes_response() = runTest {
-        val result = impl.fetchReleases()
-        assertEquals(1, result.size)
-        assertEquals("Upcoming Game", result.first().title)
-
-        assertEquals(1, recordedRequests.size)
-        assertEquals("/api/other/releases", recordedRequests.first().url.encodedPath)
     }
 
     @Test

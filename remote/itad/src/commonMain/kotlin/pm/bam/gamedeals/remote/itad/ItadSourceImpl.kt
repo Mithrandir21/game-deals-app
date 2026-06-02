@@ -5,7 +5,6 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
-import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -67,9 +66,6 @@ internal class ItadSourceImpl(
         throw notYetSupported("fetchGames")
 
     override suspend fun fetchGameDetails(id: String): GameDetails = throw notYetSupported("fetchGameDetails")
-
-    override suspend fun fetchReleases(): List<Release> =
-        throw notYetSupported("fetchReleases (ITAD has no releases endpoint; releases move to IGDB)")
 
     // --- ITAD-shaped façade (Phase 1 fetch + map; surfaced via the seam in Phase 2/3) ---
 

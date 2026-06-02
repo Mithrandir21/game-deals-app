@@ -1,8 +1,8 @@
 he # Deal-source migration (CheapShark → ITAD) — Handover
 
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
-**Status:** Phases 0 ✅, 1 ✅, and **2a ✅** (domain UUID models + Room `v5→v6` migration) are merged to
-`dev`. **Next up: Phase 2c (releases → IGDB), then 2b (ITAD mapping + DI swap).**
+**Status:** Phases 0 ✅, 1 ✅, **2a ✅** (domain UUID models + Room `v5→v6`), and **2c ✅** (releases → IGDB)
+are merged to `dev`. **Next up: Phase 2b (ITAD mapping + DI swap).**
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -20,7 +20,7 @@ notice — see ADR).
 | 0 | Decouple the seam (`DealsSource`, url-in-model, neutral `Store`) + ADR | ✅ merged (`8d8d096`) | #213, #214 |
 | 1 | `:remote:itad` module + API key (DealsSource impl) | ✅ merged (`40be334`) | #207 |
 | 2a | Domain models → `String` game ids (UUID-ready) + stored `url`/`iconUrl` + Room `v5→v6` migration | ✅ merged to `dev` | (no issue) |
-| 2c | Releases → IGDB (`first_release_date`); drop `fetchReleases()` from the seam | TODO | (no issue yet) |
+| 2c | Releases → IGDB (`first_release_date`); drop `fetchReleases()` from the seam | ✅ merged to `dev` | (no issue) |
 | 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) + UI null-tolerance | TODO | (no issue yet) |
 | 3 | Real price-history chart + bundles + regional pricing | TODO | #208, #212 |
 | 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
@@ -34,7 +34,7 @@ Related memory note (auto-loaded for Claude sessions): `.claude/.../memory/itad-
 
 ## Phase 2 — start here
 
-Goal: make ITAD the live source. Three workstreams; **2a is done**, do **2c next, then 2b**.
+Goal: make ITAD the live source. Three workstreams; **2a and 2c are done**, do **2b next**.
 
 ### 2a. Migrate the domain models to String game ids + Room migration — ✅ DONE (merged to `dev`)
 Shipped as the smallest independently-shippable slice (CheapShark stayed the live source, app still works):
@@ -68,10 +68,19 @@ Shipped as the smallest independently-shippable slice (CheapShark stayed the liv
   - Android: `app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt`
   - iOS: `iosApp/src/iosMain/kotlin/pm/bam/gamedeals/iosApp/MainViewController.kt`
 
-### 2c. Releases → IGDB
-`ItadSourceImpl.fetchReleases()` throws (ITAD has no releases endpoint). Home "new releases" must move to
-IGDB's `first_release_date`. `:remote:igdb` (`IgdbSource`) already exists; extend it and repoint the Home
-release flow / `ReleasesRepository`.
+### 2c. Releases → IGDB — ✅ DONE (merged to `dev`)
+ITAD has no releases endpoint, so Home "new releases" now comes from IGDB:
+- `IgdbSource.fetchNewReleases(): List<Release>` — `IgdbGamesApi.buildNewReleasesQuery` posts to `/v4/games`:
+  `where first_release_date != null & first_release_date <= <now> & cover != null; sort first_release_date desc;
+  limit <NEW_RELEASES_LIMIT=20>;`. `<now>` (Unix seconds) comes from an injected `Clock` in `IgdbSourceImpl`.
+  Mapper `RemoteIgdbGame.toReleaseOrNull()` → `Release(title=name, date=first_release_date, image=cover via
+  igdbImageUrl(CoverBig))`; cover-less rows are dropped.
+- `ReleasesRepository` now depends on **`IgdbSource`** (was `DealsSource`); `refreshReleases()` calls
+  `igdbSource.fetchNewReleases()`. `Release` entity is **unchanged** → no Room migration. Home UI is unchanged
+  (the release `date` was never displayed; clicking a release still searches deals by title via the seam).
+- **`fetchReleases()` removed from the `DealsSource` seam** + both impls. CheapShark's `releaseApi` wiring was
+  removed too (the `ReleaseApi`/`RemoteRelease`/`ReleaseMappers` files are now orphaned — deleted in Phase 4).
+- `IgdbSourceImpl` gained a `Clock` constructor param ⇒ `igdbRemoteModule` now `IgdbSourceImpl(get(),get(),get(),get())`.
 
 ### Confirm against a live ITAD key (two code TODOs)
 You'll need a real key (`local.properties: itadApiKey=…` for Android; `Secrets.xcconfig: ITAD_API_KEY` for

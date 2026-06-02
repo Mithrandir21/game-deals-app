@@ -6,21 +6,18 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
-import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
-import pm.bam.gamedeals.remote.cheapshark.api.ReleaseApi
 import pm.bam.gamedeals.remote.cheapshark.api.StoresApi
 import pm.bam.gamedeals.remote.cheapshark.api.models.deals.RemoteDealsQuery
 import pm.bam.gamedeals.remote.cheapshark.mappers.toDeal
 import pm.bam.gamedeals.remote.cheapshark.mappers.toDealDetails
 import pm.bam.gamedeals.remote.cheapshark.mappers.toGame
 import pm.bam.gamedeals.remote.cheapshark.mappers.toGameDetails
-import pm.bam.gamedeals.remote.cheapshark.mappers.toRelease
 import pm.bam.gamedeals.remote.cheapshark.mappers.toRemoteDealsQuery
 import pm.bam.gamedeals.remote.cheapshark.mappers.toStore
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
@@ -32,7 +29,6 @@ internal class CheapsharkSourceImpl(
     private val logger: Logger,
     private val dealsApi: DealsApi,
     private val gamesApi: GamesApi,
-    private val releaseApi: ReleaseApi,
     private val storesApi: StoresApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
     private val currencyTransformation: CurrencyTransformation,
@@ -71,13 +67,6 @@ internal class CheapsharkSourceImpl(
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .toGameDetails(currencyTransformation, datetimeFormatter)
-
-    override suspend fun fetchReleases(): List<Release> =
-        releaseApi.getReleases()
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
-            .map { it.toRelease() }
 
     override suspend fun fetchStores(): List<Store> =
         storesApi.getStores()

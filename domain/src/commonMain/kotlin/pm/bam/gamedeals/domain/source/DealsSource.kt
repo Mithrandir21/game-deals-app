@@ -4,7 +4,6 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
-import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 
@@ -34,8 +33,6 @@ interface DealsSource {
     ): List<Game>
 
     suspend fun fetchGameDetails(id: String): GameDetails
-
-    suspend fun fetchReleases(): List<Release>
 
     suspend fun fetchStores(): List<Store>
 }

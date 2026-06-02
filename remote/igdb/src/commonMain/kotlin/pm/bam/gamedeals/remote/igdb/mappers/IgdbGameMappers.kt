@@ -3,6 +3,9 @@ package pm.bam.gamedeals.remote.igdb.mappers
 import kotlin.time.Instant
 import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbInvolvedCompany
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbSimilarGame
@@ -30,6 +33,21 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
         ?.uid
         ?.toIntOrNull(),
 )
+
+/**
+ * Maps a lean IGDB game (from the new-releases query) into a domain [Release] (epic #205, Phase 2c).
+ * Returns null when the cover image id is missing so the Home strip never shows a blank tile —
+ * the query already filters `cover != null`, but the field is modelled nullable. `Release.date` is
+ * the IGDB `first_release_date` (Unix seconds); it is stored but not displayed.
+ */
+internal fun RemoteIgdbGame.toReleaseOrNull(): Release? {
+    val imageId = cover?.imageId ?: return null
+    return Release(
+        title = name,
+        date = firstReleaseDate?.toInt() ?: 0,
+        image = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
+    )
+}
 
 private const val STEAM_EXTERNAL_GAME_SOURCE_ID = 1L
 
