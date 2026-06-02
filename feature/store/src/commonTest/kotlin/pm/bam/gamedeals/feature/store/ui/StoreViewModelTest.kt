@@ -127,11 +127,11 @@ class StoreViewModelTest : MainDispatcherTest() {
         val viewModel = createViewModel(storeId = 1)
         val data = DealBottomSheetData.DealDetailsData(
             store = store(),
-            gameId = 42,
+            gameId = "42",
             gameName = "Halo",
             dealId = "deal-1",
             gameSalesPriceDenominated = "$9.99",
-            gameInfo = gameInfo(gameID = 42, thumb = "thumb-42"),
+            gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
@@ -139,7 +139,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         verifySuspend(exactly(1)) {
-            favouritesRepository.toggleFavourite(gameId = 42, title = "Halo", thumb = "thumb-42")
+            favouritesRepository.toggleFavourite(gameId = "42", title = "Halo", thumb = "thumb-42")
         }
     }
 
@@ -148,17 +148,17 @@ class StoreViewModelTest : MainDispatcherTest() {
         val viewModel = createViewModel(storeId = 1)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(emptySet<Int>(), ids.first())
+        assertEquals(emptySet<String>(), ids.first())
     }
 
     @Test
     fun favouriteIds_emits_values_from_repository() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf("1", "2", "3"))
 
         val viewModel = createViewModel(storeId = 1)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(setOf(1, 2, 3), ids.last())
+        assertEquals(setOf("1", "2", "3"), ids.last())
     }
 
     @Test
@@ -168,7 +168,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         val viewModel = createViewModel(storeId = 1)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(emptySet<Int>(), ids.last())
+        assertEquals(emptySet<String>(), ids.last())
     }
 
     @Test
@@ -180,7 +180,7 @@ class StoreViewModelTest : MainDispatcherTest() {
 
         val data = DealBottomSheetData.DealDetailsLoading(
             store = store(storeName = "Steam"),
-            gameId = 42,
+            gameId = "42",
             gameName = "Halo",
             dealId = "deal-1",
             dealUrl = "https://deal-url",
@@ -328,7 +328,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         viewModel.loadDealDetails(
             dealId = "deal-1",
             dealStoreId = 1,
-            dealGameId = 42,
+            dealGameId = "42",
             dealTitle = "Halo",
             dealPriceDenominated = "$9.99",
             dealUrl = "https://deal-url",
@@ -337,7 +337,7 @@ class StoreViewModelTest : MainDispatcherTest() {
 
         val loaded = assertNotNull(emissions.last())
         assertIs<DealBottomSheetData.DealDetailsData>(loaded)
-        assertEquals(42, loaded.gameId)
+        assertEquals("42", loaded.gameId)
         assertEquals("Halo", loaded.gameName)
 
         viewModel.dismissDealDetails()

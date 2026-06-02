@@ -102,8 +102,8 @@ internal class GameDetailsViewModel(
         val data = (uiState.value as? GameDetailsScreenData.Data) ?: return null
         val steamAppId = data.game.steamAppId
         if (steamAppId != null) {
-            val cheapsharkGameId = gamesRepository.findCheapsharkGameIdBySteamAppId(steamAppId, data.game.name)
-            if (cheapsharkGameId != null) return DealsAction.OpenGame(cheapsharkGameId)
+            val gameId = gamesRepository.findGameIdBySteamAppId(steamAppId, data.game.name)
+            if (gameId != null) return DealsAction.OpenGame(gameId)
         }
         return DealsAction.SearchByTitle(data.game.name)
     }
@@ -189,7 +189,7 @@ internal class GameDetailsViewModel(
     }
 
     sealed class DealsAction {
-        data class OpenGame(val cheapsharkGameId: Int) : DealsAction()
+        data class OpenGame(val gameId: String) : DealsAction()
         data class SearchByTitle(val title: String) : DealsAction()
     }
 

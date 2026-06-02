@@ -28,7 +28,7 @@ data class Deal(
     @SerialName("storeID")
     val storeID: Int,
     @SerialName("gameID")
-    val gameID: Int,
+    val gameID: String,
     @SerialName("salePriceValue")
     val salePriceValue: Double,
     @SerialName("salePriceDenominated")
@@ -61,6 +61,16 @@ data class Deal(
     val thumb: String,
 
     /**
+     * Source-neutral deep link to this deal at its store, read by the UI and share text.
+     *
+     * The deal-source migration (epic #205) promoted this from a Phase-0 computed property to a
+     * stored, source-filled column in Phase 2a; the source mapper fills it (CheapShark with its
+     * redirect URL, ITAD with the direct affiliate URL).
+     */
+    @SerialName("url")
+    val url: String = "",
+
+    /**
      * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
      *
      * The repository stamps this via the injected `Clock` plus the resource's TTL when adding
@@ -69,17 +79,7 @@ data class Deal(
      */
     @SerialName("expires")
     val expires: Long = 0L
-) {
-    /**
-     * Source-neutral deep link to this deal at its store, read by the UI and share text.
-     *
-     * Phase 0 derives it from the persisted [dealID] so no Room column (and therefore no schema
-     * migration) is needed; the deal-source migration (epic #205) replaces this with a stored,
-     * source-filled field once the real schema migration lands.
-     */
-    val url: String
-        get() = cheapsharkDealRedirectUrl(dealID)
-}
+)
 
 @Immutable
 @Serializable
@@ -98,7 +98,7 @@ data class DealDetails(
         @SerialName("storeID")
         val storeID: Int,
         @SerialName("gameID")
-        val gameID: Int,
+        val gameID: String,
         @SerialName("name")
         val name: String,
         @SerialName("steamAppID")

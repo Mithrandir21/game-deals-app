@@ -14,7 +14,7 @@ internal fun RemoteGame.toGame(
     currencyTransformation: CurrencyTransformation
 ): Game =
     Game(
-        gameID = gameID,
+        gameID = gameID.toString(),
         steamAppID = steamAppID,
         cheapestValue = cheapest,
         cheapestDenominated = currencyTransformation.valueToDenominated(cheapest),

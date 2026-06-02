@@ -8,7 +8,7 @@ import pm.bam.gamedeals.feature.favourites.ui.FavouritesScreen
 
 fun NavGraphBuilder.favouritesScreen(
     navController: NavController,
-    goToGame: (Int) -> Unit,
+    goToGame: (String) -> Unit,
 ) {
     composable<Destination.Favourites> {
         FavouritesScreen(

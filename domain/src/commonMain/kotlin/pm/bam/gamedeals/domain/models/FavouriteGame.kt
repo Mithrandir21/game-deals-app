@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class FavouriteGame(
     @PrimaryKey
-    val gameID: Int,
+    val gameID: String,
     val title: String,
     val thumb: String,
     val dateAddedMs: Long,

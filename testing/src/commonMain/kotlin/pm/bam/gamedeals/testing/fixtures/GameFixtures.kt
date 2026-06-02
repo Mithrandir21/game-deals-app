@@ -7,7 +7,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 
 fun game(
-    gameID: Int = 1,
+    gameID: String = "1",
     steamAppID: Int? = null,
     cheapestValue: Double = 0.0,
     cheapestDenominated: String = "$0",
@@ -46,7 +46,7 @@ fun gameDeal(
 
 fun gameInfo(
     storeID: Int = 1,
-    gameID: Int = 100,
+    gameID: String = "100",
     name: String = "Test Game",
     salePriceValue: Double = 9.99,
     salePriceDenominated: String = "$9.99",

@@ -97,7 +97,7 @@ class GameDetailsScreenTest {
     private fun setupCompose(
         onBack: () -> Unit = {},
         onSimilarGameClick: (Long) -> Unit = {},
-        onViewDealsClick: (Int) -> Unit = {},
+        onViewDealsClick: (String) -> Unit = {},
         onSearchDealsByTitle: (String) -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -287,11 +287,11 @@ class GameDetailsScreenTest {
 
     @Test
     fun tapping_view_deals_with_steam_match_invokes_onViewDealsClick_with_cheapshark_id() {
-        val onViewDealsClick: (Int) -> Unit = mockk(relaxed = true)
+        val onViewDealsClick: (String) -> Unit = mockk(relaxed = true)
         every { viewModel.uiState } returns MutableStateFlow(
             GameDetailsViewModel.GameDetailsScreenData.Data(sampleGame.copy(steamAppId = 1240440))
         )
-        coEvery { viewModel.resolveDealsAction() } returns GameDetailsViewModel.DealsAction.OpenGame(99)
+        coEvery { viewModel.resolveDealsAction() } returns GameDetailsViewModel.DealsAction.OpenGame("99")
 
         setupCompose(onViewDealsClick = onViewDealsClick)
 
@@ -299,7 +299,7 @@ class GameDetailsScreenTest {
             .performClick()
         composeTestRule.waitForIdle()
 
-        verify(exactly = 1) { onViewDealsClick.invoke(99) }
+        verify(exactly = 1) { onViewDealsClick.invoke("99") }
     }
 
     @Test

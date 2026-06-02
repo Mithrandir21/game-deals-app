@@ -20,10 +20,10 @@ interface GamesRepository {
     @ExperimentalSerializationApi
     suspend fun getReleaseDeal(gameTitle: String): Deal?
 
-    suspend fun getGameDetails(dealId: Int): GameDetails
+    suspend fun getGameDetails(dealId: String): GameDetails
     suspend fun refreshGames()
 
-    suspend fun findCheapsharkGameIdBySteamAppId(steamAppId: Int, title: String): Int?
+    suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String?
 }
 
 internal class GamesRepositoryImpl(
@@ -47,15 +47,15 @@ internal class GamesRepositoryImpl(
         dealsSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
             .firstOrNull()
 
-    override suspend fun getGameDetails(dealId: Int): GameDetails =
-        dealsSource.fetchGameDetails(dealId.toString())
+    override suspend fun getGameDetails(dealId: String): GameDetails =
+        dealsSource.fetchGameDetails(dealId)
 
     override suspend fun refreshGames() {
         dealsSource.fetchGames("")
             .let { gamesDao.addGames(*it.toTypedArray()) }
     }
 
-    override suspend fun findCheapsharkGameIdBySteamAppId(steamAppId: Int, title: String): Int? =
+    override suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String? =
         runCatching {
             dealsSource.fetchGames(title = title, steamAppID = steamAppId, limit = 1)
                 .firstOrNull()

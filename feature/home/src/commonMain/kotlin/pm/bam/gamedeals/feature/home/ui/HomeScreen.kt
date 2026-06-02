@@ -130,7 +130,7 @@ private const val CONTENT_TYPE_VIEW_ALL_BUTTON = "view_all_button"
 @Composable
 internal fun HomeScreen(
     onSearch: () -> Unit,
-    goToGame: (gameId: Int) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
@@ -189,7 +189,7 @@ internal fun HomeScreen(
 private fun StoreDealRow(
     deal: Deal,
     isFavourite: Boolean,
-    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit)
+    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit)
 ) {
     val rowCd = stringResource(
         if (isFavourite) Res.string.home_screen_store_deal_row_description_favourite
@@ -254,14 +254,14 @@ private fun HomeScreenContent(
     onSearch: () -> Unit,
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
-    favouriteIds: ImmutableSet<Int>,
+    favouriteIds: ImmutableSet<String>,
     favourites: kotlinx.collections.immutable.ImmutableList<FavouriteGame>,
     dealDetails: DealBottomSheetData?,
-    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
-    goToFavouriteGame: (gameId: Int) -> Unit,
+    goToFavouriteGame: (gameId: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
@@ -699,7 +699,7 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData {
                 title = "Hollow Knight",
                 salePriceDenominated = "$7.49",
                 normalPriceDenominated = "$14.99",
-                gameID = 22222
+                gameID = "22222"
             )
         ),
         ViewAllData(storeA),
@@ -711,7 +711,7 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData {
                 title = "Stardew Valley",
                 salePriceDenominated = "$8.99",
                 normalPriceDenominated = "$14.99",
-                gameID = 33333
+                gameID = "33333"
             )
         ),
         ViewAllData(storeB),
@@ -734,7 +734,7 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData {
 
 private val previewFavourites = persistentListOf(
     PreviewFavourite,
-    PreviewFavourite.copy(gameID = 22222, title = "Hollow Knight"),
+    PreviewFavourite.copy(gameID = "22222", title = "Hollow Knight"),
 )
 
 @Preview
@@ -745,7 +745,7 @@ private fun HomeScreenContent_Success_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
-            favouriteIds = persistentSetOf(12345),
+            favouriteIds = persistentSetOf("12345"),
             favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
@@ -772,7 +772,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
-            favouriteIds = persistentSetOf(12345),
+            favouriteIds = persistentSetOf("12345"),
             favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },

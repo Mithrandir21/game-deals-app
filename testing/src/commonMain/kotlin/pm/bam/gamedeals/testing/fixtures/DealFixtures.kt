@@ -7,7 +7,7 @@ fun deal(
     internalName: String = "TEST",
     title: String = "Test Deal",
     storeID: Int = 1,
-    gameID: Int = 100,
+    gameID: String = "100",
     salePriceValue: Double = 9.99,
     salePriceDenominated: String = "$9.99",
     normalPriceValue: Double = 19.99,

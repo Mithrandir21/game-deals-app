@@ -27,7 +27,7 @@ class DealDetailsController(
         scope: CoroutineScope,
         dealId: String,
         dealStoreId: Int,
-        dealGameId: Int,
+        dealGameId: String,
         dealTitle: String,
         dealPriceDenominated: String,
         dealUrl: String,

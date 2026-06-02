@@ -53,7 +53,7 @@ class SearchScreenTest {
     }
 
     private fun setupCompose(
-        onSearchedGame: (Int) -> Unit = { _ -> },
+        onSearchedGame: (String) -> Unit = { _ -> },
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
@@ -135,9 +135,9 @@ class SearchScreenTest {
     @Test
     fun onResults() {
         val dealTitle = "Title"
-        val singleDeal = makeMockDeal(dealId = "Id", gameId = 1, title = dealTitle)
+        val singleDeal = makeMockDeal(dealId = "Id", gameId = "1", title = dealTitle)
         val data = SearchViewModel.SearchData.SearchResults(
-            persistentListOf(GroupedSearchResult(gameID = 1, cheapestDeal = singleDeal, totalDealCount = 1))
+            persistentListOf(GroupedSearchResult(gameID = "1", cheapestDeal = singleDeal, totalDealCount = 1))
         )
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
@@ -156,9 +156,9 @@ class SearchScreenTest {
 
     @Test
     fun groupedResult_with_multiple_deals_renders_deal_count_badge() {
-        val groupedDeal = makeMockDeal(dealId = "Id", gameId = 7, title = "Batman")
+        val groupedDeal = makeMockDeal(dealId = "Id", gameId = "7", title = "Batman")
         val data = SearchViewModel.SearchData.SearchResults(
-            persistentListOf(GroupedSearchResult(gameID = 7, cheapestDeal = groupedDeal, totalDealCount = 5))
+            persistentListOf(GroupedSearchResult(gameID = "7", cheapestDeal = groupedDeal, totalDealCount = 5))
         )
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
@@ -170,9 +170,9 @@ class SearchScreenTest {
 
     @Test
     fun groupedResult_with_single_deal_does_not_render_deal_count_badge() {
-        val singleDeal = makeMockDeal(dealId = "Id", gameId = 7, title = "Solo Game")
+        val singleDeal = makeMockDeal(dealId = "Id", gameId = "7", title = "Solo Game")
         val data = SearchViewModel.SearchData.SearchResults(
-            persistentListOf(GroupedSearchResult(gameID = 7, cheapestDeal = singleDeal, totalDealCount = 1))
+            persistentListOf(GroupedSearchResult(gameID = "7", cheapestDeal = singleDeal, totalDealCount = 1))
         )
 
         every { searchViewModel.resultState } returns MutableStateFlow(data)
@@ -182,7 +182,7 @@ class SearchScreenTest {
         composeTestRule.onNodeWithText("1 deals").assertDoesNotExist()
     }
 
-    private fun makeMockDeal(dealId: String, gameId: Int, title: String): Deal = mockk {
+    private fun makeMockDeal(dealId: String, gameId: String, title: String): Deal = mockk {
         every { dealID } returns dealId
         every { gameID } returns gameId
         every { this@mockk.title } returns title

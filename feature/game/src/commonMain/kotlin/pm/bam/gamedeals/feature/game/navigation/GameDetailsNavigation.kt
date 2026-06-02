@@ -10,7 +10,7 @@ fun NavGraphBuilder.gameDetailsScreen(navController: NavController) {
     val navigateToSimilar: (Long) -> Unit = { igdbGameId ->
         navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId))
     }
-    val navigateToGame: (Int) -> Unit = { gameId ->
+    val navigateToGame: (String) -> Unit = { gameId ->
         navController.navigate(Destination.Game(gameId))
     }
     val navigateToSearch: (String) -> Unit = { title ->

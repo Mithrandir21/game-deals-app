@@ -50,7 +50,7 @@ internal class SearchViewModel(
     val resultState: StateFlow<SearchData>
         field = MutableStateFlow<SearchData>(SearchData.Empty)
 
-    val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
+    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())

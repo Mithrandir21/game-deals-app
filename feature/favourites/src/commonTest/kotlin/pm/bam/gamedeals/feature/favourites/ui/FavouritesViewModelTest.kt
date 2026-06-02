@@ -42,7 +42,7 @@ class FavouritesViewModelTest : MainDispatcherTest() {
 
     @Test
     fun populated_list_emits_SUCCESS_with_items() = runTest {
-        val fav = favouriteGame(gameID = 1)
+        val fav = favouriteGame(gameID = "1")
         every { favouritesRepository.observeFavourites() } returns flowOf(listOf(fav))
         val viewModel = FavouritesViewModel(TestingLoggingListener(), favouritesRepository)
 
@@ -87,11 +87,11 @@ class FavouritesViewModelTest : MainDispatcherTest() {
         runCurrent()
         assertEquals(0, emissions.last().favourites.size)
 
-        source.emit(listOf(favouriteGame(gameID = 1), favouriteGame(gameID = 2)))
+        source.emit(listOf(favouriteGame(gameID = "1"), favouriteGame(gameID = "2")))
         runCurrent()
         assertEquals(2, emissions.last().favourites.size)
 
-        source.emit(listOf(favouriteGame(gameID = 1)))
+        source.emit(listOf(favouriteGame(gameID = "1")))
         runCurrent()
         assertEquals(1, emissions.last().favourites.size)
         assertEquals(FavouritesViewModel.FavouritesScreenStatus.SUCCESS, emissions.last().status)

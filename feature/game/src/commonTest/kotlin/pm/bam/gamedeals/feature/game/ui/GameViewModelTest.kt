@@ -56,7 +56,7 @@ class GameViewModelTest : MainDispatcherTest() {
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun createViewModel(gameId: Int?): GameViewModel = GameViewModel(
+    private fun createViewModel(gameId: String?): GameViewModel = GameViewModel(
         savedStateHandle = if (gameId == null) SavedStateHandle() else SavedStateHandle(mapOf("gameId" to gameId)),
         logger = TestingLoggingListener(),
         gamesRepository = gamesRepository,
@@ -68,7 +68,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun initially_loading_state() = runTest {
-        val gameId = 1
+        val gameId = "1"
         // No mocks: the init flow stays in delayOnStart and does not emit before we assert.
         everySuspend { gamesRepository.getGameDetails(gameId) } returns gameDetails()
 
@@ -81,7 +81,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun error_state() = runTest {
-        val gameId = 1
+        val gameId = "1"
         everySuspend { gamesRepository.getGameDetails(gameId) } calls { throw Exception() }
 
         val viewModel = createViewModel(gameId)
@@ -100,7 +100,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun game_load() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val store = store(storeID = storeId)
         val gameDeal = gameDeal(storeID = storeId)
@@ -125,7 +125,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun game_reload() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val store = store(storeID = storeId)
         val gameDeal = gameDeal(storeID = storeId)
@@ -168,7 +168,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun isFavourite_initial_value_is_false() = runTest {
-        val viewModel = createViewModel(gameId = 1)
+        val viewModel = createViewModel(gameId = "1")
         val emissions = viewModel.isFavourite.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(false, emissions.first())
@@ -176,9 +176,9 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun isFavourite_emits_true_when_repository_reports_favourited() = runTest {
-        every { favouritesRepository.observeIsFavourite(1) } returns flowOf(true)
+        every { favouritesRepository.observeIsFavourite("1") } returns flowOf(true)
 
-        val viewModel = createViewModel(gameId = 1)
+        val viewModel = createViewModel(gameId = "1")
         val emissions = viewModel.isFavourite.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(true, emissions.last())
@@ -197,7 +197,7 @@ class GameViewModelTest : MainDispatcherTest() {
     @Test
     fun toggleFavourite_while_uiState_is_Loading_does_not_call_repository() = runTest {
         // No getGameDetails stub fired yet, so uiState stays Loading.
-        val viewModel = createViewModel(gameId = 1)
+        val viewModel = createViewModel(gameId = "1")
         runCurrent()
 
         viewModel.toggleFavourite()
@@ -208,9 +208,9 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleFavourite_while_uiState_is_Error_does_not_call_repository() = runTest {
-        everySuspend { gamesRepository.getGameDetails(1) } calls { throw Exception() }
+        everySuspend { gamesRepository.getGameDetails("1") } calls { throw Exception() }
 
-        val viewModel = createViewModel(gameId = 1)
+        val viewModel = createViewModel(gameId = "1")
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         testScheduler.advanceTimeBy(1200)
         runCurrent()
@@ -223,7 +223,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleFavourite_with_Data_state_forwards_gameId_title_and_thumb_to_repository() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val info = GameDetails.GameInfo(title = "Halo", steamAppID = null, thumb = "thumb-halo")
         val details = gameDetails(info = info, deals = persistentListOf(gameDeal(storeID = storeId)))
@@ -248,7 +248,7 @@ class GameViewModelTest : MainDispatcherTest() {
     fun onShareDealClicked_emits_ShareDeal_event_with_built_text() = runTest {
         every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
 
-        val viewModel = createViewModel(gameId = 1)
+        val viewModel = createViewModel(gameId = "1")
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
         val info = GameDetails.GameInfo(title = "Halo", steamAppID = null, thumb = "thumb")
@@ -273,7 +273,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun reload_after_initial_failure_flips_Error_back_to_Data() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val store = store(storeID = storeId)
         val gameDeal = gameDeal(storeID = storeId)
@@ -299,7 +299,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun game_load_with_steamAppID_enriches_Data_with_IgdbGame() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val steamId = 1240440
         val store = store(storeID = storeId)
@@ -325,7 +325,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun igdb_failure_does_not_hide_Data_screen_igdbGame_is_null() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val steamId = 1240440
         val store = store(storeID = storeId)
@@ -350,7 +350,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
     @Test
     fun rapid_reload_calls_do_not_crash_or_lose_final_Data_state() = runTest {
-        val gameId = 1
+        val gameId = "1"
         val storeId = 2
         val store = store(storeID = storeId)
         val gameDeal = gameDeal(storeID = storeId)

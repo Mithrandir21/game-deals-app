@@ -8,7 +8,7 @@ import pm.bam.gamedeals.domain.models.Store
 @Immutable
 sealed class DealBottomSheetData(
     open val store: Store,
-    open val gameId: Int,
+    open val gameId: String,
     open val gameName: String,
     open val dealId: String,
     open val dealUrl: String,
@@ -17,7 +17,7 @@ sealed class DealBottomSheetData(
     @Immutable
     data class DealDetailsData(
         override val store: Store,
-        override val gameId: Int,
+        override val gameId: String,
         override val gameName: String,
         override val dealId: String,
         override val gameSalesPriceDenominated: String,
@@ -30,7 +30,7 @@ sealed class DealBottomSheetData(
     @Immutable
     data class DealDetailsLoading(
         override val store: Store,
-        override val gameId: Int,
+        override val gameId: String,
         override val gameName: String,
         override val dealId: String,
         override val gameSalesPriceDenominated: String,
@@ -40,7 +40,7 @@ sealed class DealBottomSheetData(
     @Immutable
     data class DealDetailsError(
         override val store: Store,
-        override val gameId: Int,
+        override val gameId: String,
         override val gameName: String,
         override val dealId: String,
         override val gameSalesPriceDenominated: String,

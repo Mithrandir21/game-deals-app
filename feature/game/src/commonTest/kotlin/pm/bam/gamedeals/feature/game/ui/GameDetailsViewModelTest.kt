@@ -647,14 +647,14 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         val steamId = 1240440
         val igdb = igdbDetails(steamAppId = steamId)
         everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdb
-        everySuspend { gamesRepository.findCheapsharkGameIdBySteamAppId(steamId, "Halo Infinite") } returns 12345
+        everySuspend { gamesRepository.findGameIdBySteamAppId(steamId, "Halo Infinite") } returns "12345"
 
         val viewModel = createViewModel(steamId)
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         runCurrent()
 
         val action = viewModel.resolveDealsAction()
-        assertEquals(GameDetailsViewModel.DealsAction.OpenGame(12345), action)
+        assertEquals(GameDetailsViewModel.DealsAction.OpenGame("12345"), action)
     }
 
     @Test
@@ -662,7 +662,7 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
         val steamId = 1240440
         val igdb = igdbDetails(steamAppId = steamId)
         everySuspend { igdbRepository.fetchGameDetailsBySteamId(steamId) } returns igdb
-        everySuspend { gamesRepository.findCheapsharkGameIdBySteamAppId(steamId, "Halo Infinite") } returns null
+        everySuspend { gamesRepository.findGameIdBySteamAppId(steamId, "Halo Infinite") } returns null
 
         val viewModel = createViewModel(steamId)
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
@@ -684,7 +684,7 @@ class GameDetailsViewModelTest : MainDispatcherTest() {
 
         val action = viewModel.resolveDealsAction()
         assertEquals(GameDetailsViewModel.DealsAction.SearchByTitle("Hollow Knight"), action)
-        verifySuspend(exactly(0)) { gamesRepository.findCheapsharkGameIdBySteamAppId(any(), any()) }
+        verifySuspend(exactly(0)) { gamesRepository.findGameIdBySteamAppId(any(), any()) }
     }
 
     @Test
