@@ -47,7 +47,7 @@ internal class StoreViewModel(
     private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
 
-    val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
+    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -108,7 +108,7 @@ internal class StoreViewModel(
         retryTrigger.update { it + 1 }
     }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 

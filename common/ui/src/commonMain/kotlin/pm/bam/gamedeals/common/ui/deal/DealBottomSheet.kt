@@ -392,7 +392,7 @@ private fun GameDetailsError(
 
 private val previewDealDetailsData = DealBottomSheetData.DealDetailsData(
     store = PreviewStore,
-    gameId = 123,
+    gameId = "123",
     gameName = PreviewDealGameInfo.name,
     dealId = "preview-deal-1",
     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
@@ -483,7 +483,7 @@ private fun DealContent_Loading_Preview() {
             DealContent(
                 data = DealBottomSheetData.DealDetailsLoading(
                     store = PreviewStore,
-                    gameId = 123,
+                    gameId = "123",
                     gameName = PreviewDealGameInfo.name,
                     dealId = "preview-deal-1",
                     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
@@ -508,7 +508,7 @@ private fun DealContent_Error_Preview() {
             DealContent(
                 data = DealBottomSheetData.DealDetailsError(
                     store = PreviewStore,
-                    gameId = 123,
+                    gameId = "123",
                     gameName = PreviewDealGameInfo.name,
                     dealId = "preview-deal-1",
                     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,

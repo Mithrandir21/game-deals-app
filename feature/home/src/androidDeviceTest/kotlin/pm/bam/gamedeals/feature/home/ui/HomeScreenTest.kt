@@ -76,7 +76,7 @@ class HomeScreenTest {
     }
     private val mockDeal: Deal = mockk {
         every { dealID } returns dealId
-        every { gameID } returns 1
+        every { gameID } returns "1"
         every { title } returns dealTitle
         every { normalPriceDenominated } returns normalPrice
         every { salePriceDenominated } returns dealPrice
@@ -100,7 +100,7 @@ class HomeScreenTest {
 
     private fun setupCompose(
         onSearch: () -> Unit = {},
-        goToGame: (Int) -> Unit = { _ -> },
+        goToGame: (String) -> Unit = { _ -> },
         onViewStoreDeals: (Store) -> Unit = { _ -> },
         onViewGiveaways: () -> Unit = {},
         onViewFavourites: () -> Unit = {},

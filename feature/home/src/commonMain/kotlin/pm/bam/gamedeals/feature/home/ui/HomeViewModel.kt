@@ -69,7 +69,7 @@ internal class HomeViewModel(
     val uiState: StateFlow<HomeScreenData>
         field = MutableStateFlow(HomeScreenData())
 
-    val favouriteIds: StateFlow<ImmutableSet<Int>> = favouritesRepository.observeFavouriteIds()
+    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -129,7 +129,7 @@ internal class HomeViewModel(
         }
     }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 

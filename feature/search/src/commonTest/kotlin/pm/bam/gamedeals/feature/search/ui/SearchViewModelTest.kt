@@ -155,17 +155,17 @@ class SearchViewModelTest : MainDispatcherTest() {
     fun favouriteIds_initial_value_is_empty_set() = runTest {
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(emptySet<Int>(), ids.first())
+        assertEquals(emptySet<String>(), ids.first())
     }
 
     @Test
     fun favouriteIds_emits_values_from_repository() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf("1", "2", "3"))
         // Rebuild because the @BeforeTest viewModel captured the original stub.
         viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
 
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
-        assertEquals(setOf(1, 2, 3), ids.last())
+        assertEquals(setOf("1", "2", "3"), ids.last())
     }
 
     @Test
@@ -174,7 +174,7 @@ class SearchViewModelTest : MainDispatcherTest() {
         viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
 
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
-        assertEquals(emptySet<Int>(), ids.last())
+        assertEquals(emptySet<String>(), ids.last())
     }
 
     @Test

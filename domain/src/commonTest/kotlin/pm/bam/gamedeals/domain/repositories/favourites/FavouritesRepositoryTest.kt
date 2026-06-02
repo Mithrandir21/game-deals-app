@@ -26,39 +26,39 @@ class FavouritesRepositoryTest {
 
     @Test
     fun add_favourite_stamps_clock_now() = runTest {
-        impl.addFavourite(gameId = 7, title = "Game 7", thumb = "thumb7")
+        impl.addFavourite(gameId = "7", title = "Game 7", thumb = "thumb7")
 
         verifySuspend(exactly(1)) {
             favouritesDao.addFavourites(
-                FavouriteGame(gameID = 7, title = "Game 7", thumb = "thumb7", dateAddedMs = FIXED_NOW_MS)
+                FavouriteGame(gameID = "7", title = "Game 7", thumb = "thumb7", dateAddedMs = FIXED_NOW_MS)
             )
         }
     }
 
     @Test
     fun remove_favourite_delegates_to_dao() = runTest {
-        impl.removeFavourite(gameId = 9)
+        impl.removeFavourite(gameId = "9")
 
-        verifySuspend(exactly(1)) { favouritesDao.removeFavouriteById(9) }
+        verifySuspend(exactly(1)) { favouritesDao.removeFavouriteById("9") }
     }
 
     @Test
     fun toggle_delegates_to_dao_and_returns_new_state_true() = runTest {
         everySuspend {
             favouritesDao.toggleFavourite(
-                gameId = 7,
+                gameId = "7",
                 title = "Game 7",
                 thumb = "thumb7",
                 dateAddedMs = FIXED_NOW_MS,
             )
         } returns true
 
-        val now = impl.toggleFavourite(gameId = 7, title = "Game 7", thumb = "thumb7")
+        val now = impl.toggleFavourite(gameId = "7", title = "Game 7", thumb = "thumb7")
         assertTrue(now)
 
         verifySuspend(exactly(1)) {
             favouritesDao.toggleFavourite(
-                gameId = 7,
+                gameId = "7",
                 title = "Game 7",
                 thumb = "thumb7",
                 dateAddedMs = FIXED_NOW_MS,
@@ -70,19 +70,19 @@ class FavouritesRepositoryTest {
     fun toggle_delegates_to_dao_and_returns_new_state_false() = runTest {
         everySuspend {
             favouritesDao.toggleFavourite(
-                gameId = 7,
+                gameId = "7",
                 title = "Game 7",
                 thumb = "thumb7",
                 dateAddedMs = FIXED_NOW_MS,
             )
         } returns false
 
-        val now = impl.toggleFavourite(gameId = 7, title = "Game 7", thumb = "thumb7")
+        val now = impl.toggleFavourite(gameId = "7", title = "Game 7", thumb = "thumb7")
         assertFalse(now)
 
         verifySuspend(exactly(1)) {
             favouritesDao.toggleFavourite(
-                gameId = 7,
+                gameId = "7",
                 title = "Game 7",
                 thumb = "thumb7",
                 dateAddedMs = FIXED_NOW_MS,
@@ -92,10 +92,10 @@ class FavouritesRepositoryTest {
 
     @Test
     fun observe_favourite_ids_maps_list_to_set() = runTest {
-        every { favouritesDao.observeFavouriteIds() } returns flowOf(listOf(1, 2, 2, 3))
+        every { favouritesDao.observeFavouriteIds() } returns flowOf(listOf("1", "2", "2", "3"))
 
         val ids = impl.observeFavouriteIds().first()
-        assertEquals(setOf(1, 2, 3), ids)
+        assertEquals(setOf("1", "2", "3"), ids)
     }
 
     private companion object {

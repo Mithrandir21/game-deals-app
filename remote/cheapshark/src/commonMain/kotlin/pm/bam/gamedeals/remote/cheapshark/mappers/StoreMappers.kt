@@ -12,10 +12,13 @@ internal fun RemoteStore.RemoteStoreImages.toStoreImages(): Store.StoreImages =
         icon = IMAGE_BASE.plus(icon)
     )
 
-internal fun RemoteStore.toStore(): Store =
-    Store(
+internal fun RemoteStore.toStore(): Store {
+    val storeImages = images.toStoreImages()
+    return Store(
         storeID = storeID,
         storeName = storeName,
         isActive = isActive.toBooleanStrict(),
-        images = images.toStoreImages()
+        images = storeImages,
+        iconUrl = storeImages.logo,
     )
+}

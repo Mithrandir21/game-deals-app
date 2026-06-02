@@ -59,14 +59,14 @@ class StoreScreenTest {
         val dealThumb = "DealThumbnail"
         every { deal.dealID } returns dealId
         every { deal.storeID } returns storeId
-        every { deal.gameID } returns 1
+        every { deal.gameID } returns "1"
         every { deal.title } returns dealTitle
         every { deal.salePriceDenominated } returns dealPrice
         every { deal.thumb } returns dealThumb
         val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
         val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
-        val favouriteIds: StateFlow<ImmutableSet<Int>> = MutableStateFlow(persistentSetOf())
+        val favouriteIds: StateFlow<ImmutableSet<String>> = MutableStateFlow(persistentSetOf())
 
         every { viewModel.deals } returns deals
         every { viewModel.dealDetails } returns dealDetails

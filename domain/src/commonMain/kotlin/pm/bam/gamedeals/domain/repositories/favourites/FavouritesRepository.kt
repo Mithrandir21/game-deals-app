@@ -11,12 +11,12 @@ import pm.bam.gamedeals.domain.models.FavouriteGame
 
 interface FavouritesRepository {
     fun observeFavourites(): Flow<List<FavouriteGame>>
-    fun observeFavouriteIds(): Flow<ImmutableSet<Int>>
-    fun observeIsFavourite(gameId: Int): Flow<Boolean>
-    suspend fun addFavourite(gameId: Int, title: String, thumb: String)
-    suspend fun removeFavourite(gameId: Int)
+    fun observeFavouriteIds(): Flow<ImmutableSet<String>>
+    fun observeIsFavourite(gameId: String): Flow<Boolean>
+    suspend fun addFavourite(gameId: String, title: String, thumb: String)
+    suspend fun removeFavourite(gameId: String)
     @IgnorableReturnValue
-    suspend fun toggleFavourite(gameId: Int, title: String, thumb: String): Boolean
+    suspend fun toggleFavourite(gameId: String, title: String, thumb: String): Boolean
 }
 
 internal class FavouritesRepositoryImpl(
@@ -27,13 +27,13 @@ internal class FavouritesRepositoryImpl(
     override fun observeFavourites(): Flow<List<FavouriteGame>> =
         favouritesDao.observeAllFavourites()
 
-    override fun observeFavouriteIds(): Flow<ImmutableSet<Int>> =
+    override fun observeFavouriteIds(): Flow<ImmutableSet<String>> =
         favouritesDao.observeFavouriteIds().map { it.toImmutableSet() }
 
-    override fun observeIsFavourite(gameId: Int): Flow<Boolean> =
+    override fun observeIsFavourite(gameId: String): Flow<Boolean> =
         favouritesDao.observeIsFavourite(gameId)
 
-    override suspend fun addFavourite(gameId: Int, title: String, thumb: String) {
+    override suspend fun addFavourite(gameId: String, title: String, thumb: String) {
         favouritesDao.addFavourites(
             FavouriteGame(
                 gameID = gameId,
@@ -44,11 +44,11 @@ internal class FavouritesRepositoryImpl(
         )
     }
 
-    override suspend fun removeFavourite(gameId: Int) {
+    override suspend fun removeFavourite(gameId: String) {
         favouritesDao.removeFavouriteById(gameId)
     }
 
-    override suspend fun toggleFavourite(gameId: Int, title: String, thumb: String): Boolean =
+    override suspend fun toggleFavourite(gameId: String, title: String, thumb: String): Boolean =
         favouritesDao.toggleFavourite(
             gameId = gameId,
             title = title,

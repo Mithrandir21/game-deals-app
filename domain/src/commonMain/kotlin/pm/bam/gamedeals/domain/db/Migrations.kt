@@ -1,7 +1,37 @@
 package pm.bam.gamedeals.domain.db
 
 import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = emptyArray()
+/**
+ * v5 → v6 — deal-source migration (epic #205, Phase 2a).
+ *
+ * Game ids change from `Int` to `String` (ITAD UUIDs) on `Deal`, `Game` and `FavouriteGame`, and
+ * `Deal.url` / `Store.iconUrl` become stored columns. A primary-key type change is not
+ * auto-migratable, but `Deal`, `Game` and `Store` are network-backed caches (re-fetched on next
+ * launch) and existing favourites are intentionally reset on the provider switch — so the changed
+ * tables are dropped and recreated at the v6 schema rather than data-migrated.
+ *
+ * The `CREATE TABLE` statements are copied verbatim from the generated schema
+ * `domain/schemas/pm.bam.gamedeals.domain.db.DomainDatabase/6.json` so the post-migration identity
+ * hash matches the compiled v6 database (Room validates this on open). `Release` and `Giveaway` are
+ * unchanged between v5 and v6 and are left untouched.
+ */
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `Deal`")
+        connection.execSQL("DROP TABLE IF EXISTS `Game`")
+        connection.execSQL("DROP TABLE IF EXISTS `Store`")
+        connection.execSQL("DROP TABLE IF EXISTS `FavouriteGame`")
+
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Deal` (`dealID` TEXT NOT NULL, `internalName` TEXT NOT NULL, `title` TEXT NOT NULL, `metacriticLink` TEXT, `storeID` INTEGER NOT NULL, `gameID` TEXT NOT NULL, `salePriceValue` REAL NOT NULL, `salePriceDenominated` TEXT NOT NULL, `normalPriceValue` REAL NOT NULL, `normalPriceDenominated` TEXT NOT NULL, `isOnSale` INTEGER NOT NULL, `savings` REAL NOT NULL, `metacriticScore` INTEGER NOT NULL, `steamRatingText` TEXT, `steamRatingPercent` INTEGER NOT NULL, `steamRatingCount` TEXT NOT NULL, `steamAppID` INTEGER, `releaseDate` INTEGER NOT NULL, `lastChange` INTEGER NOT NULL, `dealRating` REAL NOT NULL, `thumb` TEXT NOT NULL, `url` TEXT NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`dealID`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Game` (`gameID` TEXT NOT NULL, `steamAppID` INTEGER, `cheapestValue` REAL NOT NULL, `cheapestDenominated` TEXT NOT NULL, `cheapestDealID` TEXT NOT NULL, `title` TEXT NOT NULL, `internalName` TEXT NOT NULL, `thumb` TEXT NOT NULL, PRIMARY KEY(`gameID`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Store` (`storeID` INTEGER NOT NULL, `storeName` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `images` TEXT NOT NULL, `iconUrl` TEXT NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`storeID`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `FavouriteGame` (`gameID` TEXT NOT NULL, `title` TEXT NOT NULL, `thumb` TEXT NOT NULL, `dateAddedMs` INTEGER NOT NULL, PRIMARY KEY(`gameID`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

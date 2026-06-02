@@ -137,7 +137,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     @Test
     fun onReleaseGame_resolves_deal_and_opens_bottom_sheet() = runTest {
         val releaseTitle = "title"
-        val releaseDeal = deal(dealID = "deal-1", storeID = 1, gameID = 42, title = "Halo", salePriceDenominated = "$9.99")
+        val releaseDeal = deal(dealID = "deal-1", storeID = 1, gameID = "42", title = "Halo", salePriceDenominated = "$9.99")
 
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
@@ -155,7 +155,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         val loaded = assertNotNull(dealEmissions.last())
         assertIs<DealBottomSheetData.DealDetailsData>(loaded)
-        assertEquals(42, loaded.gameId)
+        assertEquals("42", loaded.gameId)
         assertEquals("Halo", loaded.gameName)
 
         assertNull(events.firstOrNull())
@@ -292,11 +292,11 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         val data = DealBottomSheetData.DealDetailsData(
             store = store(),
-            gameId = 42,
+            gameId = "42",
             gameName = "Halo",
             dealId = "deal-1",
             gameSalesPriceDenominated = "$9.99",
-            gameInfo = gameInfo(gameID = 42, thumb = "thumb-42"),
+            gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
@@ -304,7 +304,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         verifySuspend(exactly(1)) {
-            favouritesRepository.toggleFavourite(gameId = 42, title = "Halo", thumb = "thumb-42")
+            favouritesRepository.toggleFavourite(gameId = "42", title = "Halo", thumb = "thumb-42")
         }
     }
 
@@ -317,7 +317,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(emptySet<Int>(), ids.first())
+        assertEquals(emptySet<String>(), ids.first())
     }
 
     @Test
@@ -325,12 +325,12 @@ class HomeViewModelTest : MainDispatcherTest() {
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf(1, 2, 3))
+        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf("1", "2", "3"))
 
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(setOf(1, 2, 3), ids.last())
+        assertEquals(setOf("1", "2", "3"), ids.last())
     }
 
     @Test
@@ -343,7 +343,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, favouritesRepository, dealShareTextBuilder, logger)
         val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
 
-        assertEquals(emptySet<Int>(), ids.last())
+        assertEquals(emptySet<String>(), ids.last())
     }
 
     @Test
@@ -360,7 +360,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun favourites_emits_values_from_repository() = runTest {
-        val fav = favouriteGame(gameID = 7, title = "Halo")
+        val fav = favouriteGame(gameID = "7", title = "Halo")
         every { storesRepository.observeStores() } returns flowOf(listOf())
         every { releasesRepository.observeReleases() } returns flowOf(listOf())
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
@@ -398,7 +398,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         val data = DealBottomSheetData.DealDetailsLoading(
             store = store(storeName = "Steam"),
-            gameId = 42,
+            gameId = "42",
             gameName = "Halo",
             dealId = "deal-1",
             dealUrl = "https://deal-url",
@@ -436,7 +436,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         viewModel.loadDealDetails(
             dealId = "deal-1",
             dealStoreId = 1,
-            dealGameId = 42,
+            dealGameId = "42",
             dealTitle = "Halo",
             dealPriceDenominated = "$9.99",
             dealUrl = "https://deal-url",
@@ -445,7 +445,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         val loaded = assertNotNull(emissions.last())
         assertIs<DealBottomSheetData.DealDetailsData>(loaded)
-        assertEquals(42, loaded.gameId)
+        assertEquals("42", loaded.gameId)
         assertEquals("Halo", loaded.gameName)
 
         viewModel.dismissDealDetails()

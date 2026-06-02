@@ -6,11 +6,11 @@ import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.feature.search.ui.SearchScreen
 
 fun NavGraphBuilder.searchScreen(
-    goToGame: (gameId: Int) -> Unit
+    goToGame: (gameId: String) -> Unit
 ) {
     composable<Destination.Search> {
         SearchScreen(
-            onSearchedGame = { gameId: Int -> goToGame(gameId) }
+            onSearchedGame = { gameId: String -> goToGame(gameId) }
         )
     }
 }

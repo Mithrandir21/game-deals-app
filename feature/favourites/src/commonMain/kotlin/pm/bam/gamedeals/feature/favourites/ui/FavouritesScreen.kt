@@ -74,7 +74,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 @Composable
 internal fun FavouritesScreen(
     onBack: () -> Unit,
-    goToGame: (Int) -> Unit,
+    goToGame: (String) -> Unit,
     viewModel: FavouritesViewModel = koinViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -92,7 +92,7 @@ internal fun FavouritesScreen(
 private fun FavouritesScreenContent(
     data: FavouritesViewModel.FavouritesScreenData,
     onBack: () -> Unit,
-    goToGame: (Int) -> Unit,
+    goToGame: (String) -> Unit,
 ) {
     val scrollState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -233,8 +233,8 @@ private fun FavouriteListItem(
 
 private val previewFavouritesList = persistentListOf(
     PreviewFavourite,
-    PreviewFavourite.copy(gameID = 456, title = "Hollow Knight"),
-    PreviewFavourite.copy(gameID = 789, title = "Stardew Valley"),
+    PreviewFavourite.copy(gameID = "456", title = "Hollow Knight"),
+    PreviewFavourite.copy(gameID = "789", title = "Stardew Valley"),
 )
 
 @Preview

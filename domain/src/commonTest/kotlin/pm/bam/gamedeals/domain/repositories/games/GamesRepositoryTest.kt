@@ -43,8 +43,8 @@ class GamesRepositoryTest {
 
     @Test
     fun get_game() = runTest {
-        val id = 1
-        val idString = id.toString()
+        val id = "1"
+        val idString = id
         val gameDetails = gameDetails()
 
         everySuspend { dealsSource.fetchGameDetails(idString) } returns gameDetails
@@ -69,12 +69,12 @@ class GamesRepositoryTest {
 
     @Test
     fun find_cheapshark_game_id_by_steam_app_id_returns_gameID_when_match_found() = runTest {
-        val match = game().copy(gameID = 12345)
+        val match = game().copy(gameID = "12345")
         everySuspend { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } returns listOf(match)
 
-        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+        val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
 
-        assertEquals(12345, result)
+        assertEquals("12345", result)
         verifySuspend(exactly(1)) { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) }
     }
 
@@ -82,7 +82,7 @@ class GamesRepositoryTest {
     fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_no_match() = runTest {
         everySuspend { dealsSource.fetchGames(title = "Unknown Game", steamAppID = 999999, limit = 1) } returns emptyList()
 
-        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 999999, title = "Unknown Game")
+        val result = impl.findGameIdBySteamAppId(steamAppId = 999999, title = "Unknown Game")
 
         assertEquals(null, result)
     }
@@ -91,7 +91,7 @@ class GamesRepositoryTest {
     fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_source_throws() = runTest {
         everySuspend { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } throws Exception("network down")
 
-        val result = impl.findCheapsharkGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+        val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
 
         assertEquals(null, result, "runCatching must swallow the exception and surface null")
     }

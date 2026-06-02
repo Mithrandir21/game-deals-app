@@ -32,9 +32,9 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
-    fun navigateToGame(gameId: Int) {
+    fun navigateToGame(gameId: String) {
         navController.navigate(Destination.Game(gameId)) {
-            restoreState = gameId == 0
+            restoreState = gameId.isEmpty()
         }
     }
 

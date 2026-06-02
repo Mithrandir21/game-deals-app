@@ -116,7 +116,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun SearchScreen(
-    onSearchedGame: ((gameId: Int) -> Unit) = {},
+    onSearchedGame: ((gameId: String) -> Unit) = {},
     searchViewModel: SearchViewModel = koinViewModel()
 ) {
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
@@ -171,9 +171,9 @@ private fun SearchScreenContent(
     existingSearchParameters: SearchParameters,
     initialTitle: String? = null,
     searchData: SearchViewModel.SearchData,
-    favouriteIds: ImmutableSet<Int>,
+    favouriteIds: ImmutableSet<String>,
     onSearchTitleChanged: (text: String) -> Unit,
-    onSearchedGame: (gameId: Int) -> Unit = {},
+    onSearchedGame: (gameId: String) -> Unit = {},
     onPriceChanged: (from: Int?, to: Int?) -> Unit,
     onSteamMinChanged: (min: Int) -> Unit,
     onExactMatch: (exactMatch: Boolean) -> Unit,
@@ -563,13 +563,13 @@ internal const val SearchFilterRateSteps = 10
 private val previewSearchResults = persistentListOf(
     GroupedSearchResult(gameID = PreviewDeal.gameID, cheapestDeal = PreviewDeal, totalDealCount = 5),
     GroupedSearchResult(
-        gameID = 222,
-        cheapestDeal = PreviewDeal.copy(dealID = "deal-2", title = "Hollow Knight", salePriceDenominated = "$7.49", gameID = 222),
+        gameID = "222",
+        cheapestDeal = PreviewDeal.copy(dealID = "deal-2", title = "Hollow Knight", salePriceDenominated = "$7.49", gameID = "222"),
         totalDealCount = 1,
     ),
     GroupedSearchResult(
-        gameID = 333,
-        cheapestDeal = PreviewDeal.copy(dealID = "deal-3", title = "Stardew Valley", salePriceDenominated = "$8.99", gameID = 333),
+        gameID = "333",
+        cheapestDeal = PreviewDeal.copy(dealID = "deal-3", title = "Stardew Valley", salePriceDenominated = "$8.99", gameID = "333"),
         totalDealCount = 3,
     ),
 )
@@ -583,7 +583,7 @@ private fun SearchScreenContent_Results_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
-            favouriteIds = persistentSetOf(222),
+            favouriteIds = persistentSetOf("222"),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },
@@ -603,7 +603,7 @@ private fun SearchScreenContent_Results_Dark_Preview() {
             onShowFiltersChanged = {},
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
-            favouriteIds = persistentSetOf(222),
+            favouriteIds = persistentSetOf("222"),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },

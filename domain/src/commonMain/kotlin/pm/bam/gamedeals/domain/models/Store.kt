@@ -22,6 +22,15 @@ data class Store(
     val images: StoreImages,
 
     /**
+     * Source-neutral store icon URL, intended for UI that should not depend on the provider's
+     * image layout. The deal-source migration (epic #205) promoted this from a Phase-0 computed
+     * property to a stored, source-filled column in Phase 2a; the source mapper fills it
+     * (CheapShark from its [images] logo, ITAD blank until logos land in a later phase).
+     */
+    @SerialName("iconUrl")
+    val iconUrl: String = "",
+
+    /**
      * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
      *
      * The repository stamps this via the injected `Clock` plus the resource's TTL when adding
@@ -31,14 +40,6 @@ data class Store(
     @SerialName("expires")
     val expires: Long = 0L
 ) {
-    /**
-     * Source-neutral store icon URL, intended for UI that should not depend on the provider's
-     * image layout. Phase 0 derives it from the already-persisted [images] (so no Room column /
-     * schema migration is needed); the deal-source migration (epic #205) turns this into a stored,
-     * source-filled field. Not yet read by the UI in Phase 0.
-     */
-    val iconUrl: String
-        get() = images.logo
 
     @Immutable
     @Serializable

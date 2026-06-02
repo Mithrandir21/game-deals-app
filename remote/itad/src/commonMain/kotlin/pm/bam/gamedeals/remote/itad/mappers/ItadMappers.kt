@@ -34,6 +34,7 @@ internal fun RemoteItadShop.toStore(): Store =
         storeName = title,
         isActive = true,
         images = Store.StoreImages(banner = "", logo = "", icon = ""),
+        iconUrl = "",
     )
 
 internal fun RemoteItadShop.toItadShop(): ItadShop =

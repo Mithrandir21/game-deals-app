@@ -230,12 +230,12 @@ private fun DealRow(
 @Composable
 private fun StoreDeals(
     deals: ImmutableList<Deal>,
-    favouriteIds: ImmutableSet<Int>,
+    favouriteIds: ImmutableSet<String>,
     dealDetails: DealBottomSheetData? = null,
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
-    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
@@ -343,14 +343,14 @@ private val previewDealsList = persistentListOf(
         title = "Hollow Knight",
         salePriceDenominated = "$7.49",
         normalPriceDenominated = "$14.99",
-        gameID = 222,
+        gameID = "222",
     ),
     PreviewDeal.copy(
         dealID = "deal-3",
         title = "Stardew Valley",
         salePriceDenominated = "$8.99",
         normalPriceDenominated = "$14.99",
-        gameID = 333,
+        gameID = "333",
     ),
 )
 
@@ -360,7 +360,7 @@ private fun StoreDeals_Success_Preview() {
     GameDealsTheme {
         StoreDeals(
             deals = previewDealsList,
-            favouriteIds = persistentSetOf(222), // marks Hollow Knight as favourited
+            favouriteIds = persistentSetOf("222"), // marks Hollow Knight as favourited
             storeDetails = PreviewStore,
             onBack = {},
             onLoadDealDetails = { _, _, _, _, _, _ -> },
@@ -378,7 +378,7 @@ private fun StoreDeals_Success_Dark_Preview() {
     GameDealsTheme(darkTheme = true) {
         StoreDeals(
             deals = previewDealsList,
-            favouriteIds = persistentSetOf(222),
+            favouriteIds = persistentSetOf("222"),
             storeDetails = PreviewStore,
             onBack = {},
             onLoadDealDetails = { _, _, _, _, _, _ -> },

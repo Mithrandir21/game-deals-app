@@ -16,7 +16,7 @@ internal fun RemoteDeal.toDeal(currencyTransformation: CurrencyTransformation): 
         title = title,
         metacriticLink = metacriticLink,
         storeID = storeID,
-        gameID = gameID,
+        gameID = gameID.toString(),
         salePriceValue = salePrice,
         salePriceDenominated = currencyTransformation.valueToDenominated(salePrice),
         normalPriceValue = normalPrice,
@@ -32,6 +32,7 @@ internal fun RemoteDeal.toDeal(currencyTransformation: CurrencyTransformation): 
         lastChange = lastChange,
         dealRating = dealRating,
         thumb = thumb,
+        url = cheapsharkDealRedirectUrl(dealID),
     )
 
 internal fun RemoteDealDetails.RemoteCheapestPrice.toCheapestPrice(
@@ -65,7 +66,7 @@ internal fun RemoteDealDetails.RemoteGameInfo.toGameInfo(
 ): DealDetails.GameInfo =
     DealDetails.GameInfo(
         storeID = storeID,
-        gameID = gameID,
+        gameID = gameID.toString(),
         name = name,
         steamAppID = steamAppID,
         salePriceValue = salePrice,

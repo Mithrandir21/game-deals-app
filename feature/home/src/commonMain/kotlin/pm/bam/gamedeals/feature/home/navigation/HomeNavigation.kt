@@ -8,7 +8,7 @@ import pm.bam.gamedeals.feature.home.ui.HomeScreen
 
 fun NavGraphBuilder.homeScreen(
     goToSearch: () -> Unit,
-    goToGame: (gameId: Int) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToStore: (storeId: Int) -> Unit,
     goToGiveaway: () -> Unit,
     goToFavourites: () -> Unit,

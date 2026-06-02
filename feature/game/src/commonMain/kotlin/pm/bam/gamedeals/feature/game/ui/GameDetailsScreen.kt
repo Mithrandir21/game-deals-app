@@ -142,7 +142,7 @@ import kotlin.time.Instant
 internal fun GameDetailsScreen(
     onBack: () -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
-    onViewDealsClick: (cheapsharkGameId: Int) -> Unit = {},
+    onViewDealsClick: (gameId: String) -> Unit = {},
     onSearchDealsByTitle: (title: String) -> Unit = {},
     viewModel: GameDetailsViewModel = koinViewModel(),
 ) {
@@ -152,7 +152,7 @@ internal fun GameDetailsScreen(
     val onDealsCtaClick: () -> Unit = {
         scope.launch {
             when (val action = viewModel.resolveDealsAction()) {
-                is GameDetailsViewModel.DealsAction.OpenGame -> onViewDealsClick(action.cheapsharkGameId)
+                is GameDetailsViewModel.DealsAction.OpenGame -> onViewDealsClick(action.gameId)
                 is GameDetailsViewModel.DealsAction.SearchByTitle -> onSearchDealsByTitle(action.title)
                 null -> Unit
             }

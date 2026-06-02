@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
 data class Game(
     @PrimaryKey
     @SerialName("gameID")
-    val gameID: Int,
+    val gameID: String,
     @SerialName("steamAppID")
     val steamAppID: Int? = null,
     @SerialName("cheapestValue")

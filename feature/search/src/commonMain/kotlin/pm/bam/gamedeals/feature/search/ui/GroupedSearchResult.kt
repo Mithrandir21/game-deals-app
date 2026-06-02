@@ -12,7 +12,7 @@ import pm.bam.gamedeals.domain.models.Deal
  */
 @Immutable
 internal data class GroupedSearchResult(
-    val gameID: Int,
+    val gameID: String,
     val cheapestDeal: Deal,
     val totalDealCount: Int,
 )
@@ -27,7 +27,7 @@ internal data class GroupedSearchResult(
 internal fun List<Deal>.groupByGame(): List<GroupedSearchResult> {
     if (isEmpty()) return emptyList()
 
-    val groups = linkedMapOf<Int, MutableList<Deal>>()
+    val groups = linkedMapOf<String, MutableList<Deal>>()
     for (deal in this) {
         groups.getOrPut(deal.gameID) { mutableListOf() }.add(deal)
     }

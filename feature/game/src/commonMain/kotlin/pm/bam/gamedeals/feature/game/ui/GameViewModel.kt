@@ -47,7 +47,7 @@ internal class GameViewModel(
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
-    private val gameIdFlow = MutableStateFlow(savedStateHandle.get<Int>("gameId"))
+    private val gameIdFlow = MutableStateFlow(savedStateHandle.get<String>("gameId"))
 
     val isFavourite: StateFlow<Boolean> = gameIdFlow
         .flatMapLatest { id ->
@@ -122,7 +122,7 @@ internal class GameViewModel(
         events.tryEmit(GameUiEvent.ShareDeal(text))
     }
 
-    private fun loadGameDetailsFlow(gameId: Int) =
+    private fun loadGameDetailsFlow(gameId: String) =
         flowOf(gameId)
             .flatMapLatest { gamesRepository.getGameDetails(it).toFlow() }
             .flatMapLatest { details ->
