@@ -12,12 +12,17 @@ import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildExactNameLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildIgdbIdLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildNewReleasesQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchCandidatesQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
@@ -452,6 +457,34 @@ class IgdbSourceImplTest {
         assertEquals("""a\\\"b""", escapeApicalypseString("""a\"b"""))
     }
 
+    @Test
+    fun fetchNewReleases_posts_recent_releases_query_to_games_and_maps_to_releases() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = NEW_RELEASES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchNewReleases()
+
+        // The cover-less row is dropped by the mapper's mapNotNull; the first maps to a Release with
+        // a CoverBig image URL built from the image_id, and date = first_release_date (Unix seconds).
+        assertEquals(
+            listOf(Release(title = "Some Game", date = 1_700_000_000, image = igdbImageUrl("abc123", IgdbImageSize.CoverBig))),
+            result,
+        )
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(
+            buildNewReleasesQuery(FIXED_NOW_MS / 1000, IgdbSourceImpl.NEW_RELEASES_LIMIT),
+            (request.body as TextContent).text,
+        )
+    }
+
     private fun rig(
         recorded: MutableList<HttpRequestData>,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
@@ -464,6 +497,7 @@ class IgdbSourceImplTest {
             logger = logger,
             igdbGamesApi = IgdbGamesApi(client),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            clock = Clock { FIXED_NOW_MS },
         )
     }
 
@@ -471,6 +505,14 @@ class IgdbSourceImplTest {
         const val STEAM_ID = 1240440
         const val IGDB_ID = 3151L
         const val TITLE = "Hollow Knight"
+        const val FIXED_NOW_MS = 1_700_000_000_000L
+
+        // language=JSON — IGDB always returns `id` even when not in `fields`. The cover-less second
+        // row exercises the mapper's mapNotNull filter.
+        const val NEW_RELEASES_BODY = """[
+            {"id":501,"name":"Some Game","cover":{"id":7,"image_id":"abc123"},"first_release_date":1700000000},
+            {"id":502,"name":"No Cover Game","first_release_date":1699000000}
+        ]"""
 
         // language=JSON
         const val THREE_CANDIDATES_BODY = """[

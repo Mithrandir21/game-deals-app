@@ -26,7 +26,6 @@ val cheapsharkRemoteModule = module {
             get(),
             get(),
             get(),
-            get(),
             get()
         )
     }

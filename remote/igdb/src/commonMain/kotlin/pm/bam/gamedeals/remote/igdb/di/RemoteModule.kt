@@ -10,5 +10,5 @@ val IGDB_QUALIFIER = named("igdb")
 val IGDB_TOKEN_QUALIFIER = named("igdb.token")
 
 val igdbRemoteModule = module {
-    single<IgdbSource> { IgdbSourceImpl(get(), get(), get()) }
+    single<IgdbSource> { IgdbSourceImpl(get(), get(), get(), get()) }
 }
