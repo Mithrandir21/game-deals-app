@@ -122,14 +122,15 @@ internal class HomeViewModel(
                             dealGameId = deal.gameID,
                             dealTitle = deal.title,
                             dealPriceDenominated = deal.salePriceDenominated,
+                            dealUrl = deal.url,
                         )
                     }
                 }
         }
     }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated)
+    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
+        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 
     fun toggleFavouriteFromDeal(data: DealBottomSheetData.DealDetailsData) {
@@ -151,7 +152,7 @@ internal class HomeViewModel(
             gameTitle = data.gameName,
             salePriceDenominated = data.gameSalesPriceDenominated,
             storeName = data.store.storeName,
-            dealId = data.dealId,
+            dealUrl = data.dealUrl,
         )
         info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
         events.tryEmit(HomeUiEvent.ShareDeal(text))

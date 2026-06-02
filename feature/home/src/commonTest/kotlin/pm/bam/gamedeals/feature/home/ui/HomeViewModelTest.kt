@@ -401,6 +401,7 @@ class HomeViewModelTest : MainDispatcherTest() {
             gameId = 42,
             gameName = "Halo",
             dealId = "deal-1",
+            dealUrl = "https://deal-url",
             gameSalesPriceDenominated = "$9.99",
         )
         viewModel.onShareDealClicked(data)
@@ -414,7 +415,7 @@ class HomeViewModelTest : MainDispatcherTest() {
                 gameTitle = "Halo",
                 salePriceDenominated = "$9.99",
                 storeName = "Steam",
-                dealId = "deal-1",
+                dealUrl = "https://deal-url",
             )
         }
     }
@@ -438,6 +439,7 @@ class HomeViewModelTest : MainDispatcherTest() {
             dealGameId = 42,
             dealTitle = "Halo",
             dealPriceDenominated = "$9.99",
+            dealUrl = "https://deal-url",
         )
         advanceUntilIdle()
 

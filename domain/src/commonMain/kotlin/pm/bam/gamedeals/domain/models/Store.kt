@@ -31,6 +31,15 @@ data class Store(
     @SerialName("expires")
     val expires: Long = 0L
 ) {
+    /**
+     * Source-neutral store icon URL, intended for UI that should not depend on the provider's
+     * image layout. Phase 0 derives it from the already-persisted [images] (so no Room column /
+     * schema migration is needed); the deal-source migration (epic #205) turns this into a stored,
+     * source-filled field. Not yet read by the UI in Phase 0.
+     */
+    val iconUrl: String
+        get() = images.logo
+
     @Immutable
     @Serializable
     data class StoreImages(

@@ -32,6 +32,7 @@ fun gameDeal(
     retailPriceValue: Double = 19.99,
     retailPriceDenominated: String = "$19.99",
     savings: Int = 50,
+    url: String = "",
 ) = GameDetails.GameDeal(
     storeID = storeID,
     dealID = dealID,
@@ -40,6 +41,7 @@ fun gameDeal(
     retailPriceValue = retailPriceValue,
     retailPriceDenominated = retailPriceDenominated,
     savings = savings,
+    url = url,
 )
 
 fun gameInfo(
@@ -73,6 +75,7 @@ fun cheaperStore(
     salePriceDenominated: String = "$4.99",
     retailPriceValue: Double = 19.99,
     retailPriceDenominated: String = "$19.99",
+    url: String = "",
 ) = DealDetails.CheaperStore(
     dealID = dealID,
     storeID = storeID,
@@ -80,6 +83,7 @@ fun cheaperStore(
     salePriceDenominated = salePriceDenominated,
     retailPriceValue = retailPriceValue,
     retailPriceDenominated = retailPriceDenominated,
+    url = url,
 )
 
 fun cheapestPrice(

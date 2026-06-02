@@ -54,7 +54,6 @@ import pm.bam.gamedeals.common.ui.PreviewDealCheapestPrice
 import pm.bam.gamedeals.common.ui.PreviewDealGameInfo
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
@@ -257,7 +256,7 @@ private fun GameDetails(
                     )
                     Row(
                         modifier = Modifier
-                            .clickable(role = Role.Button) { goToWeb(cheapsharkDealRedirectUrl(it.cheaperStore.dealID), data.gameName) }
+                            .clickable(role = Role.Button) { goToWeb(it.cheaperStore.url, data.gameName) }
                             .semantics(mergeDescendants = true) { contentDescription = cheaperStoreRowCd },
                     ) {
                         AsyncImage(
@@ -326,7 +325,7 @@ private fun GameDetails(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.CenterHorizontally),
-                    onClick = { goToWeb(cheapsharkDealRedirectUrl(data.dealId), data.gameName) }) {
+                    onClick = { goToWeb(data.dealUrl, data.gameName) }) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }
                 OutlinedButton(

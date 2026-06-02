@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.models.Release
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
@@ -17,7 +17,7 @@ interface ReleasesRepository {
 internal class ReleasesRepositoryImpl(
     private val logger: Logger,
     private val releasesDao: ReleasesDao,
-    private val cheapsharkSource: CheapsharkSource
+    private val dealsSource: DealsSource
 ) : ReleasesRepository {
 
     override fun observeReleases(): Flow<List<Release>> =
@@ -26,6 +26,6 @@ internal class ReleasesRepositoryImpl(
             .onError { fatal(logger, it) }
 
     override suspend fun refreshReleases() {
-        releasesDao.replaceAll(cheapsharkSource.fetchReleases())
+        releasesDao.replaceAll(dealsSource.fetchReleases())
     }
 }

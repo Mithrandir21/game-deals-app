@@ -15,7 +15,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -27,12 +27,12 @@ class StoresRepositoryTest {
 
     private val logger: Logger = TestingLoggingListener()
     private val storesDao: StoresDao = mock(MockMode.autoUnit)
-    private val cheapsharkSource: CheapsharkSource = mock(MockMode.autoUnit)
+    private val dealsSource: DealsSource = mock(MockMode.autoUnit)
 
     private val now = 1_000_000L
     private val clock = Clock { now }
 
-    private val impl = StoresRepositoryImpl(logger, storesDao, cheapsharkSource, clock)
+    private val impl = StoresRepositoryImpl(logger, storesDao, dealsSource, clock)
 
     @Test
     fun observe_stores_fresh_cache_does_not_refresh() = runTest {
@@ -44,7 +44,7 @@ class StoresRepositoryTest {
         val result = impl.observeStores().first()
         assertTrue(result.isEmpty())
 
-        verifySuspend(exactly(0)) { cheapsharkSource.fetchStores() }
+        verifySuspend(exactly(0)) { dealsSource.fetchStores() }
         verify(exactly(1)) { storesDao.observeAllStores() }
         verifySuspend(exactly(1)) { storesDao.getAllStores() }
         verifySuspend(exactly(0)) { storesDao.addStores(*anyVarargs<Store>()) }
@@ -56,12 +56,12 @@ class StoresRepositoryTest {
         val fetched = store(storeID = 99)
         val expectedExpires = now + millisInHour * 8
 
-        everySuspend { cheapsharkSource.fetchStores() } returns listOf(fetched)
+        everySuspend { dealsSource.fetchStores() } returns listOf(fetched)
         everySuspend { storesDao.getAllStores() } returns listOf(expired)
 
         impl.refreshStores()
 
-        verifySuspend(exactly(1)) { cheapsharkSource.fetchStores() }
+        verifySuspend(exactly(1)) { dealsSource.fetchStores() }
         verifySuspend(exactly(1)) { storesDao.getAllStores() }
         verifySuspend(exactly(1)) {
             storesDao.addStores(fetched.copy(expires = expectedExpires))
@@ -76,7 +76,7 @@ class StoresRepositoryTest {
 
         impl.refreshStores()
 
-        verifySuspend(exactly(0)) { cheapsharkSource.fetchStores() }
+        verifySuspend(exactly(0)) { dealsSource.fetchStores() }
         verifySuspend(exactly(1)) { storesDao.getAllStores() }
         verifySuspend(exactly(0)) { storesDao.addStores(*anyVarargs<Store>()) }
     }
@@ -86,11 +86,11 @@ class StoresRepositoryTest {
         val fetched = store(storeID = 99)
         val expectedExpires = now + millisInHour * 8
 
-        everySuspend { cheapsharkSource.fetchStores() } returns listOf(fetched)
+        everySuspend { dealsSource.fetchStores() } returns listOf(fetched)
 
         impl.refreshStores(force = true)
 
-        verifySuspend(exactly(1)) { cheapsharkSource.fetchStores() }
+        verifySuspend(exactly(1)) { dealsSource.fetchStores() }
         verifySuspend(exactly(0)) { storesDao.getAllStores() }
         verifySuspend(exactly(1)) {
             storesDao.addStores(fetched.copy(expires = expectedExpires))

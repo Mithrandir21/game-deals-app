@@ -8,7 +8,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>
@@ -28,7 +28,7 @@ interface GamesRepository {
 
 internal class GamesRepositoryImpl(
     private val gamesDao: GamesDao,
-    private val cheapsharkSource: CheapsharkSource
+    private val dealsSource: DealsSource
 ) : GamesRepository {
 
     override fun observeGames(): Flow<List<Game>> =
@@ -36,28 +36,28 @@ internal class GamesRepositoryImpl(
             .onStart { refreshGames() }
 
     override suspend fun searchGames(query: String): List<Game> =
-        cheapsharkSource.fetchGames(query)
+        dealsSource.fetchGames(query)
 
     @ExperimentalSerializationApi
     override suspend fun searchGames(searchParameters: SearchParameters): List<Deal> =
-        cheapsharkSource.fetchDealsForStore(searchParameters)
+        dealsSource.fetchDealsForStore(searchParameters)
 
     @ExperimentalSerializationApi
     override suspend fun getReleaseDeal(gameTitle: String): Deal? =
-        cheapsharkSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
+        dealsSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
             .firstOrNull()
 
     override suspend fun getGameDetails(dealId: Int): GameDetails =
-        cheapsharkSource.fetchGameDetails(dealId.toString())
+        dealsSource.fetchGameDetails(dealId.toString())
 
     override suspend fun refreshGames() {
-        cheapsharkSource.fetchGames("")
+        dealsSource.fetchGames("")
             .let { gamesDao.addGames(*it.toTypedArray()) }
     }
 
     override suspend fun findCheapsharkGameIdBySteamAppId(steamAppId: Int, title: String): Int? =
         runCatching {
-            cheapsharkSource.fetchGames(title = title, steamAppID = steamAppId, limit = 1)
+            dealsSource.fetchGames(title = title, steamAppID = steamAppId, limit = 1)
                 .firstOrNull()
                 ?.gameID
         }.getOrNull()

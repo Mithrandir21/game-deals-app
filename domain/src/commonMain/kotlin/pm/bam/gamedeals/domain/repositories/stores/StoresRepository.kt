@@ -6,7 +6,7 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
@@ -22,7 +22,7 @@ interface StoresRepository {
 internal class StoresRepositoryImpl(
     private val logger: Logger,
     private val storesDao: StoresDao,
-    private val cheapsharkSource: CheapsharkSource,
+    private val dealsSource: DealsSource,
     private val clock: Clock,
 ) : StoresRepository {
 
@@ -32,7 +32,7 @@ internal class StoresRepositoryImpl(
         expiresAtMillis = { it.expires },
         refresh = {
             val expiresAt = clock.nowMillis() + STORES_TTL_MILLIS
-            cheapsharkSource.fetchStores()
+            dealsSource.fetchStores()
                 .map { it.copy(expires = expiresAt) }
                 .let { storesDao.addStores(*it.toTypedArray()) }
         }
