@@ -52,6 +52,8 @@ import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
+import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 @Suppress("FunctionName", "unused")
@@ -75,6 +77,8 @@ private fun bootstrapKoin() {
         }
         // IGDB creds come from Info.plist keys IGDBClientId / IGDBClientSecret
         single { IgdbCredentials(infoPlistString("IGDBClientId"), infoPlistString("IGDBClientSecret")) }
+        // ITAD key comes from Info.plist key ITADApiKey (Secrets.xcconfig: ITAD_API_KEY). Epic #205.
+        single { ItadCredentials(infoPlistString("ITADApiKey")) }
     }
 
     startKoin {
@@ -92,6 +96,9 @@ private fun bootstrapKoin() {
             gamerpowerRemoteModule,
             igdbNetworkModule,
             igdbRemoteModule,
+            // ITAD (#205 Phase 1): credential + network wiring only; itadRemoteModule (the DealsSource
+            // binding) is intentionally not registered yet — CheapShark stays the active source.
+            itadNetworkModule,
             homeModule,
             searchModule,
             gameModule,

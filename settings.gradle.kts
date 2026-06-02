@@ -30,6 +30,7 @@ include(":remote")
 include(":remote:gamerpower")
 include(":remote:cheapshark")
 include(":remote:igdb")
+include(":remote:itad")
 include(":domain")
 
 include(":feature:store")

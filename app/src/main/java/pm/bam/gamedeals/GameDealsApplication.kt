@@ -41,6 +41,8 @@ import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
 import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
+import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 class GameDealsApplication : Application(), SingletonImageLoader.Factory {
@@ -79,6 +81,11 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 igdbNetworkModule,
                 igdbRemoteModule,
                 module { single { IgdbCredentials(BuildConfig.IGDB_CLIENT_ID, BuildConfig.IGDB_CLIENT_SECRET) } },
+                // ITAD (epic #205, Phase 1): credential + network wiring only. itadRemoteModule (the
+                // DealsSource binding) is intentionally NOT registered yet — CheapShark stays the active
+                // source until Phase 2 swaps the DI.
+                itadNetworkModule,
+                module { single { ItadCredentials(BuildConfig.ITAD_API_KEY) } },
                 appModule,
                 homeModule,
                 gameModule,

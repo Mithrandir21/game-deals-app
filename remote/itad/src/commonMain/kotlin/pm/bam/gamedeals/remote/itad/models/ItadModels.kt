@@ -1,0 +1,56 @@
+package pm.bam.gamedeals.remote.itad.models
+
+import kotlinx.collections.immutable.ImmutableList
+
+/**
+ * Clean, ITAD-shaped domain models that the module's mappers produce from the transport DTOs.
+ *
+ * Phase 1 (#205) keeps these separate from the app's CheapShark-shaped domain models (`Deal`,
+ * `Game`, …) on purpose: ITAD identifies games by UUID and exposes a different shape, and the
+ * app's domain models migrate to UUIDs in Phase 2. Until then these prove the fetch + map path
+ * and are consumed by the module's tests; Phase 2/3 bridge them into the (migrated) domain.
+ */
+
+data class ItadMoney(
+    val amount: Double,
+    val currency: String,
+)
+
+data class ItadShop(
+    val id: Int,
+    val name: String,
+)
+
+data class ItadGameSearchResult(
+    val id: String, // ITAD game UUID
+    val title: String,
+    val slug: String? = null,
+    /** Populated only when the game was resolved via a Steam appid lookup (the IGDB bridge). */
+    val steamAppId: Int? = null,
+    val boxart: String? = null,
+)
+
+data class ItadDeal(
+    val gameId: String, // ITAD game UUID
+    val gameTitle: String,
+    val shop: ItadShop,
+    val price: ItadMoney,
+    val regular: ItadMoney?,
+    val cutPercent: Int,
+    val url: String,
+    val storeLow: ItadMoney? = null,
+)
+
+data class ItadGamePrices(
+    val gameId: String,
+    val historyLowAll: ItadMoney?,
+    val deals: ImmutableList<ItadDeal>,
+)
+
+data class ItadPriceHistoryEntry(
+    val timestamp: String, // ISO-8601; parsing/formatting deferred to the consumer (Phase 3)
+    val shop: ItadShop,
+    val price: ItadMoney,
+    val regular: ItadMoney?,
+    val cutPercent: Int,
+)
