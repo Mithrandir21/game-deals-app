@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteGame
 import pm.bam.gamedeals.remote.cheapshark.models.RemoteGameDetails
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
@@ -34,6 +35,7 @@ internal fun RemoteGameDetails.RemoteGameDeal.toGameDeal(
         retailPriceValue = retailPrice,
         retailPriceDenominated = currencyTransformation.valueToDenominated(retailPrice),
         savings = savings.roundToInt(),
+        url = cheapsharkDealRedirectUrl(dealID),
     )
 
 internal fun RemoteGameDetails.RemoteGameCheapestPriceEver.toGameCheapestPriceEver(

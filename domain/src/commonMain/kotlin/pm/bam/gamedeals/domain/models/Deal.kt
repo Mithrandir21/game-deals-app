@@ -69,7 +69,17 @@ data class Deal(
      */
     @SerialName("expires")
     val expires: Long = 0L
-)
+) {
+    /**
+     * Source-neutral deep link to this deal at its store, read by the UI and share text.
+     *
+     * Phase 0 derives it from the persisted [dealID] so no Room column (and therefore no schema
+     * migration) is needed; the deal-source migration (epic #205) replaces this with a stored,
+     * source-filled field once the real schema migration lands.
+     */
+    val url: String
+        get() = cheapsharkDealRedirectUrl(dealID)
+}
 
 @Immutable
 @Serializable
@@ -135,7 +145,9 @@ data class DealDetails(
         @SerialName("retailPrice")
         val retailPriceValue: Double,
         @SerialName("retailPriceDenominated")
-        val retailPriceDenominated: String
+        val retailPriceDenominated: String,
+        @SerialName("url")
+        val url: String = ""
     )
 
     @Immutable

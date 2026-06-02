@@ -253,7 +253,7 @@ class GameViewModelTest : MainDispatcherTest() {
 
         val info = GameDetails.GameInfo(title = "Halo", steamAppID = null, thumb = "thumb")
         val storeValue = store(storeName = "Steam")
-        val deal = gameDeal(dealID = "deal-1", priceDenominated = "$9.99")
+        val deal = gameDeal(dealID = "deal-1", priceDenominated = "$9.99", url = "https://deal-url")
 
         viewModel.onShareDealClicked(info, storeValue, deal)
         runCurrent()
@@ -266,7 +266,7 @@ class GameViewModelTest : MainDispatcherTest() {
                 gameTitle = "Halo",
                 salePriceDenominated = "$9.99",
                 storeName = "Steam",
-                dealId = "deal-1",
+                dealUrl = "https://deal-url",
             )
         }
     }

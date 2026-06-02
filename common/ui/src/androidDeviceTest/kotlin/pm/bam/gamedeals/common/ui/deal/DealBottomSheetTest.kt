@@ -33,7 +33,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_det
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 
 class DealBottomSheetTest {
 
@@ -167,9 +166,11 @@ class DealBottomSheetTest {
         }
 
         val cheaperStoreDetailsDealId = "DealID"
+        val cheaperStoreUrl = "https://example.com/cheaper-store-deal"
         val cheaperStoreDetails: DealDetails.CheaperStore = mockk {
             every { this@mockk.dealID } returns cheaperStoreDetailsDealId
             every { this@mockk.salePriceDenominated } returns salePriceDenominated
+            every { this@mockk.url } returns cheaperStoreUrl
         }
 
         val cheapestPriceDenominated = "Cheapest Price"
@@ -180,11 +181,13 @@ class DealBottomSheetTest {
         }
 
 
+        val mainDealUrl = "https://example.com/main-deal"
         val dealDetailsData = DealBottomSheetData.DealDetailsData(
             store = store,
             gameId = gameId,
             gameName = gameName,
             dealId = dealId,
+            dealUrl = mainDealUrl,
             gameSalesPriceDenominated = gamePrice,
             gameInfo = gameInfo,
             cheaperStores = persistentListOf(StoreCheaperStorePair(store = cheaperStore, cheaperStore = cheaperStoreDetails)),
@@ -225,12 +228,12 @@ class DealBottomSheetTest {
         composeTestRule.onNode(hasContentDescription(cheaperStoreRowCd) and hasRole(Role.Button))
             .performClick()
 
-        verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(cheaperStoreDetailsDealId), gameName) }
+        verify(exactly = 1) { goToActions.invoke(cheaperStoreUrl, gameName) }
 
         composeTestRule.onNodeWithText(screenSemantics.goToDeal)
             .performClick()
 
-        verify(exactly = 1) { goToActions.invoke(cheapsharkDealRedirectUrl(dealId), gameName) }
+        verify(exactly = 1) { goToActions.invoke(mainDealUrl, gameName) }
     }
 
     @Test

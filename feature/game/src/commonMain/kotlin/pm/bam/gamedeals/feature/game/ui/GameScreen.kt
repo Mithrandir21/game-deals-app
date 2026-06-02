@@ -71,7 +71,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.models.cheapsharkDealRedirectUrl
 import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_on_date_label
@@ -331,7 +330,7 @@ private fun StoreGameDealRow(
         deal.savings,
         deal.priceDenominated,
     )
-    Card(onClick = { goToWeb(cheapsharkDealRedirectUrl(deal.dealID), gameInfo.title) }) {
+    Card(onClick = { goToWeb(deal.url, gameInfo.title) }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

@@ -9,16 +9,18 @@ import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 
 /**
- * Single deep facade over the CheapShark remote API.
+ * Source-neutral facade over the remote deals provider.
  *
- * Encapsulates Retrofit `*Api` wiring, transport DTOs, mappers, logging,
- * and exception transformation so that callers (repositories, mediators)
- * only depend on this interface and domain models.
+ * Encapsulates the HTTP client wiring, transport DTOs, mappers, logging, and
+ * exception transformation so that callers (repositories, mediators) only
+ * depend on this interface and domain models — never on a specific provider.
  *
- * The implementation lives in `:remote:cheapshark`; this interface is the
- * domain-side port and only references domain types.
+ * The current implementation (`CheapsharkSourceImpl`) lives in
+ * `:remote:cheapshark`; this interface is the domain-side port and only
+ * references domain types, so the provider can be swapped (e.g. to ITAD)
+ * without touching callers.
  */
-interface CheapsharkSource {
+interface DealsSource {
 
     suspend fun fetchDealsForStore(query: SearchParameters? = null): List<Deal>
 

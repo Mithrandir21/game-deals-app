@@ -79,6 +79,8 @@ data class GameDetails(
         @SerialName("retailPriceDenominated")
         val retailPriceDenominated: String,
         @SerialName("savings")
-        val savings: Int
+        val savings: Int,
+        @SerialName("url")
+        val url: String = ""
     )
 }

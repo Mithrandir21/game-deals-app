@@ -8,12 +8,12 @@ class DefaultDealShareTextBuilderTest {
     private val builder: DealShareTextBuilder = DefaultDealShareTextBuilder()
 
     @Test
-    fun build_contains_title_price_store_and_redirect_url() {
+    fun build_contains_title_price_store_and_url() {
         val text = builder.build(
             gameTitle = "Hollow Knight",
             salePriceDenominated = "$7.49",
             storeName = "Steam",
-            dealId = "abc123",
+            dealUrl = "https://www.cheapshark.com/redirect?dealID=abc123",
         )
 
         assertEquals(

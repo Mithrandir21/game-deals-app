@@ -9,7 +9,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.cheapshark.api.DealsApi
 import pm.bam.gamedeals.remote.cheapshark.api.GamesApi
@@ -37,7 +37,7 @@ internal class CheapsharkSourceImpl(
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
     private val currencyTransformation: CurrencyTransformation,
     private val datetimeFormatter: DateTimeFormatter
-) : CheapsharkSource {
+) : DealsSource {
 
     override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> =
         dealsApi.getDeals(query?.toRemoteDealsQuery() ?: RemoteDealsQuery())

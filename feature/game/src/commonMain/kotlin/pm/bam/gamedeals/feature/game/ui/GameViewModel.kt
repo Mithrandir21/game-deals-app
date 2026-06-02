@@ -116,7 +116,7 @@ internal class GameViewModel(
             gameTitle = gameInfo.title,
             salePriceDenominated = deal.priceDenominated,
             storeName = store.storeName,
-            dealId = deal.dealID,
+            dealUrl = deal.url,
         )
         info(logger, tag = "deal_shared") { "dealId=${deal.dealID} store=${store.storeName}" }
         events.tryEmit(GameUiEvent.ShareDeal(text))

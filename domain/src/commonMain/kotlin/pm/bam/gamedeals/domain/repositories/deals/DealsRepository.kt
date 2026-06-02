@@ -12,7 +12,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
@@ -33,7 +33,7 @@ internal class DealsRepositoryImpl(
     private val logger: Logger,
     private val dealsDao: DealsDao,
     private val domainDatabase: DomainDatabase,
-    private val cheapsharkSource: CheapsharkSource,
+    private val dealsSource: DealsSource,
     private val clock: Clock,
 ) : DealsRepository {
 
@@ -62,7 +62,7 @@ internal class DealsRepositoryImpl(
     }
 
     override suspend fun getDeal(dealId: String): DealDetails =
-        cheapsharkSource.fetchDealDetails(dealId)
+        dealsSource.fetchDealDetails(dealId)
 
     @OptIn(ExperimentalSerializationApi::class)
     override suspend fun refreshDeals(storeId: Int, force: Boolean) {
@@ -80,7 +80,7 @@ internal class DealsRepositoryImpl(
             domainDatabase.useWriterConnection { transactor ->
                 transactor.immediateTransaction {
                     dealsDao.clearDealsForStore(storeId)
-                    cheapsharkSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
+                    dealsSource.fetchDealsForStore(SearchParameters(storeID = storeId, pageSize = DEAL_PAGE_COUNT))
                         .map { it.copy(expires = expiresAt) }
                         .let { dealsDao.addDeals(*it.toTypedArray()) }
                 }

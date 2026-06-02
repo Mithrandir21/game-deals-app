@@ -2,7 +2,7 @@ package pm.bam.gamedeals.remote.cheapshark.di
 
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.remote.cheapshark.CheapsharkSourceImpl
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformation
 import pm.bam.gamedeals.remote.cheapshark.transformations.CurrencyTransformationImpl
@@ -18,7 +18,7 @@ val cheapsharkRemoteModule = module {
         CurrencyTransformationImpl(get(CURRENCY_DENOMINATION_QUALIFIER))
     }
 
-    single<CheapsharkSource> {
+    single<DealsSource> {
         CheapsharkSourceImpl(
             get(),
             get(),

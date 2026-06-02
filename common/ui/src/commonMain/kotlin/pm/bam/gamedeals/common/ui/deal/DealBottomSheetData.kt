@@ -11,6 +11,7 @@ sealed class DealBottomSheetData(
     open val gameId: Int,
     open val gameName: String,
     open val dealId: String,
+    open val dealUrl: String,
     open val gameSalesPriceDenominated: String,
 ) {
     @Immutable
@@ -23,7 +24,8 @@ sealed class DealBottomSheetData(
         val gameInfo: DealDetails.GameInfo,
         val cheaperStores: ImmutableList<StoreCheaperStorePair>,
         val cheapestPrice: DealDetails.CheapestPrice?,
-    ) : DealBottomSheetData(store, gameId, gameName, dealId, gameSalesPriceDenominated)
+        override val dealUrl: String = "",
+    ) : DealBottomSheetData(store, gameId, gameName, dealId, dealUrl, gameSalesPriceDenominated)
 
     @Immutable
     data class DealDetailsLoading(
@@ -31,8 +33,9 @@ sealed class DealBottomSheetData(
         override val gameId: Int,
         override val gameName: String,
         override val dealId: String,
-        override val gameSalesPriceDenominated: String
-    ) : DealBottomSheetData(store, gameId, gameName, dealId, gameSalesPriceDenominated)
+        override val gameSalesPriceDenominated: String,
+        override val dealUrl: String = "",
+    ) : DealBottomSheetData(store, gameId, gameName, dealId, dealUrl, gameSalesPriceDenominated)
 
     @Immutable
     data class DealDetailsError(
@@ -40,6 +43,7 @@ sealed class DealBottomSheetData(
         override val gameId: Int,
         override val gameName: String,
         override val dealId: String,
-        override val gameSalesPriceDenominated: String
-    ) : DealBottomSheetData(store, gameId, gameName, dealId, gameSalesPriceDenominated)
+        override val gameSalesPriceDenominated: String,
+        override val dealUrl: String = "",
+    ) : DealBottomSheetData(store, gameId, gameName, dealId, dealUrl, gameSalesPriceDenominated)
 }

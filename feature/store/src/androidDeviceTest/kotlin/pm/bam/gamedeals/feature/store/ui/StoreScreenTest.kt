@@ -110,7 +110,7 @@ class StoreScreenTest {
 
     @Test
     fun loadDealDetails() {
-        every { viewModel.loadDealDetails(any(), any(), any(), any(), any()) } just runs
+        every { viewModel.loadDealDetails(any(), any(), any(), any(), any(), any()) } just runs
 
         setupCompose()
 
@@ -120,7 +120,7 @@ class StoreScreenTest {
         verify(exactly = 1) { viewModel.deals }
         verify(exactly = 1) { viewModel.dealDetails }
         verify(exactly = 1) { viewModel.uiState }
-        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test

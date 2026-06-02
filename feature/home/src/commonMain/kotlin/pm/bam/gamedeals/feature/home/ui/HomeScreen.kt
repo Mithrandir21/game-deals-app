@@ -154,13 +154,14 @@ internal fun HomeScreen(
         favouriteIds = favouriteIds.value,
         favourites = favourites.value,
         dealDetails = dealDetails.value,
-        onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated ->
+        onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
             viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
                 dealGameId = dealGameId,
                 dealTitle = dealTitle,
                 dealPriceDenominated = dealPriceDenominated,
+                dealUrl = dealUrl,
             )
         },
         onViewStoreDeals = onViewStoreDeals,
@@ -188,7 +189,7 @@ internal fun HomeScreen(
 private fun StoreDealRow(
     deal: Deal,
     isFavourite: Boolean,
-    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit)
+    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit)
 ) {
     val rowCd = stringResource(
         if (isFavourite) Res.string.home_screen_store_deal_row_description_favourite
@@ -200,7 +201,7 @@ private fun StoreDealRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button) { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated) }
+            .clickable(role = Role.Button) { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) }
             .padding(bottom = GameDealsCustomTheme.spacing.small)
             .semantics(mergeDescendants = true) { contentDescription = rowCd },
         verticalAlignment = Alignment.CenterVertically
@@ -256,7 +257,7 @@ private fun HomeScreenContent(
     favouriteIds: ImmutableSet<Int>,
     favourites: kotlinx.collections.immutable.ImmutableList<FavouriteGame>,
     dealDetails: DealBottomSheetData?,
-    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
+    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
@@ -433,7 +434,8 @@ private fun HomeScreenContent(
                                 it.store.storeID,
                                 it.gameId,
                                 it.gameName,
-                                it.gameSalesPriceDenominated
+                                it.gameSalesPriceDenominated,
+                                it.dealUrl
                             )
                         }
                     }
@@ -746,7 +748,7 @@ private fun HomeScreenContent_Success_Preview() {
             favouriteIds = persistentSetOf(12345),
             favourites = previewFavourites,
             dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
@@ -773,7 +775,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             favouriteIds = persistentSetOf(12345),
             favourites = previewFavourites,
             dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
@@ -800,7 +802,7 @@ private fun HomeScreenContent_Loading_Preview() {
             favouriteIds = persistentSetOf(),
             favourites = persistentListOf(),
             dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
@@ -827,7 +829,7 @@ private fun HomeScreenContent_Error_Preview() {
             favouriteIds = persistentSetOf(),
             favourites = persistentListOf(),
             dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _ -> },
+            onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},

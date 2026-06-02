@@ -117,13 +117,14 @@ internal fun StoreScreen(
         storeDetails = store,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated ->
+        onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
             viewModel.loadDealDetails(
                 dealId = dealId,
                 dealStoreId = dealStoreId,
                 dealGameId = dealGameId,
                 dealTitle = dealTitle,
                 dealPriceDenominated = dealPriceDenominated,
+                dealUrl = dealUrl,
             )
         },
         onDismissDealDetails = { viewModel.dismissDealDetails() },
@@ -234,7 +235,7 @@ private fun StoreDeals(
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
-    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String) -> Unit,
+    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: Int, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
@@ -261,7 +262,7 @@ private fun StoreDeals(
                 key = { it.dealID }
             ) { deal ->
                 DealRow(deal, deal.gameID in favouriteIds) {
-                    onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated)
+                    onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url)
                 }
             }
         }
@@ -275,7 +276,7 @@ private fun StoreDeals(
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
             onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
-            onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated) } }
+            onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } }
         )
     }
 }
@@ -362,7 +363,7 @@ private fun StoreDeals_Success_Preview() {
             favouriteIds = persistentSetOf(222), // marks Hollow Knight as favourited
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _ -> },
+            onLoadDealDetails = { _, _, _, _, _, _ -> },
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},
@@ -380,7 +381,7 @@ private fun StoreDeals_Success_Dark_Preview() {
             favouriteIds = persistentSetOf(222),
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _ -> },
+            onLoadDealDetails = { _, _, _, _, _, _ -> },
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},
@@ -398,7 +399,7 @@ private fun StoreDeals_Empty_Preview() {
             favouriteIds = persistentSetOf(),
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _ -> },
+            onLoadDealDetails = { _, _, _, _, _, _ -> },
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},

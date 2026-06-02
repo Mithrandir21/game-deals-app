@@ -30,6 +30,7 @@ class DealDetailsController(
         dealGameId: Int,
         dealTitle: String,
         dealPriceDenominated: String,
+        dealUrl: String,
     ) {
         loadJob?.cancel()
         scope.launch {
@@ -40,6 +41,7 @@ class DealDetailsController(
                         gameId = dealGameId,
                         gameName = dealTitle,
                         dealId = dealId,
+                        dealUrl = dealUrl,
                         gameSalesPriceDenominated = dealPriceDenominated,
                     )
                 )
@@ -53,6 +55,7 @@ class DealDetailsController(
                         gameId = dealGameId,
                         gameName = dealTitle,
                         dealId = dealId,
+                        dealUrl = dealUrl,
                         gameSalesPriceDenominated = dealPriceDenominated,
                         gameInfo = dealDetails.gameInfo,
                         cheapestPrice = dealDetails.cheapestPrice,
@@ -71,6 +74,7 @@ class DealDetailsController(
                             gameId = dealGameId,
                             gameName = dealTitle,
                             dealId = dealId,
+                            dealUrl = dealUrl,
                             gameSalesPriceDenominated = dealPriceDenominated,
                         )
                     )

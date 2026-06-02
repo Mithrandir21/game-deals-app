@@ -26,7 +26,7 @@ import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
-import pm.bam.gamedeals.domain.source.CheapsharkSource
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -43,7 +43,7 @@ class DealsRepositoryTest {
 
     private val domainDatabase: DomainDatabase = mockk()
 
-    private val cheapsharkSource: CheapsharkSource = mockk()
+    private val dealsSource: DealsSource = mockk()
 
     private val now = 1_000_000L
     private val clock = Clock { now }
@@ -51,7 +51,7 @@ class DealsRepositoryTest {
     private val transactor: Transactor = mockk()
     private val txScope: TransactionScope<Unit> = mockk()
 
-    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, cheapsharkSource, clock)
+    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, dealsSource, clock)
 
     /**
      * Wires Room KMP's two-layer transaction API so the body inside
@@ -90,13 +90,13 @@ class DealsRepositoryTest {
         val id = "abc123"
         val details: DealDetails = mockk()
 
-        coEvery { cheapsharkSource.fetchDealDetails(id) } returns details
+        coEvery { dealsSource.fetchDealDetails(id) } returns details
 
 
         val result = impl.getDeal(id)
         assertEquals(details, result)
 
-        coVerify(exactly = 1) { cheapsharkSource.fetchDealDetails(id) }
+        coVerify(exactly = 1) { dealsSource.fetchDealDetails(id) }
     }
 
 
@@ -110,7 +110,7 @@ class DealsRepositoryTest {
         stubTransaction()
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
-        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
+        coEvery { dealsSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
         coEvery { dealsDao.addDeals(*anyVararg()) } just runs
 
 
@@ -118,7 +118,7 @@ class DealsRepositoryTest {
 
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
-        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
+        coVerify(exactly = 1) { dealsSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
         verify(exactly = 1) { fetched.copy(expires = now + millisInHour * 8) }
     }
@@ -137,7 +137,7 @@ class DealsRepositoryTest {
         stubTransaction()
 
         coEvery { dealsDao.clearDealsForStore(storeId) } just runs
-        coEvery { cheapsharkSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
+        coEvery { dealsSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
         coEvery { dealsDao.addDeals(*anyVararg()) } just runs
 
 
@@ -145,7 +145,7 @@ class DealsRepositoryTest {
 
 
         coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
-        coVerify(exactly = 1) { cheapsharkSource.fetchDealsForStore(query = any()) }
+        coVerify(exactly = 1) { dealsSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
     }
 
@@ -160,7 +160,7 @@ class DealsRepositoryTest {
         impl.refreshDeals(storeId)
 
 
-        coVerify(exactly = 0) { cheapsharkSource.fetchDealsForStore(query = any()) }
+        coVerify(exactly = 0) { dealsSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
     }
 }
