@@ -3,8 +3,8 @@ he # Deal-source migration (CheapShark → ITAD) — Handover
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
 **Status:** Phase 2 is **complete — ITAD is the live deal source.** Phases 0 ✅, 1 ✅, 2a ✅, 2c ✅, and
 **2b ✅** (ITAD mapping + DI swap, verified against the live API) are merged to `dev`. **Phase 3 is staged
-in three slices** (user decision): **3a price-history chart ✅ merged**, **3b regional pricing** and **3c
-bundles** still TODO. Then Phase 4 (remove `:remote:cheapshark`).
+in three slices** (user decision): **3a price-history chart ✅ merged**, **3b regional pricing ✅ merged**,
+**3c bundles** still TODO. Then Phase 4 (remove `:remote:cheapshark`).
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -25,7 +25,7 @@ notice — see ADR).
 | 2c | Releases → IGDB (`first_release_date`); drop `fetchReleases()` from the seam | ✅ merged to `dev` | (no issue) |
 | 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) | ✅ merged to `dev` | (no issue) |
 | 3a | Real price-history chart on the game screen (Vico) | ✅ merged to `dev` | #208 |
-| 3b | Regional pricing — country picker + Settings screen | TODO | #212 |
+| 3b | Regional pricing — country picker + Settings screen | ✅ merged to `dev` | #212 |
 | 3c | Bundles | TODO | (no issue yet) |
 | 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
 
@@ -149,6 +149,37 @@ Phase 3 (user chose: staged, all three — chart → regional → bundles).
   deprecated. `series(Collection<Number>)` (y-only; x auto-indexes) is the overload used.
 - To discover the exact API on a version bump, unzip the AAR's `classes.jar` and `javap` the `*Kt` / `$Companion`
   classes (that's how the above was confirmed).
+
+## Phase 3b — regional pricing (DONE, branch `feat/phase3b-regional-pricing`, merged to `dev`)
+
+A user-selectable storefront region (#212), surfaced through a new **Settings screen**, threaded into
+ITAD's `country=` param. Slice 2 of 3 in Phase 3. User decisions: **reactive immediate refresh** (changing
+region reloads Home/Store now), **broad ~40-country** list, Settings entry = a **gear FAB** on Home.
+
+- **`RegionRepository`** (new, `domain/.../repositories/region/`) — the region seam. Backed by `Storage`
+  (`get(SETTINGS_QUALIFIER)`), reactive via a `MutableStateFlow<Country?>` lazily seeded from storage:
+  `observeSelectedCountry(): Flow<Country>`, `getSelectedCountryCode(): String`, `setSelectedCountry()`,
+  `supportedCountries`. New `Country(code, name)` model + `SUPPORTED_COUNTRIES` (~40, sorted) + `DEFAULT_COUNTRY`
+  (US) in `domain/.../models/Country.kt`. Registered in `domainModule`.
+- **ITAD reads the region per call**: `ItadSourceImpl` gained a `RegionRepository` ctor param (6th `get()` in
+  `itadRemoteModule`); the old `COUNTRY="US"` const is gone — every `country=` now comes from
+  `regionRepository.getSelectedCountryCode()`. `ItadMoney.denominated()` is now currency-symbol-aware
+  (prefix `$ € £ ¥ …` for the common prefix currencies; trailing code otherwise).
+- **Reactive refresh (the key mechanism):** changing region must reload cached prices. `DealsDao.clearAllDeals()`
+  + `DealsRepository.clearCachedDeals()` were added. The **Settings VM clears the deal cache BEFORE persisting
+  the new region** (order matters — avoids a race where Home reloads against stale cache). `HomeViewModel`
+  observes `observeSelectedCountry()` and re-runs `loadTopStoresDeals()` on change (cache is empty →
+  `CachedResource` refetches). `StoreViewModel` observes it and calls `retry()` (`drop(1)` skips the initial
+  emission). Game/deal-detail + price-history are fetched fresh, so they reflect the new region immediately
+  with no cache work. Home/Store VMs + their Koin modules gained the `RegionRepository` arg.
+- **`:feature:settings`** (new module, mirrors `:feature:giveaways`): `SettingsScreen` (a `LazyColumn` region
+  picker, `RadioButton` + `selectable` row a11y), `SettingsViewModel`, `settingsModule`, `settingsScreen` nav +
+  `Destination.Settings`, strings. Wired into `settings.gradle.kts`, root Kover, `:app` + `:iosApp` deps and the
+  Koin module lists + NavHosts on **both** platforms. Home got a Settings gear `SmallFloatingActionButton`
+  (`onViewSettings`) threaded through `HomeScreen`/`HomeRoute`/`homeScreen()`.
+- Tests: `RegionRepositoryTest` (in-memory fake `Storage`), `SettingsViewModelTest` (clear-then-persist order),
+  and the `ItadSourceImplTest`/`HomeViewModelTest`/`StoreViewModelTest` constructors updated for the new
+  `RegionRepository` dependency (`:remote:itad` has no Mokkery → hand-rolled US fake).
 
 ## Phase 0 — what shipped (reference)
 

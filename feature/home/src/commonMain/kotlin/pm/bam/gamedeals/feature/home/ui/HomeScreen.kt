@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -94,6 +95,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_error_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_settings_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
@@ -134,6 +136,7 @@ internal fun HomeScreen(
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
+    onViewSettings: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -167,6 +170,7 @@ internal fun HomeScreen(
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
         onViewFavourites = onViewFavourites,
+        onViewSettings = onViewSettings,
         goToFavouriteGame = goToGame,
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
@@ -261,6 +265,7 @@ private fun HomeScreenContent(
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
+    onViewSettings: () -> Unit,
     goToFavouriteGame: (gameId: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
@@ -289,6 +294,12 @@ private fun HomeScreenContent(
                         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                         horizontalAlignment = Alignment.End,
                     ) {
+                        SmallFloatingActionButton(onClick = onViewSettings) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = stringResource(Res.string.home_screen_floating_settings_icon),
+                            )
+                        }
                         SmallFloatingActionButton(onClick = onViewFavourites) {
                             Icon(
                                 imageVector = Icons.Filled.Favorite,
@@ -752,6 +763,7 @@ private fun HomeScreenContent_Success_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
+            onViewSettings = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -779,6 +791,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
+            onViewSettings = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -806,6 +819,7 @@ private fun HomeScreenContent_Loading_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
+            onViewSettings = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -833,6 +847,7 @@ private fun HomeScreenContent_Error_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
+            onViewSettings = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},

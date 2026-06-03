@@ -9,6 +9,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
@@ -41,8 +42,9 @@ import pm.bam.gamedeals.remote.logic.mapAnyFailure
  * Metacritic, deal rating, release date); those [Deal]/[DealDetails] fields are nullable and left null.
  * The DealsSource methods bridge the ITAD-shaped façade ([fetchDeals], [fetchGamePrices], [searchGames],
  * [lookupBySteamAppId], [fetchGameInfo], …) into the (UUID-migrated) domain via the ITAD→domain mappers.
- * Deal ids are synthesized as `"<gameUUID>:<shopId>"` since ITAD has no per-deal id. Country is fixed to
- * US for now (regional pricing is Phase 3); ITAD has no releases endpoint (releases moved to IGDB in 2c).
+ * Deal ids are synthesized as `"<gameUUID>:<shopId>"` since ITAD has no per-deal id. The `country=`
+ * parameter is read from [RegionRepository] per call (regional pricing — Phase 3b, #212); ITAD has no
+ * releases endpoint (releases moved to IGDB in 2c).
  */
 internal class ItadSourceImpl(
     private val logger: Logger,
@@ -50,6 +52,7 @@ internal class ItadSourceImpl(
     private val dealsApi: ItadDealsApi,
     private val gamesApi: ItadGamesApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
+    private val regionRepository: RegionRepository,
 ) : DealsSource {
 
     // --- DealsSource (implemented) ---
@@ -67,14 +70,15 @@ internal class ItadSourceImpl(
         val storeId = query?.storeID
         val title = query?.title
         val limit = query?.pageSize
+        val country = regionRepository.getSelectedCountryCode()
         return when {
             // Store deals: `/deals/v2?shops=<id>` returns each game's best deal at that shop.
-            storeId != null -> fetchDeals(country = COUNTRY, limit = limit, shops = storeId.toString()).map { it.toDeal() }
+            storeId != null -> fetchDeals(country = country, limit = limit, shops = storeId.toString()).map { it.toDeal() }
             // Title search (release lookup + Search screen): ITAD has no title filter on /deals/v2, so
             // resolve via game search → current prices → cheapest deal per game. Price/Steam-rating/
             // Metacritic filters in [query] aren't supported by ITAD and are ignored (epic #205 ADR trade-off).
-            !title.isNullOrBlank() -> dealsByTitle(title, limit)
-            else -> fetchDeals(country = COUNTRY, limit = limit).map { it.toDeal() }
+            !title.isNullOrBlank() -> dealsByTitle(title, limit, country)
+            else -> fetchDeals(country = country, limit = limit).map { it.toDeal() }
         }
     }
 
@@ -82,7 +86,7 @@ internal class ItadSourceImpl(
         val gameId = gameIdFromDealId(id)
         val focusShopId = id.substringAfterLast(':').toIntOrNull() ?: 0
         val info = fetchGameInfo(gameId)
-        val prices = fetchGamePrices(listOf(gameId), country = COUNTRY).firstOrNull()
+        val prices = fetchGamePrices(listOf(gameId), country = regionRepository.getSelectedCountryCode()).firstOrNull()
             ?: ItadGamePrices(gameId = gameId, historyLowAll = null, deals = persistentListOf())
         return prices.toDealDetails(title = info.title, boxart = info.boxart, focusShopId = focusShopId)
     }
@@ -96,19 +100,19 @@ internal class ItadSourceImpl(
 
     override suspend fun fetchGameDetails(id: String): GameDetails {
         val info = fetchGameInfo(id)
-        val prices = fetchGamePrices(listOf(id), country = COUNTRY).firstOrNull()
+        val prices = fetchGamePrices(listOf(id), country = regionRepository.getSelectedCountryCode()).firstOrNull()
             ?: ItadGamePrices(gameId = id, historyLowAll = null, deals = persistentListOf())
         return prices.toGameDetails(title = info.title, boxart = info.boxart)
     }
 
     override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
-        fetchItadPriceHistory(gameId = gameId, country = COUNTRY).toPriceHistory(gameId)
+        fetchItadPriceHistory(gameId = gameId, country = regionRepository.getSelectedCountryCode()).toPriceHistory(gameId)
 
     /** Cheapest current deal per game for a title search; carries the game's title/boxart onto the deal. */
-    private suspend fun dealsByTitle(title: String, limit: Int?): List<Deal> {
+    private suspend fun dealsByTitle(title: String, limit: Int?, country: String): List<Deal> {
         val games = searchGames(title = title, results = limit)
         if (games.isEmpty()) return emptyList()
-        val pricesByGameId = fetchGamePrices(games.map { it.id }, country = COUNTRY).associateBy { it.gameId }
+        val pricesByGameId = fetchGamePrices(games.map { it.id }, country = country).associateBy { it.gameId }
         return games.mapNotNull { game ->
             val cheapest = pricesByGameId[game.id]?.deals?.minByOrNull { it.price.amount } ?: return@mapNotNull null
             cheapest.copy(gameTitle = game.title, boxart = game.boxart).toDeal()
@@ -171,7 +175,6 @@ internal class ItadSourceImpl(
             .toItadGameSearchResult()
 
     private companion object {
-        private const val COUNTRY = "US"
         private val TAG: String = ItadSourceImpl::class.simpleName.orEmpty()
     }
 }

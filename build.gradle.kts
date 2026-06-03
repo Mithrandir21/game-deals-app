@@ -32,6 +32,7 @@ dependencies {
     kover(project(":feature:webview"))
     kover(project(":feature:giveaways"))
     kover(project(":feature:favourites"))
+    kover(project(":feature:settings"))
 }
 
 // Modules whose connectedAndroidDeviceTest / connectedDebugAndroidTest outputs feed the parallel JaCoCo report. Add a module here when it gains an

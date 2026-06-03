@@ -125,6 +125,7 @@ dependencies {
     implementation(project(":feature:webview"))
     implementation(project(":feature:giveaways"))
     implementation(project(":feature:favourites"))
+    implementation(project(":feature:settings"))
 
     val composeBom = platform(libs.androidx.compose.bom)
 

@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.di
 
 import androidx.room.RoomDatabase
 import org.koin.dsl.module
+import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
 import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -14,6 +15,8 @@ import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -53,4 +56,5 @@ val domainModule = module {
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get()) }
     single<FavouritesRepository> { FavouritesRepositoryImpl(get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
+    single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
 }

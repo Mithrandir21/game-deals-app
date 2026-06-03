@@ -14,6 +14,7 @@ import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
+import pm.bam.gamedeals.feature.settings.navigation.settingsScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 
@@ -40,6 +41,7 @@ internal fun NavGraph(
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
+            goToSettings = { navActions.navigateToSettings() },
         )
 
         storeScreen(
@@ -74,5 +76,7 @@ internal fun NavGraph(
             navController = navController,
             goToGame = { gameId -> navActions.navigateToGame(gameId) }
         )
+
+        settingsScreen(navController = navController)
     }
 }

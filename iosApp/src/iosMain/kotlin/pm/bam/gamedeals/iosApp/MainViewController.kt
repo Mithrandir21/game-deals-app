@@ -40,6 +40,8 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
+import pm.bam.gamedeals.feature.settings.di.settingsModule
+import pm.bam.gamedeals.feature.settings.navigation.settingsScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -108,6 +110,7 @@ private fun bootstrapKoin() {
             giveawaysModule,
             favouritesModule,
             storeModule,
+            settingsModule,
             iosAppModule,
         )
     }
@@ -143,6 +146,7 @@ private fun AppNavHost() {
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
+            goToSettings = { navController.navigate(Destination.Settings) },
         )
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
@@ -161,6 +165,7 @@ private fun AppNavHost() {
             navController = navController,
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
+        settingsScreen(navController = navController)
         storeScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },

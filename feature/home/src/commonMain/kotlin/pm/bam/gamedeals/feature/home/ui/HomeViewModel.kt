@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -43,6 +44,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
@@ -67,6 +69,7 @@ internal class HomeViewModel(
     private val giveawaysRepository: GiveawaysRepository,
     private val favouritesRepository: FavouritesRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
+    private val regionRepository: RegionRepository,
     private val logger: Logger
 ) : ViewModel() {
 
@@ -97,7 +100,14 @@ internal class HomeViewModel(
     private var loadJob: Job? = null
 
     init {
-        loadTopStoresDeals()
+        // Initial load, then reload whenever the selected region changes. Settings clears the deal
+        // cache before updating the region, so the reload re-fetches regional prices (#212).
+        viewModelScope.launch {
+            regionRepository.observeSelectedCountry()
+                .map { it.code }
+                .distinctUntilChanged()
+                .collect { loadTopStoresDeals() }
+        }
     }
 
     fun loadTopStoresDeals() {
