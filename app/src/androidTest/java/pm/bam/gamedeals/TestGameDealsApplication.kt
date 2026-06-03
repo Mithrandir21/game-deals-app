@@ -3,6 +3,7 @@ package pm.bam.gamedeals
 import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
+import org.koin.dsl.module
 import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.ui.di.commonUiModule
@@ -19,11 +20,12 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
+import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
+import pm.bam.gamedeals.remote.itad.di.itadRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 /**
@@ -46,8 +48,12 @@ class TestGameDealsApplication : Application() {
                 domainModule,
                 domainAndroidModule,
                 remoteModule(RemoteBuildType.RELEASE),
-                cheapsharkNetworkModule,
-                cheapsharkRemoteModule,
+                // ITAD is the live DealsSource (epic #205); the GamerPower client is overridden with a
+                // MockEngine by testNetworkOverridesModule. ITAD isn't exercised by any current
+                // instrumented test, so it is left unmocked (real binding, never resolved).
+                itadNetworkModule,
+                itadRemoteModule,
+                module { single { ItadCredentials(BuildConfig.ITAD_API_KEY) } },
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
                 appModule,

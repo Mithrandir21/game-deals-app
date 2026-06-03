@@ -16,10 +16,9 @@ import pm.bam.gamedeals.domain.models.Store
  * exception transformation so that callers (repositories, mediators) only
  * depend on this interface and domain models — never on a specific provider.
  *
- * The current implementation (`CheapsharkSourceImpl`) lives in
- * `:remote:cheapshark`; this interface is the domain-side port and only
- * references domain types, so the provider can be swapped (e.g. to ITAD)
- * without touching callers.
+ * The live implementation (`ItadSourceImpl`) lives in `:remote:itad` (epic #205); this interface is the
+ * domain-side port and only references domain types, so the provider can be swapped without touching
+ * callers. (The original CheapShark provider was removed in Phase 4.)
  */
 interface DealsSource {
 
