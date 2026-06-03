@@ -35,11 +35,13 @@ import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -53,6 +55,7 @@ import pm.bam.gamedeals.logging.info
 
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
+internal const val LIMIT_BUNDLES = 5
 internal const val EXPIRED_STATUS = "Expired"
 // ITAD shop ids of major PC stores, shown as the Home "top stores" strips (epic #205, Phase 2b —
 // the old values were CheapShark store ids, which don't map to ITAD's). See `/service/shops/v1`:
@@ -67,6 +70,7 @@ internal class HomeViewModel(
     private val gamesRepository: GamesRepository,
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
+    private val bundlesRepository: BundlesRepository,
     private val favouritesRepository: FavouritesRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val regionRepository: RegionRepository,
@@ -197,13 +201,16 @@ internal class HomeViewModel(
             }
             .flatMapLatest { loadNewReleases().map { releases -> releases to it } }
             .flatMapLatest { loadGiveaways().map { giveaways -> Triple(it.first, giveaways.take(LIMIT_GIVEAWAYS), it.second) } }
-            .map {
-                HomeScreenData(
-                    state = HomeScreenStatus.SUCCESS,
-                    releases = it.first.toImmutableList(),
-                    giveaways = it.second.toImmutableList(),
-                    items = it.third.toImmutableList()
-                )
+            .flatMapLatest { (releases, giveaways, items) ->
+                loadBundles().map { bundles ->
+                    HomeScreenData(
+                        state = HomeScreenStatus.SUCCESS,
+                        releases = releases.toImmutableList(),
+                        giveaways = giveaways.toImmutableList(),
+                        bundles = bundles.take(LIMIT_BUNDLES).toImmutableList(),
+                        items = items.toImmutableList()
+                    )
+                }
             }
             .logFlow(logger)
             .catch { emit(HomeScreenData(state = HomeScreenStatus.ERROR)) }
@@ -220,6 +227,13 @@ internal class HomeViewModel(
             .logFlow(logger)
             .catch { emit(emptyList()) }
 
+    // Best-effort, fetched fresh (bundles aren't cached). A failure just hides the strip; the chain
+    // re-runs on region change, so bundles refresh with the new region too (#212/#205 Phase 3c).
+    private fun loadBundles(): Flow<List<Bundle>> =
+        flow { emit(bundlesRepository.getBundles()) }
+            .logFlow(logger)
+            .catch { emit(emptyList()) }
+
     internal sealed interface HomeUiEvent {
         data class ShareDeal(val text: String) : HomeUiEvent
     }
@@ -229,6 +243,7 @@ internal class HomeViewModel(
         val state: HomeScreenStatus = HomeScreenStatus.LOADING,
         val releases: ImmutableList<Release> = persistentListOf(),
         val giveaways: ImmutableList<Giveaway> = persistentListOf(),
+        val bundles: ImmutableList<Bundle> = persistentListOf(),
         val items: ImmutableList<HomeScreenListData> = persistentListOf()
     )
 

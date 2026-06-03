@@ -114,3 +114,39 @@ data class RemoteItadHistoryEntry(
     @SerialName("shop") val shop: RemoteItadShopRef,
     @SerialName("deal") val deal: RemoteItadHistoryDeal? = null,
 )
+
+// --- /bundles/v1 (a bare array of bundles; epic #205 Phase 3c) ---
+@Serializable
+data class RemoteItadBundlePage(
+    @SerialName("id") val id: Int? = null,
+    @SerialName("name") val name: String? = null,
+    @SerialName("shopId") val shopId: Int? = null,
+)
+
+@Serializable
+data class RemoteItadBundleCounts(
+    @SerialName("games") val games: Int = 0,
+    @SerialName("media") val media: Int = 0,
+)
+
+@Serializable
+data class RemoteItadBundleTier(
+    @SerialName("price") val price: RemoteItadPrice? = null,
+    @SerialName("addon") val addon: Boolean = false,
+    // Tier games share the search-game shape (id, slug, title, assets.boxart).
+    @SerialName("games") val games: List<RemoteItadSearchGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteItadBundle(
+    @SerialName("id") val id: Int,
+    @SerialName("title") val title: String,
+    @SerialName("page") val page: RemoteItadBundlePage? = null,
+    @SerialName("url") val url: String,
+    @SerialName("details") val details: String? = null,
+    @SerialName("isMature") val isMature: Boolean = false,
+    @SerialName("publish") val publish: String? = null,
+    @SerialName("expiry") val expiry: String? = null,
+    @SerialName("counts") val counts: RemoteItadBundleCounts? = null,
+    @SerialName("tiers") val tiers: List<RemoteItadBundleTier> = emptyList(),
+)

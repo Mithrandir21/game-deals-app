@@ -80,6 +80,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -87,7 +88,10 @@ import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_favourites_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveaways_label
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundle_row_description
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
@@ -125,6 +129,7 @@ private const val CONTENT_TYPE_SECTION_HEADER = "section_header"
 private const val CONTENT_TYPE_RELEASE = "release"
 private const val CONTENT_TYPE_FAVOURITE = "favourite"
 private const val CONTENT_TYPE_GIVEAWAY = "giveaway"
+private const val CONTENT_TYPE_BUNDLE = "bundle"
 private const val CONTENT_TYPE_STORE_HEADER = "store_header"
 private const val CONTENT_TYPE_DEAL = "deal"
 private const val CONTENT_TYPE_VIEW_ALL_BUTTON = "view_all_button"
@@ -137,6 +142,8 @@ internal fun HomeScreen(
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
     onViewSettings: () -> Unit,
+    onViewBundles: () -> Unit,
+    onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -171,6 +178,8 @@ internal fun HomeScreen(
         onViewGiveaways = onViewGiveaways,
         onViewFavourites = onViewFavourites,
         onViewSettings = onViewSettings,
+        onViewBundles = onViewBundles,
+        onViewBundle = onViewBundle,
         goToFavouriteGame = goToGame,
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
@@ -266,6 +275,8 @@ private fun HomeScreenContent(
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
     onViewSettings: () -> Unit,
+    onViewBundles: () -> Unit,
+    onViewBundle: (bundleId: Int) -> Unit,
     goToFavouriteGame: (gameId: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
@@ -389,6 +400,29 @@ private fun HomeScreenContent(
                                         .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
                                     onClick = { onViewGiveaways() }) {
                                     Text(text = stringResource(Res.string.home_screen_all_giveaways_label))
+                                }
+                            }
+                        }
+
+                        if (data.bundles.isNotEmpty()) {
+                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_bundles_label)) }
+
+                            items(
+                                count = data.bundles.size,
+                                key = { index -> "bundle-${data.bundles[index].id}" },
+                                contentType = { CONTENT_TYPE_BUNDLE }
+                            ) { index ->
+                                HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
+                            }
+
+                            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) {
+                                Button(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentWidth()
+                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
+                                    onClick = { onViewBundles() }) {
+                                    Text(text = stringResource(Res.string.home_screen_all_bundles_label))
                                 }
                             }
                         }
@@ -543,6 +577,43 @@ private fun ReleaseRow(
     }
 }
 
+
+@Composable
+private fun HomeBundleRow(
+    bundle: Bundle,
+    onClick: () -> Unit,
+) {
+    val rowCd = stringResource(Res.string.home_screen_bundle_row_description, bundle.title, bundle.storeName)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button) { onClick() }
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
+            .semantics(mergeDescendants = true) { contentDescription = rowCd },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = bundle.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = bundle.storeName,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        bundle.priceDenominated?.let { price ->
+            Text(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.extraSmall)
+                    .padding(GameDealsCustomTheme.spacing.medium),
+                text = price,
+            )
+        }
+    }
+}
 
 @Composable
 private fun GiveawayRow(
@@ -764,6 +835,8 @@ private fun HomeScreenContent_Success_Preview() {
             onViewGiveaways = {},
             onViewFavourites = {},
             onViewSettings = {},
+            onViewBundles = {},
+            onViewBundle = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -792,6 +865,8 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onViewGiveaways = {},
             onViewFavourites = {},
             onViewSettings = {},
+            onViewBundles = {},
+            onViewBundle = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -820,6 +895,8 @@ private fun HomeScreenContent_Loading_Preview() {
             onViewGiveaways = {},
             onViewFavourites = {},
             onViewSettings = {},
+            onViewBundles = {},
+            onViewBundle = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
@@ -848,6 +925,8 @@ private fun HomeScreenContent_Error_Preview() {
             onViewGiveaways = {},
             onViewFavourites = {},
             onViewSettings = {},
+            onViewBundles = {},
+            onViewBundle = {},
             goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},

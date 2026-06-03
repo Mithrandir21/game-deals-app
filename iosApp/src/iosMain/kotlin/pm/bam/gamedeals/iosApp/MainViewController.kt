@@ -29,6 +29,9 @@ import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.bundles.di.bundlesModule
+import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
+import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.favourites.di.favouritesModule
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
@@ -111,6 +114,7 @@ private fun bootstrapKoin() {
             favouritesModule,
             storeModule,
             settingsModule,
+            bundlesModule,
             iosAppModule,
         )
     }
@@ -147,6 +151,8 @@ private fun AppNavHost() {
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
             goToSettings = { navController.navigate(Destination.Settings) },
+            goToBundles = { navController.navigate(Destination.Bundles) },
+            goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
@@ -166,6 +172,14 @@ private fun AppNavHost() {
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         settingsScreen(navController = navController)
+        bundlesScreen(
+            navController = navController,
+            goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
+        )
+        bundleDetailScreen(
+            navController = navController,
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
+        )
         storeScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },

@@ -8,6 +8,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
+import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
@@ -42,6 +44,8 @@ internal fun NavGraph(
             goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
             goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             goToSettings = { navActions.navigateToSettings() },
+            goToBundles = { navActions.navigateToBundles() },
+            goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
         )
 
         storeScreen(
@@ -78,5 +82,15 @@ internal fun NavGraph(
         )
 
         settingsScreen(navController = navController)
+
+        bundlesScreen(
+            navController = navController,
+            goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+        )
+
+        bundleDetailScreen(
+            navController = navController,
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
+        )
     }
 }

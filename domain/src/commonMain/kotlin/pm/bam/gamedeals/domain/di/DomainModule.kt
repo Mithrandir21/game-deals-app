@@ -5,6 +5,8 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
 import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
@@ -57,4 +59,5 @@ val domainModule = module {
     single<FavouritesRepository> { FavouritesRepositoryImpl(get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
+    single<BundlesRepository> { BundlesRepositoryImpl(get()) }
 }

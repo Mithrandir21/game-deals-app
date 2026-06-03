@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="bundles_screen_title">Bundles</string>
+    <string name="bundles_screen_navigation_back_button">Back</string>
+    <string name="bundles_screen_loading_indicator">Loading bundles</string>
+    <string name="bundles_screen_data_loading_error_msg">Couldn\'t load bundles. Please try again.</string>
+    <string name="bundles_screen_data_loading_error_retry">Retry</string>
+    <string name="bundles_screen_empty">No active bundles right now.</string>
+
+    <string name="bundles_row_game_count">%1$d games</string>
+    <string name="bundles_row_expiry">Ends %1$s</string>
+    <string name="bundles_row_from_price">From %1$s</string>
+    <string name="bundles_row_description">%1$s from %2$s</string>
+
+    <string name="bundle_detail_get_bundle">Get bundle</string>
+    <string name="bundle_detail_included_games">Included games</string>
+    <string name="bundle_detail_game_image">%1$s</string>
+
+</resources>
