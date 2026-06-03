@@ -2,14 +2,17 @@ package pm.bam.gamedeals.remote.itad.mappers
 
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.round
+import kotlin.time.Instant
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.models.ItadMoney
+import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 
 /**
  * ITAD-shaped models → the app's (CheapShark-shaped) domain models (epic #205, Phase 2b).
@@ -48,6 +51,28 @@ internal fun ItadDeal.toDeal(): Deal {
         url = url,
         // CheapShark-only fields (internalName, metacritic*, steamRating*, releaseDate, lastChange,
         // dealRating) are nullable and default to null — ITAD does not provide them.
+    )
+}
+
+/**
+ * ITAD price-history log → domain [PriceHistory] (#208). Each ITAD entry is a price-change event; we plot
+ * the price at each event over time. Rows with an unparseable timestamp are dropped; points are sorted
+ * oldest → newest so the chart's x-axis runs left-to-right in time order.
+ */
+internal fun List<ItadPriceHistoryEntry>.toPriceHistory(gameId: String): PriceHistory =
+    PriceHistory(
+        gameID = gameId,
+        points = mapNotNull { it.toPricePoint() }
+            .sortedBy { it.timestampEpochMs }
+            .toImmutableList(),
+    )
+
+private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
+    val epochMs = runCatching { Instant.parse(timestamp).toEpochMilliseconds() }.getOrNull() ?: return null
+    return PriceHistory.PricePoint(
+        timestampEpochMs = epochMs,
+        priceValue = price.amount,
+        priceDenominated = price.denominated(),
     )
 }
 

@@ -7,6 +7,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.zoomable)
+            implementation(libs.vico.compose)
+            implementation(libs.vico.compose.m3)
         }
 
         androidMain.dependencies {

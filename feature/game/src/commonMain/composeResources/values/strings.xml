@@ -11,6 +11,8 @@
     <string name="game_screen_cheapest_ever_label">Cheapest Ever:</string>
     <string name="game_screen_cheapest_ever_on_date_label">%1$s on %2$s</string>
     <string name="game_screen_list_item_savings_label">Save %1$s\%%</string>
+    <string name="game_screen_price_history_label">Price history</string>
+    <string name="game_screen_price_history_range_label">%1$s – %2$s</string>
 
     <string name="game_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="game_screen_data_loading_error_retry">Retry</string>

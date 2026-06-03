@@ -14,6 +14,7 @@ sentry-kmp = "0.26.0"
 kotlinx-datetime = "0.7.0"
 coil3 = "3.0.4"
 zoomable = "2.12.0"
+vico = "3.2.1"
 sandwich-ktor = "2.1.3"
 kotlinx = "1.11.0"
 kotlinx-collections-immutable = "0.4.0"
@@ -120,6 +121,11 @@ coil3-test = { group = "io.coil-kt.coil3", name = "coil-test", version.ref = "co
 
 # Zoomable — KMP pinch/pan/double-tap Modifier (engawapg).
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
+
+# Vico — Compose Multiplatform charting (price-history chart, epic #205 Phase 3). The 3.x `compose`/
+# `compose-m3` artifacts are the multiplatform ones (Android + iOS + desktop/wasm).
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 
 # Sandwich-Ktor — response wrapper (KMP; replaced sandwich-retrofit).
 sandwich-ktor = { group = "com.github.skydoves", name = "sandwich-ktor", version.ref = "sandwich-ktor" }

@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +28,7 @@ import pm.bam.gamedeals.common.toFlow
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -129,7 +131,8 @@ internal class GameViewModel(
                 val dealDetails = details.deals
                     .map { deal -> StoreDealPair(store = storesRepository.getStore(deal.storeID), deal = deal) }
                 val igdbGame = details.info.steamAppID?.let { steamId -> fetchIgdbGameSafely(steamId) }
-                GameScreenData.Data(details, dealDetails.toImmutableList(), igdbGame).toFlow<GameScreenData>()
+                val priceHistory = fetchPriceHistorySafely(gameId)
+                GameScreenData.Data(details, dealDetails.toImmutableList(), igdbGame, priceHistory).toFlow<GameScreenData>()
             }
             .onStart { uiState.emit(GameScreenData.Loading) }
             .logFlow(logger)
@@ -143,6 +146,16 @@ internal class GameViewModel(
         throw ce
     } catch (_: Throwable) {
         null
+    }
+
+    // Price history (#208) is best-effort enrichment too: a failure or an empty series just hides the
+    // chart, it must not fail the screen. Cancellation still propagates.
+    private suspend fun fetchPriceHistorySafely(gameId: String): PriceHistory = try {
+        gamesRepository.getPriceHistory(gameId)
+    } catch (ce: CancellationException) {
+        throw ce
+    } catch (_: Throwable) {
+        PriceHistory(gameID = gameId, points = persistentListOf())
     }
 
 
@@ -159,6 +172,7 @@ internal class GameViewModel(
             val gameDetails: GameDetails,
             val dealDetails: ImmutableList<StoreDealPair>,
             val igdbGame: IgdbGame? = null,
+            val priceHistory: PriceHistory = PriceHistory(gameID = "", points = persistentListOf()),
         ) : GameScreenData()
     }
 }

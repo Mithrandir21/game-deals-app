@@ -120,8 +120,8 @@ class ItadSourceImplTest {
     }
 
     @Test
-    fun fetchPriceHistory_maps_entries_and_filters_rows_without_a_deal() = runTest {
-        val history = impl.fetchPriceHistory("uuid-1")
+    fun fetchItadPriceHistory_maps_entries_and_filters_rows_without_a_deal() = runTest {
+        val history = impl.fetchItadPriceHistory("uuid-1")
 
         // Two rows in the fixture; the second has a null deal and is dropped.
         assertEquals(1, history.size)
@@ -129,6 +129,21 @@ class ItadSourceImplTest {
         assertEquals(5.99, history.first().price.amount)
         assertEquals(70, history.first().cutPercent)
         assertEquals("/games/history/v2", recordedRequests.single().url.encodedPath)
+    }
+
+    @Test
+    fun fetchPriceHistory_maps_to_domain_points_sorted_oldest_first() = runTest {
+        val history = impl.fetchPriceHistory("uuid-1")
+
+        assertEquals("uuid-1", history.gameID)
+        // The null-deal row is dropped; the remaining row becomes one domain point.
+        assertEquals(1, history.points.size)
+        val point = history.points.first()
+        assertEquals(1767225600000L, point.timestampEpochMs) // 2026-01-01T00:00:00Z
+        assertEquals(5.99, point.priceValue)
+        assertEquals("$5.99", point.priceDenominated)
+        assertEquals("/games/history/v2", recordedRequests.single().url.encodedPath)
+        assertEquals("US", recordedRequests.single().url.parameters["country"])
     }
 
     @Test

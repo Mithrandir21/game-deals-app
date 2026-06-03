@@ -70,6 +70,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
@@ -142,6 +143,17 @@ private fun CompactGameDealsDetails(
     ) {
         CompactGameDetail(data.gameDetails)
 
+        PriceHistoryChart(
+            priceHistory = data.priceHistory,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = GameDealsCustomTheme.spacing.large,
+                    end = GameDealsCustomTheme.spacing.large,
+                    bottom = GameDealsCustomTheme.spacing.medium,
+                ),
+        )
+
         val igdb = data.igdbGame
         val steamId = data.gameDetails.info.steamAppID
         if (igdb != null && steamId != null) {
@@ -202,6 +214,11 @@ private fun WideGameDealsDetails(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
+            PriceHistoryChart(
+                priceHistory = data.priceHistory,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             val igdb = data.igdbGame
             val steamId = data.gameDetails.info.steamAppID
             if (igdb != null && steamId != null) {
@@ -497,6 +514,17 @@ private val previewIgdbGame = IgdbGame(
         "and explore the massive scale of the Halo ring.",
 )
 
+private val previewPriceHistory = PriceHistory(
+    gameID = "preview-game",
+    points = persistentListOf(
+        PriceHistory.PricePoint(1_672_531_200_000L, 59.99, "$59.99"), // Jan 2023
+        PriceHistory.PricePoint(1_680_307_200_000L, 39.99, "$39.99"), // Apr 2023
+        PriceHistory.PricePoint(1_688_169_600_000L, 29.99, "$29.99"), // Jul 2023
+        PriceHistory.PricePoint(1_696_118_400_000L, 14.99, "$14.99"), // Oct 2023
+        PriceHistory.PricePoint(1_704_067_200_000L, 9.99, "$9.99"),   // Jan 2024
+    ),
+)
+
 private val previewGameDealDetails = persistentListOf(
     StoreDealPair(store = PreviewStore, deal = PreviewGameDeal),
     StoreDealPair(
@@ -531,6 +559,7 @@ private fun GameScreenContent_Compact_Success_Preview() {
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
                 igdbGame = previewIgdbGame,
+                priceHistory = previewPriceHistory,
             ),
             isFavourite = false,
             onBack = {},
@@ -553,6 +582,7 @@ private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
                 igdbGame = previewIgdbGame,
+                priceHistory = previewPriceHistory,
             ),
             isFavourite = true,
             onBack = {},
@@ -575,6 +605,7 @@ private fun GameScreenContent_Wide_Success_Preview() {
                 gameDetails = PreviewGameDetails,
                 dealDetails = previewGameDealDetails,
                 igdbGame = previewIgdbGame,
+                priceHistory = previewPriceHistory,
             ),
             isFavourite = false,
             onBack = {},

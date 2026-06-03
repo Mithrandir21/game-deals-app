@@ -9,10 +9,12 @@ import dev.mokkery.mock
 import dev.mokkery.verify
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.db.dao.GamesDao
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.testing.fixtures.game
 import pm.bam.gamedeals.testing.fixtures.gameDetails
@@ -65,6 +67,21 @@ class GamesRepositoryTest {
 
         verifySuspend(exactly(1)) { dealsSource.fetchGames("") }
         verifySuspend(exactly(1)) { gamesDao.addGames(game) }
+    }
+
+    @Test
+    fun get_price_history_delegates_to_source() = runTest {
+        val gameId = "uuid-1"
+        val priceHistory = PriceHistory(
+            gameID = gameId,
+            points = persistentListOf(PriceHistory.PricePoint(1_704_067_200_000L, 9.99, "$9.99")),
+        )
+        everySuspend { dealsSource.fetchPriceHistory(gameId) } returns priceHistory
+
+        val result = impl.getPriceHistory(gameId)
+
+        assertEquals(priceHistory, result)
+        verifySuspend(exactly(1)) { dealsSource.fetchPriceHistory(gameId) }
     }
 
     @Test

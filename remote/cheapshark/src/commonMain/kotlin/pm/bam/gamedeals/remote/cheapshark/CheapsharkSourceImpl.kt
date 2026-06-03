@@ -1,11 +1,13 @@
 package pm.bam.gamedeals.remote.cheapshark
 
 import com.skydoves.sandwich.getOrThrow
+import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -67,6 +69,12 @@ internal class CheapsharkSourceImpl(
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .toGameDetails(currencyTransformation, datetimeFormatter)
+
+    // CheapShark exposes only a single cheapest-ever price+date, not a full time series, so it cannot
+    // back the price-history chart (#208). It is no longer the live source (ITAD is, since Phase 2b) and
+    // is removed in Phase 4; return an empty series rather than throwing if this dead path is ever hit.
+    override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
+        PriceHistory(gameID = gameId, points = persistentListOf())
 
     override suspend fun fetchStores(): List<Store> =
         storesApi.getStores()

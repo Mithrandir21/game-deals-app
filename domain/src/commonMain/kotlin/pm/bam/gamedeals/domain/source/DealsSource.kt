@@ -4,6 +4,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 
@@ -33,6 +34,12 @@ interface DealsSource {
     ): List<Game>
 
     suspend fun fetchGameDetails(id: String): GameDetails
+
+    /**
+     * The historical low-price time series for a game (by its source game id), for the price-history
+     * chart (#208). Providers that cannot supply a series return an empty [PriceHistory].
+     */
+    suspend fun fetchPriceHistory(gameId: String): PriceHistory
 
     suspend fun fetchStores(): List<Store>
 }
