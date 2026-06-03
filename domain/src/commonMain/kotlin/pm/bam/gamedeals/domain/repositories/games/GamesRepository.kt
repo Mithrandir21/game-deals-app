@@ -7,6 +7,7 @@ import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.source.DealsSource
 
@@ -21,6 +22,10 @@ interface GamesRepository {
     suspend fun getReleaseDeal(gameTitle: String): Deal?
 
     suspend fun getGameDetails(dealId: String): GameDetails
+
+    /** The game's historical low-price time series for the price-history chart (#208). */
+    suspend fun getPriceHistory(gameId: String): PriceHistory
+
     suspend fun refreshGames()
 
     suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String?
@@ -49,6 +54,9 @@ internal class GamesRepositoryImpl(
 
     override suspend fun getGameDetails(dealId: String): GameDetails =
         dealsSource.fetchGameDetails(dealId)
+
+    override suspend fun getPriceHistory(gameId: String): PriceHistory =
+        dealsSource.fetchPriceHistory(gameId)
 
     override suspend fun refreshGames() {
         dealsSource.fetchGames("")

@@ -6,6 +6,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -23,6 +24,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.mappers.toItadPriceHistoryEntry
+import pm.bam.gamedeals.remote.itad.mappers.toPriceHistory
 import pm.bam.gamedeals.remote.itad.mappers.toStore
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
@@ -99,6 +101,9 @@ internal class ItadSourceImpl(
         return prices.toGameDetails(title = info.title, boxart = info.boxart)
     }
 
+    override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
+        fetchItadPriceHistory(gameId = gameId, country = COUNTRY).toPriceHistory(gameId)
+
     /** Cheapest current deal per game for a title search; carries the game's title/boxart onto the deal. */
     private suspend fun dealsByTitle(title: String, limit: Int?): List<Deal> {
         val games = searchGames(title = title, results = limit)
@@ -133,7 +138,7 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .map { it.toItadGamePrices() }
 
-    suspend fun fetchPriceHistory(gameId: String, country: String? = null): List<ItadPriceHistoryEntry> =
+    suspend fun fetchItadPriceHistory(gameId: String, country: String? = null): List<ItadPriceHistoryEntry> =
         gamesApi.getHistory(gameId = gameId, country = country)
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }

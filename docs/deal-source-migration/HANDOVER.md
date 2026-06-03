@@ -2,8 +2,9 @@ he # Deal-source migration (CheapShark → ITAD) — Handover
 
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
 **Status:** Phase 2 is **complete — ITAD is the live deal source.** Phases 0 ✅, 1 ✅, 2a ✅, 2c ✅, and
-**2b ✅** (ITAD mapping + DI swap, verified against the live API) are merged to `dev`. **Next up: Phase 3
-(price-history chart / bundles / regional pricing) and Phase 4 (remove `:remote:cheapshark`).**
+**2b ✅** (ITAD mapping + DI swap, verified against the live API) are merged to `dev`. **Phase 3 is staged
+in three slices** (user decision): **3a price-history chart ✅ merged**, **3b regional pricing** and **3c
+bundles** still TODO. Then Phase 4 (remove `:remote:cheapshark`).
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -23,7 +24,9 @@ notice — see ADR).
 | 2a | Domain models → `String` game ids (UUID-ready) + stored `url`/`iconUrl` + Room `v5→v6` migration | ✅ merged to `dev` | (no issue) |
 | 2c | Releases → IGDB (`first_release_date`); drop `fetchReleases()` from the seam | ✅ merged to `dev` | (no issue) |
 | 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) | ✅ merged to `dev` | (no issue) |
-| 3 | Real price-history chart + bundles + regional pricing | TODO | #208, #212 |
+| 3a | Real price-history chart on the game screen (Vico) | ✅ merged to `dev` | #208 |
+| 3b | Regional pricing — country picker + Settings screen | TODO | #212 |
+| 3c | Bundles | TODO | (no issue yet) |
 | 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
 
 **ITAD is now the live `DealsSource`** (Phase 2b). `:remote:cheapshark` stays in the tree (its network
@@ -107,6 +110,45 @@ Confirmed against the live API (curl) before/while writing the mappers:
    the appid through (`ItadSourceImpl.lookupBySteamAppId`).
 
 ---
+
+## Phase 3a — price-history chart (DONE, branch `feat/phase3a-price-history-chart`, merged to `dev`)
+
+The game screen now shows a real price-history line chart (#208), drawn with **Vico**. Slice 1 of 3 in
+Phase 3 (user chose: staged, all three — chart → regional → bundles).
+
+- **New seam method `DealsSource.fetchPriceHistory(gameId): PriceHistory`** + new domain model
+  `domain/.../models/PriceHistory.kt` (`PriceHistory(gameID, points: List<PricePoint>)`, `PricePoint(
+  timestampEpochMs, priceValue, priceDenominated)`; `@Immutable`/`@Serializable`, **not** a Room entity —
+  fetched on demand, never cached). `GamesRepository.getPriceHistory(gameId)` delegates to the source.
+- **ITAD**: the `/games/history/v2` façade method was renamed `fetchPriceHistory` → **`fetchItadPriceHistory`**
+  (it returns the ITAD-shaped `List<ItadPriceHistoryEntry>`; the new seam method needed the `fetchPriceHistory`
+  name and a 1-arg overload would have been ambiguous). New mapper `List<ItadPriceHistoryEntry>.toPriceHistory(
+  gameId)` in `ItadDomainMappers.kt` — parses each entry's ISO-8601 `timestamp` via **`kotlin.time.Instant`**
+  (stable in Kotlin 2.3.21, no opt-in; not `kotlinx.datetime.Instant`), drops unparseable rows, sorts oldest→
+  newest. **CheapShark** can't supply a series → `CheapsharkSourceImpl.fetchPriceHistory` returns an empty
+  `PriceHistory` (dead path; removed in Phase 4).
+- **VM/UI**: `GameViewModel` loads price history **best-effort** (like the IGDB enrichment — a failure/empty
+  series just hides the chart, never fails the screen) into `GameScreenData.Data.priceHistory`. New composable
+  `feature/game/.../ui/PriceHistoryChart.kt` renders below the cheapest-ever block in both the compact and wide
+  layouts; hidden when `< 2` points. y-axis = price; x-axis unlabelled with a "MonthYear – MonthYear" caption
+  underneath (friendlier than per-tick dates on a compact card). New strings `game_screen_price_history_label`
+  / `_range_label`.
+
+**Vico 3.x KMP integration — non-obvious facts (vetted empirically against this repo's bleeding-edge Kotlin
+2.3.21 / CMP 1.11.0):**
+- Catalog: `vico = "3.2.1"`; libs `vico-compose` (`com.patrykandpatrick.vico:compose`) + `vico-compose-m3`
+  (`:compose-m3`). These **3.x `compose*` artifacts ARE the multiplatform ones** (Android + iOS klibs both
+  resolve & compile here). Added to `feature/game` `commonMain`. There is **no separate `:core` artifact**.
+- **All classes live under `com.patrykandpatrick.vico.compose.*`** — there is **no `com.patrykandpatrick.vico.core.*`**
+  package (that import fails). e.g. `compose.cartesian.{CartesianChartHost, rememberCartesianChart}`,
+  `compose.cartesian.data.{CartesianChartModelProducer, lineModel}`, `compose.cartesian.layer.rememberLineCartesianLayer`,
+  `compose.cartesian.axis.{VerticalAxis, HorizontalAxis}`.
+- Axis builders are **companion members**, not top-level functions: call `VerticalAxis.rememberStart()` /
+  `HorizontalAxis.rememberBottom()` (do **not** try to `import …axis.rememberStart`).
+- Inside `modelProducer.runTransaction { … }` use **`lineModel { series(values) }`** — `lineSeries` is
+  deprecated. `series(Collection<Number>)` (y-only; x auto-indexes) is the overload used.
+- To discover the exact API on a version bump, unzip the AAR's `classes.jar` and `javap` the `*Kt` / `$Companion`
+  classes (that's how the above was confirmed).
 
 ## Phase 0 — what shipped (reference)
 
