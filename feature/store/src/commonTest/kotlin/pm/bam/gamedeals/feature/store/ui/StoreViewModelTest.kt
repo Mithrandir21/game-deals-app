@@ -26,8 +26,10 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -51,6 +53,9 @@ class StoreViewModelTest : MainDispatcherTest() {
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
         every { observeFavouriteIds() } returns flowOf(persistentSetOf())
     }
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
+        every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -62,6 +67,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         favouritesRepository = favouritesRepository,
+        regionRepository = regionRepository,
     )
 
     @Test

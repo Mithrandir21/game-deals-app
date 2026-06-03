@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -34,6 +35,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
@@ -45,6 +47,7 @@ internal class StoreViewModel(
     private val storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val favouritesRepository: FavouritesRepository,
+    private val regionRepository: RegionRepository,
 ) : ViewModel() {
 
     val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
@@ -103,6 +106,19 @@ internal class StoreViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = persistentListOf()
         )
+
+    init {
+        // Re-fetch this store's deals when the region changes. Settings clears the deal cache before
+        // updating the region, so re-subscribing observeStoreDeals re-fetches regional prices (#212).
+        // `drop(1)` skips the current region already loaded on first subscribe.
+        viewModelScope.launch {
+            regionRepository.observeSelectedCountry()
+                .map { it.code }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { retry() }
+        }
+    }
 
     fun retry() {
         retryTrigger.update { it + 1 }

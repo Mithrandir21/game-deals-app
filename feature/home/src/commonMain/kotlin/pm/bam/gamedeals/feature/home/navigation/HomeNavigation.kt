@@ -15,6 +15,7 @@ fun NavGraphBuilder.homeScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
+    goToSettings: () -> Unit,
 ) {
     composable<Destination.Home> {
         HomeScreen(
@@ -23,6 +24,7 @@ fun NavGraphBuilder.homeScreen(
             onViewStoreDeals = { store: Store -> goToStore(store.storeID) },
             onViewGiveaways = goToGiveaway,
             onViewFavourites = goToFavourites,
+            onViewSettings = goToSettings,
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) },
             goToGameDetails = goToGameDetails,
             goToGameDetailsByTitle = goToGameDetailsByTitle,

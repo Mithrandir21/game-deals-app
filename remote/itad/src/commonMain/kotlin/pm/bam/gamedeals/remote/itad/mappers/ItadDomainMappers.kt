@@ -27,12 +27,30 @@ internal fun dealId(gameId: String, shopId: Int): String = "$gameId:$shopId"
 
 internal fun gameIdFromDealId(dealId: String): String = dealId.substringBeforeLast(':')
 
-/** KMP-safe money → denominated string (USD → "$9.99"; other currencies → "9.99 EUR"). */
+/**
+ * KMP-safe money → denominated string. Prefixes a symbol for the common prefix-style currencies the
+ * regional picker exposes (USD → "$9.99", EUR → "€9.99", GBP → "£9.99", …); other currencies fall back
+ * to a trailing code ("9.99 PLN") so we never render a wrong/misplaced symbol (#212, regional pricing).
+ */
 internal fun ItadMoney.denominated(): String {
     val cents = round(amount * 100).toLong()
     val number = "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
-    return if (currency.equals("USD", ignoreCase = true)) "$" + number else "$number $currency"
+    val symbol = CURRENCY_SYMBOLS[currency.uppercase()]
+    return if (symbol != null) "$symbol$number" else "$number $currency"
 }
+
+/** Prefix-style currency symbols only (currencies whose symbol conventionally trails are left as a code). */
+private val CURRENCY_SYMBOLS: Map<String, String> = mapOf(
+    "USD" to "$",
+    "CAD" to "CA$",
+    "AUD" to "A$",
+    "NZD" to "NZ$",
+    "EUR" to "€",
+    "GBP" to "£",
+    "JPY" to "¥",
+    "BRL" to "R$",
+    "MXN" to "MX$",
+)
 
 internal fun ItadDeal.toDeal(): Deal {
     val normal = regular ?: price

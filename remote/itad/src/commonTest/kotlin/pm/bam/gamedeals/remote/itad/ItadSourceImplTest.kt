@@ -7,10 +7,16 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
@@ -41,6 +47,15 @@ class ItadSourceImplTest {
     private val logger: Logger = TestingLoggingListener()
     private val recordedRequests = mutableListOf<HttpRequestData>()
     private lateinit var impl: ItadSourceImpl
+
+    // The source reads the country from [RegionRepository]; the tests assert `country=US`, so the fake
+    // always reports US (regional pricing — Phase 3b, #212).
+    private val regionRepository = object : RegionRepository {
+        override val supportedCountries: List<Country> = SUPPORTED_COUNTRIES
+        override fun observeSelectedCountry(): Flow<Country> = flowOf(DEFAULT_COUNTRY)
+        override suspend fun getSelectedCountryCode(): String = "US"
+        override suspend fun setSelectedCountry(country: Country) = Unit
+    }
 
     @BeforeTest
     fun setUp() {
@@ -73,6 +88,7 @@ class ItadSourceImplTest {
             dealsApi = ItadDealsApi(httpClient),
             gamesApi = ItadGamesApi(httpClient),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            regionRepository = regionRepository,
         )
     }
 

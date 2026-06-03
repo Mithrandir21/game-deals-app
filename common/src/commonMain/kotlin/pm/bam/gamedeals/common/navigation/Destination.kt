@@ -42,4 +42,7 @@ sealed interface Destination {
 
     @Serializable
     data object Favourites : Destination
+
+    @Serializable
+    data object Settings : Destination
 }

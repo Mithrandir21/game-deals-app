@@ -34,4 +34,8 @@ internal interface DealsDao {
     /** Deletes all [Deal]s from the database where the [Deal.storeID] is [storeId]. */
     @Query("DELETE FROM Deal WHERE storeID IS :storeId")
     suspend fun clearDealsForStore(storeId: Int)
+
+    /** Deletes every cached [Deal] — used to invalidate the cache when the region changes (#212). */
+    @Query("DELETE FROM Deal")
+    suspend fun clearAllDeals()
 }

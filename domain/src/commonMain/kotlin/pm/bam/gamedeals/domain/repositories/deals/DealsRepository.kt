@@ -27,6 +27,12 @@ interface DealsRepository {
     suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
     suspend fun getDeal(dealId: String): DealDetails
     suspend fun refreshDeals(storeId: Int, force: Boolean = false)
+
+    /**
+     * Drops every cached deal so the next observe/refresh re-fetches. Used when the region changes
+     * (#212): cached rows hold the previous region's prices/currency and must be invalidated.
+     */
+    suspend fun clearCachedDeals()
 }
 
 internal class DealsRepositoryImpl(
@@ -63,6 +69,8 @@ internal class DealsRepositoryImpl(
 
     override suspend fun getDeal(dealId: String): DealDetails =
         dealsSource.fetchDealDetails(dealId)
+
+    override suspend fun clearCachedDeals() = dealsDao.clearAllDeals()
 
     @OptIn(ExperimentalSerializationApi::class)
     override suspend fun refreshDeals(storeId: Int, force: Boolean) {

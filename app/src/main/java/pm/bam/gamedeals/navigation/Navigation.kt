@@ -64,4 +64,10 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    fun navigateToSettings() {
+        navController.navigate(Destination.Settings) {
+            restoreState = true
+        }
+    }
+
 }

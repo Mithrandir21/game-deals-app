@@ -55,6 +55,7 @@ kotlin {
             implementation(project(":feature:favourites"))
             implementation(project(":feature:store"))
             implementation(project(":feature:webview"))
+            implementation(project(":feature:settings"))
         }
     }
 }
