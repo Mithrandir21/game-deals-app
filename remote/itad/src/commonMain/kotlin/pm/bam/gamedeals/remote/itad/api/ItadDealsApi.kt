@@ -6,14 +6,12 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.CancellationException
-import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsGame
+import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsResponse
 
 /**
- * ITAD deals list endpoint. Each returned game nests its per-shop `deals[]`.
- *
- * NOTE: modelled as a bare JSON array per the published docs. If the live `/deals/v2` wraps the
- * results in an envelope (e.g. `{ "list": [...], "nextOffset": ..., "hasMore": ... }`), introduce a
- * `RemoteItadDealsResponse` wrapper here. Confirm during the Phase 1 live smoke (see plan).
+ * ITAD deals list endpoint. The live `/deals/v2` wraps the games in an envelope
+ * `{ nextOffset, hasMore, list }`, and each list item is a game with a single best `deal` (confirmed
+ * against the live API during Phase 2b). `?shops=<id>` filters to that shop's deals.
  */
 class ItadDealsApi(private val httpClient: HttpClient) {
 
@@ -23,7 +21,7 @@ class ItadDealsApi(private val httpClient: HttpClient) {
         limit: Int? = null,
         sort: String? = null,
         shops: String? = null,
-    ): ApiResponse<List<RemoteItadDealsGame>> = try {
+    ): ApiResponse<RemoteItadDealsResponse> = try {
         ApiResponse.Success(
             httpClient.get("/deals/v2") {
                 parameter("country", country)
@@ -31,7 +29,7 @@ class ItadDealsApi(private val httpClient: HttpClient) {
                 parameter("limit", limit)
                 parameter("sort", sort)
                 parameter("shops", shops)
-            }.body<List<RemoteItadDealsGame>>()
+            }.body<RemoteItadDealsResponse>()
         )
     } catch (e: CancellationException) {
         throw e

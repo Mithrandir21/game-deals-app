@@ -8,7 +8,9 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
@@ -23,8 +25,9 @@ import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * HTTP-level coverage for [ItadSourceImpl] and the ITAD `*Api` classes, driven against a
@@ -32,6 +35,7 @@ import kotlin.test.assertNotNull
  * mapping are exercised end-to-end. MockEngine routes by path; recorded requests are asserted to
  * verify wiring. [RemoteExceptionTransformer] is the identity transform here.
  */
+@OptIn(ExperimentalSerializationApi::class)
 class ItadSourceImplTest {
 
     private val logger: Logger = TestingLoggingListener()
@@ -53,6 +57,7 @@ class ItadSourceImplTest {
                 "/games/history/v2" -> HISTORY_BODY
                 "/games/search/v1" -> SEARCH_BODY
                 "/games/lookup/v1" -> LOOKUP_BODY
+                "/games/info/v2" -> INFO_BODY
                 else -> ""
             }
             respond(
@@ -82,7 +87,7 @@ class ItadSourceImplTest {
     }
 
     @Test
-    fun fetchDeals_flattens_and_maps_deal_entries() = runTest {
+    fun fetchDeals_maps_the_singular_deal_per_game_from_the_envelope() = runTest {
         val deals = impl.fetchDeals(country = "US")
 
         assertEquals(1, deals.size)
@@ -94,6 +99,7 @@ class ItadSourceImplTest {
         assertEquals("USD", deal.price.currency)
         assertEquals(50, deal.cutPercent)
         assertEquals("https://store/halo", deal.url)
+        assertEquals("halo-box.png", deal.boxart)
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -149,11 +155,98 @@ class ItadSourceImplTest {
     }
 
     @Test
-    fun dealsSource_methods_blocked_by_the_model_gap_throw_until_phase_2() = runTest {
-        assertFailsWith<UnsupportedOperationException> { impl.fetchDealDetails("x") }
-        assertFailsWith<UnsupportedOperationException> { impl.fetchGames("x", null, null, null) }
-        assertFailsWith<UnsupportedOperationException> { impl.fetchGameDetails("x") }
-        assertFailsWith<UnsupportedOperationException> { impl.fetchDealsForStore(null) }
+    fun fetchDealsForStore_by_store_maps_to_domain_deals_with_synthesized_id_and_null_cheapshark_fields() = runTest {
+        val deals = impl.fetchDealsForStore(SearchParameters(storeID = 61, pageSize = 20))
+
+        assertEquals(1, deals.size)
+        val deal = deals.first()
+        assertEquals("uuid-1:61", deal.dealID) // "<gameUUID>:<shopId>"
+        assertEquals(61, deal.storeID)
+        assertEquals("uuid-1", deal.gameID)
+        assertEquals("Halo", deal.title)
+        assertEquals(9.99, deal.salePriceValue)
+        assertEquals("\$9.99", deal.salePriceDenominated)
+        assertEquals(19.99, deal.normalPriceValue)
+        assertEquals(50.0, deal.savings)
+        assertEquals("halo-box.png", deal.thumb)
+        assertEquals("https://store/halo", deal.url)
+        // ITAD provides none of these.
+        assertNull(deal.steamRatingPercent)
+        assertNull(deal.metacriticScore)
+        assertNull(deal.dealRating)
+        assertNull(deal.releaseDate)
+
+        val recorded = recordedRequests.single().url
+        assertEquals("/deals/v2", recorded.encodedPath)
+        assertEquals("61", recorded.parameters["shops"])
+    }
+
+    @Test
+    fun fetchDealsForStore_by_title_resolves_via_search_then_prices() = runTest {
+        val deals = impl.fetchDealsForStore(SearchParameters(title = "halo", exact = true))
+
+        assertEquals(1, deals.size)
+        val deal = deals.first()
+        // Cheapest deal from PRICES_BODY (shop 35, $7.49), carrying the search game's title/boxart.
+        assertEquals("uuid-1:35", deal.dealID)
+        assertEquals(35, deal.storeID)
+        assertEquals("Halo", deal.title)
+        assertEquals(7.49, deal.salePriceValue)
+        assertEquals("box.png", deal.thumb)
+
+        val paths = recordedRequests.map { it.url.encodedPath }
+        assertTrue("/games/search/v1" in paths)
+        assertTrue("/games/prices/v3" in paths)
+    }
+
+    @Test
+    fun fetchDealDetails_parses_game_uuid_and_focus_shop_from_dealId() = runTest {
+        val details = impl.fetchDealDetails("uuid-1:35")
+
+        assertEquals("uuid-1", details.gameInfo.gameID)
+        assertEquals(35, details.gameInfo.storeID) // focus shop parsed from the dealId
+        assertEquals("Halo", details.gameInfo.name) // from /games/info/v2
+        assertEquals(7.49, details.gameInfo.salePriceValue)
+        assertEquals(4.99, details.cheapestPrice?.priceValue) // historyLow.all
+
+        val paths = recordedRequests.map { it.url.encodedPath }
+        assertTrue("/games/info/v2" in paths)
+        assertTrue("/games/prices/v3" in paths)
+    }
+
+    @Test
+    fun fetchGames_by_steam_app_id_uses_the_lookup_bridge() = runTest {
+        val games = impl.fetchGames(title = "ignored", steamAppID = 1240, limit = 1)
+
+        assertEquals(1, games.size)
+        assertEquals("uuid-1", games.first().gameID)
+        assertEquals("Halo", games.first().title)
+        assertEquals("/games/lookup/v1", recordedRequests.single().url.encodedPath)
+    }
+
+    @Test
+    fun fetchGames_by_title_uses_search() = runTest {
+        val games = impl.fetchGames(title = "halo", steamAppID = null, limit = 5)
+
+        assertEquals(1, games.size)
+        assertEquals("uuid-1", games.first().gameID)
+        assertEquals("box.png", games.first().thumb)
+        assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
+    }
+
+    @Test
+    fun fetchGameDetails_combines_info_and_prices() = runTest {
+        val details = impl.fetchGameDetails("uuid-1")
+
+        assertEquals("Halo", details.info.title)
+        assertEquals(4.99, details.cheapestPriceEver.priceValue)
+        assertEquals(1, details.deals.size)
+        assertEquals(35, details.deals.first().storeID)
+        assertEquals("uuid-1:35", details.deals.first().dealID)
+
+        val paths = recordedRequests.map { it.url.encodedPath }
+        assertTrue("/games/info/v2" in paths)
+        assertTrue("/games/prices/v3" in paths)
     }
 
     @Test
@@ -185,23 +278,29 @@ class ItadSourceImplTest {
         // language=JSON
         private const val SHOPS_BODY = """[ { "id": 61, "title": "Steam" } ]"""
 
-        // language=JSON
-        private const val DEALS_BODY = """[
-            {
-              "id": "uuid-1",
-              "slug": "halo",
-              "title": "Halo",
-              "deals": [
-                {
+        // language=JSON — the live /deals/v2 envelope: { nextOffset, hasMore, list:[ game{ assets, deal } ] }.
+        private const val DEALS_BODY = """{
+            "nextOffset": 1,
+            "hasMore": false,
+            "list": [
+              {
+                "id": "uuid-1",
+                "slug": "halo",
+                "title": "Halo",
+                "assets": { "boxart": "halo-box.png" },
+                "deal": {
                   "shop": { "id": 61, "name": "Steam" },
                   "price": { "amount": 9.99, "amountInt": 999, "currency": "USD" },
                   "regular": { "amount": 19.99, "amountInt": 1999, "currency": "USD" },
                   "cut": 50,
                   "url": "https://store/halo"
                 }
-              ]
-            }
-          ]"""
+              }
+            ]
+          }"""
+
+        // language=JSON — /games/info/v2 returns a single game object (title + assets).
+        private const val INFO_BODY = """{ "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "info-box.png" } }"""
 
         // language=JSON
         private const val PRICES_BODY = """[

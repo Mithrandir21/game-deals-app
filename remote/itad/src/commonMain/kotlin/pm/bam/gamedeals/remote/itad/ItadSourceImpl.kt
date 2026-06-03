@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad
 
 import com.skydoves.sandwich.getOrThrow
+import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -13,7 +14,12 @@ import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
-import pm.bam.gamedeals.remote.itad.mappers.toItadDeals
+import pm.bam.gamedeals.remote.itad.mappers.gameIdFromDealId
+import pm.bam.gamedeals.remote.itad.mappers.toDeal
+import pm.bam.gamedeals.remote.itad.mappers.toDealDetails
+import pm.bam.gamedeals.remote.itad.mappers.toGame
+import pm.bam.gamedeals.remote.itad.mappers.toGameDetails
+import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.mappers.toItadPriceHistoryEntry
@@ -26,18 +32,15 @@ import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
 
 /**
- * IsThereAnyDeal implementation of the source-neutral [DealsSource] port (epic #205).
+ * IsThereAnyDeal implementation of the source-neutral [DealsSource] port (epic #205) — the **live**
+ * deal source since Phase 2b.
  *
- * Phase 1 scope: this stands up the ITAD module (client, DTOs, mappers) and proves the fetch + map
- * path. ITAD identifies games by UUID and exposes a shape that doesn't fit the app's current
- * CheapShark-shaped domain models (`Deal.gameID: Int`, steam-rating fields, …), and the app's
- * domain models only migrate to UUIDs in Phase 2 — so the methods that would return those models
- * throw [UnsupportedOperationException] for now. [fetchStores] is honoured because ITAD shop ids are
- * already integers and map straight onto [Store].
- *
- * The ITAD-shaped façade ([fetchDeals], [fetchGamePrices], [fetchPriceHistory], [searchGames],
- * [lookupBySteamAppId]) carries the real Phase 1 capability and is exercised by the module's tests;
- * Phase 2/3 bridge it into the migrated domain and surface it through the seam/UI.
+ * ITAD is game-centric (UUID game ids) and lacks several CheapShark fields (per-deal id, Steam rating,
+ * Metacritic, deal rating, release date); those [Deal]/[DealDetails] fields are nullable and left null.
+ * The DealsSource methods bridge the ITAD-shaped façade ([fetchDeals], [fetchGamePrices], [searchGames],
+ * [lookupBySteamAppId], [fetchGameInfo], …) into the (UUID-migrated) domain via the ITAD→domain mappers.
+ * Deal ids are synthesized as `"<gameUUID>:<shopId>"` since ITAD has no per-deal id. Country is fixed to
+ * US for now (regional pricing is Phase 3); ITAD has no releases endpoint (releases moved to IGDB in 2c).
  */
 internal class ItadSourceImpl(
     private val logger: Logger,
@@ -56,18 +59,58 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .map { it.toStore() }
 
-    // --- DealsSource (deferred to #205 Phase 2: needs the UUID/Room domain-model migration) ---
+    // --- DealsSource (ITAD live since #205 Phase 2b) ---
 
-    override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> = throw notYetSupported("fetchDealsForStore")
+    override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> {
+        val storeId = query?.storeID
+        val title = query?.title
+        val limit = query?.pageSize
+        return when {
+            // Store deals: `/deals/v2?shops=<id>` returns each game's best deal at that shop.
+            storeId != null -> fetchDeals(country = COUNTRY, limit = limit, shops = storeId.toString()).map { it.toDeal() }
+            // Title search (release lookup + Search screen): ITAD has no title filter on /deals/v2, so
+            // resolve via game search → current prices → cheapest deal per game. Price/Steam-rating/
+            // Metacritic filters in [query] aren't supported by ITAD and are ignored (epic #205 ADR trade-off).
+            !title.isNullOrBlank() -> dealsByTitle(title, limit)
+            else -> fetchDeals(country = COUNTRY, limit = limit).map { it.toDeal() }
+        }
+    }
 
-    override suspend fun fetchDealDetails(id: String): DealDetails = throw notYetSupported("fetchDealDetails")
+    override suspend fun fetchDealDetails(id: String): DealDetails {
+        val gameId = gameIdFromDealId(id)
+        val focusShopId = id.substringAfterLast(':').toIntOrNull() ?: 0
+        val info = fetchGameInfo(gameId)
+        val prices = fetchGamePrices(listOf(gameId), country = COUNTRY).firstOrNull()
+            ?: ItadGamePrices(gameId = gameId, historyLowAll = null, deals = persistentListOf())
+        return prices.toDealDetails(title = info.title, boxart = info.boxart, focusShopId = focusShopId)
+    }
 
     override suspend fun fetchGames(title: String, steamAppID: Int?, limit: Int?, pageNumber: Int?): List<Game> =
-        throw notYetSupported("fetchGames")
+        when {
+            steamAppID != null -> listOfNotNull(lookupBySteamAppId(steamAppID)?.toGame())
+            title.isBlank() -> emptyList()
+            else -> searchGames(title = title, results = limit).map { it.toGame() }
+        }
 
-    override suspend fun fetchGameDetails(id: String): GameDetails = throw notYetSupported("fetchGameDetails")
+    override suspend fun fetchGameDetails(id: String): GameDetails {
+        val info = fetchGameInfo(id)
+        val prices = fetchGamePrices(listOf(id), country = COUNTRY).firstOrNull()
+            ?: ItadGamePrices(gameId = id, historyLowAll = null, deals = persistentListOf())
+        return prices.toGameDetails(title = info.title, boxart = info.boxart)
+    }
 
-    // --- ITAD-shaped façade (Phase 1 fetch + map; surfaced via the seam in Phase 2/3) ---
+    /** Cheapest current deal per game for a title search; carries the game's title/boxart onto the deal. */
+    private suspend fun dealsByTitle(title: String, limit: Int?): List<Deal> {
+        val games = searchGames(title = title, results = limit)
+        if (games.isEmpty()) return emptyList()
+        val pricesByGameId = fetchGamePrices(games.map { it.id }, country = COUNTRY).associateBy { it.gameId }
+        return games.mapNotNull { game ->
+            val cheapest = pricesByGameId[game.id]?.deals?.minByOrNull { it.price.amount } ?: return@mapNotNull null
+            cheapest.copy(gameTitle = game.title, boxart = game.boxart).toDeal()
+        }
+    }
+
+    // --- ITAD-shaped façade (fetch + map; consumed by the DealsSource methods above) ---
 
     suspend fun fetchDeals(
         country: String? = null,
@@ -80,7 +123,8 @@ internal class ItadSourceImpl(
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
-            .flatMap { it.toItadDeals() }
+            .list
+            .map { it.toItadDeal() }
 
     suspend fun fetchGamePrices(gameIds: List<String>, country: String? = null): List<ItadGamePrices> =
         gamesApi.getPrices(gameIds = gameIds, country = country)
@@ -113,11 +157,16 @@ internal class ItadSourceImpl(
             ?.game
             ?.toItadGameSearchResult(steamAppId = appid)
 
-    private fun notYetSupported(method: String): UnsupportedOperationException = UnsupportedOperationException(
-        "ITAD $method is not implemented in Phase 1 — see #205 Phase 2 (UUID/Room domain-model migration; releases → IGDB)."
-    )
+    /** Basic game info (title + boxart) by UUID — drives the game-/deal-detail headers. */
+    suspend fun fetchGameInfo(id: String): ItadGameSearchResult =
+        gamesApi.getInfo(id)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toItadGameSearchResult()
 
     private companion object {
+        private const val COUNTRY = "US"
         private val TAG: String = ItadSourceImpl::class.simpleName.orEmpty()
     }
 }

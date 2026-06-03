@@ -40,7 +40,7 @@ internal fun RemoteItadShop.toStore(): Store =
 internal fun RemoteItadShop.toItadShop(): ItadShop =
     ItadShop(id = id, name = title)
 
-internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String): ItadDeal =
+internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, boxart: String? = null): ItadDeal =
     ItadDeal(
         gameId = gameId,
         gameTitle = gameTitle,
@@ -50,10 +50,12 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String): 
         cutPercent = cut,
         url = url,
         storeLow = storeLow?.toItadMoney(),
+        boxart = boxart,
     )
 
-internal fun RemoteItadDealsGame.toItadDeals(): List<ItadDeal> =
-    deals.map { it.toItadDeal(gameId = id, gameTitle = title) }
+/** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
+internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =
+    deal.toItadDeal(gameId = id, gameTitle = title, boxart = assets?.boxart ?: assets?.banner300 ?: assets?.banner600)
 
 internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null): ItadGameSearchResult =
     ItadGameSearchResult(

@@ -34,7 +34,7 @@ internal fun List<Deal>.groupByGame(): List<GroupedSearchResult> {
 
     return groups.map { (gameID, deals) ->
         val cheapest = deals.minWith(
-            compareBy<Deal> { it.salePriceValue }.thenByDescending { it.dealRating }
+            compareBy<Deal> { it.salePriceValue }.thenByDescending { it.dealRating ?: 0.0 }
         )
         GroupedSearchResult(gameID = gameID, cheapestDeal = cheapest, totalDealCount = deals.size)
     }

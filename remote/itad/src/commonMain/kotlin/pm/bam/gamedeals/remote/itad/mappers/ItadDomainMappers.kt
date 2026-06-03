@@ -1,0 +1,126 @@
+package pm.bam.gamedeals.remote.itad.mappers
+
+import kotlinx.collections.immutable.toImmutableList
+import kotlin.math.round
+import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.Game
+import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.remote.itad.models.ItadDeal
+import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
+import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
+import pm.bam.gamedeals.remote.itad.models.ItadMoney
+
+/**
+ * ITAD-shaped models → the app's (CheapShark-shaped) domain models (epic #205, Phase 2b).
+ *
+ * ITAD is game-centric and lacks several fields CheapShark had (per-deal id, Steam rating, Metacritic,
+ * deal rating, release date, publisher). Those `Deal`/`DealDetails.GameInfo` fields are nullable and left
+ * `null` here. ITAD has no per-deal id, and the same game can be a deal in multiple stores, so the
+ * synthesized `Deal.dealID` encodes the shop: `"<gameUUID>:<shopId>"`. [gameIdFromDealId] recovers the UUID.
+ */
+
+internal fun dealId(gameId: String, shopId: Int): String = "$gameId:$shopId"
+
+internal fun gameIdFromDealId(dealId: String): String = dealId.substringBeforeLast(':')
+
+/** KMP-safe money → denominated string (USD → "$9.99"; other currencies → "9.99 EUR"). */
+internal fun ItadMoney.denominated(): String {
+    val cents = round(amount * 100).toLong()
+    val number = "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
+    return if (currency.equals("USD", ignoreCase = true)) "$" + number else "$number $currency"
+}
+
+internal fun ItadDeal.toDeal(): Deal {
+    val normal = regular ?: price
+    return Deal(
+        dealID = dealId(gameId, shop.id),
+        title = gameTitle,
+        storeID = shop.id,
+        gameID = gameId,
+        salePriceValue = price.amount,
+        salePriceDenominated = price.denominated(),
+        normalPriceValue = normal.amount,
+        normalPriceDenominated = normal.denominated(),
+        isOnSale = cutPercent > 0,
+        savings = cutPercent.toDouble(),
+        thumb = boxart.orEmpty(),
+        url = url,
+        // CheapShark-only fields (internalName, metacritic*, steamRating*, releaseDate, lastChange,
+        // dealRating) are nullable and default to null — ITAD does not provide them.
+    )
+}
+
+internal fun ItadGameSearchResult.toGame(): Game = Game(
+    gameID = id,
+    steamAppID = steamAppId,
+    cheapestValue = 0.0,
+    cheapestDenominated = "",
+    cheapestDealID = "",
+    title = title,
+    internalName = "",
+    thumb = boxart.orEmpty(),
+)
+
+internal fun ItadGamePrices.toGameDetails(title: String, boxart: String?): GameDetails = GameDetails(
+    info = GameDetails.GameInfo(title = title, steamAppID = null, thumb = boxart.orEmpty()),
+    cheapestPriceEver = GameDetails.GameCheapestPriceEver(
+        priceValue = historyLowAll?.amount ?: 0.0,
+        priceDenominated = historyLowAll?.denominated().orEmpty(),
+        date = "",
+    ),
+    deals = deals.map { it.toGameDeal() }.toImmutableList(),
+)
+
+/**
+ * Build a [DealDetails] for the deal at [focusShopId] (parsed from the synthesized dealID). The focused
+ * shop becomes the headline `gameInfo`; the remaining shops are the cheaper-store alternatives.
+ */
+internal fun ItadGamePrices.toDealDetails(title: String, boxart: String?, focusShopId: Int): DealDetails {
+    val focus = deals.firstOrNull { it.shop.id == focusShopId } ?: deals.firstOrNull()
+    val focusNormal = focus?.let { it.regular ?: it.price }
+    val others = deals.filter { it.shop.id != focus?.shop?.id }
+    return DealDetails(
+        gameInfo = DealDetails.GameInfo(
+            storeID = focus?.shop?.id ?: focusShopId,
+            gameID = gameId,
+            name = title,
+            salePriceValue = focus?.price?.amount ?: 0.0,
+            salePriceDenominated = focus?.price?.denominated().orEmpty(),
+            retailPriceValue = focusNormal?.amount ?: 0.0,
+            retailPriceDenominated = focusNormal?.denominated().orEmpty(),
+            thumb = boxart.orEmpty(),
+        ),
+        cheaperStores = others.map { it.toCheaperStore() }.toImmutableList(),
+        cheapestPrice = historyLowAll?.let {
+            DealDetails.CheapestPrice(priceValue = it.amount, priceDenominated = it.denominated(), date = "")
+        },
+    )
+}
+
+private fun ItadDeal.toGameDeal(): GameDetails.GameDeal {
+    val retail = regular ?: price
+    return GameDetails.GameDeal(
+        storeID = shop.id,
+        dealID = dealId(gameId, shop.id),
+        priceValue = price.amount,
+        priceDenominated = price.denominated(),
+        retailPriceValue = retail.amount,
+        retailPriceDenominated = retail.denominated(),
+        savings = cutPercent,
+        url = url,
+    )
+}
+
+private fun ItadDeal.toCheaperStore(): DealDetails.CheaperStore {
+    val retail = regular ?: price
+    return DealDetails.CheaperStore(
+        dealID = dealId(gameId, shop.id),
+        storeID = shop.id,
+        salePriceValue = price.amount,
+        salePriceDenominated = price.denominated(),
+        retailPriceValue = retail.amount,
+        retailPriceDenominated = retail.denominated(),
+        url = url,
+    )
+}

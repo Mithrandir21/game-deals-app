@@ -43,6 +43,7 @@ import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
 import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
+import pm.bam.gamedeals.remote.itad.di.itadRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 class GameDealsApplication : Application(), SingletonImageLoader.Factory {
@@ -74,17 +75,18 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 domainModule,
                 domainAndroidModule,
                 remoteModule(currentRemoteBuildType()),
+                // CheapShark network singles stay registered but unused — ITAD is the live DealsSource
+                // since Phase 2b; the whole :remote:cheapshark module is removed in Phase 4 (epic #205).
                 cheapsharkNetworkModule,
-                cheapsharkRemoteModule,
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
                 igdbNetworkModule,
                 igdbRemoteModule,
                 module { single { IgdbCredentials(BuildConfig.IGDB_CLIENT_ID, BuildConfig.IGDB_CLIENT_SECRET) } },
-                // ITAD (epic #205, Phase 1): credential + network wiring only. itadRemoteModule (the
-                // DealsSource binding) is intentionally NOT registered yet — CheapShark stays the active
-                // source until Phase 2 swaps the DI.
+                // ITAD is the live DealsSource since Phase 2b (epic #205): itadRemoteModule binds it,
+                // replacing cheapsharkRemoteModule.
                 itadNetworkModule,
+                itadRemoteModule,
                 module { single { ItadCredentials(BuildConfig.ITAD_API_KEY) } },
                 appModule,
                 homeModule,

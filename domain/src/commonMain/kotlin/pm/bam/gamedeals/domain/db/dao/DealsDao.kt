@@ -12,19 +12,19 @@ import pm.bam.gamedeals.domain.models.Deal
 internal interface DealsDao {
 
     /** Returns all the [Deal]s in the database, ordered by their [Deal.releaseDate] in descending order. */
-    @Query("SELECT * FROM Deal ORDER BY releaseDate DESC")
+    @Query("SELECT * FROM Deal ORDER BY savings DESC")
     fun observeAllDeals(): Flow<List<Deal>>
 
     /** Returns all the [Deal]s in the database with [storeId], ordered by their [Deal.dealRating] in descending order. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY dealRating DESC")
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC")
     suspend fun getStoreDeals(storeId: Int): List<Deal>
 
     /** Returns all the [Deal]s in the database with [storeId], ordered by their [Deal.dealRating] in descending order, limited to [limit]. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY dealRating DESC LIMIT :limit")
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC LIMIT :limit")
     suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
 
     /** Live stream of all the [Deal]s for [storeId], ordered by [Deal.dealRating] descending. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY dealRating DESC")
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC")
     fun observeStoreDeals(storeId: Int): Flow<List<Deal>>
 
     /** Adds the [Deal] to the database. */

@@ -20,7 +20,7 @@ data class Deal(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val dealID: String,
     @SerialName("internalName")
-    val internalName: String,
+    val internalName: String? = null,
     @SerialName("title")
     val title: String,
     @SerialName("metacriticLink")
@@ -42,21 +42,21 @@ data class Deal(
     @SerialName("savings")
     val savings: Double,
     @SerialName("metacriticScore")
-    val metacriticScore: Int,
+    val metacriticScore: Int? = null,
     @SerialName("steamRatingText")
     val steamRatingText: String? = null,
     @SerialName("steamRatingPercent")
-    val steamRatingPercent: Int,
+    val steamRatingPercent: Int? = null,
     @SerialName("steamRatingCount")
-    val steamRatingCount: String,
+    val steamRatingCount: String? = null,
     @SerialName("steamAppID")
     val steamAppID: Int? = null,
     @SerialName("releaseDate")
-    val releaseDate: Int,
+    val releaseDate: Int? = null,
     @SerialName("lastChange")
-    val lastChange: Int,
+    val lastChange: Int? = null,
     @SerialName("dealRating")
-    val dealRating: Double,
+    val dealRating: Double? = null,
     @SerialName("thumb")
     val thumb: String,
 
@@ -116,7 +116,7 @@ data class DealDetails(
         @SerialName("steamRatingPercent")
         val steamRatingPercent: Int? = null,
         @SerialName("steamRatingCount")
-        val steamRatingCount: String,
+        val steamRatingCount: String? = null,
         @SerialName("metacriticScore")
         val metacriticScore: Int? = null,
         @SerialName("metacriticLink")
@@ -124,7 +124,7 @@ data class DealDetails(
         @SerialName("releaseDate")
         val releaseDate: String? = null,
         @SerialName("publisher")
-        val publisher: String,
+        val publisher: String? = null,
         @SerialName("steamworks")
         val steamworks: Boolean? = null,
         @SerialName("thumb")

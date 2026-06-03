@@ -52,7 +52,11 @@ import pm.bam.gamedeals.logging.info
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
 internal const val EXPIRED_STATUS = "Expired"
-internal val topStores = listOf(1, 11, 3, 23, 15, 27, 7, 21, 2)
+// ITAD shop ids of major PC stores, shown as the Home "top stores" strips (epic #205, Phase 2b —
+// the old values were CheapShark store ids, which don't map to ITAD's). See `/service/shops/v1`:
+// 61 Steam · 16 Epic · 35 GOG · 37 Humble · 6 Fanatical · 36 GreenManGaming · 24 GamersGate ·
+// 20 GameBillet · 42 IndieGala.
+internal val topStores = listOf(61, 16, 35, 37, 6, 36, 24, 20, 42)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class HomeViewModel(

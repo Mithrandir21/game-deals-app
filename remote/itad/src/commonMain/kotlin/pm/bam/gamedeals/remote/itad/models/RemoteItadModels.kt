@@ -70,7 +70,19 @@ data class RemoteItadDealsGame(
     @SerialName("id") val id: String,
     @SerialName("slug") val slug: String? = null,
     @SerialName("title") val title: String,
-    @SerialName("deals") val deals: List<RemoteItadDealEntry> = emptyList(),
+    @SerialName("assets") val assets: RemoteItadGameAssets? = null,
+    @SerialName("deal") val deal: RemoteItadDealEntry,
+)
+
+/**
+ * `/deals/v2` envelope. The live API wraps the games list in `{ nextOffset, hasMore, list }` (each
+ * list item is a game with a single best `deal`), not the bare array the Phase-1 stub assumed.
+ */
+@Serializable
+data class RemoteItadDealsResponse(
+    @SerialName("nextOffset") val nextOffset: Int? = null,
+    @SerialName("hasMore") val hasMore: Boolean = false,
+    @SerialName("list") val list: List<RemoteItadDealsGame> = emptyList(),
 )
 
 // --- /games/prices/v3 ---
