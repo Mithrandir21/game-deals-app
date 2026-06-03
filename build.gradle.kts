@@ -22,7 +22,6 @@ dependencies {
     kover(project(":testing"))
     kover(project(":remote"))
     kover(project(":remote:gamerpower"))
-    kover(project(":remote:cheapshark"))
     kover(project(":remote:itad"))
     kover(project(":domain"))
     kover(project(":feature:store"))

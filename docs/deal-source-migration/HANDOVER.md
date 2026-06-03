@@ -1,9 +1,9 @@
 he # Deal-source migration (CheapShark → ITAD) — Handover
 
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
-**Status:** Phases 2 and **3 are complete.** ITAD is the live deal source; Phases 0 ✅, 1 ✅, 2a/2b/2c ✅,
-and **Phase 3 — 3a price-history chart ✅, 3b regional pricing ✅, 3c bundles ✅** — are all merged to `dev`.
-**Next up: Phase 4 (remove `:remote:cheapshark`).**
+**Status: epic #205 COMPLETE.** ITAD is the live deal source and `:remote:cheapshark` is gone. All phases
+are merged to `dev`: 0 ✅, 1 ✅, 2a/2b/2c ✅, 3a price-history chart ✅, 3b regional pricing ✅, 3c bundles ✅,
+**4 remove `:remote:cheapshark` ✅**.
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -26,7 +26,7 @@ notice — see ADR).
 | 3a | Real price-history chart on the game screen (Vico) | ✅ merged to `dev` | #208 |
 | 3b | Regional pricing — country picker + Settings screen | ✅ merged to `dev` | #212 |
 | 3c | Bundles — Home strip + Bundles list + detail screen | ✅ merged to `dev` | (no issue yet) |
-| 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
+| 4 | Remove `:remote:cheapshark` | ✅ merged to `dev` | (no issue yet) |
 
 **ITAD is now the live `DealsSource`** (Phase 2b). `:remote:cheapshark` stays in the tree (its network
 singles are still registered but unused) until **Phase 4** removes it.
@@ -179,6 +179,28 @@ region reloads Home/Store now), **broad ~40-country** list, Settings entry = a *
 - Tests: `RegionRepositoryTest` (in-memory fake `Storage`), `SettingsViewModelTest` (clear-then-persist order),
   and the `ItadSourceImplTest`/`HomeViewModelTest`/`StoreViewModelTest` constructors updated for the new
   `RegionRepository` dependency (`:remote:itad` has no Mokkery → hand-rolled US fake).
+
+## Phase 4 — remove `:remote:cheapshark` (DONE, branch `feat/phase4-remove-cheapshark`, merged to `dev`) — EPIC COMPLETE
+
+CheapShark was unused since Phase 2b (ITAD is the live `DealsSource`). Deleted the whole `:remote:cheapshark`
+module + all references:
+- Removed from `settings.gradle.kts`, root Kover, `:app` (`implementation` + `androidTestImplementation`),
+  `:iosApp`. Dropped `cheapsharkNetworkModule`/`cheapsharkRemoteModule` from `GameDealsApplication` +
+  `MainViewController`. Deleted the now-orphaned `domain/.../models/CheapsharkUrls.kt`
+  (`cheapsharkDealRedirectUrl` was referenced only by the deleted CheapShark mappers). Updated the
+  `DealsSource` KDoc (now names `ItadSourceImpl`).
+- **Integration test:** the `:app` instrumented `HomeToStoreToDealJourneyTest` mocked CheapShark and bound it
+  as the `DealsSource` in the test app — stale since 2b/2c. **Dropped** it + its CheapShark JSON fixtures
+  (user decision); stripped CheapShark from `TestNetworkOverridesModule` + `FixtureRequestHandler` (kept the
+  GamerPower/giveaways override) and switched `TestGameDealsApplication` to bind ITAD (mirrors production).
+  *Follow-up (not done): re-add an ITAD-based journey test.*
+- **Latent test gap fixed:** the full `testAndroidHostTest` here ran `:feature:game` (previously the
+  pre-existing `:remote:igdb` failure short-circuited the run without `--continue`, masking it). `GameViewModelTest`
+  needed a `getPriceHistory` stub (added in 3a but never stubbed) so the Data-state assertions match the default
+  empty `priceHistory`. Use `--continue` when running the full suite so module failures don't mask each other.
+
+> Remaining for the repo (outside epic #205): the pre-existing unrelated `IgdbSourceImplTest.fetchGameDetailsByTitle_…`
+> failure still fails on `dev`.
 
 ## Phase 3c — bundles (DONE, branch `feat/phase3c-bundles`, merged to `dev`) — Phase 3 COMPLETE
 

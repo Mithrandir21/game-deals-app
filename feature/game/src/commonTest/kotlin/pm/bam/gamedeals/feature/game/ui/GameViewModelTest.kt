@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
@@ -43,7 +44,11 @@ import kotlin.test.assertEquals
 
 class GameViewModelTest : MainDispatcherTest() {
 
-    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit) {
+        // Price history (#208) is best-effort enrichment loaded alongside the game details; stub it to
+        // the empty default so the Data-state assertions (which use the default priceHistory) hold.
+        everySuspend { getPriceHistory(any()) } returns PriceHistory(gameID = "", points = persistentListOf())
+    }
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {

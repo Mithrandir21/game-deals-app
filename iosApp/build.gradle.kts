@@ -43,7 +43,6 @@ kotlin {
             implementation(project(":common:ui"))
             implementation(project(":logging"))
             implementation(project(":remote"))
-            implementation(project(":remote:cheapshark"))
             implementation(project(":remote:gamerpower"))
             implementation(project(":remote:igdb"))
             implementation(project(":remote:itad"))

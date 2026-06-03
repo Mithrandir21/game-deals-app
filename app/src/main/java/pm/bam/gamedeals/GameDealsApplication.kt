@@ -35,8 +35,6 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -77,16 +75,12 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 domainModule,
                 domainAndroidModule,
                 remoteModule(currentRemoteBuildType()),
-                // CheapShark network singles stay registered but unused — ITAD is the live DealsSource
-                // since Phase 2b; the whole :remote:cheapshark module is removed in Phase 4 (epic #205).
-                cheapsharkNetworkModule,
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
                 igdbNetworkModule,
                 igdbRemoteModule,
                 module { single { IgdbCredentials(BuildConfig.IGDB_CLIENT_ID, BuildConfig.IGDB_CLIENT_SECRET) } },
-                // ITAD is the live DealsSource since Phase 2b (epic #205): itadRemoteModule binds it,
-                // replacing cheapsharkRemoteModule.
+                // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
                 itadNetworkModule,
                 itadRemoteModule,
                 module { single { ItadCredentials(BuildConfig.ITAD_API_KEY) } },

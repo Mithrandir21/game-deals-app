@@ -113,7 +113,6 @@ dependencies {
     implementation(project(":domain"))
 
     // Remote source adapters — wired in Koin at the app boundary so :domain stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
-    implementation(project(":remote:cheapshark"))
     implementation(project(":remote:gamerpower"))
     implementation(project(":remote:igdb"))
     implementation(project(":remote:itad"))
@@ -172,7 +171,7 @@ dependencies {
     androidTestImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.room)
     androidTestImplementation(libs.room.runtime)
-    androidTestImplementation(project(":remote:cheapshark"))
+    androidTestImplementation(project(":remote:itad"))
     androidTestImplementation(project(":remote:gamerpower"))
 
     debugImplementation(libs.androidx.ui.tooling)

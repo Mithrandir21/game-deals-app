@@ -49,8 +49,6 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.logging.di.loggingIosModule
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkNetworkModule
-import pm.bam.gamedeals.remote.cheapshark.di.cheapsharkRemoteModule
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -96,15 +94,11 @@ private fun bootstrapKoin() {
             domainModule,
             domainIosModule,
             remoteModule(currentRemoteBuildType()),
-            // CheapShark network singles stay registered but unused — ITAD is the live DealsSource
-            // since Phase 2b (epic #205); :remote:cheapshark is removed in Phase 4.
-            cheapsharkNetworkModule,
             gamerpowerNetworkModule,
             gamerpowerRemoteModule,
             igdbNetworkModule,
             igdbRemoteModule,
-            // ITAD is the live DealsSource since Phase 2b (epic #205): itadRemoteModule replaces
-            // cheapsharkRemoteModule.
+            // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
             itadNetworkModule,
             itadRemoteModule,
             homeModule,
