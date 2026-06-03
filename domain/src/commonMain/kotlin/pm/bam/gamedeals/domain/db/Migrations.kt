@@ -32,6 +32,20 @@ private val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6)
+/**
+ * v6 → v7 — ITAD go-live (epic #205, Phase 2b). ITAD doesn't provide the CheapShark-only `Deal`
+ * fields (`internalName`, `metacriticScore`, `steamRatingPercent`, `steamRatingCount`, `releaseDate`,
+ * `lastChange`, `dealRating`), so those columns become nullable. SQLite can't drop a NOT NULL
+ * constraint in place; `Deal` is a network-backed cache, so it is dropped and recreated at the v7
+ * schema (DDL copied verbatim from `domain/schemas/.../7.json`). Only `Deal` changed between v6 and v7.
+ */
+private val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `Deal`")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Deal` (`dealID` TEXT NOT NULL, `internalName` TEXT, `title` TEXT NOT NULL, `metacriticLink` TEXT, `storeID` INTEGER NOT NULL, `gameID` TEXT NOT NULL, `salePriceValue` REAL NOT NULL, `salePriceDenominated` TEXT NOT NULL, `normalPriceValue` REAL NOT NULL, `normalPriceDenominated` TEXT NOT NULL, `isOnSale` INTEGER NOT NULL, `savings` REAL NOT NULL, `metacriticScore` INTEGER, `steamRatingText` TEXT, `steamRatingPercent` INTEGER, `steamRatingCount` TEXT, `steamAppID` INTEGER, `releaseDate` INTEGER, `lastChange` INTEGER, `dealRating` REAL, `thumb` TEXT NOT NULL, `url` TEXT NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`dealID`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

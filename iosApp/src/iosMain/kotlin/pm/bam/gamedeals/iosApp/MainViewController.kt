@@ -54,6 +54,7 @@ import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
 import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
+import pm.bam.gamedeals.remote.itad.di.itadRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 
 @Suppress("FunctionName", "unused")
@@ -90,15 +91,17 @@ private fun bootstrapKoin() {
             domainModule,
             domainIosModule,
             remoteModule(currentRemoteBuildType()),
+            // CheapShark network singles stay registered but unused — ITAD is the live DealsSource
+            // since Phase 2b (epic #205); :remote:cheapshark is removed in Phase 4.
             cheapsharkNetworkModule,
-            cheapsharkRemoteModule,
             gamerpowerNetworkModule,
             gamerpowerRemoteModule,
             igdbNetworkModule,
             igdbRemoteModule,
-            // ITAD (#205 Phase 1): credential + network wiring only; itadRemoteModule (the DealsSource
-            // binding) is intentionally not registered yet — CheapShark stays the active source.
+            // ITAD is the live DealsSource since Phase 2b (epic #205): itadRemoteModule replaces
+            // cheapsharkRemoteModule.
             itadNetworkModule,
+            itadRemoteModule,
             homeModule,
             searchModule,
             gameModule,

@@ -39,6 +39,8 @@ data class ItadDeal(
     val cutPercent: Int,
     val url: String,
     val storeLow: ItadMoney? = null,
+    /** Game boxart from `/deals/v2` `assets`; absent on the `/games/prices/v3` deal entries. */
+    val boxart: String? = null,
 )
 
 data class ItadGamePrices(

@@ -1,8 +1,9 @@
 he # Deal-source migration (CheapShark → ITAD) — Handover
 
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
-**Status:** Phases 0 ✅, 1 ✅, **2a ✅** (domain UUID models + Room `v5→v6`), and **2c ✅** (releases → IGDB)
-are merged to `dev`. **Next up: Phase 2b (ITAD mapping + DI swap).**
+**Status:** Phase 2 is **complete — ITAD is the live deal source.** Phases 0 ✅, 1 ✅, 2a ✅, 2c ✅, and
+**2b ✅** (ITAD mapping + DI swap, verified against the live API) are merged to `dev`. **Next up: Phase 3
+(price-history chart / bundles / regional pricing) and Phase 4 (remove `:remote:cheapshark`).**
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -21,12 +22,12 @@ notice — see ADR).
 | 1 | `:remote:itad` module + API key (DealsSource impl) | ✅ merged (`40be334`) | #207 |
 | 2a | Domain models → `String` game ids (UUID-ready) + stored `url`/`iconUrl` + Room `v5→v6` migration | ✅ merged to `dev` | (no issue) |
 | 2c | Releases → IGDB (`first_release_date`); drop `fetchReleases()` from the seam | ✅ merged to `dev` | (no issue) |
-| 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) + UI null-tolerance | TODO | (no issue yet) |
+| 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) | ✅ merged to `dev` | (no issue) |
 | 3 | Real price-history chart + bundles + regional pricing | TODO | #208, #212 |
 | 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
 
-CheapShark is still the **live** source. ITAD is built and tested but **not wired** as the active
-`DealsSource` yet — that swap is the heart of Phase 2.
+**ITAD is now the live `DealsSource`** (Phase 2b). `:remote:cheapshark` stays in the tree (its network
+singles are still registered but unused) until **Phase 4** removes it.
 
 Related memory note (auto-loaded for Claude sessions): `.claude/.../memory/itad-deal-source-migration.md`.
 
@@ -34,7 +35,7 @@ Related memory note (auto-loaded for Claude sessions): `.claude/.../memory/itad-
 
 ## Phase 2 — start here
 
-Goal: make ITAD the live source. Three workstreams; **2a and 2c are done**, do **2b next**.
+Goal (achieved): make ITAD the live source. All three workstreams (2a, 2b, 2c) are **done & merged**.
 
 ### 2a. Migrate the domain models to String game ids + Room migration — ✅ DONE (merged to `dev`)
 Shipped as the smallest independently-shippable slice (CheapShark stayed the live source, app still works):
@@ -57,16 +58,28 @@ Shipped as the smallest independently-shippable slice (CheapShark stayed the liv
 > Note: the original ADR line "favourites preserved by re-resolving title / Steam appID" was superseded by
 > a user decision in 2a — **favourites reset on the upgrade** (simplest, lowest-risk).
 
-### 2b. Make `ItadSourceImpl` map into the migrated models, then swap DI
-- Fill in the methods `ItadSourceImpl` currently throws on (`fetchDealsForStore`, `fetchDealDetails`,
-  `fetchGames`, `fetchGameDetails`) by mapping ITAD → the migrated models. The ITAD-shaped façade methods
-  already exist and do the fetch+map (`fetchDeals`, `fetchGamePrices`, `fetchPriceHistory`, `searchGames`,
-  `lookupBySteamAppId`) — bridge those into the domain mappers.
-- **DI swap (do this on BOTH platforms):** register `itadRemoteModule` and remove
-  `cheapsharkRemoteModule`'s `DealsSource` binding. They both `single<DealsSource> { … }` — registering both
-  at once clashes. `itadNetworkModule` + `ItadCredentials` are **already** registered on both platforms.
-  - Android: `app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt`
-  - iOS: `iosApp/src/iosMain/kotlin/pm/bam/gamedeals/iosApp/MainViewController.kt`
+### 2b. Make `ItadSourceImpl` map into the migrated models, then swap DI — ✅ DONE (merged to `dev`)
+ITAD is now the live source. What shipped:
+- **`/deals/v2` envelope bug fixed** (Phase-1 stub was wrong): the live API returns
+  `{ nextOffset, hasMore, list:[ game{ assets, deal } ] }` — each item a game with a **singular** best
+  `deal` + `assets` (boxart). `RemoteItadDealsResponse` + the singular `RemoteItadDealsGame.deal` model it.
+- **ITAD→domain mappers** (`remote/itad/.../mappers/ItadDomainMappers.kt`): `ItadDeal.toDeal()`,
+  `ItadGameSearchResult.toGame()`, `ItadGamePrices.toGameDetails()/toDealDetails()`, plus an `ItadMoney`
+  USD formatter. **Synthesized `Deal.dealID = "<gameUUID>:<shopId>"`** (ITAD has no per-deal id);
+  `gameIdFromDealId()` parses it back. CheapShark-only fields are left null.
+- **The four `ItadSourceImpl` methods** implemented: `fetchDealsForStore` branches storeID
+  (`/deals/v2?shops=`) / title (search → `/games/prices/v3` → cheapest deal per game) / general;
+  `fetchDealDetails` parses the dealID then `/games/info/v2` + `/games/prices/v3`; `fetchGames` uses
+  lookup (steamAppID) or search; `fetchGameDetails` = info + prices. Country fixed to `US`. Added
+  `ItadGamesApi.getInfo` + `ItadSourceImpl.fetchGameInfo`.
+- **`Deal` CheapShark-only fields → nullable** + Room **`v6→v7`** `Migration(6,7)` (drops/recreates `Deal`
+  only; `7.json` committed). `DealsDao` store-deal ordering `dealRating DESC` → **`savings DESC`**.
+- **`HomeViewModel.topStores`** remapped from CheapShark ids to **ITAD shop ids** (Steam 61, Epic 16, GOG 35,
+  Humble 37, Fanatical 6, GreenManGaming 36, GamersGate 24, GameBillet 20, IndieGala 42).
+- **DI swap (both platforms):** `cheapsharkRemoteModule` → `itadRemoteModule` in
+  `app/.../GameDealsApplication.kt` + `iosApp/.../MainViewController.kt`.
+- **Search filters:** title resolves via ITAD; **price/Steam-rating/Metacritic filters are no-ops** (ITAD
+  has no such data) — per the ADR trade-off.
 
 ### 2c. Releases → IGDB — ✅ DONE (merged to `dev`)
 ITAD has no releases endpoint, so Home "new releases" now comes from IGDB:
@@ -82,16 +95,16 @@ ITAD has no releases endpoint, so Home "new releases" now comes from IGDB:
   removed too (the `ReleaseApi`/`RemoteRelease`/`ReleaseMappers` files are now orphaned — deleted in Phase 4).
 - `IgdbSourceImpl` gained a `Clock` constructor param ⇒ `igdbRemoteModule` now `IgdbSourceImpl(get(),get(),get(),get())`.
 
-### Confirm against a live ITAD key (two code TODOs)
-You'll need a real key (`local.properties: itadApiKey=…` for Android; `Secrets.xcconfig: ITAD_API_KEY` for
-iOS) to confirm:
-1. **`/deals/v2` envelope** — modelled as a bare JSON array; ITAD may wrap it in
-   `{ list, nextOffset, hasMore }`. If so add a `RemoteItadDealsResponse` wrapper in `ItadDealsApi`.
-2. **Shops endpoint** — used `/service/shops/v1` (singular; #207 cited `/services/`), and ITAD's shops list
-   carries no logos, so `Store.images` is blank from ITAD. Confirm path + whether logos come from elsewhere.
-
-Also keep the **Steam-appID → IGDB bridge** working: `ItadSourceImpl.lookupBySteamAppId(appid)` resolves a
-Steam appid to an ITAD game (and carries the appid through); keep the title-based fallback.
+### Live ITAD API — VERIFIED in 2b (key in `local.properties: itadApiKey`)
+Confirmed against the live API (curl) before/while writing the mappers:
+1. **`/deals/v2` IS wrapped** — `{ nextOffset, hasMore, list }`, each item a game with a **singular `deal`**
+   + `assets.boxart` (not the bare `deals[]` array the Phase-1 stub assumed). Fixed in 2b.
+2. **`/service/shops/v1`** (singular) is correct and carries **no logos** → `Store` images stay blank.
+3. `/deals/v2?shops=<id>` filters to that shop (`deal.shop.id == id`); `assets.boxart` is **not always
+   present** (`Deal.thumb = boxart ?: ""` handles it); `deal.url` is always present.
+4. `/games/prices/v3` (POST `[uuid]`) → `{ id, historyLow:{all,…}, deals:[…] }`; `/games/info/v2?id=` →
+   `{ id, title, assets }`. `/games/lookup/v1?appid=` (Steam-appID → game UUID bridge) works and carries
+   the appid through (`ItadSourceImpl.lookupBySteamAppId`).
 
 ---
 

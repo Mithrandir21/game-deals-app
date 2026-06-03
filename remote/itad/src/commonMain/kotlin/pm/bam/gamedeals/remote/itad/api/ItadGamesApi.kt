@@ -34,6 +34,19 @@ class ItadGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /** Basic game info (title + assets) by UUID — `/games/info/v2` returns the same shape as search. */
+    suspend fun getInfo(id: String): ApiResponse<RemoteItadSearchGame> = try {
+        ApiResponse.Success(
+            httpClient.get("/games/info/v2") {
+                parameter("id", id)
+            }.body<RemoteItadSearchGame>()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     suspend fun lookupGame(title: String? = null, appid: Int? = null): ApiResponse<RemoteItadLookupResponse> = try {
         ApiResponse.Success(
             httpClient.get("/games/lookup/v1") {
