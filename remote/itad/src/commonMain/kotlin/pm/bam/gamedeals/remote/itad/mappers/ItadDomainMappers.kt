@@ -3,6 +3,7 @@ package pm.bam.gamedeals.remote.itad.mappers
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.round
 import kotlin.time.Instant
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -13,6 +14,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.models.ItadMoney
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
+import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
 
 /**
  * ITAD-shaped models → the app's (CheapShark-shaped) domain models (epic #205, Phase 2b).
@@ -91,6 +93,29 @@ private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
         timestampEpochMs = epochMs,
         priceValue = price.amount,
         priceDenominated = price.denominated(),
+    )
+}
+
+/**
+ * ITAD `/bundles/v1` bundle → domain [Bundle] (#205 Phase 3c). The headline price is the cheapest tier;
+ * the games are the union across all tiers (deduped by id). Expiry is parsed from ISO-8601 (with offset)
+ * via [Instant]; an unparseable value becomes null.
+ */
+internal fun RemoteItadBundle.toBundle(): Bundle {
+    val games = tiers.flatMap { it.games }
+        .distinctBy { it.id }
+        .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets?.boxart.orEmpty()) }
+        .toImmutableList()
+    val cheapest = tiers.mapNotNull { it.price }.minByOrNull { it.amount }
+    return Bundle(
+        id = id,
+        title = title,
+        storeName = page?.name.orEmpty(),
+        url = url,
+        expiryEpochMs = expiry?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() },
+        gameCount = counts?.games ?: games.size,
+        priceDenominated = cheapest?.toItadMoney()?.denominated(),
+        games = games,
     )
 }
 

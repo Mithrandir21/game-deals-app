@@ -19,6 +19,7 @@ val itadRemoteModule = module {
             get(),
             get(),
             get(),
+            get(),
         )
     }
 }

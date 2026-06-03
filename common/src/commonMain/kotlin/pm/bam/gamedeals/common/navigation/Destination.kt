@@ -45,4 +45,10 @@ sealed interface Destination {
 
     @Serializable
     data object Settings : Destination
+
+    @Serializable
+    data object Bundles : Destination
+
+    @Serializable
+    data class BundleDetail(val bundleId: Int) : Destination
 }

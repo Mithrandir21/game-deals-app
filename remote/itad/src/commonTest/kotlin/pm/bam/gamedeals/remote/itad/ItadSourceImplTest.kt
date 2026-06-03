@@ -19,6 +19,7 @@ import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
@@ -73,6 +74,7 @@ class ItadSourceImplTest {
                 "/games/search/v1" -> SEARCH_BODY
                 "/games/lookup/v1" -> LOOKUP_BODY
                 "/games/info/v2" -> INFO_BODY
+                "/bundles/v1" -> BUNDLES_BODY
                 else -> ""
             }
             respond(
@@ -87,6 +89,7 @@ class ItadSourceImplTest {
             shopsApi = ItadShopsApi(httpClient),
             dealsApi = ItadDealsApi(httpClient),
             gamesApi = ItadGamesApi(httpClient),
+            bundlesApi = ItadBundlesApi(httpClient),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
             regionRepository = regionRepository,
         )
@@ -159,6 +162,25 @@ class ItadSourceImplTest {
         assertEquals(5.99, point.priceValue)
         assertEquals("$5.99", point.priceDenominated)
         assertEquals("/games/history/v2", recordedRequests.single().url.encodedPath)
+        assertEquals("US", recordedRequests.single().url.parameters["country"])
+    }
+
+    @Test
+    fun fetchBundles_maps_array_with_cheapest_price_and_union_of_tier_games() = runTest {
+        val bundles = impl.fetchBundles()
+
+        assertEquals(1, bundles.size)
+        val bundle = bundles.first()
+        assertEquals(16232, bundle.id)
+        assertEquals("Humble Choice (June 2026)", bundle.title)
+        assertEquals("Humble Bundle", bundle.storeName)
+        assertEquals("https://humble.example/c/123", bundle.url)
+        assertEquals(8, bundle.gameCount)
+        assertEquals("$14.99", bundle.priceDenominated) // cheapest of the two tiers
+        assertEquals(2, bundle.games.size) // union across both tiers
+        assertEquals("Construction Simulator", bundle.games.first().title)
+        assertEquals("cs-box.png", bundle.games.first().boxart)
+        assertEquals("/bundles/v1", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
     }
 
@@ -369,5 +391,33 @@ class ItadSourceImplTest {
 
         // language=JSON
         private const val LOOKUP_BODY = """{ "found": true, "game": { "id": "uuid-1", "slug": "halo", "title": "Halo" } }"""
+
+        // A bare array of bundles (the live /bundles/v1 shape), one bundle with two tiers.
+        // language=JSON
+        private const val BUNDLES_BODY = """[
+          {
+            "id": 16232,
+            "title": "Humble Choice (June 2026)",
+            "page": { "id": 1, "name": "Humble Bundle", "shopId": 37 },
+            "url": "https://humble.example/c/123",
+            "details": "https://isthereanydeal.com/bundles/16232",
+            "isMature": false,
+            "publish": "2026-06-02T20:57:58+02:00",
+            "expiry": "2026-07-07T19:00:00+02:00",
+            "counts": { "games": 8, "media": 1 },
+            "tiers": [
+              {
+                "price": { "amount": 14.99, "amountInt": 1499, "currency": "USD" },
+                "addon": false,
+                "games": [ { "id": "g1", "slug": "construction-simulator", "title": "Construction Simulator", "assets": { "boxart": "cs-box.png" } } ]
+              },
+              {
+                "price": { "amount": 24.99, "amountInt": 2499, "currency": "USD" },
+                "addon": true,
+                "games": [ { "id": "g2", "slug": "another-game", "title": "Another Game", "assets": { "boxart": "ag-box.png" } } ]
+              }
+            ]
+          }
+        ]"""
     }
 }

@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.source
 
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -40,6 +41,12 @@ interface DealsSource {
      * chart (#208). Providers that cannot supply a series return an empty [PriceHistory].
      */
     suspend fun fetchPriceHistory(gameId: String): PriceHistory
+
+    /**
+     * Active storefront bundles for the current region (#205 Phase 3c). Providers without bundles
+     * return an empty list.
+     */
+    suspend fun fetchBundles(): List<Bundle>
 
     suspend fun fetchStores(): List<Store>
 }

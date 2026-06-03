@@ -3,6 +3,7 @@ package pm.bam.gamedeals.remote.cheapshark
 import com.skydoves.sandwich.getOrThrow
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.datetime.formatting.DateTimeFormatter
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -75,6 +76,9 @@ internal class CheapsharkSourceImpl(
     // is removed in Phase 4; return an empty series rather than throwing if this dead path is ever hit.
     override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
         PriceHistory(gameID = gameId, points = persistentListOf())
+
+    // CheapShark has no bundles endpoint (ITAD-only capability). Dead path (removed in Phase 4).
+    override suspend fun fetchBundles(): List<Bundle> = emptyList()
 
     override suspend fun fetchStores(): List<Store> =
         storesApi.getStores()

@@ -70,4 +70,14 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    fun navigateToBundles() {
+        navController.navigate(Destination.Bundles) {
+            restoreState = true
+        }
+    }
+
+    fun navigateToBundleDetail(bundleId: Int) {
+        navController.navigate(Destination.BundleDetail(bundleId))
+    }
+
 }

@@ -1,10 +1,9 @@
 he # Deal-source migration (CheapShark → ITAD) — Handover
 
 **Epic:** [#205](https://github.com/Mithrandir21/game-deals-android-app/issues/205) · **ADR:** [`docs/adr/0001-deal-source-itad.md`](../adr/0001-deal-source-itad.md)
-**Status:** Phase 2 is **complete — ITAD is the live deal source.** Phases 0 ✅, 1 ✅, 2a ✅, 2c ✅, and
-**2b ✅** (ITAD mapping + DI swap, verified against the live API) are merged to `dev`. **Phase 3 is staged
-in three slices** (user decision): **3a price-history chart ✅ merged**, **3b regional pricing ✅ merged**,
-**3c bundles** still TODO. Then Phase 4 (remove `:remote:cheapshark`).
+**Status:** Phases 2 and **3 are complete.** ITAD is the live deal source; Phases 0 ✅, 1 ✅, 2a/2b/2c ✅,
+and **Phase 3 — 3a price-history chart ✅, 3b regional pricing ✅, 3c bundles ✅** — are all merged to `dev`.
+**Next up: Phase 4 (remove `:remote:cheapshark`).**
 
 This doc captures what's done and the non-obvious things learned this session so you can continue Phase 2
 without re-deriving them. Read the "Phase 2 — start here" section first, then the reference sections.
@@ -26,7 +25,7 @@ notice — see ADR).
 | 2b | Map `ItadSourceImpl` into the migrated models + DI swap; CheapShark-only `Deal` fields → nullable (`v6→v7`) | ✅ merged to `dev` | (no issue) |
 | 3a | Real price-history chart on the game screen (Vico) | ✅ merged to `dev` | #208 |
 | 3b | Regional pricing — country picker + Settings screen | ✅ merged to `dev` | #212 |
-| 3c | Bundles | TODO | (no issue yet) |
+| 3c | Bundles — Home strip + Bundles list + detail screen | ✅ merged to `dev` | (no issue yet) |
 | 4 | Remove `:remote:cheapshark` | TODO | (no issue yet) |
 
 **ITAD is now the live `DealsSource`** (Phase 2b). `:remote:cheapshark` stays in the tree (its network
@@ -180,6 +179,37 @@ region reloads Home/Store now), **broad ~40-country** list, Settings entry = a *
 - Tests: `RegionRepositoryTest` (in-memory fake `Storage`), `SettingsViewModelTest` (clear-then-persist order),
   and the `ItadSourceImplTest`/`HomeViewModelTest`/`StoreViewModelTest` constructors updated for the new
   `RegionRepository` dependency (`:remote:itad` has no Mokkery → hand-rolled US fake).
+
+## Phase 3c — bundles (DONE, branch `feat/phase3c-bundles`, merged to `dev`) — Phase 3 COMPLETE
+
+Storefront bundles from ITAD `/bundles/v1` (region-aware). Slice 3 of 3. User decisions: a **Home
+"Bundles" strip + a dedicated Bundles list screen**, and an **in-app bundle detail screen** (games + price,
+with a "Get bundle" button to the store URL).
+
+- **Live shape verified** (curl): `/bundles/v1?country=` returns a **bare array** of bundles —
+  `{ id, title, page{name,shopId}, url (affiliate), details (ITAD page), publish, expiry, counts{games,media},
+  tiers:[{ price, addon, games:[{id,title,assets.boxart}] }] }`. Tier games share the search-game shape.
+- **Implementation calls (made, not asked):** bundles go through the **`DealsSource` seam** as `fetchBundles()`
+  (CheapShark returns `emptyList()`, like `fetchPriceHistory`); and they are **fetched fresh, NOT Room-cached**
+  — the nested `tiers→games` structure would make an entity/migration painful, and fresh fetch keeps them
+  region-accurate. The DTO maps **straight to the domain `Bundle`** (no `ItadBundle` intermediate, since bundles
+  are ITAD-only): `RemoteItadBundle.toBundle()` (in `ItadDomainMappers.kt`) — headline price = **cheapest tier**,
+  games = **union across tiers** (deduped by id), expiry parsed via `kotlin.time.Instant`.
+- **Layers:** new `ItadBundlesApi` (registered in `itadNetworkModule`; 7th `get()` into `ItadSourceImpl`),
+  `RemoteItadBundle*` DTOs, domain `Bundle(+BundleGame)` model (non-entity), `fetchBundles()` on the seam,
+  `BundlesRepository` (`getBundles()` / `getBundle(id)` = fetch-and-find). `ItadSourceImpl.fetchBundles` reads
+  the region from `RegionRepository` (#212).
+- **`:feature:bundles`** (new module): `BundlesScreen` (list, loading/error/empty states + retry),
+  `BundleDetailScreen` (store/expiry/price + included-games list + "Get bundle" → `goToWeb(url)`), two VMs (one-shot
+  load with Loading/Error/Data), DI, nav (`Destination.Bundles` + `Destination.BundleDetail(bundleId)`), strings.
+  Wired into `settings.gradle.kts`, root Kover, `:app` + `:iosApp` deps + Koin module lists + NavHosts on both
+  platforms.
+- **Home:** a "Bundles" strip (`HomeBundleRow` + "View All Bundles") loaded **best-effort** into
+  `HomeScreenData.bundles` (a 4th `flatMapLatest` in `loadTopStoreDataFlow`); strip rows → bundle detail, "see all"
+  → Bundles screen. Threaded `onViewBundles`/`onViewBundle` through `HomeScreen`/`HomeRoute`/`homeScreen()`.
+- Tests: `BundlesRepositoryTest`, `ItadSourceImplTest` (`/bundles/v1` route + cheapest-price/union-games mapping),
+  `BundlesViewModelTest` + `BundleDetailViewModelTest`; updated `HomeViewModelTest`/`HomeScreenTest` for the new
+  `bundlesRepository` dep + Home callbacks.
 
 ## Phase 0 — what shipped (reference)
 

@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad
 
 import com.skydoves.sandwich.getOrThrow
 import kotlinx.collections.immutable.persistentListOf
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
@@ -13,6 +14,7 @@ import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
@@ -24,6 +26,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toGameDetails
 import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toItadGameSearchResult
+import pm.bam.gamedeals.remote.itad.mappers.toBundle
 import pm.bam.gamedeals.remote.itad.mappers.toItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.mappers.toPriceHistory
 import pm.bam.gamedeals.remote.itad.mappers.toStore
@@ -51,6 +54,7 @@ internal class ItadSourceImpl(
     private val shopsApi: ItadShopsApi,
     private val dealsApi: ItadDealsApi,
     private val gamesApi: ItadGamesApi,
+    private val bundlesApi: ItadBundlesApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
     private val regionRepository: RegionRepository,
 ) : DealsSource {
@@ -107,6 +111,13 @@ internal class ItadSourceImpl(
 
     override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
         fetchItadPriceHistory(gameId = gameId, country = regionRepository.getSelectedCountryCode()).toPriceHistory(gameId)
+
+    override suspend fun fetchBundles(): List<Bundle> =
+        bundlesApi.getBundles(country = regionRepository.getSelectedCountryCode())
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .map { it.toBundle() }
 
     /** Cheapest current deal per game for a title search; carries the game's title/boxart onto the deal. */
     private suspend fun dealsByTitle(title: String, limit: Int?, country: String): List<Deal> {
