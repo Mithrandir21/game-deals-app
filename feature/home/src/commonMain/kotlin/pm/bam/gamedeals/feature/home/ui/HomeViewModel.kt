@@ -56,6 +56,7 @@ import pm.bam.gamedeals.logging.info
 internal const val LIMIT_DEALS = 10
 internal const val LIMIT_GIVEAWAYS = 5
 internal const val LIMIT_BUNDLES = 5
+internal const val LIMIT_RELEASES = 5
 internal const val EXPIRED_STATUS = "Expired"
 // ITAD shop ids of major PC stores, shown as the Home "top stores" strips (epic #205, Phase 2b —
 // the old values were CheapShark store ids, which don't map to ITAD's). See `/service/shops/v1`:
@@ -199,7 +200,7 @@ internal class HomeViewModel(
 
                 return@map data
             }
-            .flatMapLatest { loadNewReleases().map { releases -> releases to it } }
+            .flatMapLatest { loadNewReleases().map { releases -> releases.take(LIMIT_RELEASES) to it } }
             .flatMapLatest { loadGiveaways().map { giveaways -> Triple(it.first, giveaways.take(LIMIT_GIVEAWAYS), it.second) } }
             .flatMapLatest { (releases, giveaways, items) ->
                 loadBundles().map { bundles ->
