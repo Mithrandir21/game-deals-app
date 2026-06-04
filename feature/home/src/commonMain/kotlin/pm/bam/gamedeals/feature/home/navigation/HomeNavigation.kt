@@ -7,7 +7,6 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.ui.HomeScreen
 
 fun NavGraphBuilder.homeScreen(
-    goToSearch: () -> Unit,
     goToGame: (gameId: String) -> Unit,
     goToStore: (storeId: Int) -> Unit,
     goToGiveaway: () -> Unit,
@@ -15,18 +14,17 @@ fun NavGraphBuilder.homeScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
-    goToSettings: () -> Unit,
     goToBundles: () -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
 ) {
+    // Search + Settings now live on the app-shell top bar / overflow (epic #219, Phase 1), so they are
+    // no longer Home's responsibility.
     composable<Destination.Home> {
         HomeScreen(
-            onSearch = goToSearch,
             goToGame = goToGame,
             onViewStoreDeals = { store: Store -> goToStore(store.storeID) },
             onViewGiveaways = goToGiveaway,
             onViewFavourites = goToFavourites,
-            onViewSettings = goToSettings,
             onViewBundles = goToBundles,
             onViewBundle = goToBundle,
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) },

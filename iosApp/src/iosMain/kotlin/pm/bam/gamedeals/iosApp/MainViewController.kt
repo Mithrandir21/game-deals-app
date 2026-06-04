@@ -1,10 +1,18 @@
 package pm.bam.gamedeals.iosApp
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -26,6 +34,9 @@ import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
+import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
+import pm.bam.gamedeals.common.ui.shell.PlaceholderTabScreen
+import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
@@ -132,23 +143,50 @@ private fun App() {
 private fun AppNavHost() {
     val navController = rememberNavController()
     val uriHandler = LocalUriHandler.current
-    NavHost(
-        navController = navController,
-        startDestination = Destination.Home,
-    ) {
+
+    // Top-level (bottom-nav tab) navigation: pop to start saving state, single-top, restore — mirrors
+    // the Android `NavigationActions.navigateTopLevel` (epic #219, Phase 1).
+    fun navigateTopLevel(destination: Destination) {
+        navController.navigate(destination) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    val currentDestination by navController.currentBackStackEntryAsState()
+    val selectedTab = TopLevelDestination.entries.firstOrNull { tab ->
+        currentDestination?.destination?.hierarchy?.any { it.hasRoute(tab.destination::class) } == true
+    }
+    val isTab = selectedTab != null
+
+    GameDealsAppShell(
+        selectedTab = selectedTab,
+        showTopBar = isTab && selectedTab != TopLevelDestination.GIVEAWAYS,
+        showBottomBar = isTab,
+        onSelectTab = { navigateTopLevel(it.destination) },
+        onSearch = { navController.navigate(Destination.Search()) },
+        onOpenSettings = { navController.navigate(Destination.Settings) },
+        onBrowseStores = null,
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = Destination.Home,
+            modifier = Modifier.padding(padding),
+        ) {
         homeScreen(
-            goToSearch = { navController.navigate(Destination.Search()) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
-            goToGiveaway = { navController.navigate(Destination.Giveaways) },
+            goToGiveaway = { navigateTopLevel(Destination.Giveaways) },
             goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
-            goToSettings = { navController.navigate(Destination.Settings) },
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
+        composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
+        composable<Destination.Account> { PlaceholderTabScreen(label = "Account") }
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
@@ -184,6 +222,7 @@ private fun AppNavHost() {
         webViewScreen(
             onBack = { navController.popBackStack() },
         )
+        }
     }
 }
 

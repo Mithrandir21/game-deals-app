@@ -26,9 +26,9 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 ## Phase status
 | Phase | Tickets | Status |
 |---|---|---|
-| 0 — Seams & scaffold | #220–#223 | ✅ DONE (branch `feat/phase0-home-redesign-scaffold`) |
-| 1 — App shell wired | #224–#225 | ⬜ next |
-| 2 — OAuth + Account | #226–#229 | ⬜ |
+| 0 — Seams & scaffold | #220–#223 | ✅ DONE (merged to `dev`) |
+| 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
+| 2 — OAuth + Account | #226–#229 | ⬜ next |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ⬜ |
 | 4 — Deals tab | #233–#234 | ⬜ |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
@@ -64,12 +64,30 @@ No user-visible change; everything compiles and tests pass (Android `:app:assemb
 
 ---
 
-## Next up — Phase 1 (app shell wired; LARGE/RISKY)
-**#224 (1.1):** Wrap both NavHosts in `GameDealsAppShell`. Anchors:
-- Android: `app/.../navigation/NavGraph.kt` (build `navController`, wrap the `NavHost` in `GameDealsAppShell`; compute `selectedTab` from `navController.currentBackStackEntryAsState()` route → `TopLevelDestination`; pass `onSelectTab = { navActions.navigateTopLevel(it.destination) }`, `onSearch`, `onOpenSettings`, `onBrowseStores`). Add placeholder `Destination.Deals`/`Account` `composable<>` screens. **Remove the Home FABs** (`HomeScreen.kt:303-343`) and drop the now-unused Home FAB callbacks; Search moves to the top bar.
-- iOS: mirror in `iosApp/.../MainViewController.kt`'s `AppNavHost` (it has no `NavigationActions` — either add an equivalent helper or inline the same `navigate{}` block).
-- App stays green: Deals/Account render empty placeholders until Phases 4/2.
+## Phase 1 — DONE
+> From Phase 1 onward, work is committed **directly to `dev`** (no per-phase branches — user decision).
 
-**#225 (1.2):** Hide the bar on detail routes (Store/Game/WebView/Search/BundleDetail) via current-route matching; verify tab state restoration.
+**#224 (1.1) + #225 (1.2)** — the app shell is now live on **both** platforms.
+- `GameDealsAppShell` (`common/ui/.../shell/AppShellScaffold.kt`) wraps the NavHost in Android `NavGraph.kt` and iOS `MainViewController.AppNavHost`. It shows the bottom `NavigationBar` (4 tabs) on top-level routes and a `TopAppBar` (Search action + overflow → Settings) on Home/Deals/Account; **no chrome on detail routes** (they keep their own `Scaffold`/`TopAppBar`). `selectedTab` is derived from `currentBackStackEntryAsState()` via `NavDestination.hasRoute`; tab taps go through `navigateTopLevel` (Android `NavigationActions.navigateTopLevel`; iOS inline) using `popUpTo(start){saveState}; launchSingleTop; restoreState`.
+- `contentWindowInsets = 0` on the shell **and** on Home's inner `Scaffold` so insets aren't doubled.
+- **Home FABs removed.** Search → shell top bar; Settings → shell overflow; error-retry stays on the existing snackbar. The LOADING spinner lived in the main FAB and is gone — the empty `LazyColumn` shows the "Loading" section header instead (instrumented `HomeScreenTest.loadingState` re-pointed to `home_screen_loading_label`).
+- Signatures trimmed: `HomeScreen`/`HomeRoute`/`homeScreen()` dropped `onSearch`/`onViewSettings` (and `goToSearch`/`goToSettings`). Home "View All Giveaways" and the Giveaways tab both use `navigateTopLevel(Destination.Giveaways)`.
+- **Placeholder tabs**: `PlaceholderTabScreen` (`common/ui/.../shell/`) registered for `Destination.Deals`/`Account` on both platforms — replaced by `:feature:account` (#229) and `:feature:deals` (#234).
+
+**Known interims / follow-ups (not blocking):**
+- The **Giveaways tab keeps its own top bar** (incl. a now-redundant back button); the shell passes `showTopBar = false` on that route to avoid a double bar, so **Search isn't reachable while on the Giveaways tab**. Unifying Giveaways into the shell top bar is a tracked follow-up (fold into Phase 5 or a small task).
+- The `onBrowseStores` overflow item is wired but passed `null` (no all-stores destination yet) so it's hidden for now.
+- Inset/visual polish + tab back-stack behaviour were reasoned about but **not visually verified** (Linux box can't run the emulator) — confirm on a device.
+
+Verified: `:app:assembleDebug` green; `:feature:home:compileAndroidDeviceTest` green; full `testAndroidHostTest` green **except** the known pre-existing `:remote:igdb` `IgdbSourceImplTest` failure.
+
+---
+
+## Next up — Phase 2 (ITAD OAuth + Account tab; LARGE/RISKY)
+Seams + secret plumbing already exist (Phase 0). **Fill real values first**: `local.properties itadOauthClientId` and `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID` (+ register the redirect URI `pm.bam.gamedeals://oauth/itad` with ITAD).
+- **#226 (2.1):** PKCE (`Pkce.kt`, SHA-256, commonMain) + `ItadOAuthClient` (`/oauth/authorize`, `/oauth/token` exchange/refresh) + `ItadTokenProvider`; a bearer-aware Ktor client (`Auth.bearer` + `refreshTokens`) alongside the existing API-key client in `remote/itad/.../logic/ItadHttpClient.kt`.
+- **#227 (2.2):** `AuthBrowserLauncher` expect/actual — Android Custom Tabs + redirect activity (`AndroidManifest` intent-filter for `pm.bam.gamedeals://oauth`), iOS `ASWebAuthenticationSession` + `CFBundleURLSchemes`.
+- **#228 (2.3):** `ItadUserApi`/`ItadWaitlistApi`/`ItadCollectionApi` + `ItadAccountSourceImpl`; wire the real `AccountRepository`/`WaitlistRepository`/`CollectionRepository` (replace the Phase 0 stubs) using `AuthTokenStore`.
+- **#229 (2.4):** `:feature:account` module — logged-out CTA → login; logged-in profile + stat cards + waitlist + collection (add/remove). Replace the Account `PlaceholderTabScreen`.
 
 **Heads-up for Phase 3:** DB is at **v7**; dropping `FavouriteGame` is `MIGRATION_7_8` + regen `domain/schemas/.../8.json` (`./gradlew :domain:kspAndroidMain`) + register in `DOMAIN_MIGRATIONS` — the build-gating `DomainDatabaseMigrationTest` enforces this.

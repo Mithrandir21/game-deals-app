@@ -10,12 +10,10 @@ import pm.bam.gamedeals.domain.models.Store
  */
 @Composable
 fun HomeRoute(
-    onSearch: () -> Unit,
     goToGame: (gameId: String) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit = {},
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
-    onViewSettings: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
@@ -23,12 +21,10 @@ fun HomeRoute(
     goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     HomeScreen(
-        onSearch = onSearch,
         goToGame = goToGame,
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
         onViewFavourites = onViewFavourites,
-        onViewSettings = onViewSettings,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
         goToWeb = goToWeb,

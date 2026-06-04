@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,17 +21,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -96,10 +91,6 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_d
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_label
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_favourites_icon
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_error_icon
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_search_icon
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_floating_settings_icon
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
@@ -136,12 +127,10 @@ private const val CONTENT_TYPE_VIEW_ALL_BUTTON = "view_all_button"
 
 @Composable
 internal fun HomeScreen(
-    onSearch: () -> Unit,
     goToGame: (gameId: String) -> Unit,
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
-    onViewSettings: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
@@ -158,7 +147,6 @@ internal fun HomeScreen(
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
 
     HomeScreenContent(
-        onSearch = onSearch,
         onReleaseTitle = onReleaseTitle,
         data = data.value,
         favouriteIds = favouriteIds.value,
@@ -177,7 +165,6 @@ internal fun HomeScreen(
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
         onViewFavourites = onViewFavourites,
-        onViewSettings = onViewSettings,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
         goToFavouriteGame = goToGame,
@@ -264,7 +251,6 @@ private fun StoreDealRow(
 
 @Composable
 private fun HomeScreenContent(
-    onSearch: () -> Unit,
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
     favouriteIds: ImmutableSet<String>,
@@ -274,7 +260,6 @@ private fun HomeScreenContent(
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewFavourites: () -> Unit,
-    onViewSettings: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToFavouriteGame: (gameId: String) -> Unit,
@@ -291,7 +276,6 @@ private fun HomeScreenContent(
 
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
-    val loadingCd = stringResource(Res.string.home_screen_loading_indicator)
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Box(
@@ -299,49 +283,11 @@ private fun HomeScreenContent(
             contentAlignment = Alignment.Center,
         ) {
             Scaffold(
+                // The app shell (epic #219) owns the top bar + bottom nav and provides outer padding;
+                // zero this Scaffold's insets so its content isn't double-inset under the shell.
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-                floatingActionButton = {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-                        horizontalAlignment = Alignment.End,
-                    ) {
-                        SmallFloatingActionButton(onClick = onViewSettings) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = stringResource(Res.string.home_screen_floating_settings_icon),
-                            )
-                        }
-                        SmallFloatingActionButton(onClick = onViewFavourites) {
-                            Icon(
-                                imageVector = Icons.Filled.Favorite,
-                                contentDescription = stringResource(Res.string.home_screen_floating_favourites_icon),
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                when (data.state) {
-                                    SUCCESS -> onSearch()
-                                    ERROR -> onRetry()
-                                    LOADING -> Unit
-                                }
-                            }
-                        ) {
-                            when (data.state) {
-                                LOADING -> CircularProgressIndicator(
-                                    Modifier.semantics { contentDescription = loadingCd }
-                                )
-                                ERROR -> Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = stringResource(Res.string.home_screen_floating_search_error_icon)
-                                )
-                                SUCCESS -> Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = stringResource(Res.string.home_screen_floating_search_icon)
-                                )
-                            }
-                        }
-                    }
-                }) { innerPadding: PaddingValues ->
+            ) { innerPadding: PaddingValues ->
 
                 LazyColumn(
                     modifier = Modifier.padding(innerPadding),
@@ -824,7 +770,6 @@ private val previewFavourites = persistentListOf(
 private fun HomeScreenContent_Success_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
             favouriteIds = persistentSetOf("12345"),
@@ -834,7 +779,6 @@ private fun HomeScreenContent_Success_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
-            onViewSettings = {},
             onViewBundles = {},
             onViewBundle = {},
             goToFavouriteGame = {},
@@ -854,7 +798,6 @@ private fun HomeScreenContent_Success_Preview() {
 private fun HomeScreenContent_Success_Dark_Preview() {
     GameDealsTheme(darkTheme = true) {
         HomeScreenContent(
-            onSearch = {},
             onReleaseTitle = {},
             data = previewSuccessData(),
             favouriteIds = persistentSetOf("12345"),
@@ -864,7 +807,6 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
-            onViewSettings = {},
             onViewBundles = {},
             onViewBundle = {},
             goToFavouriteGame = {},
@@ -884,7 +826,6 @@ private fun HomeScreenContent_Success_Dark_Preview() {
 private fun HomeScreenContent_Loading_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onSearch = {},
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = LOADING),
             favouriteIds = persistentSetOf(),
@@ -894,7 +835,6 @@ private fun HomeScreenContent_Loading_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
-            onViewSettings = {},
             onViewBundles = {},
             onViewBundle = {},
             goToFavouriteGame = {},
@@ -914,7 +854,6 @@ private fun HomeScreenContent_Loading_Preview() {
 private fun HomeScreenContent_Error_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onSearch = {},
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = ERROR),
             favouriteIds = persistentSetOf(),
@@ -924,7 +863,6 @@ private fun HomeScreenContent_Error_Preview() {
             onViewStoreDeals = {},
             onViewGiveaways = {},
             onViewFavourites = {},
-            onViewSettings = {},
             onViewBundles = {},
             onViewBundle = {},
             goToFavouriteGame = {},

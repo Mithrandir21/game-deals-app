@@ -34,6 +34,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loadin
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_banner
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenData
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenListData
@@ -99,12 +100,10 @@ class HomeScreenTest {
     }
 
     private fun setupCompose(
-        onSearch: () -> Unit = {},
         goToGame: (String) -> Unit = { _ -> },
         onViewStoreDeals: (Store) -> Unit = { _ -> },
         onViewGiveaways: () -> Unit = {},
         onViewFavourites: () -> Unit = {},
-        onViewSettings: () -> Unit = {},
         onViewBundles: () -> Unit = {},
         onViewBundle: (Int) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
@@ -116,12 +115,10 @@ class HomeScreenTest {
             bannerCd = ScreenSemantics.bannerCd(storeTitle)
             viewAllText = ScreenSemantics.viewAllText(storeTitle)
             HomeScreen(
-                onSearch = onSearch,
                 goToGame = goToGame,
                 onViewStoreDeals = onViewStoreDeals,
                 onViewGiveaways = onViewGiveaways,
                 onViewFavourites = onViewFavourites,
-                onViewSettings = onViewSettings,
                 onViewBundles = onViewBundles,
                 onViewBundle = onViewBundle,
                 goToWeb = goToWeb,
@@ -144,7 +141,9 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText(dealTitle).assertDoesNotExist()
         composeTestRule.onNodeWithText(viewAllText).assertDoesNotExist()
 
-        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertIsDisplayed()
+        // The FAB-hosted spinner moved out with the app-shell change (epic #219, Phase 1); the empty
+        // LazyColumn renders the loading section header instead.
+        composeTestRule.onNodeWithText(screenSemantics.loadingLabel).assertIsDisplayed()
     }
 
     @Test
@@ -255,6 +254,7 @@ class HomeScreenTest {
 
     private data class ScreenSemantics(
         val loading: String,
+        val loadingLabel: String,
         val errorMsg: String,
         val retry: String,
         val opensExternally: String,
@@ -263,6 +263,7 @@ class HomeScreenTest {
             @Composable
             fun load(): ScreenSemantics = ScreenSemantics(
                 loading = stringResource(Res.string.home_screen_loading_indicator),
+                loadingLabel = stringResource(Res.string.home_screen_loading_label),
                 errorMsg = stringResource(Res.string.home_screen_data_loading_error_msg),
                 retry = stringResource(Res.string.home_screen_data_loading_error_retry),
                 opensExternally = stringResource(Res.string.home_screen_giveaway_opens_externally),

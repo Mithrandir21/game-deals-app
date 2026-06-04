@@ -1,13 +1,22 @@
 package pm.bam.gamedeals.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
+import pm.bam.gamedeals.common.ui.shell.PlaceholderTabScreen
+import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
@@ -29,68 +38,90 @@ internal fun NavGraph(
 ) {
     val uriHandler = LocalUriHandler.current
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-        modifier = modifier
-    ) {
-        homeScreen(
-            goToSearch = { navActions.navigateToSearch() },
-            goToGame = { gameId -> navActions.navigateToGame(gameId) },
-            goToStore = { storeId -> navActions.navigateToStore(storeId) },
-            goToGiveaway = { navActions.navigateToGiveaways() },
-            goToFavourites = { navActions.navigateToFavourites() },
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
-            goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
-            goToSettings = { navActions.navigateToSettings() },
-            goToBundles = { navActions.navigateToBundles() },
-            goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
-        )
+    // Drive the shell chrome from the current route (epic #219, Phase 1): bottom nav on the top-level
+    // tabs, top bar on all tabs except Giveaways (which keeps its own top bar — interim), no chrome on
+    // detail routes (they own their Scaffold/TopAppBar).
+    val currentDestination by navController.currentBackStackEntryAsState()
+    val selectedTab = TopLevelDestination.entries.firstOrNull { tab ->
+        currentDestination?.destination?.hierarchy?.any { it.hasRoute(tab.destination::class) } == true
+    }
+    val isTab = selectedTab != null
 
-        storeScreen(
+    GameDealsAppShell(
+        modifier = modifier,
+        selectedTab = selectedTab,
+        showTopBar = isTab && selectedTab != TopLevelDestination.GIVEAWAYS,
+        showBottomBar = isTab,
+        onSelectTab = { navActions.navigateTopLevel(it.destination) },
+        onSearch = { navActions.navigateToSearch() },
+        onOpenSettings = { navActions.navigateToSettings() },
+        onBrowseStores = null,
+    ) { padding ->
+        NavHost(
             navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
-            goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
-        )
+            startDestination = startDestination,
+            modifier = Modifier.padding(padding)
+        ) {
+            homeScreen(
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToStore = { storeId -> navActions.navigateToStore(storeId) },
+                goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
+                goToFavourites = { navActions.navigateToFavourites() },
+                goToWeb = { url, _ -> uriHandler.openUri(url) },
+                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
+                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
+                goToBundles = { navActions.navigateToBundles() },
+                goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+            )
 
-        gameScreen(
-            navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) }
-        )
+            // Placeholder tabs until their feature modules land (Account: Phase 2.4 #229, Deals: Phase 4.2 #234).
+            composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
+            composable<Destination.Account> { PlaceholderTabScreen(label = "Account") }
 
-        gameDetailsScreen(navController = navController)
+            storeScreen(
+                navController = navController,
+                goToWeb = { url, _ -> uriHandler.openUri(url) },
+                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
+                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
+            )
 
-        searchScreen(
-            goToGame = { gameId -> navActions.navigateToGame(gameId) }
-        )
+            gameScreen(
+                navController = navController,
+                goToWeb = { url, _ -> uriHandler.openUri(url) },
+                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) }
+            )
 
-        webViewScreen(
-            onBack = { navController.popBackStack() }
-        )
+            gameDetailsScreen(navController = navController)
 
-        giveawaysScreen(
-            navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) }
-        )
+            searchScreen(
+                goToGame = { gameId -> navActions.navigateToGame(gameId) }
+            )
 
-        favouritesScreen(
-            navController = navController,
-            goToGame = { gameId -> navActions.navigateToGame(gameId) }
-        )
+            webViewScreen(
+                onBack = { navController.popBackStack() }
+            )
 
-        settingsScreen(navController = navController)
+            giveawaysScreen(
+                navController = navController,
+                goToWeb = { url, _ -> uriHandler.openUri(url) }
+            )
 
-        bundlesScreen(
-            navController = navController,
-            goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
-        )
+            favouritesScreen(
+                navController = navController,
+                goToGame = { gameId -> navActions.navigateToGame(gameId) }
+            )
 
-        bundleDetailScreen(
-            navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
-        )
+            settingsScreen(navController = navController)
+
+            bundlesScreen(
+                navController = navController,
+                goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+            )
+
+            bundleDetailScreen(
+                navController = navController,
+                goToWeb = { url, _ -> uriHandler.openUri(url) },
+            )
+        }
     }
 }
