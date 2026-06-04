@@ -13,8 +13,16 @@ import pm.bam.gamedeals.common.navigation.Destination
  */
 internal class NavigationActions(private val navController: NavHostController) {
 
-    fun navigateHome() {
-        navController.navigate(Destination.Home) {
+    fun navigateHome() = navigateTopLevel(Destination.Home)
+
+    /**
+     * Navigate to a top-level (bottom-nav tab) [destination] with the standard tab back-stack
+     * behaviour (epic #219): pop up to the graph's start destination saving state, single-top, and
+     * restore the tab's previously saved state. Used by the [pm.bam.gamedeals.common.ui.shell]
+     * `NavigationBar` so re-selecting a tab restores its scroll/stack rather than stacking copies.
+     */
+    fun navigateTopLevel(destination: Destination) {
+        navController.navigate(destination) {
             // Pop up to the start destination of the graph to avoid building up a large stack of destinations on the back stack as users select items
             popUpTo(navController.graph.findStartDestination().id) {
                 saveState = true

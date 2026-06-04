@@ -24,6 +24,9 @@ android {
     // IsThereAnyDeal (ITAD) API key — same local.properties (dev) / env-var (CI) sources (epic #205).
     var itadApiKey = ""
 
+    // ITAD OAuth client id — for the account feature (epic #219, Phase 2). Same sources as the API key.
+    var itadOauthClientId = ""
+
     // First check if the local.properties file exists, meaning non-CI environment.
     if (File(rootProject.rootDir, "local.properties").exists()) {
         // Loading local properties so that we can use them in the build.gradle.kts file and not expose them in the repository
@@ -40,6 +43,7 @@ android {
         igdbClientSecret = localProperties.getProperty("igdbClientSecret") ?: ""
 
         itadApiKey = localProperties.getProperty("itadApiKey") ?: ""
+        itadOauthClientId = localProperties.getProperty("itadOauthClientId") ?: ""
     }
     // Check if environment variables are present, meaning CI environment.
     else if (System.getenv("RELEASE_KEY_ALIAS") != null) {
@@ -57,6 +61,7 @@ android {
 
     // Env-var fallback for the ITAD key (independent of the signing block, like the IGDB creds).
     if (itadApiKey.isEmpty()) itadApiKey = System.getenv("ITAD_API_KEY") ?: ""
+    if (itadOauthClientId.isEmpty()) itadOauthClientId = System.getenv("ITAD_OAUTH_CLIENT_ID") ?: ""
 
     // If neither local.properties nor environment variables are present, the release key is not present.
     if(releaseKeyPresent) {
@@ -86,6 +91,7 @@ android {
         buildConfigField("String", "IGDB_CLIENT_ID", "\"$igdbClientId\"")
         buildConfigField("String", "IGDB_CLIENT_SECRET", "\"$igdbClientSecret\"")
         buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
+        buildConfigField("String", "ITAD_OAUTH_CLIENT_ID", "\"$itadOauthClientId\"")
     }
 
     buildFeatures.buildConfig = true

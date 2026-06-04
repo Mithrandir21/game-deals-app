@@ -3,10 +3,20 @@ package pm.bam.gamedeals.domain.di
 import androidx.room.RoomDatabase
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
+import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.auth.AuthTokenStoreImpl
 import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.repositories.account.AccountRepository
+import pm.bam.gamedeals.domain.repositories.account.AccountRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
+import pm.bam.gamedeals.domain.repositories.stats.StatsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
@@ -60,4 +70,12 @@ val domainModule = module {
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get()) }
+
+    // ITAD account scaffold (epic #219, Phase 0). AuthTokenStore is Storage-backed (like RegionRepository);
+    // the waitlist/collection/stats repositories are stubs until their live ITAD sources land in Phases 2/5.
+    single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl() }
+    single<CollectionRepository> { CollectionRepositoryImpl() }
+    single<StatsRepository> { StatsRepositoryImpl() }
 }
