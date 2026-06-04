@@ -71,11 +71,11 @@ val domainModule = module {
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get()) }
 
-    // ITAD account scaffold (epic #219, Phase 0). AuthTokenStore is Storage-backed (like RegionRepository);
-    // the waitlist/collection/stats repositories are stubs until their live ITAD sources land in Phases 2/5.
+    // ITAD account (epic #219). AuthTokenStore is Storage-backed (like RegionRepository). Waitlist/
+    // Collection are backed by the live ITAD account source (Phase 2.3); Stats is still a stub until #235.
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<AccountRepository> { AccountRepositoryImpl(get()) }
-    single<WaitlistRepository> { WaitlistRepositoryImpl() }
-    single<CollectionRepository> { CollectionRepositoryImpl() }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get()) }
     single<StatsRepository> { StatsRepositoryImpl() }
 }

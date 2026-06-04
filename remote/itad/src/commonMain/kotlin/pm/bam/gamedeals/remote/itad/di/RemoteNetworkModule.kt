@@ -4,9 +4,12 @@ import io.ktor.client.HttpClient
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
+import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
+import pm.bam.gamedeals.remote.itad.api.ItadUserApi
+import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
 import pm.bam.gamedeals.remote.itad.auth.oauth.ItadOAuthClient
 import pm.bam.gamedeals.remote.itad.auth.oauth.ItadTokenProvider
@@ -42,4 +45,9 @@ val itadNetworkModule = module {
     single { ItadOAuthClient(httpClient = get(ITAD_OAUTH_QUALIFIER), credentials = get()) }
     single { ItadTokenProvider(authTokenStore = get(), oauthClient = get(), clock = get(), logger = get()) }
     single<HttpClient>(ITAD_AUTH_QUALIFIER) { itadAuthHttpClient(json = get(), buildUtil = get(), tokenProvider = get()) }
+
+    // User endpoints use the bearer client (epic #219, Phase 2.3).
+    single { ItadUserApi(get(ITAD_AUTH_QUALIFIER)) }
+    single { ItadWaitlistApi(get(ITAD_AUTH_QUALIFIER)) }
+    single { ItadCollectionApi(get(ITAD_AUTH_QUALIFIER)) }
 }

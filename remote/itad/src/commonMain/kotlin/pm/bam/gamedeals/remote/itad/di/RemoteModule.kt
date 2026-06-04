@@ -2,13 +2,16 @@ package pm.bam.gamedeals.remote.itad.di
 
 import org.koin.dsl.module
 import pm.bam.gamedeals.domain.source.DealsSource
+import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.remote.itad.ItadAccountSourceImpl
 import pm.bam.gamedeals.remote.itad.ItadSourceImpl
 
 /**
- * Binds the ITAD implementation of [DealsSource] (the live source since Phase 2b, epic #205).
+ * Binds the ITAD implementations of the domain source ports (epic #205 / #219).
  *
- * The last `get()` resolves the `RegionRepository` (from `domainModule`) that supplies the selected
- * `country` for regional pricing (Phase 3b, #212).
+ * [DealsSource] is the live deal source since Phase 2b; its last `get()` resolves the `RegionRepository`
+ * (from `domainModule`) for regional pricing (Phase 3b, #212). [ItadAccountSource] is the user-scoped
+ * account port (epic #219, Phase 2.3) over the bearer (OAuth) client.
  */
 val itadRemoteModule = module {
     single<DealsSource> {
@@ -22,4 +25,6 @@ val itadRemoteModule = module {
             get(),
         )
     }
+
+    single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get()) }
 }
