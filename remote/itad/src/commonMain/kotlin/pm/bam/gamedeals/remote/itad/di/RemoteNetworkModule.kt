@@ -8,9 +8,19 @@ import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.auth.oauth.ItadOAuthClient
+import pm.bam.gamedeals.remote.itad.auth.oauth.ItadTokenProvider
+import pm.bam.gamedeals.remote.itad.logic.itadAuthHttpClient
 import pm.bam.gamedeals.remote.itad.logic.itadHttpClient
+import pm.bam.gamedeals.remote.itad.logic.itadOAuthHttpClient
 
 val ITAD_QUALIFIER = named("itad")
+
+/** API-key-less client for the OAuth token endpoint (epic #219, Phase 2). */
+val ITAD_OAUTH_QUALIFIER = named("itad-oauth")
+
+/** Bearer (user-token) client for the ITAD user endpoints (epic #219, Phase 2). */
+val ITAD_AUTH_QUALIFIER = named("itad-auth")
 
 val itadNetworkModule = module {
     single<HttpClient>(ITAD_QUALIFIER) {
@@ -25,4 +35,11 @@ val itadNetworkModule = module {
     single { ItadDealsApi(get(ITAD_QUALIFIER)) }
     single { ItadGamesApi(get(ITAD_QUALIFIER)) }
     single { ItadBundlesApi(get(ITAD_QUALIFIER)) }
+
+    // --- ITAD OAuth (epic #219, Phase 2). The user endpoints that consume the bearer client land in
+    // Phase 2.3 (#228); these are the wired-but-not-yet-consumed seam. ---
+    single<HttpClient>(ITAD_OAUTH_QUALIFIER) { itadOAuthHttpClient(json = get(), buildUtil = get()) }
+    single { ItadOAuthClient(httpClient = get(ITAD_OAUTH_QUALIFIER), credentials = get()) }
+    single { ItadTokenProvider(authTokenStore = get(), oauthClient = get(), clock = get(), logger = get()) }
+    single<HttpClient>(ITAD_AUTH_QUALIFIER) { itadAuthHttpClient(json = get(), buildUtil = get(), tokenProvider = get()) }
 }

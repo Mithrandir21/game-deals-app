@@ -21,6 +21,9 @@ interface AuthTokenStore {
     suspend fun getAccessToken(): String?
     suspend fun getRefreshToken(): String?
 
+    /** The signed-in username, or null if logged out. Preserved across token refreshes. */
+    suspend fun getUsername(): String?
+
     /** Epoch-millisecond access-token expiry, or `0L` if nothing is stored. */
     suspend fun getExpiresAtEpochMs(): Long
 
@@ -53,6 +56,8 @@ internal class AuthTokenStoreImpl(
     override suspend fun getAccessToken(): String? = loadFromStorage()?.accessToken
 
     override suspend fun getRefreshToken(): String? = loadFromStorage()?.refreshToken
+
+    override suspend fun getUsername(): String? = loadFromStorage()?.username
 
     override suspend fun getExpiresAtEpochMs(): Long = loadFromStorage()?.expiresAtEpochMs ?: 0L
 

@@ -28,7 +28,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 |---|---|---|
 | 0 — Seams & scaffold | #220–#223 | ✅ DONE (merged to `dev`) |
 | 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
-| 2 — OAuth + Account | #226–#229 | ⬜ next |
+| 2 — OAuth + Account | #226–#229 | 🔄 in progress — 2.1 (#226) DONE; 2.2–2.4 remain |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ⬜ |
 | 4 — Deals tab | #233–#234 | ⬜ |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
@@ -83,11 +83,18 @@ Verified: `:app:assembleDebug` green; `:feature:home:compileAndroidDeviceTest` g
 
 ---
 
-## Next up — Phase 2 (ITAD OAuth + Account tab; LARGE/RISKY)
-Seams + secret plumbing already exist (Phase 0). **Fill real values first**: `local.properties itadOauthClientId` and `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID` (+ register the redirect URI `pm.bam.gamedeals://oauth/itad` with ITAD).
-- **#226 (2.1):** PKCE (`Pkce.kt`, SHA-256, commonMain) + `ItadOAuthClient` (`/oauth/authorize`, `/oauth/token` exchange/refresh) + `ItadTokenProvider`; a bearer-aware Ktor client (`Auth.bearer` + `refreshTokens`) alongside the existing API-key client in `remote/itad/.../logic/ItadHttpClient.kt`.
-- **#227 (2.2):** `AuthBrowserLauncher` expect/actual — Android Custom Tabs + redirect activity (`AndroidManifest` intent-filter for `pm.bam.gamedeals://oauth`), iOS `ASWebAuthenticationSession` + `CFBundleURLSchemes`.
-- **#228 (2.3):** `ItadUserApi`/`ItadWaitlistApi`/`ItadCollectionApi` + `ItadAccountSourceImpl`; wire the real `AccountRepository`/`WaitlistRepository`/`CollectionRepository` (replace the Phase 0 stubs) using `AuthTokenStore`.
-- **#229 (2.4):** `:feature:account` module — logged-out CTA → login; logged-in profile + stat cards + waitlist + collection (add/remove). Replace the Account `PlaceholderTabScreen`.
+## Phase 2 — IN PROGRESS (ITAD OAuth + Account tab; LARGE/RISKY)
+Seams + secret plumbing exist (Phase 0). **Fill real values before runtime/login**: `local.properties itadOauthClientId` and `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID` (+ register redirect `pm.bam.gamedeals://oauth/itad` with ITAD).
+
+**#226 (2.1) — DONE (on `dev`).** All in `remote/itad/.../auth/oauth/` + `logic/`:
+- `Pkce.kt` — pure-Kotlin SHA-256 (validated against the RFC 7636 + FIPS "abc" vectors) + base64url(no-pad); `generatePkce()` / `randomState()` / `codeChallenge()`. *(verifier/state use `Random.Default` — CSPRNG upgrade tracked with token encryption in #239.)*
+- `ItadOAuthConfig` (authorize/token URLs on `isthereanydeal.com`, scopes), `RemoteItadTokenResponse`, `ItadOAuthClient` (`buildAuthorizeUrl` + `/oauth/token` exchange/refresh via `submitForm`), `ItadTokenProvider` (bridges `AuthTokenStore` + refresh → persists/clears).
+- `logic/ItadAuthHttpClient.kt`: `itadOAuthHttpClient` (plain, no key, absolute URLs) + `itadAuthHttpClient` (bearer client, `Auth.bearer` + `refreshTokens`, base = api host). Registered in `itadNetworkModule` under `ITAD_OAUTH_QUALIFIER` / `ITAD_AUTH_QUALIFIER` (no new Koin module to register). `AuthTokenStore` gained `getUsername()`. Added `ktor-client-auth`.
+- Tests (commonTest, MockEngine): `PkceTest`, `ItadOAuthClientTest`, `ItadTokenProviderTest` — all green. **OAuth endpoint URLs are documented assumptions** — confirm against ITAD docs during the 2.4 live smoke test.
+
+**Remaining:**
+- **#227 (2.2):** `AuthBrowserLauncher` expect/actual — Android Custom Tabs + redirect activity (`AndroidManifest` intent-filter for `pm.bam.gamedeals://oauth`), iOS `ASWebAuthenticationSession` + `CFBundleURLSchemes`. **The redirect-capture Activity likely belongs in `:app`** (manifest owns the scheme); the launcher contract can live in `:remote:itad` androidMain/iosMain. iOS actual can't be compiled on the Linux box — flag for macOS.
+- **#228 (2.3):** `ItadUserApi`/`ItadWaitlistApi`/`ItadCollectionApi` (use `get(ITAD_AUTH_QUALIFIER)` bearer client) + `ItadAccountSourceImpl`; replace the Phase 0 stub `AccountRepository`/`WaitlistRepository`/`CollectionRepository` impls with real ones (the login flow: exchange code → call `/user/info/v2` → `AuthTokenStore.saveTokens(..., username)`).
+- **#229 (2.4):** `:feature:account` module — logged-out CTA → `ItadOAuthClient.buildAuthorizeUrl` → `AuthBrowserLauncher` → exchange; logged-in profile + stat cards + waitlist + collection (add/remove). Replace the Account `PlaceholderTabScreen`.
 
 **Heads-up for Phase 3:** DB is at **v7**; dropping `FavouriteGame` is `MIGRATION_7_8` + regen `domain/schemas/.../8.json` (`./gradlew :domain:kspAndroidMain`) + register in `DOMAIN_MIGRATIONS` — the build-gating `DomainDatabaseMigrationTest` enforces this.

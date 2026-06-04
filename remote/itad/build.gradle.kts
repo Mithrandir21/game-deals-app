@@ -14,6 +14,9 @@ kotlin {
             // ktor-serialization-kotlinx-json + sandwich-ktor for downstream use.
             api(project(":remote"))
 
+            // Ktor Auth (bearer) for the ITAD OAuth user-token client (epic #219, Phase 2).
+            implementation(libs.ktor.client.auth)
+
             implementation(libs.koin.core)
 
             implementation(project(":logging"))
