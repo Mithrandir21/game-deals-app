@@ -24,6 +24,11 @@ kotlin {
             implementation(project(":domain"))
         }
 
+        androidMain.dependencies {
+            // androidContext() for the OAuth browser launcher binding (epic #219, Phase 2.2).
+            implementation(libs.koin.android)
+        }
+
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(project(":testing"))

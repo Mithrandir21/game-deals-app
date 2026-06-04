@@ -28,7 +28,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 |---|---|---|
 | 0 — Seams & scaffold | #220–#223 | ✅ DONE (merged to `dev`) |
 | 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
-| 2 — OAuth + Account | #226–#229 | 🔄 in progress — 2.1 (#226) + 2.3 (#228) DONE; 2.2/2.4 remain |
+| 2 — OAuth + Account | #226–#229 | 🔄 in progress — 2.1/2.2/2.3 DONE; 2.4 (#229) remains |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ⬜ |
 | 4 — Deals tab | #233–#234 | ⬜ |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
@@ -98,8 +98,13 @@ Seams + secret plumbing exist (Phase 0). **Fill real values before runtime/login
 - **Real `WaitlistRepository`/`CollectionRepository`** (replaced the Phase 0 stubs): a `MutableStateFlow` id cache over the source; `getWaitlist()/getCollection()` refresh it, `toggle*` does an optimistic local update around the remote add/remove, **all writes login-gated** (no-op / empty when logged out, checked via `AuthTokenStore.getAccessToken()`). DI now injects `(ItadAccountSource, AuthTokenStore)`.
 - Tests (all green): `ItadAccountSourceImplTest` (6), `WaitlistRepositoryTest` (5), `CollectionRepositoryTest` (3). `:app:assembleDebug` green. **Endpoint shapes match the OpenAPI but the live request/response wasn't run (OAuth-gated) — confirm at the 2.4 smoke test.**
 
+**#227 (2.2) — DONE (on `dev`; Android verified, iOS unverified).**
+- Contract: `auth/oauth/AuthBrowserLauncher.kt` (commonMain) — `interface AuthBrowserLauncher.authorize(authorizeUrl, redirectScheme): AuthRedirectResult` (`Success(code,state)` / `Cancelled` / `Failed`). Bound per-platform (interface + DI, not expect/actual).
+- **Android** (androidMain): `AndroidAuthBrowserLauncher` launches a plain `ACTION_VIEW` browser intent (no Custom Tabs dep) and awaits `AuthRedirectBus`; the redirect `Activity` lives in **`:app`** (`pm.bam.gamedeals.oauth.OAuthRedirectActivity`) with the manifest `<intent-filter>` (`scheme=pm.bam.gamedeals`, `host=oauth`) → calls `AuthRedirectBus.deliver(uri)`. `itadAndroidModule` binds it (`androidContext()`); registered in `GameDealsApplication`. Added `koin-android` to `:remote:itad` androidMain. **Compiles + assembles.**
+- **iOS** (iosMain): `IosAuthBrowserLauncher` (`ASWebAuthenticationSession` + a presentation-context provider); `itadIosModule` registered in `MainViewController`; `CFBundleURLTypes` (scheme `pm.bam.gamedeals`) added to `Info.plist`. **⚠️ NOT compiled (Linux box) — verify with `:iosApp:compileKotlinIosSimulatorArm64` on macOS.** Uncertain K/N bits flagged in the file: `keyWindow` anchor (iPad/scene; cf. #144), cancel error-code `== 1L`, `queryItems` cast.
+- **Not yet consumed** — the login orchestration that calls `authorize()` lands in 2.4. Cancel/dismiss UX (no redirect) is best-effort; verify on device.
+
 **Remaining:**
-- **#227 (2.2):** `AuthBrowserLauncher` expect/actual — Android Custom Tabs + redirect activity (`AndroidManifest` intent-filter for `pm.bam.gamedeals://oauth`), iOS `ASWebAuthenticationSession` + `CFBundleURLSchemes`. **The redirect-capture Activity likely belongs in `:app`** (manifest owns the scheme); the launcher contract can live in `:remote:itad` androidMain/iosMain. iOS actual can't be compiled on the Linux box — flag for macOS.
 - **#229 (2.4):** `:feature:account` module — logged-out CTA → `ItadOAuthClient.buildAuthorizeUrl` → `AuthBrowserLauncher` → `exchangeCodeForToken` → call `/user/info/v2` (via the now-authenticated bearer client) → `AuthTokenStore.saveTokens(..., username)`; logged-in profile + stat cards + waitlist (`getWaitlist`) + collection (`getCollection`) with add/remove. Replace the Account `PlaceholderTabScreen`. **The login orchestration still needs the browser launcher (2.2) — decide whether it lives behind a domain `AccountRepository.login()` seam or in the `:feature:account` VM.**
 
 **Heads-up for Phase 3:** DB is at **v7**; dropping `FavouriteGame` is `MIGRATION_7_8` + regen `domain/schemas/.../8.json` (`./gradlew :domain:kspAndroidMain`) + register in `DOMAIN_MIGRATIONS` — the build-gating `DomainDatabaseMigrationTest` enforces this.

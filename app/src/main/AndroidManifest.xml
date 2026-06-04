@@ -27,6 +27,24 @@
             </intent-filter>
         </activity>
 
+        <!-- ITAD OAuth redirect target (epic #219, Phase 2.2): pm.bam.gamedeals://oauth/itad -->
+        <activity
+            android:name=".oauth.OAuthRedirectActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="pm.bam.gamedeals"
+                    android:host="oauth" />
+            </intent-filter>
+        </activity>
+
         <profileable android:shell="true" />
     </application>
 

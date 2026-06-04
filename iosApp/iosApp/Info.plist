@@ -30,6 +30,18 @@
 	<string>$(ITAD_API_KEY)</string>
 	<key>ITADOAuthClientId</key>
 	<string>$(ITAD_OAUTH_CLIENT_ID)</string>
+	<!-- ITAD OAuth redirect scheme (epic #219, Phase 2.2): pm.bam.gamedeals://oauth/itad -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>pm.bam.gamedeals.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pm.bam.gamedeals</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

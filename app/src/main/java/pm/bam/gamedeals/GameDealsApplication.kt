@@ -42,6 +42,7 @@ import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.di.itadAndroidModule
 import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
 import pm.bam.gamedeals.remote.itad.di.itadRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
@@ -83,6 +84,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
                 itadNetworkModule,
                 itadRemoteModule,
+                itadAndroidModule,
                 module { single { ItadCredentials(BuildConfig.ITAD_API_KEY, BuildConfig.ITAD_OAUTH_CLIENT_ID) } },
                 appModule,
                 homeModule,

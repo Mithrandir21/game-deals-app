@@ -67,6 +67,7 @@ import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.di.igdbNetworkModule
 import pm.bam.gamedeals.remote.igdb.di.igdbRemoteModule
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.remote.itad.di.itadIosModule
 import pm.bam.gamedeals.remote.itad.di.itadNetworkModule
 import pm.bam.gamedeals.remote.itad.di.itadRemoteModule
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
@@ -113,6 +114,7 @@ private fun bootstrapKoin() {
             // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
             itadNetworkModule,
             itadRemoteModule,
+            itadIosModule,
             homeModule,
             searchModule,
             gameModule,
