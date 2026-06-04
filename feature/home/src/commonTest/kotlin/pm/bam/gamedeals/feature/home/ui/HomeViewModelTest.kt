@@ -29,6 +29,7 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -99,6 +100,25 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         verify(exactly(1)) { storesRepository.observeStores() }
         verifySuspend(exactly(0)) { dealsRepository.getStoreDeals(any(), any()) }
+    }
+
+    @Test
+    fun load_new_releases_capped_at_five() = runTest {
+        val releases = (1..8).map { Release(title = "r$it", date = 0, image = "") }
+
+        every { storesRepository.observeStores() } returns flowOf(listOf())
+        every { releasesRepository.observeReleases() } returns flowOf(releases)
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf())
+
+        viewModel = HomeViewModel(storesRepository, dealsRepository, gamesRepository, releasesRepository, giveawaysRepository, bundlesRepository, favouritesRepository, dealShareTextBuilder, regionRepository, logger)
+        val emissions = observeStates()
+
+        assertEquals(1, emissions.size)
+        assertNotNull(emissions.first())
+        assertEquals(
+            HomeScreenData(state = HomeScreenStatus.SUCCESS, releases = releases.take(LIMIT_RELEASES).toImmutableList()),
+            emissions.first()
+        )
     }
 
     @Test
