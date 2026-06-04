@@ -83,7 +83,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
                 itadNetworkModule,
                 itadRemoteModule,
-                module { single { ItadCredentials(BuildConfig.ITAD_API_KEY) } },
+                module { single { ItadCredentials(BuildConfig.ITAD_API_KEY, BuildConfig.ITAD_OAUTH_CLIENT_ID) } },
                 appModule,
                 homeModule,
                 gameModule,

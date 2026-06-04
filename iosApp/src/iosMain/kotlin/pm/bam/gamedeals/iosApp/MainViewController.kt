@@ -82,7 +82,8 @@ private fun bootstrapKoin() {
         // IGDB creds come from Info.plist keys IGDBClientId / IGDBClientSecret
         single { IgdbCredentials(infoPlistString("IGDBClientId"), infoPlistString("IGDBClientSecret")) }
         // ITAD key comes from Info.plist key ITADApiKey (Secrets.xcconfig: ITAD_API_KEY). Epic #205.
-        single { ItadCredentials(infoPlistString("ITADApiKey")) }
+        // OAuth client id from ITADOAuthClientId (Secrets.xcconfig: ITAD_OAUTH_CLIENT_ID). Epic #219, Phase 2.
+        single { ItadCredentials(infoPlistString("ITADApiKey"), infoPlistString("ITADOAuthClientId")) }
     }
 
     startKoin {

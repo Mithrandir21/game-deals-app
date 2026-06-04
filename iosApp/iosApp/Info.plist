@@ -28,6 +28,8 @@
 	<string>$(IGDB_CLIENT_SECRET)</string>
 	<key>ITADApiKey</key>
 	<string>$(ITAD_API_KEY)</string>
+	<key>ITADOAuthClientId</key>
+	<string>$(ITAD_OAUTH_CLIENT_ID)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
