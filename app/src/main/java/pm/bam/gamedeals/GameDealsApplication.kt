@@ -24,6 +24,7 @@ import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.favourites.di.favouritesModule
 import pm.bam.gamedeals.feature.game.di.gameModule
@@ -95,6 +96,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 storeModule,
                 settingsModule,
                 bundlesModule,
+                accountModule,
             )
         }
         warmDomainDatabase()

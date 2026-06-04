@@ -40,6 +40,8 @@ import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.feature.account.di.accountModule
+import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
@@ -123,6 +125,7 @@ private fun bootstrapKoin() {
             storeModule,
             settingsModule,
             bundlesModule,
+            accountModule,
             iosAppModule,
         )
     }
@@ -188,7 +191,7 @@ private fun AppNavHost() {
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
         composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
-        composable<Destination.Account> { PlaceholderTabScreen(label = "Account") }
+        accountScreen(goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) })
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )

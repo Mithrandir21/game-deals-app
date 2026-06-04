@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="account_signed_out_title">Sync your games with IsThereAnyDeal</string>
+    <string name="account_signed_out_body">Sign in to keep your waitlist and collection in sync across devices.</string>
+    <string name="account_sign_in">Sign in with IsThereAnyDeal</string>
+
+    <string name="account_signed_in_as">Signed in as %1$s</string>
+    <string name="account_sign_out">Sign out</string>
+
+    <string name="account_stat_waitlisted">Waitlisted</string>
+    <string name="account_stat_collected">Collected</string>
+
+    <string name="account_section_waitlist">Waitlist</string>
+    <string name="account_section_collection">Collection</string>
+
+</resources>

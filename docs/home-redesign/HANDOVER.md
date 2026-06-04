@@ -28,7 +28,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 |---|---|---|
 | 0 — Seams & scaffold | #220–#223 | ✅ DONE (merged to `dev`) |
 | 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
-| 2 — OAuth + Account | #226–#229 | 🔄 in progress — 2.1/2.2/2.3 DONE; 2.4 (#229) remains |
+| 2 — OAuth + Account | #226–#229 | ✅ DONE (on `dev`) — ⚠️ iOS compile + live login unverified |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ⬜ |
 | 4 — Deals tab | #233–#234 | ⬜ |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
@@ -104,7 +104,20 @@ Seams + secret plumbing exist (Phase 0). **Fill real values before runtime/login
 - **iOS** (iosMain): `IosAuthBrowserLauncher` (`ASWebAuthenticationSession` + a presentation-context provider); `itadIosModule` registered in `MainViewController`; `CFBundleURLTypes` (scheme `pm.bam.gamedeals`) added to `Info.plist`. **⚠️ NOT compiled (Linux box) — verify with `:iosApp:compileKotlinIosSimulatorArm64` on macOS.** Uncertain K/N bits flagged in the file: `keyWindow` anchor (iPad/scene; cf. #144), cancel error-code `== 1L`, `queryItems` cast.
 - **Not yet consumed** — the login orchestration that calls `authorize()` lands in 2.4. Cancel/dismiss UX (no redirect) is best-effort; verify on device.
 
-**Remaining:**
-- **#229 (2.4):** `:feature:account` module — logged-out CTA → `ItadOAuthClient.buildAuthorizeUrl` → `AuthBrowserLauncher` → `exchangeCodeForToken` → call `/user/info/v2` (via the now-authenticated bearer client) → `AuthTokenStore.saveTokens(..., username)`; logged-in profile + stat cards + waitlist (`getWaitlist`) + collection (`getCollection`) with add/remove. Replace the Account `PlaceholderTabScreen`. **The login orchestration still needs the browser launcher (2.2) — decide whether it lives behind a domain `AccountRepository.login()` seam or in the `:feature:account` VM.**
+**#229 (2.4) — DONE (on `dev`; Android verified, iOS/live unverified). PHASE 2 COMPLETE.**
+- Login orchestration behind a **domain seam**: `ItadLoginSource.login(): ItadUser?` (domain) → `ItadLoginSourceImpl` (`:remote:itad`) does PKCE → `buildAuthorizeUrl` → `AuthBrowserLauncher.authorize` → `exchangeCodeForToken` → provisional `saveTokens(username="")` → `getUserInfo` → re-`saveTokens(username)`; cancel→null, state-mismatch/failure→throw. `AccountRepository` gained `login()` (delegates to the seam); both bound in DI.
+- New **`:feature:account`** module: `AccountViewModel` (observes auth state → loads waitlist+collection; `onLogin`/`onLogout`) + `AccountScreen` (M3: logged-out CTA; logged-in profile + Waitlisted/Collected stat cards + waitlist/collection lists, row→game). Wired into settings.gradle / root Kover / `:app` / `:iosApp` deps / both Koin module lists / both NavHosts (replaced the Account `PlaceholderTabScreen`).
+- Tests (green): `ItadLoginSourceImplTest` (3), `AccountViewModelTest` (4). `:app:assembleDebug` green.
+
+**⚠️ Phase 2 verification gaps (need a Mac + the real OAuth client id):**
+- iOS Kotlin never compiled here — run `:iosApp:compileKotlinIosSimulatorArm64` on macOS (the `IosAuthBrowserLauncher` is the main risk).
+- Live login never run — fill `local.properties itadOauthClientId` / `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID`, register the redirect `pm.bam.gamedeals://oauth/itad` with ITAD, then smoke-test: login → `/user/info` → username; add/remove waitlist; force a 401 → silent refresh; logout. Confirm the `ItadOAuthConfig` URLs + the `obj.game` PUT/DELETE body shapes against the live API.
+- "Heat" stat card omitted (no clean ITAD source) — only Waitlisted/Collected shown.
+
+## Next up — Phase 3 (Favourites → Waitlist + Room v7→v8; RISKY)
+The waitlist repo now exists (Phase 2.3), so the heart can be repointed.
+- **#230 (3.1):** Repoint the heart in `common/ui/.../deal/DealBottomSheet.kt` (`isFavourite`→`isWaitlisted`, `onToggleFavourite`→`onToggleWaitlist`) + its 3 call sites + previews, and the Home/Store/Game/Search VMs → `WaitlistRepository` (login-gated; logged-out tap routes to Account/login via a one-shot event).
+- **#231 (3.2):** Drop `FavouriteGame` + Room **v7→v8** (`MIGRATION_7_8` DROP TABLE; bump `DOMAIN_DB_VERSION`; regen `8.json` via `:domain:kspAndroidMain`; register in `DOMAIN_MIGRATIONS`; delete entity/DAO/repo/tests; prune `DomainDatabase`/`DomainModule`). Build-gating `DomainDatabaseMigrationTest` enforces the registration + schema file.
+- **#232 (3.3):** Remove/repurpose `:feature:favourites` (fold the waitlist list into Account; delete the module + `Destination.Favourites`; update both NavHosts/Koin/deps/root Kover). Note: Home still has a local "Favourites" strip + "View All" + `favouriteIds`/`favourites` in `HomeViewModel` — repoint or remove those.
 
 **Heads-up for Phase 3:** DB is at **v7**; dropping `FavouriteGame` is `MIGRATION_7_8` + regen `domain/schemas/.../8.json` (`./gradlew :domain:kspAndroidMain`) + register in `DOMAIN_MIGRATIONS` — the build-gating `DomainDatabaseMigrationTest` enforces this.

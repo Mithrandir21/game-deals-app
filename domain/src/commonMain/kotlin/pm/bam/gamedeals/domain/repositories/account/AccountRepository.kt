@@ -3,24 +3,30 @@ package pm.bam.gamedeals.domain.repositories.account
 import kotlinx.coroutines.flow.Flow
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.source.ItadLoginSource
 
 /**
- * The user's ITAD account session (epic #219, Phase 2).
- *
- * Phase 0 wires only the auth state (from [AuthTokenStore], which is empty until login exists). The
- * OAuth login flow, profile, and stat-card data land in Phase 2 (#226 / #228), at which point this
- * repository gains an [pm.bam.gamedeals.domain.source.ItadAccountSource] dependency.
+ * The user's ITAD account session (epic #219, Phase 2). [observeAuthState] reflects the persisted
+ * token ([AuthTokenStore]); [login] runs the OAuth flow via [ItadLoginSource]; [logout] clears it.
  */
 interface AccountRepository {
     fun observeAuthState(): Flow<AuthState>
+
+    /** Runs the OAuth login; returns the signed-in user, or null if cancelled. */
+    suspend fun login(): ItadUser?
+
     suspend fun logout()
 }
 
 internal class AccountRepositoryImpl(
     private val authTokenStore: AuthTokenStore,
+    private val loginSource: ItadLoginSource,
 ) : AccountRepository {
 
     override fun observeAuthState(): Flow<AuthState> = authTokenStore.observeAuthState()
+
+    override suspend fun login(): ItadUser? = loginSource.login()
 
     override suspend fun logout() = authTokenStore.clear()
 }

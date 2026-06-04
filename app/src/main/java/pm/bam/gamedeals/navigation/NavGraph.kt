@@ -17,6 +17,7 @@ import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.PlaceholderTabScreen
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
+import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
@@ -74,9 +75,9 @@ internal fun NavGraph(
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
             )
 
-            // Placeholder tabs until their feature modules land (Account: Phase 2.4 #229, Deals: Phase 4.2 #234).
+            // Placeholder tab until the Deals feature module lands (Phase 4.2 #234).
             composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
-            composable<Destination.Account> { PlaceholderTabScreen(label = "Account") }
+            accountScreen(goToGame = { gameId -> navActions.navigateToGame(gameId) })
 
             storeScreen(
                 navController = navController,

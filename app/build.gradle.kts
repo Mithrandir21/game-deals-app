@@ -132,6 +132,7 @@ dependencies {
     implementation(project(":feature:favourites"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:bundles"))
+    implementation(project(":feature:account"))
 
     val composeBom = platform(libs.androidx.compose.bom)
 

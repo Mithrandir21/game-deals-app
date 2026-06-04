@@ -3,7 +3,9 @@ package pm.bam.gamedeals.remote.itad.di
 import org.koin.dsl.module
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.domain.source.ItadLoginSource
 import pm.bam.gamedeals.remote.itad.ItadAccountSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadLoginSourceImpl
 import pm.bam.gamedeals.remote.itad.ItadSourceImpl
 
 /**
@@ -27,4 +29,8 @@ val itadRemoteModule = module {
     }
 
     single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get()) }
+
+    // Login orchestration (epic #219, Phase 2.4): OAuth client + browser launcher (platform-bound) +
+    // account source + token store + credentials + clock.
+    single<ItadLoginSource> { ItadLoginSourceImpl(get(), get(), get(), get(), get(), get()) }
 }

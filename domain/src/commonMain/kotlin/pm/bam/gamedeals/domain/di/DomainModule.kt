@@ -74,7 +74,7 @@ val domainModule = module {
     // ITAD account (epic #219). AuthTokenStore is Storage-backed (like RegionRepository). Waitlist/
     // Collection are backed by the live ITAD account source (Phase 2.3); Stats is still a stub until #235.
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
-    single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get()) }
     single<StatsRepository> { StatsRepositoryImpl() }
