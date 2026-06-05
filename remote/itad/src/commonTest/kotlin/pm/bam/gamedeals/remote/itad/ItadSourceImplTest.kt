@@ -14,6 +14,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.DealsQuery
+import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -106,8 +108,8 @@ class ItadSourceImplTest {
     }
 
     @Test
-    fun fetchDeals_maps_the_singular_deal_per_game_from_the_envelope() = runTest {
-        val deals = impl.fetchDeals(country = "US")
+    fun fetchItadDeals_maps_the_singular_deal_per_game_from_the_envelope() = runTest {
+        val deals = impl.fetchItadDeals(country = "US")
 
         assertEquals(1, deals.size)
         val deal = deals.first()
@@ -123,6 +125,37 @@ class ItadSourceImplTest {
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
         assertEquals("US", recorded.parameters["country"])
+    }
+
+    @Test
+    fun fetchDeals_query_passes_sort_shops_offset_and_maps_to_domain() = runTest {
+        val deals = impl.fetchDeals(
+            DealsQuery(sort = DealsSort.TopDiscount, shopIds = listOf(61, 16), offset = 30, limit = 30)
+        )
+
+        assertEquals(1, deals.size)
+        val deal = deals.first()
+        assertEquals("uuid-1", deal.gameID)
+        assertEquals("Halo", deal.title)
+        assertEquals(61, deal.storeID)
+
+        val recorded = recordedRequests.single().url
+        assertEquals("/deals/v2", recorded.encodedPath)
+        assertEquals("US", recorded.parameters["country"]) // applied from RegionRepository
+        assertEquals("-cut", recorded.parameters["sort"])
+        assertEquals("61,16", recorded.parameters["shops"])
+        assertEquals("30", recorded.parameters["offset"])
+        assertEquals("30", recorded.parameters["limit"])
+    }
+
+    @Test
+    fun fetchDeals_query_omits_shops_when_no_shop_filter() = runTest {
+        impl.fetchDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, shopIds = emptyList()))
+
+        val recorded = recordedRequests.single().url
+        assertEquals("/deals/v2", recorded.encodedPath)
+        assertEquals("price", recorded.parameters["sort"])
+        assertNull(recorded.parameters["shops"])
     }
 
     @Test

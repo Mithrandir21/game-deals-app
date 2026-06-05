@@ -15,11 +15,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
-import pm.bam.gamedeals.common.ui.shell.PlaceholderTabScreen
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
+import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
@@ -73,8 +73,11 @@ internal fun NavGraph(
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
             )
 
-            // Placeholder tab until the Deals feature module lands (Phase 4.2 #234).
-            composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
+            dealsScreen(
+                goToWeb = { url, _ -> uriHandler.openUri(url) },
+                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
+                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
+            )
             accountScreen(goToGame = { gameId -> navActions.navigateToGame(gameId) })
 
             storeScreen(

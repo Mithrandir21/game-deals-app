@@ -35,7 +35,6 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
-import pm.bam.gamedeals.common.ui.shell.PlaceholderTabScreen
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
@@ -45,6 +44,8 @@ import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
+import pm.bam.gamedeals.feature.deals.di.dealsModule
+import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
@@ -123,6 +124,7 @@ private fun bootstrapKoin() {
             settingsModule,
             bundlesModule,
             accountModule,
+            dealsModule,
             iosAppModule,
         )
     }
@@ -186,7 +188,11 @@ private fun AppNavHost() {
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
-        composable<Destination.Deals> { PlaceholderTabScreen(label = "Deals") }
+        dealsScreen(
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
+            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
+        )
         accountScreen(goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) })
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },

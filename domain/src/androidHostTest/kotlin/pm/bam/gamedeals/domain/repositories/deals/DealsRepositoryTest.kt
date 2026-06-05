@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
@@ -97,6 +98,22 @@ class DealsRepositoryTest {
         assertEquals(details, result)
 
         coVerify(exactly = 1) { dealsSource.fetchDealDetails(id) }
+    }
+
+
+    @Test
+    fun `getDeals - delegates to source and is not Room-cached`() = runTest {
+        val query = DealsQuery(offset = 30)
+        val deals = listOf<Deal>(mockk())
+
+        coEvery { dealsSource.fetchDeals(query) } returns deals
+
+
+        val result = impl.getDeals(query)
+        assertEquals(deals, result)
+
+        coVerify(exactly = 1) { dealsSource.fetchDeals(query) }
+        coVerify(exactly = 0) { dealsDao.addDeals(*anyVararg()) }
     }
 
 

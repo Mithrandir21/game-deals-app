@@ -1,0 +1,15 @@
+<resources>
+    <string name="deals_screen_title">Deals</string>
+    <string name="deals_screen_loading_error_msg">Couldn\'t load deals</string>
+    <string name="deals_screen_loading_error_retry">Retry</string>
+    <string name="deals_screen_load_more_error_msg">Couldn\'t load more deals</string>
+    <string name="deals_screen_empty_label">No deals right now</string>
+    <string name="deals_screen_game_image">Image for %1$s</string>
+    <string name="deals_screen_deal_row_description">Deal: %1$s, %2$s</string>
+    <string name="deals_screen_deal_row_description_waitlisted">Deal: %1$s, waitlisted, %2$s</string>
+
+    <string name="deals_sort_label">Sort</string>
+    <string name="deals_sort_top_discount">Top discount</string>
+    <string name="deals_sort_recently_added">Recently added</string>
+    <string name="deals_sort_price_low_high">Cheapest</string>
+</resources>

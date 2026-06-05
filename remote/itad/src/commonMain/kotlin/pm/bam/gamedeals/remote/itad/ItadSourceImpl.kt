@@ -5,6 +5,7 @@ import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.PriceHistory
@@ -77,14 +78,23 @@ internal class ItadSourceImpl(
         val country = regionRepository.getSelectedCountryCode()
         return when {
             // Store deals: `/deals/v2?shops=<id>` returns each game's best deal at that shop.
-            storeId != null -> fetchDeals(country = country, limit = limit, shops = storeId.toString()).map { it.toDeal() }
+            storeId != null -> fetchItadDeals(country = country, limit = limit, shops = storeId.toString()).map { it.toDeal() }
             // Title search (release lookup + Search screen): ITAD has no title filter on /deals/v2, so
             // resolve via game search → current prices → cheapest deal per game. Price/Steam-rating/
             // Metacritic filters in [query] aren't supported by ITAD and are ignored (epic #205 ADR trade-off).
             !title.isNullOrBlank() -> dealsByTitle(title, limit, country)
-            else -> fetchDeals(country = country, limit = limit).map { it.toDeal() }
+            else -> fetchItadDeals(country = country, limit = limit).map { it.toDeal() }
         }
     }
+
+    override suspend fun fetchDeals(query: DealsQuery): List<Deal> =
+        fetchItadDeals(
+            country = regionRepository.getSelectedCountryCode(),
+            offset = query.offset,
+            limit = query.limit,
+            sort = query.sort.apiValue,
+            shops = query.shopIds.takeIf { it.isNotEmpty() }?.joinToString(separator = ","),
+        ).map { it.toDeal() }
 
     override suspend fun fetchDealDetails(id: String): DealDetails {
         val gameId = gameIdFromDealId(id)
@@ -132,7 +142,7 @@ internal class ItadSourceImpl(
 
     // --- ITAD-shaped façade (fetch + map; consumed by the DealsSource methods above) ---
 
-    suspend fun fetchDeals(
+    suspend fun fetchItadDeals(
         country: String? = null,
         offset: Int? = null,
         limit: Int? = null,

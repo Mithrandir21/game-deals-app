@@ -30,7 +30,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 | 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
 | 2 — OAuth + Account | #226–#229 | ✅ DONE (on `dev`) — ⚠️ iOS compile + live login unverified |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ✅ DONE (on `dev`) |
-| 4 — Deals tab | #233–#234 | ⬜ |
+| 4 — Deals tab | #233–#234 | ✅ DONE (on `dev`) |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
 | 6 — Cleanup & hardening | #238–#240 | ⬜ |
 
@@ -127,5 +127,19 @@ Local Favourites replaced by the ITAD Waitlist. DB is now at **v8**.
 - **Logged-out heart silently no-ops** — the plan (#230) wanted a logged-out tap to route to Account/login via a one-shot event; instead `WaitlistRepository.toggleWaitlist` just returns when logged out. The heart still renders + animates with nothing happening. Add a "sign in to save" prompt/route (small task or fold into Phase 5/6 polish).
 - Committed `.stability` reference files for touched modules still show the old `isFavourite`/`onToggleFavourite` text but `stabilityCheck` passes (it compares stability classifications, not param names); `stabilityDump` produced no diff. Left as-is.
 
-## Next up — Phase 4 (Deals tab; #233–#234)
-New `:feature:deals` module = the full browsable/filterable all-stores `/deals/v2` list (today's per-store strips move here). Needs the shell + gated heart (both now in place). The `onBrowseStores` top-bar overflow item is currently wired-but-`null` (hidden) — Phase 4 gives it a destination. Mirror `:feature:bundles`/`:feature:settings` as the new-module template; wire into settings.gradle / root Kover / `:app` + `:iosApp` / both Koin lists / both NavHosts; replace the `Destination.Deals` `PlaceholderTabScreen` on both platforms.
+## Phase 4 — DONE (on `dev`; commit `ec82170`)
+The Deals tab is live on both platforms (replaces the `Destination.Deals` placeholder).
+
+- **#233 (4.1) — general seam + repo path.** New domain `DealsQuery` (sort + `shopIds` + `offset`/`limit`; `DEALS_PAGE_SIZE = 30`) + `DealsSort` (`-cut`/`-publish`/`price`). `DealsSource.fetchDeals(query)` — a non-store-scoped `/deals/v2` page, distinct from `fetchDealsForStore`; region applied by the impl. In `ItadSourceImpl` the ITAD façade was renamed `fetchDeals`→**`fetchItadDeals`** (seam takes the plain name, per the #205 convention) and `fetchDeals(query)` implemented over it. `DealsRepository.getDeals(query)` is a **direct passthrough — deliberately NOT Room-cached** (paged/filtered/region-sensitive; the `Deal` table is store-scoped).
+- **#234 (4.2) — `:feature:deals` module.** `DealsViewModel` (sort filter + offset load-more — paging-compose isn't KMP; reloads page 0 on sort/region change via `combine` + `collectLatest`, appends until a short page; gated heart via `WaitlistRepository`; row→`DealBottomSheet` via `DealDetailsController`; share via one-shot events). `DealsScreen` (sort `FilterChip`s + deal-row list + load-more spinner + loading/empty/error; mirrors `StoreScreen`, no own top bar — the shell provides it). Wired into settings.gradle / root Kover / `:app` + `:iosApp` / both Koin lists / both NavHosts; `PlaceholderTabScreen` import dropped on both platforms (now unused).
+
+**Verified:** `:app:assembleDebug` green; full `testAndroidHostTest` green except the known pre-existing `:remote:igdb` failure; `DealsViewModelTest` (4) + `ItadSourceImplTest`/`DealsRepositoryTest` additions pass. iOS not compiled (Linux box) — symmetric wiring, wants a macOS `:iosApp:compileKotlinIosSimulatorArm64`.
+
+**Phase 4 follow-ups (not blocking):**
+- **Shop-filter UI not built.** `DealsQuery.shopIds` is plumbed end-to-end (and `fetchDeals` joins it into `shops=`), but there's no store picker — the tab browses all stores. Add a multi-store filter (load `StoresRepository`, chips/sheet) as a small follow-up.
+- **`onBrowseStores` overflow** is still wired-but-`null` (hidden). It wasn't in #233/#234 scope (it implies a stores-list screen, not the Deals tab). Decide later whether to point it at a store picker.
+- Logged-out heart still silently no-ops (shared Phase 3 gap — see Phase 3 follow-ups).
+- Stability tooling note: `stabilityCheck`/`stabilityDump` report "No composables found" for every module in this env and skip (pass); the committed `*.stability` files are stale legacy artifacts. `:feature:deals` therefore has no `stability/` reference and CI's `stabilityCheck` still passes.
+
+## Next up — Phase 5 (Curated Home feed; #235–#237)
+Stats + new Home VM/UI. Per the locked Home order: account stat cards → Featured hero grid → Trending deals → Most Waitlisted (30d) → Most Collected (30d) → New Releases (IGDB) → Bundles → Giveaways. Needs the `StatsSource`/`StatsRepository` (Phase 0 stubs) made live in `:remote:itad` (`/stats/most-waitlisted|most-collected|most-popular/v1`, API-key only → enrich via `POST /games/prices/v3`), then rebuild the Home feed sections + the per-store strips' replacement (those moved to the Deals tab in Phase 4). Also fold the Giveaways tab into the shell top bar (Phase 1 interim) if not done separately.

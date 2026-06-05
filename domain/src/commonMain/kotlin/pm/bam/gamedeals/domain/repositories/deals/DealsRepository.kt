@@ -10,6 +10,7 @@ import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -27,6 +28,14 @@ interface DealsRepository {
     suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
     suspend fun getDeal(dealId: String): DealDetails
     suspend fun refreshDeals(storeId: Int, force: Boolean = false)
+
+    /**
+     * A sorted/filtered page of all-stores deals for the Deals tab (#219 Phase 4). Fetched fresh from
+     * the source per call — deliberately **not** Room-cached: results are paged, filtered and
+     * region-sensitive, so persisting them in the store-scoped [Deal] table would be incorrect (and
+     * would collide with the store-deals cache). Callers drive offset-based load-more via [DealsQuery].
+     */
+    suspend fun getDeals(query: DealsQuery): List<Deal>
 
     /**
      * Drops every cached deal so the next observe/refresh re-fetches. Used when the region changes
@@ -69,6 +78,9 @@ internal class DealsRepositoryImpl(
 
     override suspend fun getDeal(dealId: String): DealDetails =
         dealsSource.fetchDealDetails(dealId)
+
+    override suspend fun getDeals(query: DealsQuery): List<Deal> =
+        dealsSource.fetchDeals(query)
 
     override suspend fun clearCachedDeals() = dealsDao.clearAllDeals()
 
