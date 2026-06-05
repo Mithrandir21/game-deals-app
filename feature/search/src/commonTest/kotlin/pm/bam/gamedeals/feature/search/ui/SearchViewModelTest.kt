@@ -20,7 +20,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.feature.search.ui.SearchViewModel.SearchData
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -37,8 +37,8 @@ import kotlin.test.assertEquals
 class SearchViewModelTest : MainDispatcherTest() {
 
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
-    private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeFavouriteIds() } returns flowOf(persistentSetOf())
+    private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
+        every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
 
     private lateinit var viewModel: SearchViewModel
@@ -46,7 +46,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     @BeforeTest
     fun setup() {
         installMainDispatcher()
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, waitlistRepository)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -152,28 +152,28 @@ class SearchViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun favouriteIds_initial_value_is_empty_set() = runTest {
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+    fun waitlistIds_initial_value_is_empty_set() = runTest {
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(emptySet<String>(), ids.first())
     }
 
     @Test
-    fun favouriteIds_emits_values_from_repository() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf("1", "2", "3"))
+    fun waitlistIds_emits_values_from_repository() = runTest {
+        every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("1", "2", "3"))
         // Rebuild because the @BeforeTest viewModel captured the original stub.
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, waitlistRepository)
 
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(setOf("1", "2", "3"), ids.last())
     }
 
     @Test
-    fun favouriteIds_recovers_from_repository_error_with_empty_set() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flow { throw Exception() }
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, favouritesRepository)
+    fun waitlistIds_recovers_from_repository_error_with_empty_set() = runTest {
+        every { waitlistRepository.observeWaitlistIds() } returns flow { throw Exception() }
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, waitlistRepository)
 
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(emptySet<String>(), ids.last())
     }
 
@@ -228,7 +228,7 @@ class SearchViewModelTest : MainDispatcherTest() {
             SavedStateHandle(mapOf("initialQuery" to "Halo Infinite")),
             TestingLoggingListener(),
             gamesRepository,
-            favouritesRepository,
+            waitlistRepository,
         )
 
         assertEquals("Halo Infinite", viewModel.initialQuery)
@@ -249,7 +249,7 @@ class SearchViewModelTest : MainDispatcherTest() {
             SavedStateHandle(mapOf("initialQuery" to "")),
             TestingLoggingListener(),
             gamesRepository,
-            favouritesRepository,
+            waitlistRepository,
         )
 
         assertEquals(null, viewModel.initialQuery)

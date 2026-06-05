@@ -29,7 +29,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 | 0 — Seams & scaffold | #220–#223 | ✅ DONE (merged to `dev`) |
 | 1 — App shell wired | #224–#225 | ✅ DONE (on `dev`) |
 | 2 — OAuth + Account | #226–#229 | ✅ DONE (on `dev`) — ⚠️ iOS compile + live login unverified |
-| 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ⬜ |
+| 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ✅ DONE (on `dev`) |
 | 4 — Deals tab | #233–#234 | ⬜ |
 | 5 — Curated Home feed | #235–#237 | ⬜ |
 | 6 — Cleanup & hardening | #238–#240 | ⬜ |
@@ -114,10 +114,18 @@ Seams + secret plumbing exist (Phase 0). **Fill real values before runtime/login
 - Live login never run — fill `local.properties itadOauthClientId` / `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID`, register the redirect `pm.bam.gamedeals://oauth/itad` with ITAD, then smoke-test: login → `/user/info` → username; add/remove waitlist; force a 401 → silent refresh; logout. Confirm the `ItadOAuthConfig` URLs + the `obj.game` PUT/DELETE body shapes against the live API.
 - "Heat" stat card omitted (no clean ITAD source) — only Waitlisted/Collected shown.
 
-## Next up — Phase 3 (Favourites → Waitlist + Room v7→v8; RISKY)
-The waitlist repo now exists (Phase 2.3), so the heart can be repointed.
-- **#230 (3.1):** Repoint the heart in `common/ui/.../deal/DealBottomSheet.kt` (`isFavourite`→`isWaitlisted`, `onToggleFavourite`→`onToggleWaitlist`) + its 3 call sites + previews, and the Home/Store/Game/Search VMs → `WaitlistRepository` (login-gated; logged-out tap routes to Account/login via a one-shot event).
-- **#231 (3.2):** Drop `FavouriteGame` + Room **v7→v8** (`MIGRATION_7_8` DROP TABLE; bump `DOMAIN_DB_VERSION`; regen `8.json` via `:domain:kspAndroidMain`; register in `DOMAIN_MIGRATIONS`; delete entity/DAO/repo/tests; prune `DomainDatabase`/`DomainModule`). Build-gating `DomainDatabaseMigrationTest` enforces the registration + schema file.
-- **#232 (3.3):** Remove/repurpose `:feature:favourites` (fold the waitlist list into Account; delete the module + `Destination.Favourites`; update both NavHosts/Koin/deps/root Kover). Note: Home still has a local "Favourites" strip + "View All" + `favouriteIds`/`favourites` in `HomeViewModel` — repoint or remove those.
+## Phase 3 — DONE (on `dev`; commit `52bfe22`)
+Local Favourites replaced by the ITAD Waitlist. DB is now at **v8**.
 
-**Heads-up for Phase 3:** DB is at **v7**; dropping `FavouriteGame` is `MIGRATION_7_8` + regen `domain/schemas/.../8.json` (`./gradlew :domain:kspAndroidMain`) + register in `DOMAIN_MIGRATIONS` — the build-gating `DomainDatabaseMigrationTest` enforces this.
+- **#230 (3.1) — heart repointed to `WaitlistRepository`.** `DealBottomSheet` params `isFavourite`→`isWaitlisted` / `onToggleFavourite`→`onToggleWaitlist`; the Home/Store/Search/Game VMs now expose `waitlistIds`/`isWaitlisted` and `toggleWaitlist[FromDeal]` over `WaitlistRepository`. The **Home "Favourites" strip** (FavouriteRow + View-All) and `favourites`/`favouriteIds` state were removed from `HomeViewModel`/`HomeScreen`. *(Cosmetic debt: many call-site local names + string keys still read `favourite*` — e.g. `favouriteIds` local in Store/Search, `deal_favourite_add_action`, `store_screen_favourite_indicator`; harmless, rename opportunistically.)*
+- **#231 (3.2) — Room v7→v8.** `MIGRATION_7_8` `DROP TABLE FavouriteGame` (in-place, no recreate); `DOMAIN_DB_VERSION=8`; registered in `DOMAIN_MIGRATIONS`; `domain/schemas/.../8.json` added; `FavouriteGame` entity / `FavouritesDao` / `FavouritesRepository` (+ tests) deleted and pruned from `DomainDatabase`/`DomainModule`.
+- **#232 (3.3) — `:feature:favourites` deleted** along with `Destination.Favourites`; wiring pruned from settings.gradle, root Kover, `:app` + `:iosApp` deps, both Koin module lists and both NavHosts. (Waitlist list already lives on the Account screen from Phase 2.4, so nothing was folded.)
+
+**Verified:** `:app:assembleDebug` green; full `testAndroidHostTest` green except the known pre-existing `:remote:igdb` `IgdbSourceImplTest` failure; `stabilityCheck` green on the touched modules. iOS not compiled (Linux box) — `MainViewController.kt` edits are deletions only (low risk) but still want a macOS `:iosApp:compileKotlinIosSimulatorArm64`.
+
+**Phase 3 follow-ups (not blocking):**
+- **Logged-out heart silently no-ops** — the plan (#230) wanted a logged-out tap to route to Account/login via a one-shot event; instead `WaitlistRepository.toggleWaitlist` just returns when logged out. The heart still renders + animates with nothing happening. Add a "sign in to save" prompt/route (small task or fold into Phase 5/6 polish).
+- Committed `.stability` reference files for touched modules still show the old `isFavourite`/`onToggleFavourite` text but `stabilityCheck` passes (it compares stability classifications, not param names); `stabilityDump` produced no diff. Left as-is.
+
+## Next up — Phase 4 (Deals tab; #233–#234)
+New `:feature:deals` module = the full browsable/filterable all-stores `/deals/v2` list (today's per-store strips move here). Needs the shell + gated heart (both now in place). The `onBrowseStores` top-bar overflow item is currently wired-but-`null` (hidden) — Phase 4 gives it a destination. Mirror `:feature:bundles`/`:feature:settings` as the new-module template; wire into settings.gradle / root Kover / `:app` + `:iosApp` / both Koin lists / both NavHosts; replace the `Destination.Deals` `PlaceholderTabScreen` on both platforms.

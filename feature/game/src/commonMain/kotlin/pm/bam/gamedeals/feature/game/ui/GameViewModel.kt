@@ -30,10 +30,10 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.Store
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
 
@@ -44,16 +44,16 @@ internal class GameViewModel(
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
-    private val favouritesRepository: FavouritesRepository,
+    private val waitlistRepository: WaitlistRepository,
     private val igdbRepository: IgdbRepository,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
     private val gameIdFlow = MutableStateFlow(savedStateHandle.get<String>("gameId"))
 
-    val isFavourite: StateFlow<Boolean> = gameIdFlow
+    val isWaitlisted: StateFlow<Boolean> = gameIdFlow
         .flatMapLatest { id ->
-            if (id == null) flowOf(false) else favouritesRepository.observeIsFavourite(id)
+            if (id == null) flowOf(false) else waitlistRepository.observeIsWaitlisted(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
@@ -96,16 +96,11 @@ internal class GameViewModel(
         reloadTrigger.tryEmit(Unit)
     }
 
-    fun toggleFavourite() {
-        val current = uiState.value as? GameScreenData.Data ?: return
-        val info = current.gameDetails.info
+    fun toggleWaitlist() {
+        if (uiState.value !is GameScreenData.Data) return
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            favouritesRepository.toggleFavourite(
-                gameId = id,
-                title = info.title,
-                thumb = info.thumb,
-            )
+            waitlistRepository.toggleWaitlist(id)
         }
     }
 

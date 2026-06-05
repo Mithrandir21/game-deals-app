@@ -48,7 +48,7 @@ class SearchScreenTest {
 
     @Before
     fun setup() {
-        every { searchViewModel.favouriteIds } returns MutableStateFlow(persistentSetOf())
+        every { searchViewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
         every { searchViewModel.initialQuery } returns null
     }
 

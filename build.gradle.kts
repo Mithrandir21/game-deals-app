@@ -30,7 +30,6 @@ dependencies {
     kover(project(":feature:home"))
     kover(project(":feature:webview"))
     kover(project(":feature:giveaways"))
-    kover(project(":feature:favourites"))
     kover(project(":feature:settings"))
     kover(project(":feature:bundles"))
     kover(project(":feature:account"))

@@ -28,7 +28,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -50,8 +50,8 @@ class StoreViewModelTest : MainDispatcherTest() {
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
-    private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeFavouriteIds() } returns flowOf(persistentSetOf())
+    private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
+        every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
@@ -66,7 +66,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         dealsRepository = dealsRepository,
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
-        favouritesRepository = favouritesRepository,
+        waitlistRepository = waitlistRepository,
         regionRepository = regionRepository,
     )
 
@@ -127,9 +127,7 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun toggleFavouriteFromDeal_delegates_to_repository_with_data_fields() = runTest {
-        everySuspend { favouritesRepository.toggleFavourite(any(), any(), any()) } returns true
-
+    fun toggleWaitlistFromDeal_delegates_to_repository_with_game_id() = runTest {
         val viewModel = createViewModel(storeId = 1)
         val data = DealBottomSheetData.DealDetailsData(
             store = store(),
@@ -141,38 +139,38 @@ class StoreViewModelTest : MainDispatcherTest() {
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
-        viewModel.toggleFavouriteFromDeal(data)
+        viewModel.toggleWaitlistFromDeal(data)
         runCurrent()
 
         verifySuspend(exactly(1)) {
-            favouritesRepository.toggleFavourite(gameId = "42", title = "Halo", thumb = "thumb-42")
+            waitlistRepository.toggleWaitlist("42")
         }
     }
 
     @Test
-    fun favouriteIds_initial_value_is_empty_set() = runTest {
+    fun waitlistIds_initial_value_is_empty_set() = runTest {
         val viewModel = createViewModel(storeId = 1)
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(emptySet<String>(), ids.first())
     }
 
     @Test
-    fun favouriteIds_emits_values_from_repository() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flowOf(persistentSetOf("1", "2", "3"))
+    fun waitlistIds_emits_values_from_repository() = runTest {
+        every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("1", "2", "3"))
 
         val viewModel = createViewModel(storeId = 1)
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(setOf("1", "2", "3"), ids.last())
     }
 
     @Test
-    fun favouriteIds_recovers_from_repository_error_with_empty_set() = runTest {
-        every { favouritesRepository.observeFavouriteIds() } returns flow { throw Exception() }
+    fun waitlistIds_recovers_from_repository_error_with_empty_set() = runTest {
+        every { waitlistRepository.observeWaitlistIds() } returns flow { throw Exception() }
 
         val viewModel = createViewModel(storeId = 1)
-        val ids = viewModel.favouriteIds.observeEmissions(this.backgroundScope, testDispatcher)
+        val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(emptySet<String>(), ids.last())
     }

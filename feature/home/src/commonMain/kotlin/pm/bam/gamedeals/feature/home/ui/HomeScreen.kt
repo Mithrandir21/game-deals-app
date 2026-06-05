@@ -63,7 +63,6 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
-import pm.bam.gamedeals.common.ui.PreviewFavourite
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.PreviewRelease
 import pm.bam.gamedeals.common.ui.PreviewStore
@@ -77,12 +76,10 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_favourites_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveaways_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundle_row_description
@@ -90,7 +87,6 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundles_lab
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_store_deals_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_favourites_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
@@ -118,7 +114,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 // instead of composing every appearing item from scratch — the main fix for fling jank on this mixed list.
 private const val CONTENT_TYPE_SECTION_HEADER = "section_header"
 private const val CONTENT_TYPE_RELEASE = "release"
-private const val CONTENT_TYPE_FAVOURITE = "favourite"
 private const val CONTENT_TYPE_GIVEAWAY = "giveaway"
 private const val CONTENT_TYPE_BUNDLE = "bundle"
 private const val CONTENT_TYPE_STORE_HEADER = "store_header"
@@ -130,7 +125,6 @@ internal fun HomeScreen(
     goToGame: (gameId: String) -> Unit,
     onViewStoreDeals: ((store: Store) -> Unit) = {},
     onViewGiveaways: () -> Unit,
-    onViewFavourites: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
@@ -140,8 +134,7 @@ internal fun HomeScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
-    val favouriteIds = viewModel.favouriteIds.collectAsStateWithLifecycle()
-    val favourites = viewModel.favourites.collectAsStateWithLifecycle()
+    val favouriteIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
@@ -150,7 +143,6 @@ internal fun HomeScreen(
         onReleaseTitle = onReleaseTitle,
         data = data.value,
         favouriteIds = favouriteIds.value,
-        favourites = favourites.value,
         dealDetails = dealDetails.value,
         onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
             viewModel.loadDealDetails(
@@ -164,13 +156,11 @@ internal fun HomeScreen(
         },
         onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
-        onViewFavourites = onViewFavourites,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
-        goToFavouriteGame = goToGame,
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
-        onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
+        onToggleDealFavourite = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -254,15 +244,12 @@ private fun HomeScreenContent(
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
     favouriteIds: ImmutableSet<String>,
-    favourites: kotlinx.collections.immutable.ImmutableList<FavouriteGame>,
     dealDetails: DealBottomSheetData?,
     onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onViewStoreDeals: (store: Store) -> Unit,
     onViewGiveaways: () -> Unit,
-    onViewFavourites: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
-    goToFavouriteGame: (gameId: String) -> Unit,
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
@@ -301,29 +288,6 @@ private fun HomeScreenContent(
                                 contentType = { CONTENT_TYPE_RELEASE }
                             ) { index ->
                                 ReleaseRow(data.releases[index], onReleaseTitle)
-                            }
-                        }
-
-                        if (favourites.isNotEmpty()) {
-                            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_favourites_label)) }
-
-                            items(
-                                count = favourites.size,
-                                key = { index -> "favourite-${favourites[index].gameID}" },
-                                contentType = { CONTENT_TYPE_FAVOURITE }
-                            ) { index ->
-                                FavouriteRow(favourites[index]) { goToFavouriteGame(favourites[index].gameID) }
-                            }
-
-                            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) {
-                                Button(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentWidth()
-                                        .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
-                                    onClick = { onViewFavourites() }) {
-                                    Text(text = stringResource(Res.string.home_screen_all_favourites_label))
-                                }
                             }
                         }
 
@@ -411,10 +375,10 @@ private fun HomeScreenContent(
                 )
                 DealBottomSheet(
                     data = dealDetails,
-                    isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
+                    isWaitlisted = dealDetails?.gameId?.let { it in favouriteIds } == true,
                     onDismiss = { onDismissDealDetails() },
                     onShare = { sheetData -> onShareDealDetails(sheetData) },
-                    onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
+                    onToggleWaitlist = { sheetData -> onToggleDealFavourite(sheetData) },
                     goToWeb = goToWeb,
                     goToGameDetails = goToGameDetails,
                     goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -659,49 +623,6 @@ private fun GiveawayRow(
 
 
 @Composable
-private fun FavouriteRow(
-    favourite: FavouriteGame,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onClick() }
-            .padding(bottom = GameDealsCustomTheme.spacing.small),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                .height(60.dp)
-                .width(100.dp),
-        ) {
-            AsyncImage(
-                model = favourite.thumb,
-                contentDescription = stringResource(Res.string.home_screen_game_image, favourite.title),
-                contentScale = ContentScale.Fit,
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
-            )
-            FavouriteOverlay(modifier = Modifier.align(Alignment.BottomEnd))
-        }
-        Text(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = GameDealsCustomTheme.spacing.small),
-            textAlign = TextAlign.Start,
-            text = favourite.title,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
 private fun FavouriteOverlay(modifier: Modifier = Modifier) {
     Icon(
         imageVector = Icons.Filled.Favorite,
@@ -760,11 +681,6 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData {
     )
 }
 
-private val previewFavourites = persistentListOf(
-    PreviewFavourite,
-    PreviewFavourite.copy(gameID = "22222", title = "Hollow Knight"),
-)
-
 @Preview
 @Composable
 private fun HomeScreenContent_Success_Preview() {
@@ -773,15 +689,12 @@ private fun HomeScreenContent_Success_Preview() {
             onReleaseTitle = {},
             data = previewSuccessData(),
             favouriteIds = persistentSetOf("12345"),
-            favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
-            onViewFavourites = {},
             onViewBundles = {},
             onViewBundle = {},
-            goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},
@@ -801,15 +714,12 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onReleaseTitle = {},
             data = previewSuccessData(),
             favouriteIds = persistentSetOf("12345"),
-            favourites = previewFavourites,
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
-            onViewFavourites = {},
             onViewBundles = {},
             onViewBundle = {},
-            goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},
@@ -829,15 +739,12 @@ private fun HomeScreenContent_Loading_Preview() {
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = LOADING),
             favouriteIds = persistentSetOf(),
-            favourites = persistentListOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
-            onViewFavourites = {},
             onViewBundles = {},
             onViewBundle = {},
-            goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},
@@ -857,15 +764,12 @@ private fun HomeScreenContent_Error_Preview() {
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(state = ERROR),
             favouriteIds = persistentSetOf(),
-            favourites = persistentListOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
             onViewStoreDeals = {},
             onViewGiveaways = {},
-            onViewFavourites = {},
             onViewBundles = {},
             onViewBundle = {},
-            goToFavouriteGame = {},
             onDismissDealDetails = {},
             onShareDealDetails = {},
             onToggleDealFavourite = {},

@@ -120,7 +120,7 @@ internal fun SearchScreen(
     searchViewModel: SearchViewModel = koinViewModel()
 ) {
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
-    val favouriteIds = searchViewModel.favouriteIds.collectAsStateWithLifecycle()
+    val favouriteIds = searchViewModel.waitlistIds.collectAsStateWithLifecycle()
 
     val initialTitle = searchViewModel.initialQuery
 

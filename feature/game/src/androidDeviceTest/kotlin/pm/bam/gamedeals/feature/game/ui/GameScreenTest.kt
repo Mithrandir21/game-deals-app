@@ -89,7 +89,7 @@ class GameScreenTest {
     @Before
     fun setup() {
         every { viewModel.reloadGameDetails() } just runs
-        every { viewModel.isFavourite } returns MutableStateFlow(false)
+        every { viewModel.isWaitlisted } returns MutableStateFlow(false)
         every { viewModel.events } returns MutableSharedFlow<GameViewModel.GameUiEvent>().asSharedFlow()
     }
 

@@ -37,18 +37,17 @@ import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 import pm.bam.gamedeals.logging.info
@@ -72,7 +71,7 @@ internal class HomeViewModel(
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
     private val bundlesRepository: BundlesRepository,
-    private val favouritesRepository: FavouritesRepository,
+    private val waitlistRepository: WaitlistRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val regionRepository: RegionRepository,
     private val logger: Logger
@@ -81,16 +80,10 @@ internal class HomeViewModel(
     val uiState: StateFlow<HomeScreenData>
         field = MutableStateFlow(HomeScreenData())
 
-    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
+    val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
-
-    val favourites: StateFlow<ImmutableList<FavouriteGame>> = favouritesRepository.observeFavourites()
-        .map { it.toImmutableList() }
-        .onStart { emit(persistentListOf()) }
-        .catch { emit(persistentListOf()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
@@ -152,13 +145,9 @@ internal class HomeViewModel(
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 
-    fun toggleFavouriteFromDeal(data: DealBottomSheetData.DealDetailsData) {
+    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) {
         viewModelScope.launch {
-            favouritesRepository.toggleFavourite(
-                gameId = data.gameId,
-                title = data.gameName,
-                thumb = data.gameInfo.thumb,
-            )
+            waitlistRepository.toggleWaitlist(data.gameId)
         }
     }
 

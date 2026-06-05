@@ -129,7 +129,6 @@ dependencies {
     implementation(project(":feature:search"))
     implementation(project(":feature:webview"))
     implementation(project(":feature:giveaways"))
-    implementation(project(":feature:favourites"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:bundles"))
     implementation(project(":feature:account"))

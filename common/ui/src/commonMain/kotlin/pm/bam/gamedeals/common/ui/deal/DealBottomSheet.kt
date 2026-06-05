@@ -87,10 +87,10 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 @Composable
 fun DealBottomSheet(
     data: DealBottomSheetData?,
-    isFavourite: Boolean = false,
+    isWaitlisted: Boolean = false,
     onDismiss: () -> Unit,
     onShare: (data: DealBottomSheetData) -> Unit,
-    onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
+    onToggleWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -103,7 +103,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, isFavourite, onShare, onToggleFavourite, goToWeb, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
+            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, goToWeb, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
         }
     }
 }
@@ -111,9 +111,9 @@ fun DealBottomSheet(
 @Composable
 private fun DealContent(
     data: DealBottomSheetData,
-    isFavourite: Boolean,
+    isWaitlisted: Boolean,
     onShare: (data: DealBottomSheetData) -> Unit,
-    onToggleFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    onToggleWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -167,9 +167,9 @@ private fun DealContent(
             }
             IconButton(
                 enabled = data is DealBottomSheetData.DealDetailsData,
-                onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleFavourite) },
+                onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleWaitlist) },
             ) {
-                AnimatedContent(targetState = isFavourite, label = "favourite-icon") { fav ->
+                AnimatedContent(targetState = isWaitlisted, label = "favourite-icon") { fav ->
                     Icon(
                         imageVector = if (fav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = stringResource(
@@ -408,9 +408,9 @@ private fun DealContent_Success_Preview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             DealContent(
                 data = previewDealDetailsData,
-                isFavourite = false,
+                isWaitlisted = false,
                 onShare = {},
-                onToggleFavourite = {},
+                onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
@@ -427,9 +427,9 @@ private fun DealContent_Success_Favourited_Dark_Preview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             DealContent(
                 data = previewDealDetailsData,
-                isFavourite = true,
+                isWaitlisted = true,
                 onShare = {},
-                onToggleFavourite = {},
+                onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
@@ -463,9 +463,9 @@ private fun DealContent_WithCheaperStores_Preview() {
                     ),
                     cheapestPrice = null,
                 ),
-                isFavourite = false,
+                isWaitlisted = false,
                 onShare = {},
-                onToggleFavourite = {},
+                onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
@@ -488,9 +488,9 @@ private fun DealContent_Loading_Preview() {
                     dealId = "preview-deal-1",
                     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
                 ),
-                isFavourite = false,
+                isWaitlisted = false,
                 onShare = {},
-                onToggleFavourite = {},
+                onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
@@ -513,9 +513,9 @@ private fun DealContent_Error_Preview() {
                     dealId = "preview-deal-1",
                     gameSalesPriceDenominated = PreviewDealGameInfo.salePriceDenominated,
                 ),
-                isFavourite = false,
+                isWaitlisted = false,
                 onShare = {},
-                onToggleFavourite = {},
+                onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},

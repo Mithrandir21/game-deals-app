@@ -26,7 +26,6 @@ import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
-import pm.bam.gamedeals.feature.favourites.di.favouritesModule
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.home.di.homeModule
@@ -91,7 +90,6 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 homeModule,
                 gameModule,
                 giveawaysModule,
-                favouritesModule,
                 searchModule,
                 storeModule,
                 settingsModule,

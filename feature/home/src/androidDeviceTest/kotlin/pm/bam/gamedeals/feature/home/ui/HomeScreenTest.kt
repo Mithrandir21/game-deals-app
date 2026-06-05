@@ -23,7 +23,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.FavouriteGame
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayType
@@ -95,15 +94,13 @@ class HomeScreenTest {
     @Before
     fun setup() {
         every { viewModel.dealDetails } returns MutableStateFlow(null)
-        every { viewModel.favouriteIds } returns MutableStateFlow(persistentSetOf())
-        every { viewModel.favourites } returns MutableStateFlow(persistentListOf<FavouriteGame>())
+        every { viewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
     }
 
     private fun setupCompose(
         goToGame: (String) -> Unit = { _ -> },
         onViewStoreDeals: (Store) -> Unit = { _ -> },
         onViewGiveaways: () -> Unit = {},
-        onViewFavourites: () -> Unit = {},
         onViewBundles: () -> Unit = {},
         onViewBundle: (Int) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
@@ -118,7 +115,6 @@ class HomeScreenTest {
                 goToGame = goToGame,
                 onViewStoreDeals = onViewStoreDeals,
                 onViewGiveaways = onViewGiveaways,
-                onViewFavourites = onViewFavourites,
                 onViewBundles = onViewBundles,
                 onViewBundle = onViewBundle,
                 goToWeb = goToWeb,

@@ -46,6 +46,17 @@ private val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7)
+/**
+ * v7 → v8 — Favourites → ITAD Waitlist (epic #219, Phase 3). The local `FavouriteGame` table is removed;
+ * "saved games" now live on the user's ITAD waitlist (cloud, login-gated). Dropping a table is an
+ * in-place migration — no recreate needed.
+ */
+private val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `FavouriteGame`")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

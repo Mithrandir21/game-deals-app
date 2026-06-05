@@ -34,8 +34,8 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
@@ -46,11 +46,11 @@ internal class StoreViewModel(
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
-    private val favouritesRepository: FavouritesRepository,
+    private val waitlistRepository: WaitlistRepository,
     private val regionRepository: RegionRepository,
 ) : ViewModel() {
 
-    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
+    val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -128,13 +128,9 @@ internal class StoreViewModel(
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 
-    fun toggleFavouriteFromDeal(data: DealBottomSheetData.DealDetailsData) {
+    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) {
         viewModelScope.launch {
-            favouritesRepository.toggleFavourite(
-                gameId = data.gameId,
-                title = data.gameName,
-                thumb = data.gameInfo.thumb,
-            )
+            waitlistRepository.toggleWaitlist(data.gameId)
         }
     }
 

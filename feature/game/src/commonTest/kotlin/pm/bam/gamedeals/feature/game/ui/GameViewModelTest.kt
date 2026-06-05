@@ -24,7 +24,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -51,8 +51,8 @@ class GameViewModelTest : MainDispatcherTest() {
     }
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
-    private val favouritesRepository: FavouritesRepository = mock(MockMode.autoUnit) {
-        every { observeIsFavourite(any()) } returns flowOf(false)
+    private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
+        every { observeIsWaitlisted(any()) } returns flowOf(false)
     }
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit) {
         everySuspend { fetchGameBySteamId(any()) } returns null
@@ -67,7 +67,7 @@ class GameViewModelTest : MainDispatcherTest() {
         gamesRepository = gamesRepository,
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
-        favouritesRepository = favouritesRepository,
+        waitlistRepository = waitlistRepository,
         igdbRepository = igdbRepository,
     )
 
@@ -172,31 +172,31 @@ class GameViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun isFavourite_initial_value_is_false() = runTest {
+    fun isWaitlisted_initial_value_is_false() = runTest {
         val viewModel = createViewModel(gameId = "1")
-        val emissions = viewModel.isFavourite.observeEmissions(this.backgroundScope, testDispatcher)
+        val emissions = viewModel.isWaitlisted.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(false, emissions.first())
     }
 
     @Test
-    fun isFavourite_emits_true_when_repository_reports_favourited() = runTest {
-        every { favouritesRepository.observeIsFavourite("1") } returns flowOf(true)
+    fun isWaitlisted_emits_true_when_repository_reports_favourited() = runTest {
+        every { waitlistRepository.observeIsWaitlisted("1") } returns flowOf(true)
 
         val viewModel = createViewModel(gameId = "1")
-        val emissions = viewModel.isFavourite.observeEmissions(this.backgroundScope, testDispatcher)
+        val emissions = viewModel.isWaitlisted.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertEquals(true, emissions.last())
     }
 
     @Test
-    fun isFavourite_emits_false_when_gameId_is_null_without_querying_repository() = runTest {
+    fun isWaitlisted_emits_false_when_gameId_is_null_without_querying_repository() = runTest {
         val viewModel = createViewModel(gameId = null)
-        val emissions = viewModel.isFavourite.observeEmissions(this.backgroundScope, testDispatcher)
+        val emissions = viewModel.isWaitlisted.observeEmissions(this.backgroundScope, testDispatcher)
         runCurrent()
 
         assertEquals(false, emissions.last())
-        verify(exactly(0)) { favouritesRepository.observeIsFavourite(any()) }
+        verify(exactly(0)) { waitlistRepository.observeIsWaitlisted(any()) }
     }
 
     @Test
@@ -205,10 +205,10 @@ class GameViewModelTest : MainDispatcherTest() {
         val viewModel = createViewModel(gameId = "1")
         runCurrent()
 
-        viewModel.toggleFavourite()
+        viewModel.toggleWaitlist()
         runCurrent()
 
-        verifySuspend(exactly(0)) { favouritesRepository.toggleFavourite(any(), any(), any()) }
+        verifySuspend(exactly(0)) { waitlistRepository.toggleWaitlist(any()) }
     }
 
     @Test
@@ -220,10 +220,10 @@ class GameViewModelTest : MainDispatcherTest() {
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        viewModel.toggleFavourite()
+        viewModel.toggleWaitlist()
         runCurrent()
 
-        verifySuspend(exactly(0)) { favouritesRepository.toggleFavourite(any(), any(), any()) }
+        verifySuspend(exactly(0)) { waitlistRepository.toggleWaitlist(any()) }
     }
 
     @Test
@@ -234,18 +234,17 @@ class GameViewModelTest : MainDispatcherTest() {
         val details = gameDetails(info = info, deals = persistentListOf(gameDeal(storeID = storeId)))
         everySuspend { gamesRepository.getGameDetails(gameId) } returns details
         everySuspend { storesRepository.getStore(storeId) } returns store(storeID = storeId)
-        everySuspend { favouritesRepository.toggleFavourite(any(), any(), any()) } returns true
 
         val viewModel = createViewModel(gameId)
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)
         testScheduler.advanceTimeBy(1200)
         runCurrent()
 
-        viewModel.toggleFavourite()
+        viewModel.toggleWaitlist()
         runCurrent()
 
         verifySuspend(exactly(1)) {
-            favouritesRepository.toggleFavourite(gameId = gameId, title = "Halo", thumb = "thumb-halo")
+            waitlistRepository.toggleWaitlist(gameId)
         }
     }
 

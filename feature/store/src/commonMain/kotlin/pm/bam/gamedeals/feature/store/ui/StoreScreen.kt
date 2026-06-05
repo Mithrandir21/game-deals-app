@@ -96,7 +96,7 @@ internal fun StoreScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: ImmutableList<Deal> by viewModel.deals.collectAsStateWithLifecycle()
-    val favouriteIds by viewModel.favouriteIds.collectAsStateWithLifecycle()
+    val favouriteIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
@@ -129,7 +129,7 @@ internal fun StoreScreen(
         },
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
-        onToggleDealFavourite = { sheetData -> viewModel.toggleFavouriteFromDeal(sheetData) },
+        onToggleDealFavourite = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -269,13 +269,13 @@ private fun StoreDeals(
 
         DealBottomSheet(
             data = dealDetails,
-            isFavourite = dealDetails?.gameId?.let { it in favouriteIds } == true,
+            isWaitlisted = dealDetails?.gameId?.let { it in favouriteIds } == true,
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
             goToGameDetailsByTitle = goToGameDetailsByTitle,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
-            onToggleFavourite = { sheetData -> onToggleDealFavourite(sheetData) },
+            onToggleWaitlist = { sheetData -> onToggleDealFavourite(sheetData) },
             onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } }
         )
     }

@@ -45,8 +45,6 @@ import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
-import pm.bam.gamedeals.feature.favourites.di.favouritesModule
-import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
@@ -121,7 +119,6 @@ private fun bootstrapKoin() {
             searchModule,
             gameModule,
             giveawaysModule,
-            favouritesModule,
             storeModule,
             settingsModule,
             bundlesModule,
@@ -183,7 +180,6 @@ private fun AppNavHost() {
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navigateTopLevel(Destination.Giveaways) },
-            goToFavourites = { navController.navigate(Destination.Favourites) },
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
@@ -204,10 +200,6 @@ private fun AppNavHost() {
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
-        )
-        favouritesScreen(
-            navController = navController,
-            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         settingsScreen(navController = navController)
         bundlesScreen(

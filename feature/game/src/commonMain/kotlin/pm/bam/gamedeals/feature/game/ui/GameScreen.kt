@@ -102,7 +102,7 @@ internal fun GameScreen(
     viewModel: GameViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
-    val isFavourite = viewModel.isFavourite.collectAsStateWithLifecycle()
+    val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
     val platformActions = LocalPlatformActions.current
 
@@ -123,7 +123,7 @@ internal fun GameScreen(
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
-            onToggleFavourite = { viewModel.toggleFavourite() },
+            onToggleFavourite = { viewModel.toggleWaitlist() },
             onRetry = onRetry
         )
     }

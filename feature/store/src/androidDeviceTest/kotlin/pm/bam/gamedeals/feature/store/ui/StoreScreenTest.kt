@@ -71,7 +71,7 @@ class StoreScreenTest {
         every { viewModel.deals } returns deals
         every { viewModel.dealDetails } returns dealDetails
         every { viewModel.uiState } returns uiState
-        every { viewModel.favouriteIds } returns favouriteIds
+        every { viewModel.waitlistIds } returns favouriteIds
         every { viewModel.events } returns MutableSharedFlow<StoreViewModel.StoreUiEvent>().asSharedFlow()
     }
 

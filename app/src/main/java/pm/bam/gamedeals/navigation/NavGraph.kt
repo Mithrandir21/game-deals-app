@@ -20,7 +20,6 @@ import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
-import pm.bam.gamedeals.feature.favourites.navigation.favouritesScreen
 import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
 import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
@@ -67,7 +66,6 @@ internal fun NavGraph(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToStore = { storeId -> navActions.navigateToStore(storeId) },
                 goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
-                goToFavourites = { navActions.navigateToFavourites() },
                 goToWeb = { url, _ -> uriHandler.openUri(url) },
                 goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
                 goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
@@ -105,11 +103,6 @@ internal fun NavGraph(
             giveawaysScreen(
                 navController = navController,
                 goToWeb = { url, _ -> uriHandler.openUri(url) }
-            )
-
-            favouritesScreen(
-                navController = navController,
-                goToGame = { gameId -> navActions.navigateToGame(gameId) }
             )
 
             settingsScreen(navController = navController)

@@ -25,8 +25,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.SearchParameters
-import pm.bam.gamedeals.domain.repositories.favourites.FavouritesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 
 @Suppress("NullChecksToSafeCall")
@@ -35,7 +35,7 @@ internal class SearchViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
-    private val favouritesRepository: FavouritesRepository,
+    private val waitlistRepository: WaitlistRepository,
 ) : ViewModel() {
 
     val initialQuery: String? = savedStateHandle.get<String>("initialQuery")?.takeIf { it.isNotBlank() }
@@ -50,7 +50,7 @@ internal class SearchViewModel(
     val resultState: StateFlow<SearchData>
         field = MutableStateFlow<SearchData>(SearchData.Empty)
 
-    val favouriteIds: StateFlow<ImmutableSet<String>> = favouritesRepository.observeFavouriteIds()
+    val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
