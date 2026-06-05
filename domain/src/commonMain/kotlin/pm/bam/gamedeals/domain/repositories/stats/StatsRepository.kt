@@ -1,12 +1,14 @@
 package pm.bam.gamedeals.domain.repositories.stats
 
 import pm.bam.gamedeals.domain.models.RankedGame
+import pm.bam.gamedeals.domain.source.StatsSource
 
 /**
  * Global ITAD ranking stats for the Home feed (epic #219, Phase 5 — Most Waitlisted / Most Collected).
  *
- * Phase 0 STUB: returns empty lists until the live stats source + price enrichment land in Phase 5.1
- * (#235). Registered in DI now so the Home feed has a stable seam to inject.
+ * A thin seam over [StatsSource]; the source does the ITAD ranking calls and per-game price enrichment
+ * (Phase 5.1, #235). Rankings are fetched fresh per call (not cached) — they're a small, region-aware,
+ * Home-only feed.
  */
 interface StatsRepository {
     suspend fun getMostWaitlisted(limit: Int? = null): List<RankedGame>
@@ -14,8 +16,10 @@ interface StatsRepository {
     suspend fun getMostPopular(limit: Int? = null): List<RankedGame>
 }
 
-internal class StatsRepositoryImpl : StatsRepository {
-    override suspend fun getMostWaitlisted(limit: Int?): List<RankedGame> = emptyList()
-    override suspend fun getMostCollected(limit: Int?): List<RankedGame> = emptyList()
-    override suspend fun getMostPopular(limit: Int?): List<RankedGame> = emptyList()
+internal class StatsRepositoryImpl(
+    private val statsSource: StatsSource,
+) : StatsRepository {
+    override suspend fun getMostWaitlisted(limit: Int?): List<RankedGame> = statsSource.fetchMostWaitlisted(limit)
+    override suspend fun getMostCollected(limit: Int?): List<RankedGame> = statsSource.fetchMostCollected(limit)
+    override suspend fun getMostPopular(limit: Int?): List<RankedGame> = statsSource.fetchMostPopular(limit)
 }

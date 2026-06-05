@@ -8,6 +8,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
+import pm.bam.gamedeals.remote.itad.api.ItadStatsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
 import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
@@ -38,6 +39,7 @@ val itadNetworkModule = module {
     single { ItadDealsApi(get(ITAD_QUALIFIER)) }
     single { ItadGamesApi(get(ITAD_QUALIFIER)) }
     single { ItadBundlesApi(get(ITAD_QUALIFIER)) }
+    single { ItadStatsApi(get(ITAD_QUALIFIER)) }
 
     // --- ITAD OAuth (epic #219, Phase 2). The user endpoints that consume the bearer client land in
     // Phase 2.3 (#228); these are the wired-but-not-yet-consumed seam. ---

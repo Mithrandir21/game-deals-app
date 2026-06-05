@@ -31,7 +31,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 | 2 — OAuth + Account | #226–#229 | ✅ DONE (on `dev`) — ⚠️ iOS compile + live login unverified |
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ✅ DONE (on `dev`) |
 | 4 — Deals tab | #233–#234 | ✅ DONE (on `dev`) |
-| 5 — Curated Home feed | #235–#237 | ⬜ |
+| 5 — Curated Home feed | #235–#237 | ✅ DONE (on `dev`) |
 | 6 — Cleanup & hardening | #238–#240 | ⬜ |
 
 ---
@@ -140,5 +140,19 @@ The Deals tab is live on both platforms (replaces the `Destination.Deals` placeh
 - **`onBrowseStores` overflow** is still wired-but-`null` (hidden). It wasn't in #233/#234 scope (it implies a stores-list screen, not the Deals tab). Decide later whether to point it at a store picker.
 - Stability tooling note: `stabilityCheck`/`stabilityDump` report "No composables found" for every module in this env and skip (pass); the committed `*.stability` files are stale legacy artifacts. `:feature:deals` therefore has no `stability/` reference and CI's `stabilityCheck` still passes.
 
-## Next up — Phase 5 (Curated Home feed; #235–#237)
-Stats + new Home VM/UI. Per the locked Home order: account stat cards → Featured hero grid → Trending deals → Most Waitlisted (30d) → Most Collected (30d) → New Releases (IGDB) → Bundles → Giveaways. Needs the `StatsSource`/`StatsRepository` (Phase 0 stubs) made live in `:remote:itad` (`/stats/most-waitlisted|most-collected|most-popular/v1`, API-key only → enrich via `POST /games/prices/v3`), then rebuild the Home feed sections + the per-store strips' replacement (those moved to the Deals tab in Phase 4). Also fold the Giveaways tab into the shell top bar (Phase 1 interim) if not done separately.
+## Phase 5 — DONE (on `dev`; commit `0b06a10`)
+Curated, section-oriented Home feed replaces the per-store strips.
+
+- **#235 (5.1) — ITAD stats.** `ItadStatsApi` (`/stats/most-waitlisted|most-collected|most-popular/v1` — bare array, `offset=0`); `RemoteItadRankedGame` DTO + `toRankedGame`. `ItadStatsSourceImpl` (live `StatsSource`) maps rankings then enriches each with the cheapest current price via one batched `POST /games/prices/v3` (region-aware, **best-effort**). `StatsRepository` is now a thin passthrough (was a Phase-0 stub). Verified live: stats endpoints need `offset=0` or they start at position ~21.
+- **#236 (5.2) — section `HomeViewModel`.** `HomeScreenData` = `accountStats?` + `featuredHero` + `trending` + `mostWaitlisted` + `mostCollected` + `releases` + `bundles` + `giveaways`. `load()` fetches all sections in parallel; each is best-effort (`runCatching` → empty/hidden). Empty feed → `ERROR` (retry). Account stat cards gated on `AuthState.LoggedIn` (Waitlisted/Collected counts). Featured = `getDeals(TopDiscount)`, Trending = `getDeals(RecentlyAdded)` (Phase 4 seam). Dropped `topStores`/store-strip flow/`HomeScreenListData`. VM ctor grew to 13 deps (+ `StatsRepository`/`AccountRepository`/`CollectionRepository`).
+- **#237 (5.3) — Home UI.** New reusable `:common:ui` composables `HeroGridTile`/`StatCard`/`RankedGameRow`. `HomeScreen` renders the locked order; hero grid is 2-up; deal rows (featured/trending) tap → `DealBottomSheet`, ranked rows tap → `goToGame`; kept Release/Bundle/Giveaway rows. `onViewStoreDeals`/`goToStore` removed from Home + both NavHosts.
+
+**Verified:** `:app:assembleDebug` green; full `testAndroidHostTest` green except the known pre-existing `:remote:igdb` failure; `:feature:home` androidDeviceTest **compiles** (not run — Linux box). iOS not compiled — only a dropped `homeScreen()` arg, low risk.
+
+**Phase 5 follow-ups (not blocking):**
+- **Ranked rows show placeholder boxart** — the stats endpoints carry no boxart and `/games/prices/v3` doesn't either, so `RankedGame.boxart` is null. A batched boxart enrichment (e.g. `/games/info`) would make Most Waitlisted/Collected image-rich.
+- **`fetchMostPopular` is implemented but unused** — the locked Home order has no "Most Popular" section. Left in the seam for future use.
+- **The Store screen (`:feature:store`) is now unreachable** — Home no longer links to it and `onBrowseStores` is hidden. Phase 6 should either wire `onBrowseStores` → a stores list (then Store) or remove `:feature:store`.
+
+## Next up — Phase 6 (Cleanup & hardening; #238–#240)
+Token security (move `AuthTokenStore` off plain `Storage` → Keychain / EncryptedSharedPreferences; CSPRNG for PKCE verifier/state — #239), the epic-wide iOS compile + live-OAuth smoke test, dead-code/string cleanup (favourites/store-strip strings, the unreachable `:feature:store` + `onBrowseStores`, the `Giveaways` tab's own top bar interim), and docs. See the per-ticket notes on #238–#240.

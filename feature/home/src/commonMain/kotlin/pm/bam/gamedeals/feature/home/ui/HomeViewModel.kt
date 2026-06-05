@@ -8,13 +8,10 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,30 +19,32 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.onError
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DealsQuery
+import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Giveaway
+import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
-import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
+import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
@@ -53,18 +52,23 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 import pm.bam.gamedeals.logging.info
 
-internal const val LIMIT_DEALS = 10
+internal const val LIMIT_HERO = 6
+internal const val LIMIT_TRENDING = 10
+internal const val LIMIT_STATS = 10
 internal const val LIMIT_GIVEAWAYS = 5
 internal const val LIMIT_BUNDLES = 5
 internal const val LIMIT_RELEASES = 5
 internal const val EXPIRED_STATUS = "Expired"
-// ITAD shop ids of major PC stores, shown as the Home "top stores" strips (epic #205, Phase 2b —
-// the old values were CheapShark store ids, which don't map to ITAD's). See `/service/shops/v1`:
-// 61 Steam · 16 Epic · 35 GOG · 37 Humble · 6 Fanatical · 36 GreenManGaming · 24 GamersGate ·
-// 20 GameBillet · 42 IndieGala.
-internal val topStores = listOf(61, 16, 35, 37, 6, 36, 24, 20, 42)
 
-@OptIn(ExperimentalCoroutinesApi::class)
+/**
+ * Drives the curated Home feed (epic #219, Phase 5). The feed is a fixed set of independent sections
+ * (account stat cards → Featured hero → Trending → Most Waitlisted → Most Collected → New Releases →
+ * Bundles → Giveaways), each loaded **best-effort in parallel**: a section that fails is logged and
+ * left empty (hidden) rather than sinking the whole feed. The whole feed reloads on region change.
+ *
+ * The account stat cards are gated on auth state (null when logged out). Row taps funnel into the
+ * shared [DealDetailsController] → `DealBottomSheet`; the heart is login-gated via [WaitlistRepository].
+ */
 internal class HomeViewModel(
     private val storesRepository: StoresRepository,
     private val dealsRepository: DealsRepository,
@@ -72,10 +76,13 @@ internal class HomeViewModel(
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
     private val bundlesRepository: BundlesRepository,
+    private val statsRepository: StatsRepository,
+    private val accountRepository: AccountRepository,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val regionRepository: RegionRepository,
-    private val logger: Logger
+    private val logger: Logger,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeScreenData>
@@ -105,40 +112,54 @@ internal class HomeViewModel(
             regionRepository.observeSelectedCountry()
                 .map { it.code }
                 .distinctUntilChanged()
-                .collect { loadTopStoresDeals() }
+                .collect { load() }
         }
     }
 
-    fun loadTopStoresDeals() {
+    fun load() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            loadTopStoreDataFlow()
-                .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
-                .collect { newState -> uiState.emit(newState) }
+            uiState.update { it.copy(status = HomeScreenStatus.LOADING) }
+            val data = coroutineScope {
+                val accountStats = async { runCatching { loadAccountStats() }.getOrNull() }
+                val featuredHero = async { section { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, limit = LIMIT_HERO)) } }
+                val trending = async { section { dealsRepository.getDeals(DealsQuery(sort = DealsSort.RecentlyAdded, limit = LIMIT_TRENDING)) } }
+                val mostWaitlisted = async { section { statsRepository.getMostWaitlisted(LIMIT_STATS) } }
+                val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
+                val releases = async { section { loadReleases() } }
+                val bundles = async { section { bundlesRepository.getBundles().take(LIMIT_BUNDLES) } }
+                val giveaways = async { section { loadGiveaways() } }
+
+                HomeScreenData(
+                    status = HomeScreenStatus.DATA,
+                    accountStats = accountStats.await(),
+                    featuredHero = featuredHero.await(),
+                    trending = trending.await(),
+                    mostWaitlisted = mostWaitlisted.await(),
+                    mostCollected = mostCollected.await(),
+                    releases = releases.await(),
+                    bundles = bundles.await(),
+                    giveaways = giveaways.await(),
+                )
+            }
+            // Best-effort sections hide on failure; if the whole feed came back empty (e.g. fully
+            // offline), surface an error so the user gets a retry instead of a blank screen.
+            uiState.value = data.copy(status = if (data.hasContent) HomeScreenStatus.DATA else HomeScreenStatus.ERROR)
         }
     }
+
+    fun retry() = load()
 
     fun onReleaseGame(releaseTitle: String) {
         viewModelScope.launch {
-            flow { emit(gamesRepository.getReleaseDeal(releaseTitle)) }
-                .onStart { uiState.update { it.copy(state = HomeScreenStatus.LOADING) } }
-                .onError { fatal(logger, it) }
-                .catch { uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) } }
-                .collect { deal ->
-                    if (deal == null) {
-                        uiState.update { current -> current.copy(state = HomeScreenStatus.ERROR) }
-                    } else {
-                        uiState.update { current -> current.copy(state = HomeScreenStatus.SUCCESS) }
-                        loadDealDetails(
-                            dealId = deal.dealID,
-                            dealStoreId = deal.storeID,
-                            dealGameId = deal.gameID,
-                            dealTitle = deal.title,
-                            dealPriceDenominated = deal.salePriceDenominated,
-                            dealUrl = deal.url,
-                        )
-                    }
-                }
+            val deal = runCatching { gamesRepository.getReleaseDeal(releaseTitle) }
+                .onFailure { fatal(logger, it) { "Failed to resolve release deal for '$releaseTitle'" } }
+                .getOrNull()
+            if (deal == null) {
+                events.tryEmit(HomeUiEvent.ReleaseUnavailable)
+            } else {
+                loadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url)
+            }
         }
     }
 
@@ -169,85 +190,66 @@ internal class HomeViewModel(
         events.tryEmit(HomeUiEvent.ShareDeal(text))
     }
 
-    private fun loadTopStoreDataFlow() =
-        flow { emitAll(storesRepository.observeStores()) }
-            .map { listOfStores -> listOfStores.filter { topStores.contains(it.storeID) } }
-            .map { listOfStores ->
-                coroutineScope {
-                    listOfStores.map { store ->
-                        async {
-                            store to dealsRepository.getStoreDeals(store.storeID, LIMIT_DEALS)
-                        }
-                    }.awaitAll()
-                }
-            }
-            .map {
-                val data = mutableListOf<HomeScreenListData>()
+    /** Account stat cards are gated on auth state: null when logged out, counts when logged in. */
+    private suspend fun loadAccountStats(): AccountStats? {
+        if (accountRepository.observeAuthState().first() !is AuthState.LoggedIn) return null
+        return coroutineScope {
+            val waitlisted = async { runCatching { waitlistRepository.getWaitlist().size }.getOrDefault(0) }
+            val collected = async { runCatching { collectionRepository.getCollection().size }.getOrDefault(0) }
+            AccountStats(waitlistedCount = waitlisted.await(), collectedCount = collected.await())
+        }
+    }
 
-                it.forEach { (store, deals) ->
-                    data.add(HomeScreenListData.StoreData(store))
-                    data.addAll(deals.map { deal -> HomeScreenListData.DealData(deal) })
-                    data.add(HomeScreenListData.ViewAllData(store))
-                }
+    private suspend fun loadReleases(): List<Release> {
+        releasesRepository.refreshReleases()
+        return releasesRepository.observeReleases().first().take(LIMIT_RELEASES)
+    }
 
-                return@map data
-            }
-            .flatMapLatest { loadNewReleases().map { releases -> releases.take(LIMIT_RELEASES) to it } }
-            .flatMapLatest { loadGiveaways().map { giveaways -> Triple(it.first, giveaways.take(LIMIT_GIVEAWAYS), it.second) } }
-            .flatMapLatest { (releases, giveaways, items) ->
-                loadBundles().map { bundles ->
-                    HomeScreenData(
-                        state = HomeScreenStatus.SUCCESS,
-                        releases = releases.toImmutableList(),
-                        giveaways = giveaways.toImmutableList(),
-                        bundles = bundles.take(LIMIT_BUNDLES).toImmutableList(),
-                        items = items.toImmutableList()
-                    )
-                }
-            }
-            .logFlow(logger)
-            .catch { emit(HomeScreenData(state = HomeScreenStatus.ERROR)) }
+    private suspend fun loadGiveaways(): List<Giveaway> {
+        giveawaysRepository.refreshGiveaways()
+        return giveawaysRepository.observeGiveaways().first()
+            .filter { !it.status.equals(EXPIRED_STATUS, ignoreCase = true) }
+            .take(LIMIT_GIVEAWAYS)
+    }
 
-    private fun loadNewReleases(): Flow<List<Release>> =
-        flow { emitAll(releasesRepository.observeReleases()) }
-            .logFlow(logger)
-            .catch { emit(emptyList()) }
-
-    private fun loadGiveaways(): Flow<List<Giveaway>> =
-        flow { emitAll(giveawaysRepository.observeGiveaways()) }
-            .map { list -> list.filter { !it.status.equals(EXPIRED_STATUS, ignoreCase = true) } }
-            .onStart { giveawaysRepository.refreshGiveaways() }
-            .logFlow(logger)
-            .catch { emit(emptyList()) }
-
-    // Best-effort, fetched fresh (bundles aren't cached). A failure just hides the strip; the chain
-    // re-runs on region change, so bundles refresh with the new region too (#212/#205 Phase 3c).
-    private fun loadBundles(): Flow<List<Bundle>> =
-        flow { emit(bundlesRepository.getBundles()) }
-            .logFlow(logger)
-            .catch { emit(emptyList()) }
+    /** Runs a section's fetch best-effort: failures are logged and yield an empty (hidden) section. */
+    private suspend fun <T> section(block: suspend () -> List<T>): ImmutableList<T> =
+        runCatching { block() }
+            .onFailure { fatal(logger, it) { "Home section failed" } }
+            .getOrElse { emptyList() }
+            .toImmutableList()
 
     internal sealed interface HomeUiEvent {
         data class ShareDeal(val text: String) : HomeUiEvent
         data object SignInRequired : HomeUiEvent
+        data object ReleaseUnavailable : HomeUiEvent
     }
 
     @Immutable
     internal data class HomeScreenData(
-        val state: HomeScreenStatus = HomeScreenStatus.LOADING,
+        val status: HomeScreenStatus = HomeScreenStatus.LOADING,
+        val accountStats: AccountStats? = null,
+        val featuredHero: ImmutableList<Deal> = persistentListOf(),
+        val trending: ImmutableList<Deal> = persistentListOf(),
+        val mostWaitlisted: ImmutableList<RankedGame> = persistentListOf(),
+        val mostCollected: ImmutableList<RankedGame> = persistentListOf(),
         val releases: ImmutableList<Release> = persistentListOf(),
-        val giveaways: ImmutableList<Giveaway> = persistentListOf(),
         val bundles: ImmutableList<Bundle> = persistentListOf(),
-        val items: ImmutableList<HomeScreenListData> = persistentListOf()
+        val giveaways: ImmutableList<Giveaway> = persistentListOf(),
+    ) {
+        val hasContent: Boolean
+            get() = accountStats != null || featuredHero.isNotEmpty() || trending.isNotEmpty() ||
+                mostWaitlisted.isNotEmpty() || mostCollected.isNotEmpty() || releases.isNotEmpty() ||
+                bundles.isNotEmpty() || giveaways.isNotEmpty()
+    }
+
+    @Immutable
+    internal data class AccountStats(
+        val waitlistedCount: Int,
+        val collectedCount: Int,
     )
 
     internal enum class HomeScreenStatus {
-        LOADING, ERROR, SUCCESS
-    }
-
-    internal sealed class HomeScreenListData {
-        data class StoreData(val store: Store) : HomeScreenListData()
-        data class DealData(val deal: Deal) : HomeScreenListData()
-        data class ViewAllData(val store: Store) : HomeScreenListData()
+        LOADING, ERROR, DATA
     }
 }

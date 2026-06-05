@@ -11,6 +11,17 @@
     <string name="home_screen_all_store_deals_label">View All %1$s deals</string>
     <string name="home_screen_new_releases_label">New Releases</string>
 
+    <!-- Curated feed sections (epic #219, Phase 5) -->
+    <string name="home_screen_featured_label">Featured</string>
+    <string name="home_screen_trending_label">Trending</string>
+    <string name="home_screen_most_waitlisted_label">Most Waitlisted</string>
+    <string name="home_screen_most_collected_label">Most Collected</string>
+    <string name="home_screen_stat_waitlisted">Waitlisted</string>
+    <string name="home_screen_stat_collected">Collected</string>
+    <string name="home_screen_hero_deal_description">%1$s, was %2$s, now %3$s</string>
+    <string name="home_screen_ranked_game_description">%1$s, %2$s</string>
+    <string name="home_screen_ranked_game_description_no_price">%1$s</string>
+
     <string name="home_screen_giveaways_label">Giveaways</string>
     <string name="home_screen_all_giveaways_label">View All Giveaways</string>
     <string name="home_screen_bundles_label">Bundles</string>

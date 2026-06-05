@@ -64,7 +64,6 @@ internal fun NavGraph(
         ) {
             homeScreen(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
-                goToStore = { storeId -> navActions.navigateToStore(storeId) },
                 goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
                 goToWeb = { url, _ -> uriHandler.openUri(url) },
                 goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },

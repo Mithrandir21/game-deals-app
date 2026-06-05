@@ -85,6 +85,16 @@ data class RemoteItadDealsResponse(
     @SerialName("list") val list: List<RemoteItadDealsGame> = emptyList(),
 )
 
+// --- /stats/most-waitlisted|most-collected|most-popular/v1 (bare array, ordered by position) ---
+@Serializable
+data class RemoteItadRankedGame(
+    @SerialName("position") val position: Int = 0,
+    @SerialName("id") val id: String,
+    @SerialName("slug") val slug: String? = null,
+    @SerialName("title") val title: String,
+    @SerialName("count") val count: Int? = null,
+)
+
 // --- /games/prices/v3 ---
 @Serializable
 data class RemoteItadHistoryLow(

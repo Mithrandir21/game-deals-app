@@ -180,7 +180,6 @@ private fun AppNavHost() {
         ) {
         homeScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
-            goToStore = { storeId -> navController.navigate(Destination.Store(storeId)) },
             goToGiveaway = { navigateTopLevel(Destination.Giveaways) },
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },

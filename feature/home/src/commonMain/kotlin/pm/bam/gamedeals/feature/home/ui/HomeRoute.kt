@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.feature.home.ui
 
 import androidx.compose.runtime.Composable
-import pm.bam.gamedeals.domain.models.Store
 
 /**
  * Public entry point into the home feature. Wraps the internal [HomeScreen] so
@@ -11,7 +10,6 @@ import pm.bam.gamedeals.domain.models.Store
 @Composable
 fun HomeRoute(
     goToGame: (gameId: String) -> Unit,
-    onViewStoreDeals: (store: Store) -> Unit = {},
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
@@ -21,7 +19,6 @@ fun HomeRoute(
 ) {
     HomeScreen(
         goToGame = goToGame,
-        onViewStoreDeals = onViewStoreDeals,
         onViewGiveaways = onViewGiveaways,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
