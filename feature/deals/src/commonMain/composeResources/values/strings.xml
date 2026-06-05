@@ -12,4 +12,6 @@
     <string name="deals_sort_top_discount">Top discount</string>
     <string name="deals_sort_recently_added">Recently added</string>
     <string name="deals_sort_price_low_high">Cheapest</string>
+
+    <string name="deals_filter_all_stores">All stores</string>
 </resources>

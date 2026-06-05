@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
@@ -60,6 +61,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
@@ -68,6 +70,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description_waitlisted
@@ -76,6 +79,7 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_game_imag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_load_more_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_retry
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_price_low_high
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_recently_added
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_top_discount
@@ -97,6 +101,8 @@ internal fun DealsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val data by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val stores by viewModel.stores.collectAsStateWithLifecycle()
+    val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
@@ -113,9 +119,13 @@ internal fun DealsScreen(
     DealsContent(
         data = data,
         waitlistIds = waitlistIds,
+        stores = stores,
+        selectedShops = selectedShops,
         dealDetails = dealDetails,
         snackbarHostState = snackbarHostState,
         onSelectSort = { viewModel.setSort(it) },
+        onToggleShop = { viewModel.toggleShop(it) },
+        onClearShops = { viewModel.clearShopFilter() },
         onLoadMore = { viewModel.loadNextPage() },
         onRetry = { viewModel.retry() },
         onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
@@ -135,9 +145,13 @@ internal fun DealsScreen(
 private fun DealsContent(
     data: DealsScreenData,
     waitlistIds: ImmutableSet<String>,
+    stores: ImmutableList<Store> = persistentListOf(),
+    selectedShops: ImmutableSet<Int> = persistentSetOf(),
     dealDetails: DealBottomSheetData? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSelectSort: (DealsSort) -> Unit,
+    onToggleShop: (Int) -> Unit = {},
+    onClearShops: () -> Unit = {},
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
@@ -188,6 +202,16 @@ private fun DealsContent(
                     onSelectSort = onSelectSort,
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                if (stores.isNotEmpty()) {
+                    ShopFilterRow(
+                        stores = stores,
+                        selected = selectedShops,
+                        onToggleShop = onToggleShop,
+                        onClearShops = onClearShops,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     when {
@@ -267,6 +291,37 @@ private fun DealsSort.labelRes(): StringResource = when (this) {
     DealsSort.PriceLowToHigh -> Res.string.deals_sort_price_low_high
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShopFilterRow(
+    stores: ImmutableList<Store>,
+    selected: ImmutableSet<Int>,
+    onToggleShop: (Int) -> Unit,
+    onClearShops: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+    ) {
+        // Empty selection == all stores; the "All stores" chip clears the filter.
+        FilterChip(
+            selected = selected.isEmpty(),
+            onClick = onClearShops,
+            label = { Text(stringResource(Res.string.deals_filter_all_stores)) },
+        )
+        stores.forEach { store ->
+            FilterChip(
+                selected = store.storeID in selected,
+                onClick = { onToggleShop(store.storeID) },
+                label = { Text(store.storeName) },
+            )
+        }
+    }
+}
+
 @Composable
 private fun DealRow(
     deal: Deal,
@@ -344,6 +399,12 @@ private val previewDeals = persistentListOf(
     PreviewDeal.copy(dealID = "deal-3", title = "Stardew Valley", salePriceDenominated = "$8.99", gameID = "333"),
 )
 
+private val previewStores = persistentListOf(
+    PreviewStore,
+    PreviewStore.copy(storeID = 16, storeName = "Epic Games Store"),
+    PreviewStore.copy(storeID = 35, storeName = "GOG"),
+)
+
 @Preview
 @Composable
 private fun DealsContent_Success_Preview() {
@@ -351,6 +412,8 @@ private fun DealsContent_Success_Preview() {
         DealsContent(
             data = DealsScreenData(status = DealsScreenData.Status.DATA, deals = previewDeals),
             waitlistIds = persistentSetOf("222"),
+            stores = previewStores,
+            selectedShops = persistentSetOf(16),
             onSelectSort = {},
             onLoadMore = {},
             onRetry = {},

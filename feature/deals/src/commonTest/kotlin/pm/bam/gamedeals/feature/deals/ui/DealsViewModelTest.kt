@@ -43,7 +43,9 @@ import kotlin.test.assertTrue
 class DealsViewModelTest : MainDispatcherTest() {
 
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
-    private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
+    private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
+        every { observeStores() } returns flowOf(emptyList())
+    }
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
@@ -118,6 +120,20 @@ class DealsViewModelTest : MainDispatcherTest() {
 
         assertEquals(DealsSort.PriceLowToHigh, vm.uiState.value.sort)
         verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, offset = 0)) }
+    }
+
+    @Test
+    fun toggleShop_reloads_page_zero_with_selected_shop_ids() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.toggleShop(61)
+        advanceUntilIdle()
+
+        assertEquals(setOf(61), vm.uiState.value.shopIds)
+        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, shopIds = listOf(61), offset = 0)) }
     }
 
     @Test

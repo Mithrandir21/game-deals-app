@@ -7,6 +7,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -30,6 +31,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -62,7 +64,20 @@ internal class DealsViewModel(
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
+    /** Active stores offered as the shop filter (empty selection = all stores). */
+    val stores: StateFlow<ImmutableList<Store>> = storesRepository.observeStores()
+        .map { stores -> stores.filter { it.isActive }.toImmutableList() }
+        .onStart { emit(persistentListOf()) }
+        .catch { emit(persistentListOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
+
     private val sort = MutableStateFlow(DealsSort.TopDiscount)
+    private val selectedShopIds = MutableStateFlow<Set<Int>>(emptySet())
+
+    /** The currently selected shop ids (empty = all stores). */
+    val selectedShops: StateFlow<ImmutableSet<Int>> = selectedShopIds
+        .map { it.toImmutableSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
     val uiState: StateFlow<DealsScreenData>
         field = MutableStateFlow(DealsScreenData())
@@ -80,33 +95,40 @@ internal class DealsViewModel(
     private var appendJob: Job? = null
 
     init {
-        // First load + reload whenever the sort or the region changes. The region flow emits its
-        // seeded value immediately, so this also performs the initial load. `collectLatest` cancels an
-        // in-flight first-page load if the filter changes again before it finishes.
+        // First load + reload whenever the sort, the shop filter or the region changes. The region flow
+        // emits its seeded value immediately, so this also performs the initial load. `collectLatest`
+        // cancels an in-flight first-page load if a filter changes again before it finishes.
         viewModelScope.launch {
             combine(
                 sort,
+                selectedShopIds,
                 regionRepository.observeSelectedCountry().map { it.code }.distinctUntilChanged(),
-            ) { selectedSort, _ -> selectedSort }
-                .collectLatest { selectedSort -> loadFirstPage(selectedSort) }
+            ) { selectedSort, shops, _ -> selectedSort to shops }
+                .collectLatest { (selectedSort, shops) -> loadFirstPage(selectedSort, shops) }
         }
     }
 
     fun setSort(newSort: DealsSort) = sort.update { newSort }
 
+    /** Toggle a shop in/out of the filter; an empty selection means "all stores". */
+    fun toggleShop(storeId: Int) = selectedShopIds.update { if (storeId in it) it - storeId else it + storeId }
+
+    fun clearShopFilter() = selectedShopIds.update { emptySet() }
+
     fun retry() {
-        viewModelScope.launch { loadFirstPage(sort.value) }
+        viewModelScope.launch { loadFirstPage(sort.value, selectedShopIds.value) }
     }
 
-    private suspend fun loadFirstPage(selectedSort: DealsSort) {
+    private suspend fun loadFirstPage(selectedSort: DealsSort, shopIds: Set<Int>) {
         appendJob?.cancel()
-        uiState.update { DealsScreenData(status = DealsScreenData.Status.LOADING, sort = selectedSort) }
+        uiState.update { DealsScreenData(status = DealsScreenData.Status.LOADING, sort = selectedSort, shopIds = shopIds.toImmutableSet()) }
         try {
-            val page = dealsRepository.getDeals(DealsQuery(sort = selectedSort, offset = 0))
+            val page = dealsRepository.getDeals(DealsQuery(sort = selectedSort, shopIds = shopIds.toList(), offset = 0))
             uiState.update {
                 DealsScreenData(
                     status = DealsScreenData.Status.DATA,
                     sort = selectedSort,
+                    shopIds = shopIds.toImmutableSet(),
                     deals = page.toImmutableList(),
                     endReached = page.size < DealsQuery.DEALS_PAGE_SIZE,
                 )
@@ -114,8 +136,8 @@ internal class DealsViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
-            fatal(logger, t) { "Failed to load deals (sort=$selectedSort)" }
-            uiState.update { DealsScreenData(status = DealsScreenData.Status.ERROR, sort = selectedSort) }
+            fatal(logger, t) { "Failed to load deals (sort=$selectedSort, shops=$shopIds)" }
+            uiState.update { DealsScreenData(status = DealsScreenData.Status.ERROR, sort = selectedSort, shopIds = shopIds.toImmutableSet()) }
         }
     }
 
@@ -126,7 +148,7 @@ internal class DealsViewModel(
         appendJob = viewModelScope.launch {
             uiState.update { it.copy(appending = true) }
             try {
-                val page = dealsRepository.getDeals(DealsQuery(sort = current.sort, offset = current.deals.size))
+                val page = dealsRepository.getDeals(DealsQuery(sort = current.sort, shopIds = current.shopIds.toList(), offset = current.deals.size))
                 uiState.update { state ->
                     state.copy(
                         deals = (state.deals + page).toImmutableList(),
@@ -180,6 +202,7 @@ internal class DealsViewModel(
     data class DealsScreenData(
         val status: Status = Status.LOADING,
         val sort: DealsSort = DealsSort.TopDiscount,
+        val shopIds: ImmutableSet<Int> = persistentSetOf(),
         val deals: ImmutableList<Deal> = persistentListOf(),
         val appending: Boolean = false,
         val endReached: Boolean = false,

@@ -123,8 +123,8 @@ Local Favourites replaced by the ITAD Waitlist. DB is now at **v8**.
 
 **Verified:** `:app:assembleDebug` green; full `testAndroidHostTest` green except the known pre-existing `:remote:igdb` `IgdbSourceImplTest` failure; `stabilityCheck` green on the touched modules. iOS not compiled (Linux box) — `MainViewController.kt` edits are deletions only (low risk) but still want a macOS `:iosApp:compileKotlinIosSimulatorArm64`.
 
-**Phase 3 follow-ups (not blocking):**
-- **Logged-out heart silently no-ops** — the plan (#230) wanted a logged-out tap to route to Account/login via a one-shot event; instead `WaitlistRepository.toggleWaitlist` just returns when logged out. The heart still renders + animates with nothing happening. Add a "sign in to save" prompt/route (small task or fold into Phase 5/6 polish).
+**Phase 3 follow-ups:**
+- ~~Logged-out heart silently no-ops~~ **RESOLVED** (commit `a65ea9c`): `WaitlistRepository.toggleWaitlist` now returns `WaitlistToggleResult` and the Home/Store/Game/Deals VMs emit `SignInRequired` → each screen shows a "Sign in from the Account tab to save deals" snackbar. *Residual nicety:* the snackbar isn't tappable — making it a "Sign in" action that navigates straight to Account would need a `goToAccount` callback threaded through ~5 screens; deferred.
 - Committed `.stability` reference files for touched modules still show the old `isFavourite`/`onToggleFavourite` text but `stabilityCheck` passes (it compares stability classifications, not param names); `stabilityDump` produced no diff. Left as-is.
 
 ## Phase 4 — DONE (on `dev`; commit `ec82170`)
@@ -135,10 +135,9 @@ The Deals tab is live on both platforms (replaces the `Destination.Deals` placeh
 
 **Verified:** `:app:assembleDebug` green; full `testAndroidHostTest` green except the known pre-existing `:remote:igdb` failure; `DealsViewModelTest` (4) + `ItadSourceImplTest`/`DealsRepositoryTest` additions pass. iOS not compiled (Linux box) — symmetric wiring, wants a macOS `:iosApp:compileKotlinIosSimulatorArm64`.
 
-**Phase 4 follow-ups (not blocking):**
-- **Shop-filter UI not built.** `DealsQuery.shopIds` is plumbed end-to-end (and `fetchDeals` joins it into `shops=`), but there's no store picker — the tab browses all stores. Add a multi-store filter (load `StoresRepository`, chips/sheet) as a small follow-up.
+**Phase 4 follow-ups:**
+- ~~Shop-filter UI not built~~ **RESOLVED** (commit `f608faf`): the Deals tab now has a multi-select store `FilterChip` row ("All stores" + a chip per active store from `StoresRepository`) driving `DealsQuery.shopIds`; selection reloads page 0.
 - **`onBrowseStores` overflow** is still wired-but-`null` (hidden). It wasn't in #233/#234 scope (it implies a stores-list screen, not the Deals tab). Decide later whether to point it at a store picker.
-- Logged-out heart still silently no-ops (shared Phase 3 gap — see Phase 3 follow-ups).
 - Stability tooling note: `stabilityCheck`/`stabilityDump` report "No composables found" for every module in this env and skip (pass); the committed `*.stability` files are stale legacy artifacts. `:feature:deals` therefore has no `stability/` reference and CI's `stabilityCheck` still passes.
 
 ## Next up — Phase 5 (Curated Home feed; #235–#237)
