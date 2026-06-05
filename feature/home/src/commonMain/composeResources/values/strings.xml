@@ -2,13 +2,7 @@
 <resources>
 
     <string name="home_screen_game_image">%1$s Game image</string>
-    <string name="home_screen_store_banner">%1$s Store banner</string>
-    <string name="home_screen_floating_search_icon">Search</string>
-    <string name="home_screen_floating_search_error_icon">Retry search</string>
 
-    <string name="home_screen_loading_label">Loading…</string>
-
-    <string name="home_screen_all_store_deals_label">View All %1$s deals</string>
     <string name="home_screen_new_releases_label">New Releases</string>
 
     <!-- Curated feed sections (epic #219, Phase 5) -->
@@ -33,13 +27,9 @@
     <string name="home_screen_giveaway_type_early_access">Early Access</string>
     <string name="home_screen_giveaway_type_other">Other</string>
 
-    <string name="home_screen_favourites_label">Your favourites</string>
-    <string name="home_screen_all_favourites_label">See all favourites</string>
-    <string name="home_screen_floating_favourites_icon">View favourites</string>
-    <string name="home_screen_floating_settings_icon">Settings</string>
-    <string name="home_screen_favourite_indicator">Favourited</string>
+    <!-- Trending deal rows -->
     <string name="home_screen_store_deal_row_description">%1$s, was %2$s, now %3$s</string>
-    <string name="home_screen_store_deal_row_description_favourite">%1$s, favourited, was %2$s, now %3$s</string>
+    <string name="home_screen_store_deal_row_description_favourite">%1$s, waitlisted, was %2$s, now %3$s</string>
 
     <string name="home_screen_giveaway_row_description">FREE, %1$s, originally %2$s, %3$s on %4$s</string>
     <string name="home_screen_giveaway_row_description_no_platforms">FREE, %1$s, originally %2$s, %3$s</string>
