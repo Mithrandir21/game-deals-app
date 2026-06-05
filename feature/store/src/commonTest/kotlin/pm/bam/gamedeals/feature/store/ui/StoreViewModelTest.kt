@@ -29,6 +29,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -139,12 +140,38 @@ class StoreViewModelTest : MainDispatcherTest() {
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.UPDATED
+
         viewModel.toggleWaitlistFromDeal(data)
         runCurrent()
 
         verifySuspend(exactly(1)) {
             waitlistRepository.toggleWaitlist("42")
         }
+    }
+
+    @Test
+    fun toggleWaitlistFromDeal_when_logged_out_emits_SignInRequired() = runTest {
+        val viewModel = createViewModel(storeId = 1)
+        val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
+
+        val data = DealBottomSheetData.DealDetailsData(
+            store = store(),
+            gameId = "42",
+            gameName = "Halo",
+            dealId = "deal-1",
+            gameSalesPriceDenominated = "$9.99",
+            gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
+            cheaperStores = persistentListOf(),
+            cheapestPrice = null,
+        )
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.NOT_LOGGED_IN
+
+        viewModel.toggleWaitlistFromDeal(data)
+        runCurrent()
+
+        assertEquals(1, events.size)
+        assertEquals(StoreViewModel.StoreUiEvent.SignInRequired, events.first())
     }
 
     @Test

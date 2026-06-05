@@ -69,6 +69,7 @@ import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -136,6 +137,8 @@ internal fun HomeScreen(
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
     val favouriteIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     val onReleaseTitle: (title: String) -> Unit = { title -> viewModel.onReleaseGame(title) }
 
@@ -143,6 +146,7 @@ internal fun HomeScreen(
         onReleaseTitle = onReleaseTitle,
         data = data.value,
         favouriteIds = favouriteIds.value,
+        snackbarHostState = snackbarHostState,
         dealDetails = dealDetails.value,
         onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
             viewModel.loadDealDetails(
@@ -171,6 +175,7 @@ internal fun HomeScreen(
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
+            HomeViewModel.HomeUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
         }
     }
 }
@@ -256,9 +261,9 @@ private fun HomeScreenContent(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val currentOnRetry by rememberUpdatedState(onRetry)
 
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)

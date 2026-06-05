@@ -25,6 +25,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -234,6 +235,8 @@ class GameViewModelTest : MainDispatcherTest() {
         val details = gameDetails(info = info, deals = persistentListOf(gameDeal(storeID = storeId)))
         everySuspend { gamesRepository.getGameDetails(gameId) } returns details
         everySuspend { storesRepository.getStore(storeId) } returns store(storeID = storeId)
+
+        everySuspend { waitlistRepository.toggleWaitlist(gameId) } returns WaitlistToggleResult.UPDATED
 
         val viewModel = createViewModel(gameId)
         viewModel.uiState.observeEmissions(this.backgroundScope, testDispatcher)

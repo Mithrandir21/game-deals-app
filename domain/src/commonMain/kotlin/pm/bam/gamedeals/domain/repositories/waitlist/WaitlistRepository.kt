@@ -19,11 +19,26 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
  * update around the remote add/remove. All writes are login-gated — a no-op when logged out (the UI
  * gates the heart, and [getWaitlist] returns empty so logged-out users simply see nothing).
  */
+/** Outcome of a [WaitlistRepository.toggleWaitlist] call, so callers can react to the login gate. */
+enum class WaitlistToggleResult {
+    /** The waitlist was updated (added or removed). */
+    UPDATED,
+
+    /** No-op: the user is logged out. Callers should prompt the user to sign in. */
+    NOT_LOGGED_IN,
+}
+
 interface WaitlistRepository {
     fun observeWaitlistIds(): Flow<ImmutableSet<String>>
     fun observeIsWaitlisted(gameId: String): Flow<Boolean>
     suspend fun getWaitlist(): List<WaitlistEntry>
-    suspend fun toggleWaitlist(gameId: String)
+
+    /**
+     * Adds/removes [gameId] on the user's ITAD waitlist, returning [WaitlistToggleResult]. When logged
+     * out this is a no-op and returns [WaitlistToggleResult.NOT_LOGGED_IN] so the UI can route the user
+     * to sign in (the heart is login-gated — there is no local waitlist).
+     */
+    suspend fun toggleWaitlist(gameId: String): WaitlistToggleResult
 }
 
 internal class WaitlistRepositoryImpl(
@@ -46,8 +61,8 @@ internal class WaitlistRepositoryImpl(
         return entries
     }
 
-    override suspend fun toggleWaitlist(gameId: String) {
-        if (!loggedIn()) return
+    override suspend fun toggleWaitlist(gameId: String): WaitlistToggleResult {
+        if (!loggedIn()) return WaitlistToggleResult.NOT_LOGGED_IN
         if (gameId in ids.value) {
             accountSource.removeFromWaitlist(gameId)
             ids.value = (ids.value - gameId).toImmutableSet()
@@ -55,6 +70,7 @@ internal class WaitlistRepositoryImpl(
             accountSource.addToWaitlist(gameId)
             ids.value = (ids.value + gameId).toImmutableSet()
         }
+        return WaitlistToggleResult.UPDATED
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

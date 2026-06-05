@@ -34,6 +34,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 import pm.bam.gamedeals.logging.info
@@ -153,7 +154,9 @@ internal class DealsViewModel(
 
     fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) {
         viewModelScope.launch {
-            waitlistRepository.toggleWaitlist(data.gameId)
+            if (waitlistRepository.toggleWaitlist(data.gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(DealsUiEvent.SignInRequired)
+            }
         }
     }
 
@@ -171,6 +174,7 @@ internal class DealsViewModel(
     internal sealed interface DealsUiEvent {
         data class ShareDeal(val text: String) : DealsUiEvent
         data object LoadMoreError : DealsUiEvent
+        data object SignInRequired : DealsUiEvent
     }
 
     data class DealsScreenData(

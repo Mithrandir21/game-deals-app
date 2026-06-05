@@ -32,7 +32,7 @@ class WaitlistRepositoryTest {
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = null))
-        repo.toggleWaitlist("a")
+        assertEquals(WaitlistToggleResult.NOT_LOGGED_IN, repo.toggleWaitlist("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
     }
@@ -52,7 +52,7 @@ class WaitlistRepositoryTest {
         val source = FakeAccountSource()
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"))
 
-        repo.toggleWaitlist("a")
+        assertEquals(WaitlistToggleResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsWaitlisted("a").first())
@@ -64,7 +64,7 @@ class WaitlistRepositoryTest {
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"))
         repo.getWaitlist() // seed cache with "a"
 
-        repo.toggleWaitlist("a")
+        assertEquals(WaitlistToggleResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.removed)
         assertFalse(repo.observeIsWaitlisted("a").first())

@@ -89,6 +89,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.store
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -105,10 +106,13 @@ internal fun GameScreen(
     val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
     val platformActions = LocalPlatformActions.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is GameViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
+            GameViewModel.GameUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
         }
     }
 
@@ -124,7 +128,8 @@ internal fun GameScreen(
             goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onToggleFavourite = { viewModel.toggleWaitlist() },
-            onRetry = onRetry
+            onRetry = onRetry,
+            snackbarHostState = snackbarHostState,
         )
     }
 }
@@ -409,9 +414,9 @@ private fun GameScreenContent(
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState, AlwaysScrollable)
     val currentOnRetry by rememberUpdatedState(onRetry)

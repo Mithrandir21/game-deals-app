@@ -34,6 +34,7 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
 
@@ -100,7 +101,9 @@ internal class GameViewModel(
         if (uiState.value !is GameScreenData.Data) return
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            waitlistRepository.toggleWaitlist(id)
+            if (waitlistRepository.toggleWaitlist(id) == WaitlistToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(GameUiEvent.SignInRequired)
+            }
         }
     }
 
@@ -156,6 +159,7 @@ internal class GameViewModel(
 
     internal sealed interface GameUiEvent {
         data class ShareDeal(val text: String) : GameUiEvent
+        data object SignInRequired : GameUiEvent
     }
 
     sealed class GameScreenData {

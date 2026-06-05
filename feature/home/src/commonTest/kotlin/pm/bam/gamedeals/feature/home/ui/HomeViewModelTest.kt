@@ -34,6 +34,7 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -326,6 +327,8 @@ class HomeViewModelTest : MainDispatcherTest() {
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.UPDATED
+
         viewModel.toggleWaitlistFromDeal(data)
         runCurrent()
 

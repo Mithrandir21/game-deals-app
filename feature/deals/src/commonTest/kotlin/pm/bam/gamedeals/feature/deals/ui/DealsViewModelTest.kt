@@ -11,11 +11,13 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealsQuery
@@ -24,9 +26,13 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
+import pm.bam.gamedeals.testing.fixtures.gameInfo
+import pm.bam.gamedeals.testing.fixtures.store
+import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -112,5 +118,32 @@ class DealsViewModelTest : MainDispatcherTest() {
 
         assertEquals(DealsSort.PriceLowToHigh, vm.uiState.value.sort)
         verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, offset = 0)) }
+    }
+
+    @Test
+    fun toggle_waitlist_when_logged_out_emits_SignInRequired() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.NOT_LOGGED_IN
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        val events = vm.events.observeEmissions(this.backgroundScope, testDispatcher)
+
+        vm.toggleWaitlistFromDeal(
+            DealBottomSheetData.DealDetailsData(
+                store = store(),
+                gameId = "42",
+                gameName = "Halo",
+                dealId = "deal-1",
+                gameSalesPriceDenominated = "$9.99",
+                gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
+                cheaperStores = persistentListOf(),
+                cheapestPrice = null,
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertEquals(DealsViewModel.DealsUiEvent.SignInRequired, events.first())
     }
 }

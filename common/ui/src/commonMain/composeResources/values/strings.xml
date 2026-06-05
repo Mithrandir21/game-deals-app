@@ -9,6 +9,9 @@
     <string name="deal_favourite_add_action">Add to waitlist</string>
     <string name="deal_favourite_remove_action">Remove from waitlist</string>
 
+    <!-- Shown when a logged-out user taps the waitlist heart (epic #219, Phase 3/4 follow-up). -->
+    <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>
+
     <string name="deal_details_game_image">%1$s Game image</string>
     <string name="deal_details_store_thumbnail">%1$s Store thumbnail</string>
     <string name="deal_details_cheaper_store_thumbnail">%1$s Cheaper store thumbnail</string>

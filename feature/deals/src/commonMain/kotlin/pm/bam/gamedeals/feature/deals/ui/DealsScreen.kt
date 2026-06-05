@@ -81,6 +81,7 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_recently_ad
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_top_discount
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 // Trigger a load-more when the user scrolls within this many rows of the end of the loaded page.
@@ -99,11 +100,13 @@ internal fun DealsScreen(
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is DealsViewModel.DealsUiEvent.ShareDeal -> platformActions.share(event.text)
             DealsViewModel.DealsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
+            DealsViewModel.DealsUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
         }
     }
 
