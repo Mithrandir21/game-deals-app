@@ -38,7 +38,8 @@ class ItadOAuthClientTest {
         assertEquals("RT", token.refreshToken)
         assertEquals(3600, token.expiresIn)
         assertEquals("isthereanydeal.com", recorded.single().url.host)
-        assertTrue(recorded.single().url.encodedPath.endsWith("/oauth/token"))
+        // Trailing slash is required — ITAD 302-redirects /oauth/token, which drops the POST body.
+        assertTrue(recorded.single().url.encodedPath.endsWith("/oauth/token/"))
     }
 
     @Test
