@@ -32,7 +32,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ✅ DONE (on `dev`) |
 | 4 — Deals tab | #233–#234 | ✅ DONE (on `dev`) |
 | 5 — Curated Home feed | #235–#237 | ✅ DONE (on `dev`) |
-| 6 — Cleanup & hardening | #238–#240 | ⬜ |
+| 6 — Cleanup & hardening | #238–#240 | 🔶 PARTIAL — 6.1 done (#238 closed); 6.2/6.3 blocked (Mac/env) |
 
 ---
 
@@ -154,5 +154,17 @@ Curated, section-oriented Home feed replaces the per-store strips.
 - **`fetchMostPopular` is implemented but unused** — the locked Home order has no "Most Popular" section. Left in the seam for future use.
 - **The Store screen (`:feature:store`) is now unreachable** — Home no longer links to it and `onBrowseStores` is hidden. Phase 6 should either wire `onBrowseStores` → a stores list (then Store) or remove `:feature:store`.
 
-## Next up — Phase 6 (Cleanup & hardening; #238–#240)
-Token security (move `AuthTokenStore` off plain `Storage` → Keychain / EncryptedSharedPreferences; CSPRNG for PKCE verifier/state — #239), the epic-wide iOS compile + live-OAuth smoke test, dead-code/string cleanup (favourites/store-strip strings, the unreachable `:feature:store` + `onBrowseStores`, the `Giveaways` tab's own top bar interim), and docs. See the per-ticket notes on #238–#240.
+## Phase 6 — PARTIAL (#238 done; #239/#240 outstanding)
+- **#238 (6.1) — DONE (closed).** Verified: no "New in Subscriptions"/"Misc. Deals" strings or usages exist (those sections were dropped at design time, never implemented). No code change needed.
+- **#239 (6.2) — OPEN (tracked tech-debt; Mac-blocked).** Move `AuthTokenStore` off plain `Storage` → EncryptedSharedPreferences (Android) / Keychain (iOS), and swap PKCE's `Random.Default` for a CSPRNG. **Deliberately not implemented here:** the iOS Keychain half can't be compiled/verified on this Linux box, and Android's `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is itself deprecated — this needs a design decision (Keystore-backed DataStore vs. the deprecated API) + a Mac to verify the iOS actual. Keep as tracked tech-debt.
+- **#240 (6.3) — PARTIAL/OPEN.** Docs/handover kept current each phase ✅; root Kover includes every new epic module (`:feature:account`, `:feature:deals`, `:remote:itad`) ✅ (`:remote:igdb`'s absence is a pre-existing, unrelated omission). **Stability baselines NOT regenerated:** `stabilityDump`/`stabilityCheck` report "No composables found" for every module *in this environment* and skip (so the committed `*.stability` files are stale-but-`stabilityCheck`-passing). Regenerating them needs a machine where the compose-stability analyzer actually emits metrics — do this on a proper dev setup.
+
+## Remaining epic-wide verification (needs a Mac + real OAuth client id)
+Carried since Phase 2 — **none of this can be done on the Linux dev box:**
+- `:iosApp:compileKotlinIosSimulatorArm64` to compile all the `iosMain` changes (OAuth launcher + every NavHost/Koin edit across Phases 1–5).
+- Live OAuth smoke test: fill `local.properties itadOauthClientId` / `Secrets.xcconfig ITAD_OAUTH_CLIENT_ID`, register the redirect `pm.bam.gamedeals://oauth/itad` with ITAD, then login → `/user/info` → username; add/remove waitlist; force a 401 → silent refresh; logout. Confirm the `ItadOAuthConfig` URLs + the `obj.game` PUT/DELETE body shapes against the live API.
+
+## Deferred dead-code cleanup (safe, low-priority — not yet ticketed)
+- Unused strings left behind by Phases 3–5: the favourites strings (`home_screen_favourites_label`, `home_screen_favourite_indicator`, `home_screen_floating_*`, `home_screen_all_favourites_label`) and store-strip strings (`home_screen_store_banner`, `home_screen_all_store_deals_label`, `home_screen_store_deal_row_description*` if no longer used) in `:feature:home`; the `favourite*`-named locals/keys in Store/Search.
+- The **Store screen (`:feature:store`) is now unreachable** (Home dropped the link; `onBrowseStores` is hidden). Either wire `onBrowseStores` → a stores list → Store, or delete `:feature:store` + `Destination.Store` + `NavigationActions.navigateToStore`.
+- Fold the **Giveaways tab** into the shell top bar (Phase 1 interim: it keeps its own top bar, so Search isn't reachable on that tab).
