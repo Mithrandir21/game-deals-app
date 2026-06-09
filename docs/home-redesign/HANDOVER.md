@@ -32,7 +32,7 @@ export JAVA_HOME=/opt/android-studio/jbr      # JDK 21 (Android Studio JBR)
 | 3 — Favourites→Waitlist + Room v7→v8 | #230–#232 | ✅ DONE (on `dev`) |
 | 4 — Deals tab | #233–#234 | ✅ DONE (on `dev`) |
 | 5 — Curated Home feed | #235–#237 | ✅ DONE (on `dev`) |
-| 6 — Cleanup & hardening | #238–#240 | 🔶 PARTIAL — 6.1 done (#238 closed); 6.2/6.3 blocked (Mac/env) |
+| 6 — Cleanup & hardening | #238–#240 | 🔶 PARTIAL — 6.1 done (#238 closed); 6.2 CSPRNG done, encrypted-storage half Mac-blocked; 6.3 env-blocked |
 
 ---
 
@@ -156,7 +156,9 @@ Curated, section-oriented Home feed replaces the per-store strips.
 
 ## Phase 6 — PARTIAL (#238 done; #239/#240 outstanding)
 - **#238 (6.1) — DONE (closed).** Verified: no "New in Subscriptions"/"Misc. Deals" strings or usages exist (those sections were dropped at design time, never implemented). No code change needed.
-- **#239 (6.2) — OPEN (tracked tech-debt; Mac-blocked).** Move `AuthTokenStore` off plain `Storage` → EncryptedSharedPreferences (Android) / Keychain (iOS), and swap PKCE's `Random.Default` for a CSPRNG. **Deliberately not implemented here:** the iOS Keychain half can't be compiled/verified on this Linux box, and Android's `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is itself deprecated — this needs a design decision (Keystore-backed DataStore vs. the deprecated API) + a Mac to verify the iOS actual. Keep as tracked tech-debt.
+- **#239 (6.2) — PARTIAL (CSPRNG done; encrypted storage still open).**
+  - **CSPRNG — DONE.** PKCE verifier + CSRF `state` now draw from the platform CSPRNG via an `expect/actual secureRandomBytes(size)` (`SecureRandom.kt` in `auth/oauth`): `java.security.SecureRandom` on Android, `SecRandomCopyBytes` (Security framework) on iOS, replacing `Random.Default`. Android/common verified by `:remote:itad:testAndroidHostTest` (added `randomState`/`secureRandomBytes` tests); the iOS actual is standard K/N Security interop but **Mac-unverified** (compile with `:iosApp:compileKotlinIosSimulatorArm64`).
+  - **Encrypted token storage — OPEN (tracked tech-debt; Mac-blocked).** Still move `AuthTokenStore` off plain `Storage` → EncryptedSharedPreferences (Android) / Keychain (iOS). **Deliberately not implemented here:** the iOS Keychain half can't be compiled/verified on this Linux box, and Android's `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is itself deprecated — this needs a design decision (Keystore-backed DataStore vs. the deprecated API) + a Mac to verify the iOS actual. Keep as tracked tech-debt.
 - **#240 (6.3) — PARTIAL/OPEN.** Docs/handover kept current each phase ✅; root Kover includes every new epic module (`:feature:account`, `:feature:deals`, `:remote:itad`) ✅ (`:remote:igdb`'s absence is a pre-existing, unrelated omission). **Stability baselines NOT regenerated:** `stabilityDump`/`stabilityCheck` report "No composables found" for every module *in this environment* and skip (so the committed `*.stability` files are stale-but-`stabilityCheck`-passing). Regenerating them needs a machine where the compose-stability analyzer actually emits metrics — do this on a proper dev setup.
 
 ## Remaining epic-wide verification (needs a Mac + real OAuth client id)

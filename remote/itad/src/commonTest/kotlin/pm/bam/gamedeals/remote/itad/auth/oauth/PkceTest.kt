@@ -36,6 +36,21 @@ class PkceTest {
         assertTrue(generatePkce().codeVerifier != generatePkce().codeVerifier)
     }
 
+    @Test
+    fun randomState_is_url_safe_and_varies_per_call() {
+        val state = randomState()
+        assertTrue(state.isNotEmpty())
+        assertTrue(state.none { it == '=' || it == '+' || it == '/' })
+        assertTrue(randomState() != randomState())
+    }
+
+    @Test
+    fun secureRandomBytes_returns_requested_size_and_differs_across_calls() {
+        assertEquals(0, secureRandomBytes(0).size)
+        assertEquals(64, secureRandomBytes(64).size)
+        assertTrue(secureRandomBytes(32).toHex() != secureRandomBytes(32).toHex())
+    }
+
     private fun ByteArray.toHex(): String =
         joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 }

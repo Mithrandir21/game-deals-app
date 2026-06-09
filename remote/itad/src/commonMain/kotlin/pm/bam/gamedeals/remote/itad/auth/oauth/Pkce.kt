@@ -2,7 +2,6 @@ package pm.bam.gamedeals.remote.itad.auth.oauth
 
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.random.Random
 
 /**
  * PKCE (RFC 7636) helpers for the ITAD OAuth authorization-code flow (epic #219, Phase 2).
@@ -10,9 +9,8 @@ import kotlin.random.Random
  * The SHA-256 is implemented in pure Kotlin so the challenge derivation lives entirely in commonMain
  * (no platform crypto cinterop), and is validated against the RFC 7636 Appendix-B test vector in tests.
  *
- * NOTE (security): the verifier/state use [Random.Default], which is not guaranteed to be a CSPRNG on
- * every target. Upgrading to a platform secure RNG (expect/actual) is tracked with the token-encryption
- * hardening in Phase 6.2 (#239).
+ * The verifier/state bytes come from the platform CSPRNG via [secureRandomBytes]
+ * (`java.security.SecureRandom` / `SecRandomCopyBytes`), per Phase 6.2 (#239).
  */
 data class PkceCodes(
     val codeVerifier: String,
@@ -24,12 +22,12 @@ private fun ByteArray.base64UrlNoPad(): String = Base64.UrlSafe.encode(this).tri
 
 /** Generates a fresh verifier + its S256 challenge. */
 fun generatePkce(): PkceCodes {
-    val codeVerifier = Random.Default.nextBytes(64).base64UrlNoPad()
+    val codeVerifier = secureRandomBytes(64).base64UrlNoPad()
     return PkceCodes(codeVerifier = codeVerifier, codeChallenge = codeChallenge(codeVerifier))
 }
 
 /** A random URL-safe `state` value for CSRF protection on the authorize round-trip. */
-fun randomState(): String = Random.Default.nextBytes(16).base64UrlNoPad()
+fun randomState(): String = secureRandomBytes(16).base64UrlNoPad()
 
 /** `code_challenge = base64url(sha256(ASCII(code_verifier)))`, no padding (the S256 method). */
 internal fun codeChallenge(codeVerifier: String): String =
