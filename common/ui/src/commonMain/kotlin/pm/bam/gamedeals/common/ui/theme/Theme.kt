@@ -15,11 +15,14 @@ import androidx.compose.ui.graphics.Color
  * styles the host Activity's status bar; the iOS actual is a thin wrapper
  * around MaterialTheme. The [dynamicColor] parameter is honoured on Android
  * and ignored on iOS.
+ *
+ * [dynamicColor] defaults to **false** (UI Improvements #253) so the curated ITAD palette renders
+ * consistently on every device; callers can opt back into Material You by passing `true`.
  */
 @Composable
 expect fun GameDealsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 )
 
@@ -52,6 +55,13 @@ val lightScheme = lightColorScheme(
     inverseSurface = inverseSurfaceLight,
     inverseOnSurface = inverseOnSurfaceLight,
     inversePrimary = inversePrimaryLight,
+    surfaceDim = surfaceDimLight,
+    surfaceBright = surfaceBrightLight,
+    surfaceContainerLowest = surfaceContainerLowestLight,
+    surfaceContainerLow = surfaceContainerLowLight,
+    surfaceContainer = surfaceContainerLight,
+    surfaceContainerHigh = surfaceContainerHighLight,
+    surfaceContainerHighest = surfaceContainerHighestLight,
 )
 
 val darkScheme = darkColorScheme(
@@ -83,6 +93,13 @@ val darkScheme = darkColorScheme(
     inverseSurface = inverseSurfaceDark,
     inverseOnSurface = inverseOnSurfaceDark,
     inversePrimary = inversePrimaryDark,
+    surfaceDim = surfaceDimDark,
+    surfaceBright = surfaceBrightDark,
+    surfaceContainerLowest = surfaceContainerLowestDark,
+    surfaceContainerLow = surfaceContainerLowDark,
+    surfaceContainer = surfaceContainerDark,
+    surfaceContainerHigh = surfaceContainerHighDark,
+    surfaceContainerHighest = surfaceContainerHighestDark,
 )
 
 val LocalExtendedSpacing = staticCompositionLocalOf { CustomSpaces() }

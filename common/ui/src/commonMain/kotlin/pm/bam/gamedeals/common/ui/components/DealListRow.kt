@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -85,7 +84,7 @@ fun DealListRow(
                 modifier = Modifier
                     .width(GameDealsCustomTheme.spacing.rowThumbnailWidth)
                     .height(GameDealsCustomTheme.spacing.rowThumbnailHeight)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
+                    .clip(MaterialTheme.shapes.small),
             )
             Column(
                 modifier = Modifier.weight(1f),

@@ -37,10 +37,12 @@ actual fun GameDealsTheme(
     // ComposeViews used in service notifications, or dialogs hosted on Application
     // context. Skip status-bar styling rather than crashing with ClassCastException.
     if (!view.isInEditMode && activity != null) {
-        LaunchedEffect(colorScheme.primary, darkTheme) {
+        LaunchedEffect(colorScheme.surface, darkTheme) {
             val window = activity.window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            // Match the status bar to the surface for the dense ITAD look (UI Improvements #253),
+            // with icon contrast following the theme (dark icons on the light surface, light on dark).
+            window.statusBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
@@ -50,6 +52,7 @@ actual fun GameDealsTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
+            shapes = Shapes,
             content = content
         )
     }
