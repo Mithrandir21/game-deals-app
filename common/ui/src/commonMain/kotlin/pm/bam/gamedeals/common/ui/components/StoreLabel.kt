@@ -20,7 +20,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -67,13 +66,13 @@ fun StoreLabel(
                 contentScale = ContentScale.Fit,
                 error = painterResource(CommonRes.drawable.videogame_thumb),
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(GameDealsCustomTheme.spacing.storeIcon)
                     .clip(CircleShape),
             )
         } else {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(GameDealsCustomTheme.spacing.storeDot)
                     .clip(CircleShape)
                     .background(color),
             )

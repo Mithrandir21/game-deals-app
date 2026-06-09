@@ -21,7 +21,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -84,8 +83,8 @@ fun DealListRow(
                 contentScale = ContentScale.Crop,
                 error = painterResource(CommonRes.drawable.videogame_thumb),
                 modifier = Modifier
-                    .width(100.dp)
-                    .height(60.dp)
+                    .width(GameDealsCustomTheme.spacing.rowThumbnailWidth)
+                    .height(GameDealsCustomTheme.spacing.rowThumbnailHeight)
                     .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
             )
             Column(

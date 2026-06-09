@@ -12,6 +12,14 @@ internal val mediumSpace: Dp = 8.dp
 internal val largeSpace: Dp = 16.dp
 internal val extraLargeSpace: Dp = 40.dp
 
+// Shared deal-surface dimensions (UI Improvements #254). The recurring row thumbnail and the inline
+// store/badge icon sizes live in the theme so the dense ITAD-style rows and tiles reference tokens
+// instead of hardcoded dp — one rhythm across Home, Deals, Store, and Search, tunable in one place.
+internal val rowThumbnailWidthSize: Dp = 100.dp
+internal val rowThumbnailHeightSize: Dp = 60.dp
+internal val storeIconSize: Dp = 16.dp
+internal val badgeIconSize: Dp = 12.dp
+internal val storeDotSize: Dp = 8.dp
 
 
 @Immutable
@@ -21,4 +29,10 @@ data class CustomSpaces(
     val medium: Dp = mediumSpace,
     val large: Dp = largeSpace,
     val extraLarge: Dp = extraLargeSpace,
+    // Shared deal-surface dimensions for the dense list rows/tiles (UI Improvements #254).
+    val rowThumbnailWidth: Dp = rowThumbnailWidthSize,
+    val rowThumbnailHeight: Dp = rowThumbnailHeightSize,
+    val storeIcon: Dp = storeIconSize,
+    val badgeIcon: Dp = badgeIconSize,
+    val storeDot: Dp = storeDotSize,
 )

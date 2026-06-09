@@ -18,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -63,7 +62,7 @@ fun DiscountBadge(
                 imageVector = Icons.Filled.ContentCut,
                 contentDescription = null, // decorative; the pill's text/contentDescription speaks
                 tint = colors.onContainer,
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(GameDealsCustomTheme.spacing.badgeIcon),
             )
         }
         Text(
