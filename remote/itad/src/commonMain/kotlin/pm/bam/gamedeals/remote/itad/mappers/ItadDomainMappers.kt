@@ -70,6 +70,7 @@ internal fun ItadDeal.toDeal(): Deal {
         savings = cutPercent.toDouble(),
         thumb = boxart.orEmpty(),
         url = url,
+        isLowestEver = isLowestEver,
         // CheapShark-only fields (internalName, metacritic*, steamRating*, releaseDate, lastChange,
         // dealRating) are nullable and default to null — ITAD does not provide them.
     )

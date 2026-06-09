@@ -29,14 +29,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsElevation
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.common.ui.theme.tertiaryDark
 import pm.bam.gamedeals.domain.models.Deal
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /**
@@ -139,6 +142,18 @@ fun DealHeroTile(
                             regularPrice = deal.normalPriceDenominated,
                             salePriceColor = Color.White,
                             regularPriceColor = Color.White.copy(alpha = 0.7f),
+                            caption = if (deal.isLowestEver) {
+                                {
+                                    Text(
+                                        text = stringResource(CommonRes.string.deal_lowest_ever_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        // Fixed bright accent — always over the dark scrim, like the other overlay text.
+                                        color = tertiaryDark,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -169,6 +184,7 @@ private fun DealHeroTile_Preview() {
                         salePriceDenominated = "8,60 €",
                         normalPriceDenominated = "39,99 €",
                         savings = 78.0,
+                        isLowestEver = true,
                     ),
                     storeName = "GreenManGaming",
                     contentDescription = "Resident Evil 4, on sale for 8,60 €, was 39,99 €",

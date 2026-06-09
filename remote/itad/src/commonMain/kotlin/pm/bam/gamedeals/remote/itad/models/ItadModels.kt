@@ -41,6 +41,8 @@ data class ItadDeal(
     val storeLow: ItadMoney? = null,
     /** Game boxart from `/deals/v2` `assets`; absent on the `/games/prices/v3` deal entries. */
     val boxart: String? = null,
+    /** `true` when ITAD's deal `flag` marks this price as at/at-a-new historical low (#255). */
+    val isLowestEver: Boolean = false,
 )
 
 data class ItadGamePrices(

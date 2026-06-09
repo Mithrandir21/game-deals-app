@@ -19,7 +19,7 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-internal const val DOMAIN_DB_VERSION = 8
+internal const val DOMAIN_DB_VERSION = 9
 
 @Database(version = DOMAIN_DB_VERSION, entities = [Deal::class, Game::class, Store::class, Release::class, Giveaway::class], exportSchema = true)
 @TypeConverters(StoreImagesConverter::class, GiveawayPlatformsConverter::class, LocalDatetimeConverter::class)

@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.models
 
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -78,7 +79,21 @@ data class Deal(
      * is considered stale by the cache.
      */
     @SerialName("expires")
-    val expires: Long = 0L
+    val expires: Long = 0L,
+
+    /**
+     * `true` when this deal's price is at the game's all-time historical low (UI Improvements board,
+     * Phase E, #255). Filled by the source mapper from ITAD's deal `flag` (`"N"` new low / `"H"` at
+     * historical low); both the deals and prices endpoints carry it. Drives the `PriceBlock`
+     * "Lowest ever" caption on the deal surfaces.
+     *
+     * Persisted (so it survives the Room round-trip on the cached Home/Store surfaces) with a SQL
+     * `DEFAULT 0` — that default also backs the v8→v9 `ADD COLUMN` migration and matches older cached
+     * rows, which stay `false` until their next TTL refetch.
+     */
+    @SerialName("isLowestEver")
+    @ColumnInfo(defaultValue = "0")
+    val isLowestEver: Boolean = false
 )
 
 @Immutable

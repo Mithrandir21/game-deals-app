@@ -316,6 +316,7 @@ private fun SearchResultListItem(
             salePrice = deal.salePriceDenominated,
             regularPrice = deal.normalPriceDenominated,
             discountPercent = deal.savings.roundToInt(),
+            isLowestEver = deal.isLowestEver,
             storeName = store?.storeName,
             storeIconUrl = store?.iconUrl,
         )

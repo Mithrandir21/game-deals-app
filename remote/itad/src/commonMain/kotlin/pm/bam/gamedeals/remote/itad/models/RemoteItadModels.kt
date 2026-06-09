@@ -73,6 +73,12 @@ data class RemoteItadDealEntry(
     @SerialName("cut") val cut: Int = 0,
     @SerialName("url") val url: String,
     @SerialName("storeLow") val storeLow: RemoteItadPrice? = null,
+    /**
+     * ITAD's server-computed deal marker, present on both `/deals/v2` and `/games/prices/v3` deal
+     * entries: `"N"` = price just hit a new historical low, `"H"` = currently at the historical low,
+     * `"S"`/`null` = neither. Drives the "lowest ever" badge (UI Improvements board, Phase E, #255).
+     */
+    @SerialName("flag") val flag: String? = null,
 )
 
 @Serializable

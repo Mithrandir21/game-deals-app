@@ -121,6 +121,7 @@ class ItadSourceImplTest {
         assertEquals(50, deal.cutPercent)
         assertEquals("https://store/halo", deal.url)
         assertEquals("halo-banner300.png", deal.boxart) // prioritized banner300 over boxart
+        assertTrue(deal.isLowestEver) // flag "N" (new historical low)
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -138,6 +139,7 @@ class ItadSourceImplTest {
         assertEquals("uuid-1", deal.gameID)
         assertEquals("Halo", deal.title)
         assertEquals(61, deal.storeID)
+        assertTrue(deal.isLowestEver) // mapped from the /deals/v2 deal flag "N"
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -256,6 +258,7 @@ class ItadSourceImplTest {
         assertEquals(50.0, deal.savings)
         assertEquals("halo-banner300.png", deal.thumb) // prioritized banner300 over boxart
         assertEquals("https://store/halo", deal.url)
+        assertTrue(deal.isLowestEver) // flag "N" survives onto the (Room-cached) store-deal model
         // ITAD provides none of these.
         assertNull(deal.steamRatingPercent)
         assertNull(deal.metacriticScore)
@@ -279,6 +282,7 @@ class ItadSourceImplTest {
         assertEquals("Halo", deal.title)
         assertEquals(7.49, deal.salePriceValue)
         assertEquals("banner400.png", deal.thumb) // prioritized banner400 over boxart
+        assertTrue(deal.isLowestEver) // flag "H" derived from the /games/prices/v3 deal entry
 
         val paths = recordedRequests.map { it.url.encodedPath }
         assertTrue("/games/search/v1" in paths)
@@ -379,6 +383,7 @@ class ItadSourceImplTest {
                   "price": { "amount": 9.99, "amountInt": 999, "currency": "USD" },
                   "regular": { "amount": 19.99, "amountInt": 1999, "currency": "USD" },
                   "cut": 50,
+                  "flag": "N",
                   "url": "https://store/halo"
                 }
               }
@@ -400,6 +405,7 @@ class ItadSourceImplTest {
                   "price": { "amount": 7.49, "amountInt": 749, "currency": "USD" },
                   "regular": { "amount": 19.99, "amountInt": 1999, "currency": "USD" },
                   "cut": 63,
+                  "flag": "H",
                   "url": "https://gog/halo"
                 }
               ]

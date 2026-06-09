@@ -57,6 +57,19 @@ private val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+/**
+ * v8 → v9 — "lowest ever" badge (UI Improvements board, Phase E, #255). Adds the `Deal.isLowestEver`
+ * column. A single nullable-safe `ADD COLUMN` is an in-place, non-destructive migration — the deal
+ * cache is preserved (existing rows take the `DEFAULT 0` and pick the flag up on their next TTL
+ * refetch). The `NOT NULL DEFAULT 0` matches the `@ColumnInfo(defaultValue = "0")` on the entity so
+ * the post-migration schema's identity matches the compiled v9 database (validated on open).
+ */
+private val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `isLowestEver` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

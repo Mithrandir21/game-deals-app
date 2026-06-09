@@ -52,7 +52,14 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, b
         url = url,
         storeLow = storeLow?.toItadMoney(),
         boxart = boxart,
+        isLowestEver = flag.isHistoryLowFlag(),
     )
+
+/**
+ * ITAD's deal `flag` marks a price at its all-time low: `"N"` (just hit a new historical low) or
+ * `"H"` (currently at the historical low). Any other value (incl. `"S"` and `null`) is not (#255).
+ */
+internal fun String?.isHistoryLowFlag(): Boolean = this == "N" || this == "H"
 
 /** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
 internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =
