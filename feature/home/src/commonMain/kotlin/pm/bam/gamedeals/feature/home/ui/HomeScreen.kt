@@ -18,11 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +30,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -132,7 +131,6 @@ private const val CONTENT_TYPE_RANKED = "ranked"
 private const val CONTENT_TYPE_RELEASE = "release"
 private const val CONTENT_TYPE_GIVEAWAY = "giveaway"
 private const val CONTENT_TYPE_BUNDLE = "bundle"
-private const val CONTENT_TYPE_VIEW_ALL_BUTTON = "view_all_button"
 
 @Composable
 internal fun HomeScreen(
@@ -411,7 +409,13 @@ private fun HomeFeed(
 
         // 7. Bundles.
         if (data.bundles.isNotEmpty()) {
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_bundles_label)) }
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) {
+                SectionHeader(
+                    text = stringResource(Res.string.home_screen_bundles_label),
+                    actionText = stringResource(Res.string.home_screen_all_bundles_label),
+                    onActionClick = onViewBundles,
+                )
+            }
             items(
                 count = data.bundles.size,
                 key = { index -> "bundle-${data.bundles[index].id}" },
@@ -419,12 +423,17 @@ private fun HomeFeed(
             ) { index ->
                 HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
             }
-            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) { ViewAllButton(stringResource(Res.string.home_screen_all_bundles_label), onViewBundles) }
         }
 
         // 8. Giveaways.
         if (data.giveaways.isNotEmpty()) {
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_giveaways_label)) }
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) {
+                SectionHeader(
+                    text = stringResource(Res.string.home_screen_giveaways_label),
+                    actionText = stringResource(Res.string.home_screen_all_giveaways_label),
+                    onActionClick = onViewGiveaways,
+                )
+            }
             items(
                 count = data.giveaways.size,
                 key = { index -> "giveaway-${data.giveaways[index].id}" },
@@ -432,7 +441,6 @@ private fun HomeFeed(
             ) { index ->
                 GiveawayRow(data.giveaways[index]) { url -> goToWeb(url, data.giveaways[index].title) }
             }
-            item(contentType = CONTENT_TYPE_VIEW_ALL_BUTTON) { ViewAllButton(stringResource(Res.string.home_screen_all_giveaways_label), onViewGiveaways) }
         }
     }
 }
@@ -463,36 +471,43 @@ private fun LazyListScope.rankedSection(
     }
 }
 
+/**
+ * A light, ITAD-style section header (UI Improvements #252): the title styled as a heading with
+ * no full-bleed primary block, and an optional inline "View all" affordance on the trailing edge
+ * (replacing the old separate full-width [Button] row). The title keeps `heading()` semantics so
+ * TalkBack still navigates by section; the action is a separate, independently actionable node.
+ */
 @Composable
-private fun ViewAllButton(text: String, onClick: () -> Unit) {
-    Button(
-        modifier = Modifier
+private fun SectionHeader(
+    text: String,
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentWidth()
-            .padding(top = GameDealsCustomTheme.spacing.medium, bottom = GameDealsCustomTheme.spacing.large),
-        onClick = onClick,
-    ) {
-        Text(text = text)
-    }
-}
-
-@Composable
-private fun SectionHeader(text: String) {
-    Box(
-        modifier = Modifier
-            .height(80.dp)
-            .fillMaxWidth()
-            .background(color = MaterialTheme.colorScheme.primary)
-            .padding(GameDealsCustomTheme.spacing.medium)
-            .semantics { heading() },
-        contentAlignment = Alignment.Center
+            .padding(
+                start = GameDealsCustomTheme.spacing.medium,
+                end = GameDealsCustomTheme.spacing.small,
+                top = GameDealsCustomTheme.spacing.medium,
+                bottom = GameDealsCustomTheme.spacing.small,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onPrimary,
-            style = MaterialTheme.typography.headlineSmall
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
         )
+        if (actionText != null && onActionClick != null) {
+            TextButton(onClick = onActionClick) {
+                Text(text = actionText)
+            }
+        }
     }
 }
 
