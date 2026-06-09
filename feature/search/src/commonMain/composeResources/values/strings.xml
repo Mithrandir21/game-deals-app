@@ -10,8 +10,6 @@
     <string name="search_screen_list_no_results_state_label">No results found</string>
     <string name="search_screen_list_item_label">Cheapest Deal: %1$s</string>
     <string name="search_screen_list_item_deal_count">%1$d deals</string>
-    <string name="search_screen_list_item_row_description_with_count">%1$s, %2$s, %3$d deals available</string>
-    <string name="search_screen_list_item_row_description_favourite_with_count">%1$s, favourited, %2$s, %3$d deals available</string>
     <string name="search_screen_filter_price_range_label">Price Range</string>
     <string name="search_screen_filter_steam_range_label">Steam Rating</string>
     <string name="search_screen_filter_exact_match_label">Exact Match</string>

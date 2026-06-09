@@ -95,7 +95,7 @@ fun DealHeroTile(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color.Black.copy(alpha = 0.35f), // darken top for the heart
+                                    Color.Black.copy(alpha = 0.45f), // darken top so the white heart keeps contrast over bright art (#257)
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.85f), // darken bottom for the info
                                 ),

@@ -98,8 +98,6 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_em
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_deal_count
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite
-import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite_with_count
-import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_with_count
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_no_results_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_loading_indicator
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_field_label
@@ -294,20 +292,13 @@ private fun SearchResultListItem(
     onToggleWaitlist: () -> Unit,
 ) {
     val showBadge = dealCount > 1
-    // The cheapest deal's store, discount, and prices come straight off the grouped result; the
-    // visible "N deals" badge (separate node) keeps the count it always carried, so the row's
-    // spoken description still names the count for the with-count variants.
-    val rowCd = when {
-        isFavourite && showBadge -> stringResource(
-            Res.string.search_screen_list_item_row_description_favourite_with_count,
-            deal.title, deal.salePriceDenominated, dealCount,
-        )
-        isFavourite -> stringResource(Res.string.search_screen_list_item_row_description_favourite, deal.title, deal.salePriceDenominated)
-        showBadge -> stringResource(
-            Res.string.search_screen_list_item_row_description_with_count,
-            deal.title, deal.salePriceDenominated, dealCount,
-        )
-        else -> stringResource(Res.string.search_screen_list_item_row_description, deal.title, deal.salePriceDenominated)
+    // The row's spoken description names the title + cheapest price only; the separate "N deals"
+    // badge node carries the count, so we deliberately keep it out of the row CD to avoid TalkBack
+    // announcing the count twice (UI Improvements #257).
+    val rowCd = if (isFavourite) {
+        stringResource(Res.string.search_screen_list_item_row_description_favourite, deal.title, deal.salePriceDenominated)
+    } else {
+        stringResource(Res.string.search_screen_list_item_row_description, deal.title, deal.salePriceDenominated)
     }
     val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
     val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
