@@ -3,18 +3,13 @@
 
 package pm.bam.gamedeals.feature.search.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
@@ -31,7 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RangeSlider
@@ -58,36 +51,39 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.serialization.ExperimentalSerializationApi
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.common.ui.PreviewStore
+import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.components.WaitlistHeartButton
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.search.generated.resources.Res
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_data_loading_error_retry
@@ -98,10 +94,8 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_icon
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_price_range_slider_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_filters_rating_range_slider_description
-import pm.bam.gamedeals.feature.search.generated.resources.search_screen_game_image
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_empty_state_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_deal_count
-import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_label
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_list_item_row_description_favourite_with_count
@@ -112,7 +106,9 @@ import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_
 import pm.bam.gamedeals.feature.search.generated.resources.search_screen_search_icon
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 
 @Composable
 internal fun SearchScreen(
@@ -121,6 +117,7 @@ internal fun SearchScreen(
 ) {
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
     val favouriteIds = searchViewModel.waitlistIds.collectAsStateWithLifecycle()
+    val stores = searchViewModel.stores.collectAsStateWithLifecycle()
 
     val initialTitle = searchViewModel.initialQuery
 
@@ -151,11 +148,14 @@ internal fun SearchScreen(
         initialTitle = initialTitle,
         searchData = data.value,
         favouriteIds = favouriteIds.value,
+        stores = stores.value,
+        events = searchViewModel.events,
         onSearchTitleChanged = {
             existingParameters = existingParameters.copy(title = it)
             onSearch()
         },
         onSearchedGame = onSearchedGame,
+        onToggleWaitlist = { gameId -> searchViewModel.toggleWaitlist(gameId) },
         onPriceChanged = { from, to -> existingParameters = existingParameters.copy(lowerPrice = from, upperPrice = to) },
         onSteamMinChanged = { min -> existingParameters = existingParameters.copy(steamMinRating = min) },
         onExactMatch = { exactMatch -> existingParameters = existingParameters.copy(exact = exactMatch) },
@@ -172,8 +172,11 @@ private fun SearchScreenContent(
     initialTitle: String? = null,
     searchData: SearchViewModel.SearchData,
     favouriteIds: ImmutableSet<String>,
+    stores: ImmutableMap<Int, Store> = persistentMapOf(),
+    events: Flow<SearchViewModel.SearchUiEvent> = emptyFlow(),
     onSearchTitleChanged: (text: String) -> Unit,
     onSearchedGame: (gameId: String) -> Unit = {},
+    onToggleWaitlist: (gameId: String) -> Unit = {},
     onPriceChanged: (from: Int?, to: Int?) -> Unit,
     onSteamMinChanged: (min: Int) -> Unit,
     onExactMatch: (exactMatch: Boolean) -> Unit,
@@ -184,6 +187,14 @@ private fun SearchScreenContent(
 
     val errorMessage = stringResource(Res.string.search_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.search_screen_data_loading_error_retry)
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
+
+    // One-shot waitlist sign-in prompt, mirroring Home/Deals/Store.
+    SingleEventEffect(events) { event ->
+        when (event) {
+            SearchViewModel.SearchUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+        }
+    }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -227,6 +238,7 @@ private fun SearchScreenContent(
                 is SearchViewModel.SearchData.SearchResults -> {
                     LazyColumn(
                         modifier = Modifier.padding(innerPadding),
+                        contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         content = {
                             items(
                                 key = { index -> searchData.searchResults[index].gameID },
@@ -237,7 +249,9 @@ private fun SearchScreenContent(
                                     deal = group.cheapestDeal,
                                     dealCount = group.totalDealCount,
                                     isFavourite = group.gameID in favouriteIds,
+                                    store = stores[group.cheapestDeal.storeID],
                                     onGame = { onSearchedGame(group.gameID) },
+                                    onToggleWaitlist = { onToggleWaitlist(group.gameID) },
                                 )
                             }
                         }
@@ -275,9 +289,14 @@ private fun SearchResultListItem(
     deal: Deal,
     dealCount: Int,
     isFavourite: Boolean,
-    onGame: () -> Unit
+    store: Store?,
+    onGame: () -> Unit,
+    onToggleWaitlist: () -> Unit,
 ) {
     val showBadge = dealCount > 1
+    // The cheapest deal's store, discount, and prices come straight off the grouped result; the
+    // visible "N deals" badge (separate node) keeps the count it always carried, so the row's
+    // spoken description still names the count for the with-count variants.
     val rowCd = when {
         isFavourite && showBadge -> stringResource(
             Res.string.search_screen_list_item_row_description_favourite_with_count,
@@ -290,48 +309,35 @@ private fun SearchResultListItem(
         )
         else -> stringResource(Res.string.search_screen_list_item_row_description, deal.title, deal.salePriceDenominated)
     }
-    ListItem(
-        headlineContent = { Text(deal.title) },
-        supportingContent = { Text(stringResource(Res.string.search_screen_list_item_label, deal.salePriceDenominated)) },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .height(60.dp)
-                    .width(100.dp),
-            ) {
-                AsyncImage(
-                    model = deal.thumb,
-                    contentDescription = stringResource(Res.string.search_screen_game_image, deal.title),
-                    error = painterResource(CommonRes.drawable.videogame_thumb),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-                )
-                if (isFavourite) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(GameDealsCustomTheme.spacing.extraSmall)
-                            .size(16.dp),
-                    )
-                }
-            }
-        },
-        trailingContent = if (showBadge) {
-            { DealCountBadge(count = dealCount) }
-        } else null,
-        modifier = Modifier
-            .clickable(role = Role.Button) { onGame() }
-            .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .semantics(mergeDescendants = true) { contentDescription = rowCd }
-    )
-    HorizontalDivider()
+    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
+    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DealListRow(
+            modifier = Modifier.weight(1f),
+            title = deal.title,
+            contentDescription = rowCd,
+            onClick = onGame,
+            imageUrl = deal.thumb,
+            salePrice = deal.salePriceDenominated,
+            regularPrice = deal.normalPriceDenominated,
+            discountPercent = deal.savings.roundToInt(),
+            storeName = store?.storeName,
+            storeIconUrl = store?.iconUrl,
+        )
+        if (showBadge) {
+            DealCountBadge(count = dealCount)
+        }
+        WaitlistHeartButton(
+            isWaitlisted = isFavourite,
+            onToggle = onToggleWaitlist,
+            addToWaitlistContentDescription = addToWaitlistCd,
+            removeFromWaitlistContentDescription = removeFromWaitlistCd,
+        )
+    }
 }
 
 @Composable
@@ -584,6 +590,7 @@ private fun SearchScreenContent_Results_Preview() {
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
             favouriteIds = persistentSetOf("222"),
+            stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },
@@ -604,6 +611,7 @@ private fun SearchScreenContent_Results_Dark_Preview() {
             existingSearchParameters = SearchParameters(),
             searchData = SearchViewModel.SearchData.SearchResults(previewSearchResults),
             favouriteIds = persistentSetOf("222"),
+            stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             onSearchTitleChanged = {},
             onSearchedGame = {},
             onPriceChanged = { _, _ -> },

@@ -19,6 +19,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
@@ -49,6 +51,8 @@ class SearchScreenTest {
     @Before
     fun setup() {
         every { searchViewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
+        every { searchViewModel.stores } returns MutableStateFlow(persistentMapOf())
+        every { searchViewModel.events } returns MutableSharedFlow()
         every { searchViewModel.initialQuery } returns null
     }
 
@@ -187,6 +191,9 @@ class SearchScreenTest {
         every { gameID } returns gameId
         every { this@mockk.title } returns title
         every { salePriceDenominated } returns "Price"
+        every { normalPriceDenominated } returns "Reg"
+        every { savings } returns 0.0
+        every { storeID } returns 1
         every { thumb } returns "Thumb"
     }
 

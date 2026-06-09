@@ -5,11 +5,17 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -25,8 +31,11 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.logging.Logger
 
 @Suppress("NullChecksToSafeCall")
@@ -35,6 +44,7 @@ internal class SearchViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val gamesRepository: GamesRepository,
+    private val storesRepository: StoresRepository,
     private val waitlistRepository: WaitlistRepository,
 ) : ViewModel() {
 
@@ -54,6 +64,20 @@ internal class SearchViewModel(
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    /** Stores keyed by id, for resolving each result's cheapest-deal store name/icon (UI Improvements #251). */
+    val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()
+        .map { list -> list.associateBy { it.storeID }.toImmutableMap() }
+        .onStart { emit(persistentMapOf()) }
+        .catch { emit(persistentMapOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentMapOf())
+
+    val events: SharedFlow<SearchUiEvent>
+        field = MutableSharedFlow<SearchUiEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     init {
         viewModelScope.launch {
@@ -96,6 +120,15 @@ internal class SearchViewModel(
         }
     }
 
+    /** Toggle a game on/off the waitlist from an inline row heart; prompts sign-in when logged out. */
+    fun toggleWaitlist(gameId: String) {
+        viewModelScope.launch {
+            if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(SearchUiEvent.SignInRequired)
+            }
+        }
+    }
+
     sealed class SearchData {
         data object Empty : SearchData()
         data object Loading : SearchData()
@@ -106,5 +139,10 @@ internal class SearchViewModel(
         data class SearchResults(
             val searchResults: ImmutableList<GroupedSearchResult>
         ) : SearchData()
+    }
+
+    internal sealed interface SearchUiEvent {
+        /** The user tapped a waitlist heart while logged out. */
+        data object SignInRequired : SearchUiEvent
     }
 }
