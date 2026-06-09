@@ -36,7 +36,7 @@ class ItadAccountSourceImplTest {
             when {
                 request.url.encodedPath == "/user/info/v2" -> respond("""{"username":"alice"}""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/waitlist/games/v1" && request.method == HttpMethod.Get ->
-                    respond("""[{"id":"uuid-1","title":"Hades","assets":{"boxart":"box.jpg"}}]""", HttpStatusCode.OK, jsonHeaders)
+                    respond("""[{"id":"uuid-1","title":"Hades","assets":{"boxart":"box.jpg","banner300":"banner300.jpg"}}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/collection/games/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"uuid-2","title":"Celeste"}]""", HttpStatusCode.OK, jsonHeaders)
                 else -> respond("", HttpStatusCode.NoContent) // PUT/DELETE writes
@@ -64,7 +64,7 @@ class ItadAccountSourceImplTest {
         assertEquals(1, entries.size)
         assertEquals("uuid-1", entries.single().gameId)
         assertEquals("Hades", entries.single().title)
-        assertEquals("box.jpg", entries.single().boxart)
+        assertEquals("banner300.jpg", entries.single().boxart) // prioritized banner300 over boxart
         assertEquals("/waitlist/games/v1", recorded.single().url.encodedPath)
     }
 

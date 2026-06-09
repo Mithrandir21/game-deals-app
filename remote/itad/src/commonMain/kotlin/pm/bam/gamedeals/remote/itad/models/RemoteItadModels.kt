@@ -35,8 +35,18 @@ data class RemoteItadShop(
 data class RemoteItadGameAssets(
     @SerialName("boxart") val boxart: String? = null,
     @SerialName("banner300") val banner300: String? = null,
+    @SerialName("banner400") val banner400: String? = null,
     @SerialName("banner600") val banner600: String? = null,
 )
+
+/**
+ * Prioritizes wide-aspect banners over the portrait boxart (epic #219, Phase 5), smallest first so
+ * list rows fetch the lightest art that fills the slot. Order: banner300 -> banner400 -> banner600 -> boxart.
+ */
+fun RemoteItadGameAssets?.bestArt(): String? {
+    if (this == null) return null
+    return banner300 ?: banner400 ?: banner600 ?: boxart
+}
 
 @Serializable
 data class RemoteItadSearchGame(

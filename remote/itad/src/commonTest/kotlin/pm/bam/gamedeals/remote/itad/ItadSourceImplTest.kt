@@ -120,7 +120,7 @@ class ItadSourceImplTest {
         assertEquals("USD", deal.price.currency)
         assertEquals(50, deal.cutPercent)
         assertEquals("https://store/halo", deal.url)
-        assertEquals("halo-box.png", deal.boxart)
+        assertEquals("halo-banner300.png", deal.boxart) // prioritized banner300 over boxart
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -224,7 +224,7 @@ class ItadSourceImplTest {
         assertEquals(1, results.size)
         assertEquals("uuid-1", results.first().id)
         assertEquals("Halo", results.first().title)
-        assertEquals("box.png", results.first().boxart)
+        assertEquals("banner400.png", results.first().boxart) // prioritized banner400 over boxart
         assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
     }
 
@@ -254,7 +254,7 @@ class ItadSourceImplTest {
         assertEquals("\$9.99", deal.salePriceDenominated)
         assertEquals(19.99, deal.normalPriceValue)
         assertEquals(50.0, deal.savings)
-        assertEquals("halo-box.png", deal.thumb)
+        assertEquals("halo-banner300.png", deal.thumb) // prioritized banner300 over boxart
         assertEquals("https://store/halo", deal.url)
         // ITAD provides none of these.
         assertNull(deal.steamRatingPercent)
@@ -278,7 +278,7 @@ class ItadSourceImplTest {
         assertEquals(35, deal.storeID)
         assertEquals("Halo", deal.title)
         assertEquals(7.49, deal.salePriceValue)
-        assertEquals("box.png", deal.thumb)
+        assertEquals("banner400.png", deal.thumb) // prioritized banner400 over boxart
 
         val paths = recordedRequests.map { it.url.encodedPath }
         assertTrue("/games/search/v1" in paths)
@@ -316,7 +316,7 @@ class ItadSourceImplTest {
 
         assertEquals(1, games.size)
         assertEquals("uuid-1", games.first().gameID)
-        assertEquals("box.png", games.first().thumb)
+        assertEquals("banner400.png", games.first().thumb) // prioritized banner400 over boxart
         assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
     }
 
@@ -373,7 +373,7 @@ class ItadSourceImplTest {
                 "id": "uuid-1",
                 "slug": "halo",
                 "title": "Halo",
-                "assets": { "boxart": "halo-box.png" },
+                "assets": { "boxart": "halo-box.png", "banner300": "halo-banner300.png" },
                 "deal": {
                   "shop": { "id": 61, "name": "Steam" },
                   "price": { "amount": 9.99, "amountInt": 999, "currency": "USD" },
@@ -386,7 +386,8 @@ class ItadSourceImplTest {
           }"""
 
         // language=JSON — /games/info/v2 returns a single game object (title + assets).
-        private const val INFO_BODY = """{ "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "info-box.png" } }"""
+        private const val INFO_BODY =
+            """{ "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "info-box.png", "banner400": "info-banner400.png" } }"""
 
         // language=JSON
         private const val PRICES_BODY = """[
@@ -420,7 +421,8 @@ class ItadSourceImplTest {
           ]"""
 
         // language=JSON
-        private const val SEARCH_BODY = """[ { "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "box.png" } } ]"""
+        private const val SEARCH_BODY =
+            """[ { "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "box.png", "banner400": "banner400.png" } } ]"""
 
         // language=JSON
         private const val LOOKUP_BODY = """{ "found": true, "game": { "id": "uuid-1", "slug": "halo", "title": "Halo" } }"""

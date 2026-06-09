@@ -16,6 +16,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadPrice
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadShop
 import pm.bam.gamedeals.remote.itad.models.RemoteItadShopRef
+import pm.bam.gamedeals.remote.itad.models.bestArt
 
 internal fun RemoteItadPrice.toItadMoney(): ItadMoney =
     ItadMoney(amount = amount, currency = currency)
@@ -55,7 +56,7 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, b
 
 /** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
 internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =
-    deal.toItadDeal(gameId = id, gameTitle = title, boxart = assets?.boxart ?: assets?.banner300 ?: assets?.banner600)
+    deal.toItadDeal(gameId = id, gameTitle = title, boxart = assets.bestArt())
 
 internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null): ItadGameSearchResult =
     ItadGameSearchResult(
@@ -63,7 +64,7 @@ internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null
         title = title,
         slug = slug,
         steamAppId = steamAppId,
-        boxart = assets?.boxart ?: assets?.banner300 ?: assets?.banner600,
+        boxart = assets.bestArt(),
     )
 
 internal fun RemoteItadGamePrices.toItadGamePrices(): ItadGamePrices =

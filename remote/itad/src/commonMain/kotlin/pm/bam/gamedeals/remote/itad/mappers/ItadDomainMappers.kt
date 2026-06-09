@@ -15,6 +15,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.models.ItadMoney
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
+import pm.bam.gamedeals.remote.itad.models.bestArt
 
 /**
  * ITAD-shaped models → the app's (CheapShark-shaped) domain models (epic #205, Phase 2b).
@@ -104,7 +105,7 @@ private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
 internal fun RemoteItadBundle.toBundle(): Bundle {
     val games = tiers.flatMap { it.games }
         .distinctBy { it.id }
-        .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets?.boxart.orEmpty()) }
+        .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets.bestArt().orEmpty()) }
         .toImmutableList()
     val cheapest = tiers.mapNotNull { it.price }.minByOrNull { it.amount }
     return Bundle(

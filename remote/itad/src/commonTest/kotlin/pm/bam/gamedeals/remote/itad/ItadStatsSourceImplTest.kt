@@ -56,6 +56,9 @@ class ItadStatsSourceImplTest {
                 "/stats/most-collected/v1" -> COLLECTED_BODY
                 "/stats/most-popular/v1" -> POPULAR_BODY
                 "/games/prices/v3" -> PRICES_BODY
+                "/games/info/v2" -> {
+                    if (request.url.parameters["id"] == "g1") INFO_BODY_G1 else ""
+                }
                 else -> ""
             }
             respond(
@@ -74,23 +77,26 @@ class ItadStatsSourceImplTest {
     }
 
     @Test
-    fun fetchMostWaitlisted_maps_rankings_and_enriches_cheapest_price() = runTest {
+    fun fetchMostWaitlisted_maps_rankings_and_enriches_cheapest_price_and_boxart() = runTest {
         val ranked = impl.fetchMostWaitlisted(limit = 2)
 
         assertEquals(2, ranked.size)
         assertEquals("g1", ranked.first().gameId)
         assertEquals("Game One", ranked.first().title)
-        assertNull(ranked.first().boxart) // stats carry no boxart
+        assertEquals("https://assets/g1_banner400.jpg", ranked.first().boxart) // prioritized banner400 over boxart
         assertEquals("$5.99", ranked.first().priceDenominated) // cheapest of g1's two deals
-        // g2 has no price entry → left null (best-effort enrichment)
+
+        // g2 has no price entry and no info entry → left null (best-effort enrichment)
         assertEquals("g2", ranked[1].gameId)
         assertNull(ranked[1].priceDenominated)
+        assertNull(ranked[1].boxart)
 
         val stats = recordedRequests.first().url
         assertEquals("/stats/most-waitlisted/v1", stats.encodedPath)
         assertEquals("2", stats.parameters["limit"])
         assertEquals("0", stats.parameters["offset"])
         assertTrue(recordedRequests.any { it.url.encodedPath == "/games/prices/v3" })
+        assertTrue(recordedRequests.any { it.url.encodedPath == "/games/info/v2" && it.url.parameters["id"] == "g1" })
     }
 
     @Test
@@ -112,6 +118,14 @@ class ItadStatsSourceImplTest {
         ]"""
         private const val COLLECTED_BODY = """[ { "position": 1, "id": "g1", "title": "Game One", "count": 50 } ]"""
         private const val POPULAR_BODY = """[ { "position": 1, "id": "g1", "title": "Game One", "count": 50 } ]"""
+        private const val INFO_BODY_G1 = """{
+            "id": "g1",
+            "title": "Game One",
+            "assets": {
+                "boxart": "https://assets/g1_box.jpg",
+                "banner400": "https://assets/g1_banner400.jpg"
+            }
+        }"""
         private const val PRICES_BODY = """[
             {
               "id": "g1",
