@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,7 +46,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -57,9 +54,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
@@ -70,14 +70,17 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.PreviewRelease
+import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DealHeroTile
+import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
-import pm.bam.gamedeals.common.ui.home.HeroGridTile
-import pm.bam.gamedeals.common.ui.home.RankedGameRow
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -87,6 +90,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveaways_label
@@ -144,6 +148,7 @@ internal fun HomeScreen(
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val stores = viewModel.stores.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
@@ -153,11 +158,13 @@ internal fun HomeScreen(
         onReleaseTitle = { title -> viewModel.onReleaseGame(title) },
         data = data.value,
         waitlistIds = waitlistIds.value,
+        stores = stores.value,
         snackbarHostState = snackbarHostState,
         dealDetails = dealDetails.value,
         onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
             viewModel.loadDealDetails(dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
         },
+        onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
         goToGame = goToGame,
         onViewGiveaways = onViewGiveaways,
         onViewBundles = onViewBundles,
@@ -186,8 +193,10 @@ private fun HomeScreenContent(
     onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
+    stores: ImmutableMap<Int, Store>,
     dealDetails: DealBottomSheetData?,
     onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
@@ -225,8 +234,10 @@ private fun HomeScreenContent(
                     HomeFeed(
                         data = data,
                         waitlistIds = waitlistIds,
+                        stores = stores,
                         onReleaseTitle = onReleaseTitle,
                         onViewDealDetails = onViewDealDetails,
+                        onToggleWaitlist = onToggleWaitlist,
                         goToGame = goToGame,
                         onViewGiveaways = onViewGiveaways,
                         onViewBundles = onViewBundles,
@@ -264,14 +275,18 @@ private fun HomeScreenContent(
 private fun HomeFeed(
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
+    stores: ImmutableMap<Int, Store>,
     onReleaseTitle: (title: String) -> Unit,
     onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
+    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
+    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         // 1. Account stat cards (logged-in only).
         data.accountStats?.let { stats ->
@@ -313,10 +328,17 @@ private fun HomeFeed(
                     horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
                     heroRows[index].forEach { deal ->
-                        HeroGridTile(
+                        val store = stores[deal.storeID]
+                        DealHeroTile(
                             deal = deal,
+                            storeName = store?.storeName,
+                            storeIconUrl = store?.iconUrl,
                             contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
                             onClick = { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                            isWaitlisted = deal.gameID in waitlistIds,
+                            onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
+                            addToWaitlistContentDescription = addToWaitlistCd,
+                            removeFromWaitlistContentDescription = removeFromWaitlistCd,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -335,7 +357,27 @@ private fun HomeFeed(
                 contentType = { CONTENT_TYPE_DEAL },
             ) { index ->
                 val deal = data.trending[index]
-                HomeDealRow(deal, deal.gameID in waitlistIds, onViewDealDetails)
+                val store = stores[deal.storeID]
+                val isWaitlisted = deal.gameID in waitlistIds
+                DealListRow(
+                    title = deal.title,
+                    contentDescription = stringResource(
+                        if (isWaitlisted) Res.string.home_screen_store_deal_row_description_favourite
+                        else Res.string.home_screen_store_deal_row_description,
+                        deal.title, deal.normalPriceDenominated, deal.salePriceDenominated,
+                    ),
+                    onClick = { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                    imageUrl = deal.thumb,
+                    salePrice = deal.salePriceDenominated,
+                    regularPrice = deal.normalPriceDenominated,
+                    discountPercent = deal.savings.roundToInt(),
+                    storeName = store?.storeName,
+                    storeIconUrl = store?.iconUrl,
+                    isWaitlisted = isWaitlisted,
+                    onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
+                    addToWaitlistContentDescription = addToWaitlistCd,
+                    removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                )
             }
         }
 
@@ -411,7 +453,13 @@ private fun LazyListScope.rankedSection(
         val game = games[index]
         val cd = game.priceDenominated?.let { stringResource(Res.string.home_screen_ranked_game_description, game.title, it) }
             ?: stringResource(Res.string.home_screen_ranked_game_description_no_price, game.title)
-        RankedGameRow(game = game, contentDescription = cd, onClick = { goToGame(game.gameId) })
+        DealListRow(
+            title = game.title,
+            contentDescription = cd,
+            onClick = { goToGame(game.gameId) },
+            imageUrl = game.boxart,
+            salePrice = game.priceDenominated,
+        )
     }
 }
 
@@ -425,78 +473,6 @@ private fun ViewAllButton(text: String, onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Text(text = text)
-    }
-}
-
-@Composable
-private fun HomeDealRow(
-    deal: Deal,
-    isWaitlisted: Boolean,
-    onViewDealDetails: ((dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit)
-) {
-    val rowCd = stringResource(
-        if (isWaitlisted) Res.string.home_screen_store_deal_row_description_favourite
-        else Res.string.home_screen_store_deal_row_description,
-        deal.title,
-        deal.normalPriceDenominated,
-        deal.salePriceDenominated,
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small)
-            .semantics(mergeDescendants = true) { contentDescription = rowCd },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                .height(60.dp)
-                .width(100.dp)
-        ) {
-            AsyncImage(
-                model = deal.thumb,
-                contentDescription = stringResource(Res.string.home_screen_game_image, deal.title),
-                contentScale = ContentScale.Fit,
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-            )
-            if (isWaitlisted) {
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(GameDealsCustomTheme.spacing.extraSmall)
-                        .size(16.dp),
-                )
-            }
-        }
-        Text(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = GameDealsCustomTheme.spacing.small),
-            textAlign = TextAlign.Start,
-            text = deal.title
-        )
-        Text(
-            modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium),
-            style = TextStyle(textDecoration = TextDecoration.LineThrough),
-            text = deal.normalPriceDenominated
-        )
-        Text(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.extraSmall)
-                .padding(GameDealsCustomTheme.spacing.medium),
-            text = deal.salePriceDenominated,
-        )
-        Spacer(Modifier.padding(GameDealsCustomTheme.spacing.small))
     }
 }
 
@@ -723,8 +699,10 @@ private fun HomeScreenContent_Success_Preview() {
             onReleaseTitle = {},
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
+            stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
+            onToggleWaitlist = {},
             goToGame = {},
             onViewGiveaways = {},
             onViewBundles = {},
@@ -748,8 +726,10 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onReleaseTitle = {},
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
+            stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
+            onToggleWaitlist = {},
             goToGame = {},
             onViewGiveaways = {},
             onViewBundles = {},
@@ -773,8 +753,10 @@ private fun HomeScreenContent_Loading_Preview() {
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.LOADING),
             waitlistIds = persistentSetOf(),
+            stores = persistentMapOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
+            onToggleWaitlist = {},
             goToGame = {},
             onViewGiveaways = {},
             onViewBundles = {},
@@ -798,8 +780,10 @@ private fun HomeScreenContent_Error_Preview() {
             onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.ERROR),
             waitlistIds = persistentSetOf(),
+            stores = persistentMapOf(),
             dealDetails = null,
             onViewDealDetails = { _, _, _, _, _, _ -> },
+            onToggleWaitlist = {},
             goToGame = {},
             onViewGiveaways = {},
             onViewBundles = {},

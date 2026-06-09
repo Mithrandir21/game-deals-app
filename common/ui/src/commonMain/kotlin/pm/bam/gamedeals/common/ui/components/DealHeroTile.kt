@@ -53,7 +53,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 @Composable
 fun DealHeroTile(
     deal: Deal,
-    storeName: String,
+    storeName: String?,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -115,11 +115,13 @@ fun DealHeroTile(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        StoreLabel(
-                            storeName = storeName,
-                            iconUrl = storeIconUrl,
-                            color = Color.White.copy(alpha = 0.85f),
-                        )
+                        if (storeName != null) {
+                            StoreLabel(
+                                storeName = storeName,
+                                iconUrl = storeIconUrl,
+                                color = Color.White.copy(alpha = 0.85f),
+                            )
+                        }
                     }
                     Column(
                         horizontalAlignment = Alignment.End,

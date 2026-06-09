@@ -4,10 +4,13 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -36,6 +39,7 @@ import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -92,6 +96,13 @@ internal class HomeViewModel(
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    /** Stores keyed by id, for resolving each feed deal's store name/icon in the UI (UI Improvements #248). */
+    val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()
+        .map { list -> list.associateBy { it.storeID }.toImmutableMap() }
+        .onStart { emit(persistentMapOf()) }
+        .catch { emit(persistentMapOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentMapOf())
 
     private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
     val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
@@ -167,9 +178,12 @@ internal class HomeViewModel(
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
 
-    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) {
+    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleWaitlist(data.gameId)
+
+    /** Toggle a game on/off the waitlist from an inline heart; prompts sign-in when logged out. */
+    fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(data.gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+            if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
                 events.tryEmit(HomeUiEvent.SignInRequired)
             }
         }

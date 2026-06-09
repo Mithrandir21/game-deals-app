@@ -53,7 +53,9 @@ import kotlin.test.assertTrue
 
 class HomeViewModelTest : MainDispatcherTest() {
 
-    private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
+    private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
+        every { observeStores() } returns flowOf(emptyList())
+    }
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit) {
         everySuspend { getDeals(any()) } returns emptyList()
