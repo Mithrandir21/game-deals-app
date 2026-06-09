@@ -174,9 +174,12 @@ internal class DealsViewModel(
         dealDetailsController.dismiss(viewModelScope)
     }
 
-    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) {
+    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleWaitlist(data.gameId)
+
+    /** Toggle a game on/off the waitlist from an inline row heart; prompts sign-in when logged out. */
+    fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(data.gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+            if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
                 events.tryEmit(DealsUiEvent.SignInRequired)
             }
         }

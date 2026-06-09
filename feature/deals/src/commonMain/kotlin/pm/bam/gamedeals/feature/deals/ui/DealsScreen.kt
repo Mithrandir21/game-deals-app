@@ -1,8 +1,6 @@
 package pm.bam.gamedeals.feature.deals.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,24 +10,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -42,40 +31,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description_waitlisted
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_empty_label
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_game_image
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_load_more_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_retry
@@ -85,8 +65,9 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_recently_ad
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_top_discount
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 // Trigger a load-more when the user scrolls within this many rows of the end of the loaded page.
 private const val LOAD_MORE_THRESHOLD = 5
@@ -134,6 +115,7 @@ internal fun DealsScreen(
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
+        onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -158,6 +140,7 @@ private fun DealsContent(
     onDismissDealDetails: () -> Unit,
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
@@ -165,6 +148,9 @@ private fun DealsContent(
     val listState = rememberLazyListState()
     val errorMessage = stringResource(Res.string.deals_screen_loading_error_msg)
     val errorRetry = stringResource(Res.string.deals_screen_loading_error_retry)
+    val storesById = remember(stores) { stores.associateBy(Store::storeID) }
+    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
+    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
     // against duplicate/exhausted calls (appending / endReached / non-Data state).
@@ -227,13 +213,30 @@ private fun DealsContent(
                         else -> LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             state = listState,
-                            contentPadding = PaddingValues(GameDealsCustomTheme.spacing.medium),
-                            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         ) {
                             items(items = data.deals, key = { it.dealID }) { deal ->
-                                DealRow(deal, deal.gameID in waitlistIds) {
-                                    onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url)
-                                }
+                                val store = storesById[deal.storeID]
+                                val isWaitlisted = deal.gameID in waitlistIds
+                                DealListRow(
+                                    title = deal.title,
+                                    contentDescription = stringResource(
+                                        if (isWaitlisted) Res.string.deals_screen_deal_row_description_waitlisted
+                                        else Res.string.deals_screen_deal_row_description,
+                                        deal.title, deal.salePriceDenominated,
+                                    ),
+                                    onClick = { onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                                    imageUrl = deal.thumb,
+                                    salePrice = deal.salePriceDenominated,
+                                    regularPrice = deal.normalPriceDenominated,
+                                    discountPercent = deal.savings.roundToInt(),
+                                    storeName = store?.storeName,
+                                    storeIconUrl = store?.iconUrl,
+                                    isWaitlisted = isWaitlisted,
+                                    onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
+                                    addToWaitlistContentDescription = addToWaitlistCd,
+                                    removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                                )
                             }
                             if (data.appending) {
                                 item(key = "deals-load-more-spinner") {
@@ -317,77 +320,6 @@ private fun ShopFilterRow(
                 selected = store.storeID in selected,
                 onClick = { onToggleShop(store.storeID) },
                 label = { Text(store.storeName) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun DealRow(
-    deal: Deal,
-    isWaitlisted: Boolean,
-    onViewDealDetails: ((deal: Deal) -> Unit),
-) {
-    val dealRowCd = stringResource(
-        if (isWaitlisted) Res.string.deals_screen_deal_row_description_waitlisted
-        else Res.string.deals_screen_deal_row_description,
-        deal.title,
-        deal.salePriceDenominated,
-    )
-    Card {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button) { onViewDealDetails(deal) }
-                .padding(
-                    start = GameDealsCustomTheme.spacing.small,
-                    top = GameDealsCustomTheme.spacing.extraSmall,
-                    end = GameDealsCustomTheme.spacing.medium,
-                    bottom = GameDealsCustomTheme.spacing.extraSmall,
-                )
-                .semantics(mergeDescendants = true) { contentDescription = dealRowCd },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .height(60.dp)
-                    .width(100.dp),
-            ) {
-                AsyncImage(
-                    model = deal.thumb,
-                    contentDescription = stringResource(Res.string.deals_screen_game_image, deal.title),
-                    error = painterResource(CommonRes.drawable.videogame_thumb),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
-                )
-                if (isWaitlisted) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(GameDealsCustomTheme.spacing.extraSmall)
-                            .size(16.dp),
-                    )
-                }
-            }
-            Text(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = GameDealsCustomTheme.spacing.medium),
-                textAlign = TextAlign.Start,
-                text = deal.title,
-            )
-            Text(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-                    .padding(GameDealsCustomTheme.spacing.medium),
-                text = deal.salePriceDenominated,
             )
         }
     }
