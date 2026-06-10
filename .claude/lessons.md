@@ -11,6 +11,8 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 
 | ID | TL;DR | Tags |
 |---|---|---|
+| L-2026-06-10-02 | ITAD `/deals` & `/prices` entries include a nullable `voucher` code and `flag` (N=new low, H=at low, S=store low) absent from the docs schema. | itad, api, networking |
+| L-2026-06-10-01 | isSystemInDarkTheme ignores forced-dark previews/explicit darkTheme=; derive custom colors from the active ColorScheme (surface.luminance()). | compose, theme, preview, dark-theme |
 | L-2026-06-01-01 | Each `Res.drawable.X`/`Res.string.X` is an extension property — a missing import reads as "Unresolved reference X", not a resource-gen failure. | compose-resources, kmp, imports, build-error |
 | L-2026-05-27-03 | Delimit suffix with `\s+[-–—]\s+`, match keyword via `endsWith` on the lowercased tail, iterate to stable. | igdb, parsing, regex |
 | L-2026-05-27-02 | When IGDB external_games returns empty for a Steam id from CheapShark, the id may be a /subs/ id — fall back to title lookup. | igdb, cheapshark, kmp |
@@ -106,6 +108,24 @@ Each lesson has an immutable ID. When a lesson is superseded or turns out to be 
 | L-2026-04-20-01 | When resolving merge conflicts on a long-running migration branch, map them by *feature* — not file-by-file — and decide per feature. | merge-conflicts, migration, di, architecture |
 
 ## Active
+
+### L-2026-06-10-02 · ITAD deal entries carry undocumented voucher and flag (N/H/S) fields
+**TL;DR:** ITAD `/deals` & `/prices` entries include a nullable `voucher` code and `flag` (N=new low, H=at low, S=store low) absent from the docs schema.
+`active` · `confirmed` · 2026-06-10 · `itad` `api` `networking`
+**Applies to:** Mapping ITAD deal/price entries (`RemoteItadDealEntry`) in `:remote:itad`.
+
+ITAD's published docs schema omits fields the live API returns. Each deal/price entry carries a nullable `voucher` string (store coupon code; drives the website's scissors badge) and a `flag`: `"N"` = new historical low, `"H"` = at historical low, `"S"` = lowest-ever price *at that store*. The DTO previously only modelled `flag` (N/H → "lowest ever") and ignored `voucher`. When you need a signal ITAD's own UI shows, check a real response — not the docs. `Json { ignoreUnknownKeys = true }` means missing DTO fields fail silent, not loud.
+
+**Source:** Mapping `voucher` + splitting `flag` into N/S/voucher badges for the deal-badge feature.
+
+### L-2026-06-10-01 · Custom theme colors: read the active scheme, not isSystemInDarkTheme
+**TL;DR:** isSystemInDarkTheme ignores forced-dark previews/explicit darkTheme=; derive custom colors from the active ColorScheme (surface.luminance()).
+`active` · `tentative` · 2026-06-10 · `compose` `theme` `preview` `dark-theme`
+**Applies to:** Choosing colors outside the M3 ColorScheme roles (custom brand/badge tokens) that must differ by light/dark.
+
+Material3 swaps the active `ColorScheme` per `darkTheme`, but `isSystemInDarkTheme()` reads the OS setting — so it returns the wrong value inside a `GameDealsTheme(darkTheme = true)` block, a forced-dark `@Preview`, or any caller overriding the system theme. For custom colors with no M3 role (e.g. a badge's orange token), pick light/dark from the active scheme: `MaterialTheme.colorScheme.surface.luminance() < 0.5f`. The existing `fullscreenSemiTransparentBackground()` uses `isSystemInDarkTheme()` and has this latent bug. Not visually eyeballed this session — reasoning plus that helper's bug back it.
+
+**Source:** Adding the orange "N" new-low badge token in `DealFlagBadges.kt`/`Color.kt`.
 
 ### L-2026-06-01-01 · Import each Compose Resources accessor — they're extension properties
 **TL;DR:** Each `Res.drawable.X`/`Res.string.X` is an extension property — a missing import reads as "Unresolved reference X", not a resource-gen failure.
