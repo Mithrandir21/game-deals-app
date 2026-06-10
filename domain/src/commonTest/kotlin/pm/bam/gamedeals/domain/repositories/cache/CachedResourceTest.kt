@@ -1,9 +1,11 @@
 package pm.bam.gamedeals.domain.repositories.cache
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -159,5 +161,64 @@ class CachedResourceTest {
         assertEquals(1, refreshCount)
         // force avoids the read-and-compare path entirely
         assertEquals(0, readCount)
+    }
+
+    @Test
+    fun refresh_failure_with_nonempty_cache_is_swallowed_and_serves_stale() = runTest {
+        val clock = MutableClock(initial = 1_000)
+        // expired entry: a refresh is attempted, but the cache is non-empty
+        val cache = CachedResource(
+            clock = clock,
+            read = { listOf(Entry(id = 1, expires = clock.nowMillis - 1)) },
+            expiresAtMillis = { it.expires },
+            refresh = { throw RuntimeException("network down") },
+        )
+
+        // No exception propagates; the stale entry is kept (serve-stale-on-error).
+        val refreshed = cache.refreshIfNeeded()
+
+        assertTrue(refreshed) // refresh was attempted
+    }
+
+    @Test
+    fun refresh_failure_with_empty_cache_rethrows() = runTest {
+        val clock = MutableClock(initial = 1_000)
+        val cache = CachedResource(
+            clock = clock,
+            read = { emptyList<Entry>() },
+            expiresAtMillis = { it.expires },
+            refresh = { throw RuntimeException("network down") },
+        )
+
+        // Nothing to fall back to, so the failure must surface.
+        assertFailsWith<RuntimeException> { cache.refreshIfNeeded() }
+    }
+
+    @Test
+    fun refresh_failure_with_surfaceErrors_rethrows_even_with_cached_data() = runTest {
+        val clock = MutableClock(initial = 1_000)
+        val cache = CachedResource(
+            clock = clock,
+            read = { listOf(Entry(id = 1, expires = clock.nowMillis - 1)) },
+            expiresAtMillis = { it.expires },
+            refresh = { throw RuntimeException("network down") },
+        )
+
+        // surfaceErrors opts a pull-to-refresh caller into seeing the failure despite stale rows.
+        assertFailsWith<RuntimeException> { cache.refreshIfNeeded(surfaceErrors = true) }
+    }
+
+    @Test
+    fun refresh_cancellation_is_always_rethrown() = runTest {
+        val clock = MutableClock(initial = 1_000)
+        val cache = CachedResource(
+            clock = clock,
+            read = { listOf(Entry(id = 1, expires = clock.nowMillis - 1)) },
+            expiresAtMillis = { it.expires },
+            refresh = { throw CancellationException("cancelled") },
+        )
+
+        // Cancellation must never be swallowed by serve-stale-on-error.
+        assertFailsWith<CancellationException> { cache.refreshIfNeeded() }
     }
 }

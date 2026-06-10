@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.cache
 
+import kotlinx.coroutines.CancellationException
 import pm.bam.gamedeals.common.time.Clock
 
 /**
@@ -34,13 +35,30 @@ class CachedResource<T>(
     /**
      * Refreshes the underlying cache when needed.
      *
+     * **Serve-stale-on-error:** when [refresh] fails, the previously-cached entries are kept
+     * (even if expired) rather than propagating the failure — so a flaky network or an ITAD
+     * rate-limit degrades to last-known data instead of an error. The failure is only rethrown
+     * when there is nothing to fall back to (the cache is empty) or when the caller opts in via
+     * [surfaceErrors] (e.g. an explicit pull-to-refresh that wants to show a retry/snackbar while
+     * still displaying the stale rows). [CancellationException] is always rethrown so structured
+     * concurrency is preserved.
+     *
      * @param force When `true`, skips the freshness check and always invokes [refresh].
-     * @return `true` when [refresh] was invoked, `false` when the cache was considered fresh.
+     * @param surfaceErrors When `true`, a failed [refresh] is rethrown even if cached data exists.
+     * @return `true` when [refresh] was invoked (whether or not it succeeded), `false` when the
+     *   cache was considered fresh and no refresh ran.
      */
-    suspend fun refreshIfNeeded(force: Boolean = false): Boolean {
+    suspend fun refreshIfNeeded(force: Boolean = false, surfaceErrors: Boolean = false): Boolean {
         val needed = force || isStale()
-        if (needed) refresh()
-        return needed
+        if (!needed) return false
+        try {
+            refresh()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Throwable) {
+            if (surfaceErrors || read().isEmpty()) throw error
+        }
+        return true
     }
 
     private suspend fun isStale(): Boolean {

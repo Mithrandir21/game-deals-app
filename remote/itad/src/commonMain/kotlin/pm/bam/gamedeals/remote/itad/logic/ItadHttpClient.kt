@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad.logic
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -9,6 +10,7 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.client.request.url
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
@@ -42,6 +44,16 @@ internal fun itadHttpClient(
             requestTimeoutMillis = 30_000
         }
 
+        // ITAD rate-limits without published quotas and can revoke access without notice, so a 429
+        // must be weathered rather than surfaced as an error. Retry transparently on 429 only —
+        // safe for any HTTP method since the request was throttled, not processed — honoring the
+        // server's `Retry-After` header and otherwise backing off exponentially.
+        install(HttpRequestRetry) {
+            maxRetries = ITAD_MAX_RETRIES
+            retryIf { _, response -> response.status == HttpStatusCode.TooManyRequests }
+            exponentialDelay(respectRetryAfterHeader = true)
+        }
+
         when (buildUtil.buildType()) {
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
@@ -61,3 +73,6 @@ internal fun itadHttpClient(
 
 internal const val ITAD_HOST = "api.isthereanydeal.com"
 internal const val ITAD_BASE_URL = "https://api.isthereanydeal.com"
+
+/** Retry attempts after the initial request when ITAD returns 429 (see [itadHttpClient]). */
+private const val ITAD_MAX_RETRIES = 3

@@ -34,6 +34,7 @@ import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -374,6 +375,62 @@ class ItadSourceImplTest {
         val request = recorded.single()
         assertEquals("test-key", request.headers["ITAD-API-Key"])
         assertEquals(ITAD_HOST, request.url.host)
+    }
+
+    @Test
+    fun itadHttpClient_retries_on_429_then_succeeds() = runTest {
+        var attempts = 0
+        val engine = MockEngine { _ ->
+            attempts++
+            if (attempts == 1) {
+                respond(
+                    content = "",
+                    status = HttpStatusCode.TooManyRequests,
+                    headers = headersOf(HttpHeaders.RetryAfter, "0"),
+                )
+            } else {
+                respond(
+                    content = SHOPS_BODY,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            }
+        }
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = engine,
+        )
+
+        val shops = ItadShopsApi(client).getShops().getOrThrow()
+
+        assertEquals(2, attempts) // initial 429 + one retry that succeeded
+        assertTrue(shops.isNotEmpty())
+    }
+
+    @Test
+    fun itadHttpClient_gives_up_after_max_retries_on_persistent_429() = runTest {
+        var attempts = 0
+        val engine = MockEngine { _ ->
+            attempts++
+            respond(
+                content = "",
+                status = HttpStatusCode.TooManyRequests,
+                headers = headersOf(HttpHeaders.RetryAfter, "0"),
+            )
+        }
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = engine,
+        )
+
+        assertFailsWith<Throwable> { ItadShopsApi(client).getShops().getOrThrow() }
+
+        // 1 initial attempt + 3 retries (ITAD_MAX_RETRIES)
+        assertEquals(4, attempts)
     }
 
     private companion object {
