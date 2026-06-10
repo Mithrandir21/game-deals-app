@@ -9,12 +9,16 @@
     <string name="deal_favourite_add_action">Add to waitlist</string>
     <string name="deal_favourite_remove_action">Remove from waitlist</string>
 
-    <!-- Caption shown on a deal tile/row when its price is at the game's all-time low (#255). -->
-    <string name="deal_lowest_ever_label">Lowest ever</string>
+    <!-- ITAD-style deal flag badges shown around the discount on tiles/rows (deal-badge work). The
+         single-letter labels mirror the ITAD website ("N" = new historical low, "S" = store low). -->
+    <string name="deal_new_low_badge_label">N</string>
+    <string name="deal_store_low_badge_label">S</string>
 
-    <!-- Spoken-only suffix appended to a deal's merged content description when isLowestEver, so
-         TalkBack announces the all-time-low status that the visual "Lowest ever" caption conveys (#259). -->
-    <string name="deal_lowest_ever_content_suffix">, lowest price ever</string>
+    <!-- Spoken-only suffixes appended to a deal's merged content description for each badge shown, so
+         TalkBack announces what the visual badges convey. -->
+    <string name="deal_new_low_content_suffix">, new lowest price ever</string>
+    <string name="deal_store_low_content_suffix">, lowest price at this store</string>
+    <string name="deal_voucher_content_suffix">, voucher available</string>
 
     <!-- Shown when a logged-out user taps the waitlist heart (epic #219, Phase 3/4 follow-up). -->
     <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>

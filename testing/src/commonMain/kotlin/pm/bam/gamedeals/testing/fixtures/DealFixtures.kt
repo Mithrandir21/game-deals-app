@@ -21,6 +21,10 @@ fun deal(
     lastChange: Int = 0,
     dealRating: Double = 9.0,
     thumb: String = "thumb",
+    isLowestEver: Boolean = false,
+    isNewHistoricalLow: Boolean = false,
+    isStoreLow: Boolean = false,
+    hasVoucher: Boolean = false,
 ) = Deal(
     dealID = dealID,
     internalName = internalName,
@@ -40,4 +44,8 @@ fun deal(
     lastChange = lastChange,
     dealRating = dealRating,
     thumb = thumb,
+    isLowestEver = isLowestEver,
+    isNewHistoricalLow = isNewHistoricalLow,
+    isStoreLow = isStoreLow,
+    hasVoucher = hasVoucher,
 )

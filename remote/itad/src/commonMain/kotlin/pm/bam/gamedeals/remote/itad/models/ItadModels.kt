@@ -43,6 +43,12 @@ data class ItadDeal(
     val boxart: String? = null,
     /** `true` when ITAD's deal `flag` marks this price as at/at-a-new historical low (#255). */
     val isLowestEver: Boolean = false,
+    /** `true` when ITAD's deal `flag == "N"` — the price *just* hit a new all-time low (new-low badge). */
+    val isNewHistoricalLow: Boolean = false,
+    /** `true` when ITAD's deal `flag == "S"` — the lowest price this specific store has offered (store-low badge). */
+    val isStoreLow: Boolean = false,
+    /** `true` when the deal carries a voucher/coupon code (drives the "with voucher" scissors badge). */
+    val hasVoucher: Boolean = false,
 )
 
 data class ItadGamePrices(

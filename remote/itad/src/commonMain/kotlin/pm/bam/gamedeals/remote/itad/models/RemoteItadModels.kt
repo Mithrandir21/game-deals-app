@@ -76,9 +76,15 @@ data class RemoteItadDealEntry(
     /**
      * ITAD's server-computed deal marker, present on both `/deals/v2` and `/games/prices/v3` deal
      * entries: `"N"` = price just hit a new historical low, `"H"` = currently at the historical low,
-     * `"S"`/`null` = neither. Drives the "lowest ever" badge (UI Improvements board, Phase E, #255).
+     * `"S"` = lowest price this specific store has ever offered, `null` = none. The deal-badge work
+     * surfaces `"N"` (new-low badge) and `"S"` (store-low badge) on the deal tiles/rows.
      */
     @SerialName("flag") val flag: String? = null,
+    /**
+     * The shop's voucher/coupon code applied to reach [price], when one is required (nullable; ITAD
+     * leaves it absent otherwise). Presence drives the "with voucher" scissors badge.
+     */
+    @SerialName("voucher") val voucher: String? = null,
 )
 
 @Serializable

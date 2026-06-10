@@ -70,6 +70,22 @@ private val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+/**
+ * v9 → v10 — richer deal badges (deal-badge work). Adds three `Deal` columns: `isNewHistoricalLow`
+ * (ITAD flag `"N"`, the new-low badge), `isStoreLow` (ITAD flag `"S"`, the store-low badge) and
+ * `hasVoucher` (the "with voucher" scissors badge). Each is a non-destructive `ADD COLUMN`, so the
+ * deal cache is preserved (existing rows take the `DEFAULT 0` and pick the signals up on their next
+ * TTL refetch). The `NOT NULL DEFAULT 0` matches the `@ColumnInfo(defaultValue = "0")` on the entity
+ * so the post-migration schema's identity matches the compiled v10 database (validated on open).
+ */
+private val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `isNewHistoricalLow` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `isStoreLow` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `hasVoucher` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

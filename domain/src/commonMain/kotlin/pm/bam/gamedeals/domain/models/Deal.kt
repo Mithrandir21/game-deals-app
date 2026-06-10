@@ -84,8 +84,10 @@ data class Deal(
     /**
      * `true` when this deal's price is at the game's all-time historical low (UI Improvements board,
      * Phase E, #255). Filled by the source mapper from ITAD's deal `flag` (`"N"` new low / `"H"` at
-     * historical low); both the deals and prices endpoints carry it. Drives the `PriceBlock`
-     * "Lowest ever" caption on the deal surfaces.
+     * historical low); both the deals and prices endpoints carry it.
+     *
+     * Retained as a stored column for backward compatibility, but the deal surfaces no longer render
+     * it directly — historical-low status is now shown via the new-low badge ([isNewHistoricalLow]).
      *
      * Persisted (so it survives the Room round-trip on the cached Home/Store surfaces) with a SQL
      * `DEFAULT 0` — that default also backs the v8→v9 `ADD COLUMN` migration and matches older cached
@@ -93,7 +95,33 @@ data class Deal(
      */
     @SerialName("isLowestEver")
     @ColumnInfo(defaultValue = "0")
-    val isLowestEver: Boolean = false
+    val isLowestEver: Boolean = false,
+
+    /**
+     * `true` when ITAD's deal `flag == "N"` — the price *just* hit a new all-time low. Drives the
+     * orange "N" new-low badge on the deal tiles/rows (deal-badge work). Persisted with SQL
+     * `DEFAULT 0`, backing the v9→v10 `ADD COLUMN` migration; older cached rows stay `false` until
+     * their next TTL refetch.
+     */
+    @SerialName("isNewHistoricalLow")
+    @ColumnInfo(defaultValue = "0")
+    val isNewHistoricalLow: Boolean = false,
+
+    /**
+     * `true` when ITAD's deal `flag == "S"` — the lowest price this specific store has ever offered.
+     * Drives the "S" store-low badge. Persisted with SQL `DEFAULT 0` (see [isNewHistoricalLow]).
+     */
+    @SerialName("isStoreLow")
+    @ColumnInfo(defaultValue = "0")
+    val isStoreLow: Boolean = false,
+
+    /**
+     * `true` when the deal requires a voucher/coupon code at the store. Drives the "with voucher"
+     * scissors badge. Persisted with SQL `DEFAULT 0` (see [isNewHistoricalLow]).
+     */
+    @SerialName("hasVoucher")
+    @ColumnInfo(defaultValue = "0")
+    val hasVoucher: Boolean = false
 )
 
 @Immutable

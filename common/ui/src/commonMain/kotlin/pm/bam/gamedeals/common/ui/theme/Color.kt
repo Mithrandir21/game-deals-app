@@ -224,4 +224,14 @@ val surfaceContainerDarkHighContrast = Color(0xFF1F1F25)
 val surfaceContainerHighDarkHighContrast = Color(0xFF2A292F)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF35343A)
 
+// New-historical-low ("N") badge — a warm ITAD-orange accent that deliberately sits *outside* the
+// teal/blue Material3 palette so a brand-new all-time low pops (deal-badge work). There is no M3
+// role for orange, so these are standalone tokens selected by theme in `NewHistoricalLowBadge`.
+// Dark-theme container brightens slightly to keep the chip vivid on near-black surfaces; both pairs
+// keep AA contrast for the single letter.
+val newLowBadgeContainerLight = Color(0xFFE58A2E)
+val onNewLowBadgeContainerLight = Color(0xFF2A1700)
+val newLowBadgeContainerDark = Color(0xFFFFB95C)
+val onNewLowBadgeContainerDark = Color(0xFF3A2400)
+
 

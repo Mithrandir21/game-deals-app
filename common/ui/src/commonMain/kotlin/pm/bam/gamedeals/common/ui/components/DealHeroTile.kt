@@ -38,8 +38,9 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_content_suffix
-import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_new_low_content_suffix
+import pm.bam.gamedeals.common.ui.generated.resources.deal_store_low_content_suffix
+import pm.bam.gamedeals.common.ui.generated.resources.deal_voucher_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /**
@@ -69,13 +70,22 @@ fun DealHeroTile(
     addToWaitlistContentDescription: String = "",
     removeFromWaitlistContentDescription: String = "",
 ) {
-    // The "Lowest ever" caption is visual-only on this merged node, so append its spoken equivalent
-    // to the tile's content description when shown — keeping the badge and its TalkBack announcement
-    // in lock-step (#259). Mirrored in DealListRow.
-    val tileContentDescription = if (deal.isLowestEver) {
-        contentDescription + stringResource(CommonRes.string.deal_lowest_ever_content_suffix)
-    } else {
-        contentDescription
+    // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
+    // their spoken equivalents to the tile's content description — keeping each badge and its TalkBack
+    // announcement in lock-step (#259). Mirrored in DealListRow.
+    val newLowSuffix = stringResource(CommonRes.string.deal_new_low_content_suffix)
+    val storeLowSuffix = stringResource(CommonRes.string.deal_store_low_content_suffix)
+    val voucherSuffix = stringResource(CommonRes.string.deal_voucher_content_suffix)
+    val tileContentDescription = contentDescription + dealBadgeSuffixes(
+        isNewHistoricalLow = deal.isNewHistoricalLow,
+        isStoreLow = deal.isStoreLow,
+        hasVoucher = deal.hasVoucher,
+    ).joinToString(separator = "") { suffix ->
+        when (suffix) {
+            DealBadgeSuffix.NEW_LOW -> newLowSuffix
+            DealBadgeSuffix.STORE_LOW -> storeLowSuffix
+            DealBadgeSuffix.VOUCHER -> voucherSuffix
+        }
     }
     Card(
         modifier = modifier,
@@ -129,26 +139,19 @@ fun DealHeroTile(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    // ITAD-style badge cluster + price: [voucher] [-XX%] [N] [S]  price.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                     ) {
+                        if (deal.hasVoucher) VoucherBadge()
                         DiscountBadge(discountPercent = deal.savings.roundToInt())
+                        if (deal.isNewHistoricalLow) NewHistoricalLowBadge()
+                        if (deal.isStoreLow) StoreLowBadge()
                         PriceBlock(
                             salePrice = deal.salePriceDenominated,
                             regularPrice = deal.normalPriceDenominated,
                             horizontalAlignment = Alignment.Start,
-                            caption = if (deal.isLowestEver) {
-                                {
-                                    Text(
-                                        text = stringResource(CommonRes.string.deal_lowest_ever_label),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                    )
-                                }
-                            } else {
-                                null
-                            },
                         )
                     }
                     if (storeName != null) {
@@ -185,7 +188,8 @@ private fun DealHeroTile_Preview() {
                         salePriceDenominated = "8,60 €",
                         normalPriceDenominated = "39,99 €",
                         savings = 78.0,
-                        isLowestEver = true,
+                        isNewHistoricalLow = true,
+                        hasVoucher = true,
                     ),
                     storeName = "GreenManGaming",
                     contentDescription = "Resident Evil 4, on sale for 8,60 €, was 39,99 €",
@@ -212,6 +216,7 @@ private fun DealHeroTile_NoHeart_Dark_Preview() {
                         salePriceDenominated = "31,25 €",
                         normalPriceDenominated = "49,99 €",
                         savings = 37.0,
+                        hasVoucher = true,
                     ),
                     storeName = "Playsum",
                     contentDescription = "Expedition 33, on sale for 31,25 €, was 49,99 €",

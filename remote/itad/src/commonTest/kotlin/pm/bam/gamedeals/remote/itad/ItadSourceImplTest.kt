@@ -34,6 +34,7 @@ import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -122,6 +123,9 @@ class ItadSourceImplTest {
         assertEquals("https://store/halo", deal.url)
         assertEquals("halo-banner300.png", deal.boxart) // prioritized banner300 over boxart
         assertTrue(deal.isLowestEver) // flag "N" (new historical low)
+        assertTrue(deal.isNewHistoricalLow) // "N" is specifically a *new* low
+        assertFalse(deal.isStoreLow)
+        assertTrue(deal.hasVoucher) // voucher code present on the entry
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -140,6 +144,8 @@ class ItadSourceImplTest {
         assertEquals("Halo", deal.title)
         assertEquals(61, deal.storeID)
         assertTrue(deal.isLowestEver) // mapped from the /deals/v2 deal flag "N"
+        assertTrue(deal.isNewHistoricalLow)
+        assertTrue(deal.hasVoucher)
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
@@ -259,6 +265,9 @@ class ItadSourceImplTest {
         assertEquals("halo-banner300.png", deal.thumb) // prioritized banner300 over boxart
         assertEquals("https://store/halo", deal.url)
         assertTrue(deal.isLowestEver) // flag "N" survives onto the (Room-cached) store-deal model
+        assertTrue(deal.isNewHistoricalLow)
+        assertFalse(deal.isStoreLow)
+        assertTrue(deal.hasVoucher) // voucher survives onto the store-deal model too
         // ITAD provides none of these.
         assertNull(deal.steamRatingPercent)
         assertNull(deal.metacriticScore)
@@ -283,6 +292,9 @@ class ItadSourceImplTest {
         assertEquals(7.49, deal.salePriceValue)
         assertEquals("banner400.png", deal.thumb) // prioritized banner400 over boxart
         assertTrue(deal.isLowestEver) // flag "H" derived from the /games/prices/v3 deal entry
+        assertFalse(deal.isNewHistoricalLow) // "H" is at the low, but not *new*
+        assertFalse(deal.isStoreLow)
+        assertFalse(deal.hasVoucher) // no voucher on this entry
 
         val paths = recordedRequests.map { it.url.encodedPath }
         assertTrue("/games/search/v1" in paths)
@@ -384,6 +396,7 @@ class ItadSourceImplTest {
                   "regular": { "amount": 19.99, "amountInt": 1999, "currency": "USD" },
                   "cut": 50,
                   "flag": "N",
+                  "voucher": "SUMMER10",
                   "url": "https://store/halo"
                 }
               }

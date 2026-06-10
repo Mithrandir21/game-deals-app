@@ -4,10 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,7 +19,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 
 /**
- * A compact discount pill (e.g. `✂ -78%`) for the ITAD-style deal surfaces (UI Improvements
+ * A compact discount pill (e.g. `-78%`) for the ITAD-style deal surfaces (UI Improvements
  * board, Phase A). The app already fetches the discount (`Deal.savings` / ITAD `cut`) but never
  * rendered it; this is the reusable badge that finally surfaces it on tiles and rows.
  *
@@ -32,14 +28,14 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
  * container roles. It renders **nothing** when [discountPercent] is non-positive.
  *
  * It is string-agnostic: callers pass a localized [contentDescription] (e.g. "78% off"); when
- * omitted the visible `-78%` text carries the semantics.
+ * omitted the visible `-78%` text carries the semantics. (The scissors icon now belongs to the
+ * separate [VoucherBadge], so this pill is text-only.)
  */
 @Composable
 fun DiscountBadge(
     discountPercent: Int,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    showIcon: Boolean = true,
 ) {
     if (discountPercent <= 0) return
 
@@ -57,14 +53,6 @@ fun DiscountBadge(
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showIcon) {
-            Icon(
-                imageVector = Icons.Filled.ContentCut,
-                contentDescription = null, // decorative; the pill's text/contentDescription speaks
-                tint = colors.onContainer,
-                modifier = Modifier.size(GameDealsCustomTheme.spacing.badgeIcon),
-            )
-        }
         Text(
             text = "-$discountPercent%",
             style = MaterialTheme.typography.labelMedium,
@@ -121,7 +109,7 @@ private fun DiscountBadge_Dark_Preview() {
                 modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
                 horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
             ) {
-                DiscountBadge(discountPercent = 12, showIcon = false, contentDescription = "12% off")
+                DiscountBadge(discountPercent = 12, contentDescription = "12% off")
                 DiscountBadge(discountPercent = 37, contentDescription = "37% off")
                 DiscountBadge(discountPercent = 78, contentDescription = "78% off")
             }

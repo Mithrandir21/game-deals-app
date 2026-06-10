@@ -53,6 +53,9 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, b
         storeLow = storeLow?.toItadMoney(),
         boxart = boxart,
         isLowestEver = flag.isHistoryLowFlag(),
+        isNewHistoricalLow = flag.isNewHistoryLowFlag(),
+        isStoreLow = flag.isStoreLowFlag(),
+        hasVoucher = voucher.isVoucherPresent(),
     )
 
 /**
@@ -60,6 +63,15 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, b
  * `"H"` (currently at the historical low). Any other value (incl. `"S"` and `null`) is not (#255).
  */
 internal fun String?.isHistoryLowFlag(): Boolean = this == "N" || this == "H"
+
+/** ITAD `flag == "N"`: the price *just* hit a new all-time low (drives the new-low "N" badge). */
+internal fun String?.isNewHistoryLowFlag(): Boolean = this == "N"
+
+/** ITAD `flag == "S"`: the lowest price this specific store has ever offered (drives the store-low "S" badge). */
+internal fun String?.isStoreLowFlag(): Boolean = this == "S"
+
+/** A deal carries a voucher when ITAD returns a non-blank `voucher` code (drives the scissors badge). */
+internal fun String?.isVoucherPresent(): Boolean = !this.isNullOrBlank()
 
 /** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
 internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =

@@ -316,7 +316,9 @@ private fun SearchResultListItem(
             salePrice = deal.salePriceDenominated,
             regularPrice = deal.normalPriceDenominated,
             discountPercent = deal.savings.roundToInt(),
-            isLowestEver = deal.isLowestEver,
+            hasVoucher = deal.hasVoucher,
+            isNewHistoricalLow = deal.isNewHistoricalLow,
+            isStoreLow = deal.isStoreLow,
             storeName = store?.storeName,
             storeIconUrl = store?.iconUrl,
         )

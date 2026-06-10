@@ -202,7 +202,9 @@ private fun StoreDeals(
                     salePrice = deal.salePriceDenominated,
                     regularPrice = deal.normalPriceDenominated,
                     discountPercent = deal.savings.roundToInt(),
-                    isLowestEver = deal.isLowestEver,
+                    hasVoucher = deal.hasVoucher,
+                    isNewHistoricalLow = deal.isNewHistoricalLow,
+                    isStoreLow = deal.isStoreLow,
                     // store label omitted: this screen is already scoped to a single store
                     isWaitlisted = isFavourite,
                     onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
