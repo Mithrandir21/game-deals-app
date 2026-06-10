@@ -35,7 +35,6 @@ import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsElevation
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.common.ui.theme.tertiaryDark
 import pm.bam.gamedeals.domain.models.Deal
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -45,16 +44,17 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /**
  * The ITAD-style featured-deal tile (UI Improvements board, Phase B): wide-aspect banner art
- * with a vertical scrim and the deal's identity overlaid at the bottom — replacing the old
- * `HeroGridTile`, which stacked plain text *below* a cropped image. It assembles the Phase-A
- * building blocks ([StoreLabel], [DiscountBadge], [PriceBlock], [WaitlistHeartButton]) over the
- * art ([Deal.thumb] already prefers wide banners via `bestArt()`).
+ * on top, with the deal's identity stacked *below* it on the card surface — matching the ITAD
+ * website's hero grid. It assembles the Phase-A building blocks ([StoreLabel], [DiscountBadge],
+ * [PriceBlock], [WaitlistHeartButton]) over and under the art ([Deal.thumb] already prefers wide
+ * banners via `bestArt()`). The only thing left over the art is the waitlist heart, backed by a
+ * small top-only scrim so it keeps contrast over bright covers (#257).
  *
- * Accessibility: the art + scrim + info form a single clickable node carrying the caller's
- * localized [contentDescription]; the optional waitlist heart is a *separate* sibling node on
- * top (so it stays independently actionable), mirroring the deal bottom sheet. The heart is only
- * shown when [onToggleWaitlist] is provided (e.g. omit it when logged out). Overlay text uses
- * fixed light colours because it always sits over the dark scrim regardless of theme.
+ * Accessibility: the art + info form a single clickable node carrying the caller's localized
+ * [contentDescription]; the optional waitlist heart is a *separate* sibling node on top (so it
+ * stays independently actionable), mirroring the deal bottom sheet. The heart is only shown when
+ * [onToggleWaitlist] is provided (e.g. omit it when logged out). The info below the art uses the
+ * building blocks' themed colours (like [DealListRow]); only the heart over the scrim is forced light.
  */
 @Composable
 fun DealHeroTile(
@@ -82,87 +82,79 @@ fun DealHeroTile(
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = GameDealsElevation.card),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f),
-        ) {
-            // Clickable content layer (art + scrim + info), merged into a single a11y node.
-            Box(
+        // Outer Box lets the waitlist heart overlay the art's top corner as a separate a11y sibling.
+        Box {
+            // Clickable content layer (art + info below), merged into a single a11y node.
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
                     .clickable(role = Role.Button) { onClick() }
                     .semantics(mergeDescendants = true) { this.contentDescription = tileContentDescription },
             ) {
-                AsyncImage(
-                    model = deal.thumb,
-                    contentDescription = null, // the tile's contentDescription carries the spoken text
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(CommonRes.drawable.videogame_thumb),
-                    modifier = Modifier.fillMaxSize(),
-                )
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.Black.copy(alpha = 0.45f), // darken top so the white heart keeps contrast over bright art (#257)
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.85f), // darken bottom for the info
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f),
+                ) {
+                    AsyncImage(
+                        model = deal.thumb,
+                        contentDescription = null, // the tile's contentDescription carries the spoken text
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(CommonRes.drawable.videogame_thumb),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // Top-only scrim, purely so the white heart keeps contrast over bright art (#257).
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.45f),
+                                        Color.Transparent,
+                                    ),
                                 ),
                             ),
-                        ),
-                )
-                Row(
+                    )
+                }
+                // Info on the card surface, left-aligned and stacked (title / discount+price / store).
+                Column(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
                         .fillMaxWidth()
                         .padding(GameDealsCustomTheme.spacing.small),
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-                    ) {
-                        Text(
-                            text = deal.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (storeName != null) {
-                            StoreLabel(
-                                storeName = storeName,
-                                iconUrl = storeIconUrl,
-                                color = Color.White.copy(alpha = 0.85f),
-                            )
-                        }
-                    }
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                    Text(
+                        text = deal.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                     ) {
                         DiscountBadge(discountPercent = deal.savings.roundToInt())
                         PriceBlock(
                             salePrice = deal.salePriceDenominated,
                             regularPrice = deal.normalPriceDenominated,
-                            salePriceColor = Color.White,
-                            regularPriceColor = Color.White.copy(alpha = 0.7f),
+                            horizontalAlignment = Alignment.Start,
                             caption = if (deal.isLowestEver) {
                                 {
                                     Text(
                                         text = stringResource(CommonRes.string.deal_lowest_ever_label),
                                         style = MaterialTheme.typography.labelSmall,
-                                        // Fixed bright accent — always over the dark scrim, like the other overlay text.
-                                        color = tertiaryDark,
+                                        color = MaterialTheme.colorScheme.tertiary,
                                     )
                                 }
                             } else {
                                 null
                             },
+                        )
+                    }
+                    if (storeName != null) {
+                        StoreLabel(
+                            storeName = storeName,
+                            iconUrl = storeIconUrl,
                         )
                     }
                 }
