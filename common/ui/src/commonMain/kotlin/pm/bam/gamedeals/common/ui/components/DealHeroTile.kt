@@ -39,6 +39,7 @@ import pm.bam.gamedeals.common.ui.theme.tertiaryDark
 import pm.bam.gamedeals.domain.models.Deal
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -68,6 +69,14 @@ fun DealHeroTile(
     addToWaitlistContentDescription: String = "",
     removeFromWaitlistContentDescription: String = "",
 ) {
+    // The "Lowest ever" caption is visual-only on this merged node, so append its spoken equivalent
+    // to the tile's content description when shown — keeping the badge and its TalkBack announcement
+    // in lock-step (#259). Mirrored in DealListRow.
+    val tileContentDescription = if (deal.isLowestEver) {
+        contentDescription + stringResource(CommonRes.string.deal_lowest_ever_content_suffix)
+    } else {
+        contentDescription
+    }
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
@@ -83,7 +92,7 @@ fun DealHeroTile(
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable(role = Role.Button) { onClick() }
-                    .semantics(mergeDescendants = true) { this.contentDescription = contentDescription },
+                    .semantics(mergeDescendants = true) { this.contentDescription = tileContentDescription },
             ) {
                 AsyncImage(
                     model = deal.thumb,

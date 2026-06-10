@@ -27,6 +27,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_lowest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -65,6 +66,14 @@ fun DealListRow(
     addToWaitlistContentDescription: String = "",
     removeFromWaitlistContentDescription: String = "",
 ) {
+    // The "Lowest ever" caption is visual-only on this merged node, so append its spoken equivalent
+    // to the row's content description whenever the badge is shown — keeping the badge and its
+    // TalkBack announcement in lock-step (#259). Mirrored in DealHeroTile.
+    val rowContentDescription = if (salePrice != null && isLowestEver) {
+        contentDescription + stringResource(CommonRes.string.deal_lowest_ever_content_suffix)
+    } else {
+        contentDescription
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -76,7 +85,7 @@ fun DealListRow(
                 .weight(1f)
                 .clickable(role = Role.Button) { onClick() }
                 .padding(vertical = GameDealsCustomTheme.spacing.small)
-                .semantics(mergeDescendants = true) { this.contentDescription = contentDescription },
+                .semantics(mergeDescendants = true) { this.contentDescription = rowContentDescription },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
