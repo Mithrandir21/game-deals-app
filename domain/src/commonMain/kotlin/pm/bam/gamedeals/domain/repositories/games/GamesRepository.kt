@@ -3,13 +3,21 @@ package pm.bam.gamedeals.domain.repositories.games
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.ExperimentalSerializationApi
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.source.DealsSource
+import pm.bam.gamedeals.domain.utils.millisInDay
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.debug
+
+/** Games are metadata (7-day tier — ITAD caching strategy §4 / Phase 1). */
+internal val GAMES_TTL_MILLIS = millisInDay * 7
 
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>
@@ -32,9 +40,23 @@ interface GamesRepository {
 }
 
 internal class GamesRepositoryImpl(
+    private val logger: Logger,
     private val gamesDao: GamesDao,
-    private val dealsSource: DealsSource
+    private val dealsSource: DealsSource,
+    private val clock: Clock,
 ) : GamesRepository {
+
+    private val cache = CachedResource(
+        clock = clock,
+        read = { gamesDao.getAllGames() },
+        expiresAtMillis = { it.expires },
+        refresh = {
+            val expiresAt = clock.nowMillis() + GAMES_TTL_MILLIS
+            dealsSource.fetchGames("")
+                .map { it.copy(expires = expiresAt) }
+                .let { gamesDao.addGames(*it.toTypedArray()) }
+        }
+    )
 
     override fun observeGames(): Flow<List<Game>> =
         gamesDao.observeAllGames()
@@ -59,8 +81,8 @@ internal class GamesRepositoryImpl(
         dealsSource.fetchPriceHistory(gameId)
 
     override suspend fun refreshGames() {
-        dealsSource.fetchGames("")
-            .let { gamesDao.addGames(*it.toTypedArray()) }
+        val refreshed = cache.refreshIfNeeded()
+        debug(logger) { "Games refresh needed: $refreshed" }
     }
 
     override suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String? =

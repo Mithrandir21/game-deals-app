@@ -14,6 +14,10 @@ internal interface GiveawaysDao {
     @Query("SELECT * FROM Giveaway")
     fun observeAllGiveaways(): Flow<List<Giveaway>>
 
+    /** One-shot snapshot of all [Giveaway]s, used by the cache to evaluate TTL freshness. */
+    @Query("SELECT * FROM Giveaway")
+    suspend fun getAllGiveaways(): List<Giveaway>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addGiveaways(vararg genericItem: Giveaway)
 

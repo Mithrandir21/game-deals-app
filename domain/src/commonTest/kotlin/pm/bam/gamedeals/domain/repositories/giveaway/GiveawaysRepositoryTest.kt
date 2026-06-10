@@ -12,6 +12,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.domain.models.GiveawayPlatformSelection
@@ -34,7 +35,11 @@ class GiveawaysRepositoryTest {
     private val logger: Logger = TestingLoggingListener()
     private val giveawaysDao: GiveawaysDao = mock(MockMode.autoUnit)
     private val gamerPowerSource: GamerPowerSource = mock(MockMode.autoUnit)
-    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource)
+
+    private val now = 1_000_000L
+    private val clock = Clock { now }
+
+    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource, clock)
 
     @Test
     fun observe_giveaways_with_descending_publishedDate_order() = runTest {
@@ -52,15 +57,29 @@ class GiveawaysRepositoryTest {
     }
 
     @Test
-    fun refresh_giveaways_swaps_table_contents_via_dao_replaceAll() = runTest {
-        val item = giveaway()
+    fun refresh_giveaways_unforced_expired_swaps_table_contents_and_stamps_expires() = runTest {
+        val expired = giveaway(id = 99, expires = now - 1)
+        val fetched = giveaway()
 
-        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(item)
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(expired)
+        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(fetched)
 
         impl.refreshGiveaways()
 
         verifySuspend(exactly(1)) { gamerPowerSource.fetchGiveaways() }
-        verifySuspend(exactly(1)) { giveawaysDao.replaceAll(listOf(item)) }
+        verifySuspend(exactly(1)) { giveawaysDao.replaceAll(listOf(fetched.copy(expires = now + GIVEAWAYS_TTL_MILLIS))) }
+    }
+
+    @Test
+    fun refresh_giveaways_unforced_all_fresh_skips_fetch() = runTest {
+        val fresh = giveaway(expires = now + 10_000)
+
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(fresh)
+
+        impl.refreshGiveaways()
+
+        verifySuspend(exactly(0)) { gamerPowerSource.fetchGiveaways() }
+        verifySuspend(exactly(1)) { giveawaysDao.getAllGiveaways() }
     }
 
     @Test

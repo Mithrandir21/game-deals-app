@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.models
 
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -28,7 +29,19 @@ data class Game(
     @SerialName("internalName")
     val internalName: String,
     @SerialName("thumb")
-    val thumb: String
+    val thumb: String,
+
+    /**
+     * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
+     *
+     * The repository stamps this via the injected `Clock` plus the resource's TTL when adding
+     * fetched entities to the DAO (ITAD caching strategy, Phase 1 — TTL-gate). Persisted with SQL
+     * `DEFAULT 0` (already-expired), which backs the v10→v11 `ADD COLUMN` migration: older cached
+     * rows are treated as stale and refetch once on next access.
+     */
+    @SerialName("expires")
+    @ColumnInfo(defaultValue = "0")
+    val expires: Long = 0L
 )
 
 @Immutable

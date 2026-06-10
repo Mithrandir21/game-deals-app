@@ -1,6 +1,6 @@
 # ITAD caching strategy
 
-**Status:** In progress — **Phase 0 shipped** (#261); Phases 1–8 to follow. This document is the agreed strategy, built in phases.
+**Status:** In progress — **Phases 0–1 shipped** (#261, #262); Phases 2–8 to follow. This document is the agreed strategy, built in phases.
 **Scope:** Caching of IsThereAnyDeal (ITAD) data across the app. Sibling sources (IGDB releases,
 GamerPower giveaways) are touched only where they share the same `CachedResource` seam.
 **Related:** deal-source migration [`docs/deal-source-migration/HANDOVER.md`](../deal-source-migration/HANDOVER.md) ·
@@ -248,7 +248,7 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 | Phase | What | Why first / notes | Schema change |
 |------:|------|-------------------|:-------------:|
 | **0** | ✅ **Done (#261).** Cross-cutting foundation: serve-stale-on-error (`CachedResource`), `RequestCoalescer`, and 429/`Retry-After` (`ItadHttpClient`), all unit-tested. | Pure behaviour, no schema; immediately reduces wasted/duplicate calls everywhere. | No |
-| **1** | Gate `Games` / `Releases` / `Giveaways` behind TTL (add `expires` to `Game`; stop refetch-on-every-subscribe). | Biggest call-count win for the least work. | `Game.expires` |
+| **1** | ✅ **Done (#262).** Gate `Games` (7d) / `Releases` (24h) / `Giveaways` (12h) behind TTL via `CachedResource`; stop refetch-on-every-subscribe. | Biggest call-count win for the least work. | `Game`/`Release`/`Giveaway.expires` (v11) |
 | **2** | Region dimension: add `country` to region-scoped entities; switch to `(resource × country)` reads; retire #212 clear-on-change. **Backfill current region** on migration (not treat-as-expired). | Unblocks correct multi-region caching for later phases. | Yes |
 | **3** | Per-game **prices** + **deal/game details** caches (transact tier, fresh-blocking). | The money-facing surfaces; needs Phase 2's `country`. | New tables |
 | **4** | **Price history** incremental cache (`since`-based top-up + 30d retention). | High-value, append-only; independent of the price caches. | New table |

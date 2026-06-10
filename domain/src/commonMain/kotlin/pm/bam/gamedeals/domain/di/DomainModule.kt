@@ -60,9 +60,9 @@ val domainModule = module {
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
-    single<GamesRepository> { GamesRepositoryImpl(get(), get()) }
-    single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get()) }
-    single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get()) }
+    single<GamesRepository> { GamesRepositoryImpl(get(), get(), get(), get()) }
+    single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
+    single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get()) }

@@ -13,9 +13,12 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.source.DealsSource
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.game
 import pm.bam.gamedeals.testing.fixtures.gameDetails
 import kotlin.test.Test
@@ -24,15 +27,21 @@ import kotlin.test.assertTrue
 
 class GamesRepositoryTest {
 
+    private val logger: Logger = TestingLoggingListener()
     private val gamesDao: GamesDao = mock(MockMode.autoUnit)
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
-    private val impl = GamesRepositoryImpl(gamesDao, dealsSource)
+
+    private val now = 1_000_000L
+    private val clock = Clock { now }
+
+    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock)
 
     @Test
-    fun observe_games_with_refresh_called() = runTest {
+    fun observe_games_empty_cache_triggers_refresh_and_stamps_expires() = runTest {
         val game = game()
 
         every { gamesDao.observeAllGames() } returns flowOf(emptyList())
+        everySuspend { gamesDao.getAllGames() } returns emptyList()
         everySuspend { dealsSource.fetchGames("") } returns listOf(game)
 
         val result = impl.observeGames().first()
@@ -40,7 +49,21 @@ class GamesRepositoryTest {
 
         verify(exactly(1)) { gamesDao.observeAllGames() }
         verifySuspend(exactly(1)) { dealsSource.fetchGames("") }
-        verifySuspend(exactly(1)) { gamesDao.addGames(game) }
+        verifySuspend(exactly(1)) { gamesDao.addGames(game.copy(expires = now + GAMES_TTL_MILLIS)) }
+    }
+
+    @Test
+    fun observe_games_fresh_cache_does_not_refresh() = runTest {
+        val fresh = game(expires = now + 10_000)
+
+        every { gamesDao.observeAllGames() } returns flowOf(listOf(fresh))
+        everySuspend { gamesDao.getAllGames() } returns listOf(fresh)
+
+        val result = impl.observeGames().first()
+        assertTrue(result.isNotEmpty())
+
+        verifySuspend(exactly(0)) { dealsSource.fetchGames("") }
+        verifySuspend(exactly(1)) { gamesDao.getAllGames() }
     }
 
     @Test
@@ -58,15 +81,29 @@ class GamesRepositoryTest {
     }
 
     @Test
-    fun refresh_games() = runTest {
-        val game = game()
+    fun refresh_games_unforced_expired_entry_fetches_and_stamps_expires() = runTest {
+        val expired = game(gameID = "old", expires = now - 1)
+        val fetched = game(gameID = "new")
 
-        everySuspend { dealsSource.fetchGames("") } returns listOf(game)
+        everySuspend { gamesDao.getAllGames() } returns listOf(expired)
+        everySuspend { dealsSource.fetchGames("") } returns listOf(fetched)
 
         impl.refreshGames()
 
         verifySuspend(exactly(1)) { dealsSource.fetchGames("") }
-        verifySuspend(exactly(1)) { gamesDao.addGames(game) }
+        verifySuspend(exactly(1)) { gamesDao.addGames(fetched.copy(expires = now + GAMES_TTL_MILLIS)) }
+    }
+
+    @Test
+    fun refresh_games_unforced_all_fresh_skips_fetch() = runTest {
+        val fresh = game(expires = now + 10_000)
+
+        everySuspend { gamesDao.getAllGames() } returns listOf(fresh)
+
+        impl.refreshGames()
+
+        verifySuspend(exactly(0)) { dealsSource.fetchGames("") }
+        verifySuspend(exactly(1)) { gamesDao.getAllGames() }
     }
 
     @Test

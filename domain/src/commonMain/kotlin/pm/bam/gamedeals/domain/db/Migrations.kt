@@ -86,6 +86,23 @@ private val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+/**
+ * v10 → v11 — TTL-gate the under-cached tables (ITAD caching strategy, Phase 1, #262). Adds an
+ * `expires` column to `Game`, `Release` and `Giveaway` so each is gated behind the same per-row TTL
+ * `CachedResource` pattern as `Deal`/`Store`, instead of refetching on every `observe*` subscribe.
+ * Each is a non-destructive `ADD COLUMN`, so the caches are preserved: existing rows take the
+ * `DEFAULT 0` (already-expired) and refetch once on next access. The `NOT NULL DEFAULT 0` matches the
+ * `@ColumnInfo(defaultValue = "0")` on each entity so the post-migration schema's identity matches
+ * the compiled v11 database (validated on open).
+ */
+private val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Game` ADD COLUMN `expires` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE `Release` ADD COLUMN `expires` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE `Giveaway` ADD COLUMN `expires` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

@@ -14,6 +14,10 @@ internal interface ReleasesDao {
     @Query("SELECT * FROM `Release`")
     fun observeAllReleases(): Flow<List<Release>>
 
+    /** One-shot snapshot of all [Release]s, used by the cache to evaluate TTL freshness. */
+    @Query("SELECT * FROM `Release`")
+    suspend fun getAllReleases(): List<Release>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addReleases(vararg genericItem: Release)
 

@@ -28,7 +28,8 @@ fun giveaway(
     status: String = "Active",
     gamerpowerUrl: String = "https://example.com",
     openGiveaway: String = "https://example.com/giveaway",
+    expires: Long = 0L,
 ) = Giveaway(
     id, title, worthDenominated, worth, thumbnail, image, description, instructions,
-    openGiveawayUrl, publishedDate, type, platforms, endDate, users, status, gamerpowerUrl, openGiveaway,
+    openGiveawayUrl, publishedDate, type, platforms, endDate, users, status, gamerpowerUrl, openGiveaway, expires,
 )

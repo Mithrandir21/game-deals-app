@@ -14,6 +14,10 @@ internal interface GamesDao {
     @Query("SELECT * FROM Game")
     fun observeAllGames(): Flow<List<Game>>
 
+    /** One-shot snapshot of all [Game]s, used by the cache to evaluate TTL freshness. */
+    @Query("SELECT * FROM Game")
+    suspend fun getAllGames(): List<Game>
+
     /** Adds the [Game] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addGames(vararg genericItem: Game)

@@ -15,7 +15,8 @@ fun game(
     title: String = "Test Game",
     internalName: String = "TEST_GAME",
     thumb: String = "thumb",
-) = Game(gameID, steamAppID, cheapestValue, cheapestDenominated, cheapestDealID, title, internalName, thumb)
+    expires: Long = 0L,
+) = Game(gameID, steamAppID, cheapestValue, cheapestDenominated, cheapestDealID, title, internalName, thumb, expires)
 
 fun gameDetails(
     info: GameDetails.GameInfo = GameDetails.GameInfo(title = "Test Game", steamAppID = null, thumb = "thumb"),

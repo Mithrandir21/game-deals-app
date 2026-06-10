@@ -3,13 +3,20 @@ package pm.bam.gamedeals.domain.repositories.giveaway
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.common.onError
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
+import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.source.GamerPowerSource
+import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.fatal
+
+/** Giveaways rotate intra-day (12-hour tier — ITAD caching strategy, Phase 1). */
+internal val GIVEAWAYS_TTL_MILLIS = millisInHour * 12
 
 interface GiveawaysRepository {
     fun observeGiveaways(): Flow<List<Giveaway>>
@@ -20,8 +27,19 @@ interface GiveawaysRepository {
 internal class GiveawaysRepositoryImpl(
     private val logger: Logger,
     private val giveawaysDao: GiveawaysDao,
-    private val gamerPowerSource: GamerPowerSource
+    private val gamerPowerSource: GamerPowerSource,
+    private val clock: Clock,
 ) : GiveawaysRepository {
+
+    private val cache = CachedResource(
+        clock = clock,
+        read = { giveawaysDao.getAllGiveaways() },
+        expiresAtMillis = { it.expires },
+        refresh = {
+            val expiresAt = clock.nowMillis() + GIVEAWAYS_TTL_MILLIS
+            giveawaysDao.replaceAll(gamerPowerSource.fetchGiveaways().map { it.copy(expires = expiresAt) })
+        }
+    )
 
     override fun observeGiveaways(): Flow<List<Giveaway>> =
         giveawaysDao.observeAllGiveaways()
@@ -57,6 +75,7 @@ internal class GiveawaysRepositoryImpl(
     }
 
     override suspend fun refreshGiveaways() {
-        giveawaysDao.replaceAll(gamerPowerSource.fetchGiveaways())
+        val refreshed = cache.refreshIfNeeded()
+        debug(logger) { "Giveaways refresh needed: $refreshed" }
     }
 }
