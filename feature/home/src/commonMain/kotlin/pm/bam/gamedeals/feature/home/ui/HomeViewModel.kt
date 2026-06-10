@@ -117,8 +117,8 @@ internal class HomeViewModel(
     private var loadJob: Job? = null
 
     init {
-        // Initial load, then reload whenever the selected region changes. Settings clears the deal
-        // cache before updating the region, so the reload re-fetches regional prices (#212).
+        // Initial load, then reload whenever the selected region changes. Home reads deals via the
+        // un-cached getDeals passthrough, so the reload always fetches the new region's prices (#212).
         viewModelScope.launch {
             regionRepository.observeSelectedCountry()
                 .map { it.code }

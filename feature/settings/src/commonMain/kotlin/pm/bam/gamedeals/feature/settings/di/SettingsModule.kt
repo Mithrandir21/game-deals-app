@@ -5,5 +5,5 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.settings.ui.SettingsViewModel
 
 val settingsModule = module {
-    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get()) }
 }

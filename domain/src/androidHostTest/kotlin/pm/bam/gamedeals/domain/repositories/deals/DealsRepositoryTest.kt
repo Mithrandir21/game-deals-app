@@ -27,6 +27,7 @@ import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
@@ -49,10 +50,15 @@ class DealsRepositoryTest {
     private val now = 1_000_000L
     private val clock = Clock { now }
 
+    private val country = "US"
+    private val regionRepository: RegionRepository = mockk {
+        coEvery { getSelectedCountryCode() } returns country
+    }
+
     private val transactor: Transactor = mockk()
     private val txScope: TransactionScope<Unit> = mockk()
 
-    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, dealsSource, clock)
+    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, dealsSource, clock, regionRepository)
 
     /**
      * Wires Room KMP's two-layer transaction API so the body inside
@@ -122,11 +128,11 @@ class DealsRepositoryTest {
         val storeId = 1
         val fetched: Deal = mockk()
         val stamped: Deal = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        every { fetched.copy(expires = now + millisInHour * 8, country = country) } returns stamped
 
         stubTransaction()
 
-        coEvery { dealsDao.clearDealsForStore(storeId) } just runs
+        coEvery { dealsDao.clearDealsForStore(storeId, country) } just runs
         coEvery { dealsSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
         coEvery { dealsDao.addDeals(*anyVararg()) } just runs
 
@@ -134,10 +140,10 @@ class DealsRepositoryTest {
         impl.refreshDeals(storeId, force = true)
 
 
-        coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
+        coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId, country) }
         coVerify(exactly = 1) { dealsSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
-        verify(exactly = 1) { fetched.copy(expires = now + millisInHour * 8) }
+        verify(exactly = 1) { fetched.copy(expires = now + millisInHour * 8, country = country) }
     }
 
 
@@ -147,13 +153,13 @@ class DealsRepositoryTest {
         val expired: Deal = mockk { every { expires } returns now - 10_000 }
         val fetched: Deal = mockk()
         val stamped: Deal = mockk()
-        every { fetched.copy(expires = now + millisInHour * 8) } returns stamped
+        every { fetched.copy(expires = now + millisInHour * 8, country = country) } returns stamped
 
-        coEvery { dealsDao.getStoreDeals(storeId) } returns listOf(expired)
+        coEvery { dealsDao.getStoreDeals(storeId, country) } returns listOf(expired)
 
         stubTransaction()
 
-        coEvery { dealsDao.clearDealsForStore(storeId) } just runs
+        coEvery { dealsDao.clearDealsForStore(storeId, country) } just runs
         coEvery { dealsSource.fetchDealsForStore(query = any()) } returns listOf(fetched)
         coEvery { dealsDao.addDeals(*anyVararg()) } just runs
 
@@ -161,7 +167,7 @@ class DealsRepositoryTest {
         impl.refreshDeals(storeId)
 
 
-        coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId) }
+        coVerify(exactly = 1) { dealsDao.clearDealsForStore(storeId, country) }
         coVerify(exactly = 1) { dealsSource.fetchDealsForStore(query = any()) }
         coVerify(exactly = 1) { dealsDao.addDeals(stamped) }
     }
@@ -171,13 +177,30 @@ class DealsRepositoryTest {
     fun `refreshDeals - unforced - skips source when DAO has fresh deals`() = runTest {
         val storeId = 1
         val fresh: Deal = mockk { every { expires } returns now + 10_000 }
-        coEvery { dealsDao.getStoreDeals(storeId) } returns listOf(fresh)
+        coEvery { dealsDao.getStoreDeals(storeId, country) } returns listOf(fresh)
 
 
         impl.refreshDeals(storeId)
 
 
         coVerify(exactly = 0) { dealsSource.fetchDealsForStore(query = any()) }
-        coVerify(exactly = 0) { dealsDao.clearDealsForStore(any()) }
+        coVerify(exactly = 0) { dealsDao.clearDealsForStore(any(), any()) }
+    }
+
+
+    @Test
+    fun `getStoreDeals - reads the active region's cached deals`() = runTest {
+        val storeId = 1
+        val fresh: Deal = mockk { every { expires } returns now + 10_000 }
+        coEvery { dealsDao.getStoreDeals(storeId, country) } returns listOf(fresh)
+
+
+        val result = impl.getStoreDeals(storeId)
+
+
+        assertEquals(listOf(fresh), result)
+        // Fresh cache for the active region: no fetch, and the read is country-scoped.
+        coVerify(exactly = 0) { dealsSource.fetchDealsForStore(query = any()) }
+        coVerify { dealsDao.getStoreDeals(storeId, country) }
     }
 }

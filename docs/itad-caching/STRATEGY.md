@@ -1,6 +1,6 @@
 # ITAD caching strategy
 
-**Status:** In progress — **Phases 0–1 shipped** (#261, #262); Phases 2–8 to follow. This document is the agreed strategy, built in phases.
+**Status:** In progress — **Phases 0–2 shipped** (#261, #262, #263); Phases 3–8 to follow. This document is the agreed strategy, built in phases.
 **Scope:** Caching of IsThereAnyDeal (ITAD) data across the app. Sibling sources (IGDB releases,
 GamerPower giveaways) are touched only where they share the same `CachedResource` seam.
 **Related:** deal-source migration [`docs/deal-source-migration/HANDOVER.md`](../deal-source-migration/HANDOVER.md) ·
@@ -147,6 +147,12 @@ Prices, deals, stats and bundles all vary by `country`. Moving from clear-on-reg
 
 - Add a **`country` column** to every region-scoped entity (`Deal`, `Store`, `GamePrice`,
   `PriceHistoryPoint`, `RankedGame`, `Bundle`), part of the primary key / read predicate.
+  - **As built (Phase 2):** only `Deal` is keyed — by `(storeID, country)` via an `ADD COLUMN`
+    that keeps the `dealID` primary key (a refetch under another region overwrites the same
+    `dealID`, so the cache self-heals rather than coexisting). `Store` is **deferred as
+    region-invariant**: it is fetched globally (no `country` param) and was never region-cleared, so
+    keying it would be an unverified behaviour change — revisit if shops prove per-country. The
+    new region-scoped tables in Phases 3–5 are created **with** `country` from the start.
 - Reads filter by the active country (from `RegionRepository`); switching region is then **instant** for any
   region previously fetched, and offline-friendly.
 - `DealsRepository.clearCachedDeals()` (the #212 hook) is **no longer needed for correctness** — kept only as
@@ -249,7 +255,7 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 |------:|------|-------------------|:-------------:|
 | **0** | ✅ **Done (#261).** Cross-cutting foundation: serve-stale-on-error (`CachedResource`), `RequestCoalescer`, and 429/`Retry-After` (`ItadHttpClient`), all unit-tested. | Pure behaviour, no schema; immediately reduces wasted/duplicate calls everywhere. | No |
 | **1** | ✅ **Done (#262).** Gate `Games` (7d) / `Releases` (24h) / `Giveaways` (12h) behind TTL via `CachedResource`; stop refetch-on-every-subscribe. | Biggest call-count win for the least work. | `Game`/`Release`/`Giveaway.expires` (v11) |
-| **2** | Region dimension: add `country` to region-scoped entities; switch to `(resource × country)` reads; retire #212 clear-on-change. **Backfill current region** on migration (not treat-as-expired). | Unblocks correct multi-region caching for later phases. | Yes |
+| **2** | ✅ **Done (#263).** Region dimension: `Deal` keyed by `(storeID, country)`; reads filter by the active region; #212 clear-on-change retired. **Store kept region-invariant** (fetched globally today); `ADD COLUMN` backfilling the default region. | Unblocks correct multi-region caching for later phases. | `Deal.country` (v12) |
 | **3** | Per-game **prices** + **deal/game details** caches (transact tier, fresh-blocking). | The money-facing surfaces; needs Phase 2's `country`. | New tables |
 | **4** | **Price history** incremental cache (`since`-based top-up + 30d retention). | High-value, append-only; independent of the price caches. | New table |
 | **5** | **Stats rankings** + **bundles** caches (feed tier, 12h, SWR), **plus a client-side concurrency limiter** over ITAD calls. | Stats' per-game price enrichment is the heaviest path; the limiter caps its fan-out (more important now prices use a single 2h TTL). | New tables |

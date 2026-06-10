@@ -10,19 +10,18 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 
 /**
  * Backs the Settings screen's region picker (epic #205, Phase 3b — #212).
  *
- * Selecting a country clears the cached deals BEFORE persisting the new region, so the Home/Store
- * screens (which observe the region) reload and re-fetch regional prices instead of re-reading the
- * previous region's stale cache.
+ * Selecting a country persists the new region; the Home/Store screens observe the region and reload.
+ * The deal cache is **no longer cleared** here — region keying (ITAD caching strategy, D5 / Phase 2)
+ * stamps each cached deal with its country and reads filter by the active region, so switching reads
+ * the new region's rows (fetching on a miss) instead of wiping the cache.
  */
 internal class SettingsViewModel(
     private val regionRepository: RegionRepository,
-    private val dealsRepository: DealsRepository,
 ) : ViewModel() {
 
     val countries: ImmutableList<Country> = regionRepository.supportedCountries.toImmutableList()
@@ -33,7 +32,6 @@ internal class SettingsViewModel(
 
     fun onCountrySelected(country: Country) {
         viewModelScope.launch {
-            dealsRepository.clearCachedDeals()
             regionRepository.setSelectedCountry(country)
         }
     }

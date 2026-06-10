@@ -15,7 +15,6 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
-import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import kotlin.test.AfterTest
@@ -29,27 +28,25 @@ class SettingsViewModelTest : MainDispatcherTest() {
         every { supportedCountries } returns SUPPORTED_COUNTRIES
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
     }
-    private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     @Test
-    fun on_country_selected_clears_cache_and_persists() = runTest {
-        val viewModel = SettingsViewModel(regionRepository, dealsRepository)
+    fun on_country_selected_persists_region() = runTest {
+        val viewModel = SettingsViewModel(regionRepository)
         val germany = Country("DE", "Germany")
 
         viewModel.onCountrySelected(germany)
         advanceUntilIdle()
 
-        // Cache must be cleared (so Home/Store reload regional prices) and the region persisted.
-        verifySuspend(exactly(1)) { dealsRepository.clearCachedDeals() }
+        // Region keying (Phase 2) means no cache clear is needed — just persist the new region.
         verifySuspend(exactly(1)) { regionRepository.setSelectedCountry(germany) }
     }
 
     @Test
     fun exposes_supported_countries() {
-        val viewModel = SettingsViewModel(regionRepository, dealsRepository)
+        val viewModel = SettingsViewModel(regionRepository)
 
         assertEquals(SUPPORTED_COUNTRIES.size, viewModel.countries.size)
         assertEquals(SUPPORTED_COUNTRIES.first().code, viewModel.countries.first().code)

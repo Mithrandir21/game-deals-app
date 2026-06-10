@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.testing.fixtures
 
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 
 fun deal(
     dealID: String = "deal-1",
@@ -25,6 +26,7 @@ fun deal(
     isNewHistoricalLow: Boolean = false,
     isStoreLow: Boolean = false,
     hasVoucher: Boolean = false,
+    country: String = DEFAULT_COUNTRY.code,
 ) = Deal(
     dealID = dealID,
     internalName = internalName,
@@ -48,4 +50,5 @@ fun deal(
     isNewHistoricalLow = isNewHistoricalLow,
     isStoreLow = isStoreLow,
     hasVoucher = hasVoucher,
+    country = country,
 )

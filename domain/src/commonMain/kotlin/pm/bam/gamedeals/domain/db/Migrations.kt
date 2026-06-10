@@ -103,6 +103,26 @@ private val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+/**
+ * v11 → v12 — region as a cache dimension (ITAD caching strategy, D5 / Phase 2, #263). Adds a
+ * `country` column to `Deal` so cached deals are keyed by `(storeID, country)` and a region switch
+ * reads the new region's rows instead of clearing the whole cache (#212). A non-destructive
+ * `ADD COLUMN` keeping the `dealID` primary key: existing rows are **backfilled to the default
+ * region** (`'US'` = `DEFAULT_COUNTRY`) rather than treated-as-expired, so the common (default-region)
+ * user's cache is preserved and there is no first-launch refetch storm. A non-default-region user's
+ * rows are filtered out by the region predicate and harmlessly overwritten (same `dealID`) on the
+ * next per-store refetch. The `NOT NULL DEFAULT 'US'` matches the `@ColumnInfo(defaultValue = "US")`
+ * on the entity so the post-migration schema identity matches the compiled v12 database.
+ *
+ * Only `Deal` is keyed: `Store` is fetched globally (region-invariant) and not region-cleared today,
+ * so it is intentionally left unkeyed (revisit if shops become per-country).
+ */
+private val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `country` TEXT NOT NULL DEFAULT 'US'")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

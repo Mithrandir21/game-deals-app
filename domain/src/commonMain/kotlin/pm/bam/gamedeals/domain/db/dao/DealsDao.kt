@@ -15,25 +15,25 @@ internal interface DealsDao {
     @Query("SELECT * FROM Deal ORDER BY savings DESC")
     fun observeAllDeals(): Flow<List<Deal>>
 
-    /** Returns all the [Deal]s in the database with [storeId], ordered by their [Deal.dealRating] in descending order. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC")
-    suspend fun getStoreDeals(storeId: Int): List<Deal>
+    /** Returns the cached [Deal]s for [storeId] in [country], ordered by savings descending. */
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId AND country IS :country ORDER BY savings DESC")
+    suspend fun getStoreDeals(storeId: Int, country: String): List<Deal>
 
-    /** Returns all the [Deal]s in the database with [storeId], ordered by their [Deal.dealRating] in descending order, limited to [limit]. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC LIMIT :limit")
-    suspend fun getStoreDeals(storeId: Int, limit: Int): List<Deal>
+    /** Returns the cached [Deal]s for [storeId] in [country], ordered by savings descending, limited to [limit]. */
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId AND country IS :country ORDER BY savings DESC LIMIT :limit")
+    suspend fun getStoreDeals(storeId: Int, country: String, limit: Int): List<Deal>
 
-    /** Live stream of all the [Deal]s for [storeId], ordered by [Deal.dealRating] descending. */
-    @Query("SELECT * FROM Deal WHERE storeID IS :storeId ORDER BY savings DESC")
-    fun observeStoreDeals(storeId: Int): Flow<List<Deal>>
+    /** Live stream of the cached [Deal]s for [storeId] in [country], ordered by savings descending. */
+    @Query("SELECT * FROM Deal WHERE storeID IS :storeId AND country IS :country ORDER BY savings DESC")
+    fun observeStoreDeals(storeId: Int, country: String): Flow<List<Deal>>
 
     /** Adds the [Deal] to the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addDeals(vararg genericItem: Deal)
 
-    /** Deletes all [Deal]s from the database where the [Deal.storeID] is [storeId]. */
-    @Query("DELETE FROM Deal WHERE storeID IS :storeId")
-    suspend fun clearDealsForStore(storeId: Int)
+    /** Deletes the cached [Deal]s for [storeId] in [country] (the active region's store rows). */
+    @Query("DELETE FROM Deal WHERE storeID IS :storeId AND country IS :country")
+    suspend fun clearDealsForStore(storeId: Int, country: String)
 
     /** Deletes every cached [Deal] — used to invalidate the cache when the region changes (#212). */
     @Query("DELETE FROM Deal")

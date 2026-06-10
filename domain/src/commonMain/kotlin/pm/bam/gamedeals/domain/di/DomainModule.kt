@@ -58,7 +58,7 @@ val domainModule = module {
     single { get<DomainDatabase>().getReleasesDao() }
     single { get<DomainDatabase>().getGiveawaysDao() }
 
-    single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
     single<GamesRepository> { GamesRepositoryImpl(get(), get(), get(), get()) }
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }

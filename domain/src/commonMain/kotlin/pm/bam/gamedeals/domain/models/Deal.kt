@@ -121,7 +121,19 @@ data class Deal(
      */
     @SerialName("hasVoucher")
     @ColumnInfo(defaultValue = "0")
-    val hasVoucher: Boolean = false
+    val hasVoucher: Boolean = false,
+
+    /**
+     * The storefront region ([Country.code]) this deal's price/currency was fetched for — the cache's
+     * region dimension (ITAD caching strategy, D5 / Phase 2, #263). The repository stamps it (from
+     * [RegionRepository][pm.bam.gamedeals.domain.repositories.region.RegionRepository]) on write and
+     * filters reads by it, so a region switch reads the new region's rows instead of clearing the
+     * cache (#212). Persisted with SQL `DEFAULT 'US'` ([DEFAULT_COUNTRY]) — that default backs the
+     * v11→v12 `ADD COLUMN` migration, which backfills existing rows to the default region.
+     */
+    @SerialName("country")
+    @ColumnInfo(defaultValue = "US")
+    val country: String = DEFAULT_COUNTRY.code
 )
 
 @Immutable
