@@ -28,8 +28,8 @@ enum class DealsSort(val apiValue: String) {
     /** Biggest discount first (`-cut`). */
     TopDiscount("-cut"),
 
-    /** Most recently added first (`-publish`). */
-    RecentlyAdded("-publish"),
+    /** Most recently added first (`-time`). */
+    RecentlyAdded("-time"),
 
     /** Cheapest first (`price`). */
     PriceLowToHigh("price"),
