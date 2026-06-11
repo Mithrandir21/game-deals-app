@@ -49,6 +49,13 @@ espresso-core = "3.7.0"
 espresso-device = "1.1.0"
 ui-test-junit4 = "1.9.4"
 
+# Macrobenchmark + Baseline Profile (release-build scroll/jank measurement). benchmark-macro and the
+# baselineprofile gradle plugin ship in lockstep, so they share one version ref. Pinned to the 1.5.0-alpha
+# line because the stable 1.4.x line predates AGP 9 — see the :baselineprofile module if the build rejects it.
+androidx-benchmark = "1.5.0-alpha06"
+androidx-profileinstaller = "1.4.1"
+androidx-uiautomator = "2.3.0"
+
 
 [libraries]
 # AndroidX core / lifecycle / Compose UI (Android-only artifacts).
@@ -145,6 +152,12 @@ androidx-espresso-device = { group = "androidx.test.espresso", name = "espresso-
 androidx-compose-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "ui-test-junit4" }
 androidx-compose-test = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "ui-test-junit4" }
 
+# Macrobenchmark / Baseline Profile — consumed only by the :baselineprofile producer module (macro + uiautomator)
+# and by :app (profileinstaller, which installs the shipped profile at runtime).
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "androidx-benchmark" }
+androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "androidx-uiautomator" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
+
 # Gradle plugin artifacts on the build-logic convention classpath. These resolve the actual plugin JARs so the precompiled convention plugins can
 # `pluginManager.apply("...")` them by id at runtime. Not consumed as regular dependencies by any app module.
 android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "android-gradle-plugin" }
@@ -170,6 +183,10 @@ androidx-room = { id = "androidx.room", version.ref = "room" }
 compose-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version.ref = "compose-stability-analyzer" }
 mokkery = { id = "dev.mokkery", version.ref = "mokkery" }
 kotlinx-kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+# `com.android.test` is part of AGP, already on the build classpath via the build-logic included build, so it
+# carries NO version here (like kotlin-multiplatform/compose-multiplatform above) — a version.ref would clash.
+android-test = { id = "com.android.test" }
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "androidx-benchmark" }
 
 # Convention plugins (registered by the build-logic included build). All library/feature modules use the KMP plugins; only :app uses the
 # Android-application plugin since :app stays Android-only.

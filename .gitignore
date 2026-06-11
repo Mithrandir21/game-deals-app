@@ -18,6 +18,13 @@ iosApp/Configuration/Secrets.xcconfig
 # Android Studio generated files and folders
 captures/
 release/
+# ...but the broad release/ rule above (meant for AS's exported-APK folder) also swallows the release
+# source set. Re-include the generated Baseline Profile — it must be committed so it ships in release builds.
+# Each parent dir is re-included explicitly because git can't un-ignore a file whose parent dir is excluded.
+!app/src/release/
+!app/src/release/generated/
+!app/src/release/generated/baselineProfiles/
+!app/src/release/generated/baselineProfiles/*.txt
 .externalNativeBuild/
 .cxx/
 *.apk
