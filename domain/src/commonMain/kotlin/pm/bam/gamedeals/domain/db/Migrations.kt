@@ -150,6 +150,31 @@ private val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+/**
+ * v14 → v15 — bundles cache (ITAD caching strategy, Phase 5b, #266). Creates the `BundlesCache` table,
+ * holding a region's whole `List<Bundle>` as a serialized blob keyed by `(country)` with a `fetchedAt`
+ * stamp (for the retention sweep) and an `expires` TTL stamp. New table only — nothing existing is
+ * touched. The `CREATE TABLE` DDL is copied verbatim from the generated schema `domain/schemas/.../15.json`.
+ */
+private val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `BundlesCache` (`country` TEXT NOT NULL, `json` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`country`))")
+    }
+}
+
+/**
+ * v15 → v16 — stats rankings cache (ITAD caching strategy, Phase 5c, #266). Creates the
+ * `StatsRankingsCache` table, holding one ranking's `List<RankedGame>` as a serialized blob keyed by
+ * `(rankingType, country)` with a `fetchedAt` stamp (for the retention sweep) and an `expires` TTL stamp.
+ * New table only — nothing existing is touched. The `CREATE TABLE` DDL is copied verbatim from the
+ * generated schema `domain/schemas/.../16.json`.
+ */
+private val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `StatsRankingsCache` (`rankingType` TEXT NOT NULL, `country` TEXT NOT NULL, `json` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`rankingType`, `country`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

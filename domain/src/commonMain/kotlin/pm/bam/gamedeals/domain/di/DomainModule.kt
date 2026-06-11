@@ -60,6 +60,8 @@ val domainModule = module {
     single { get<DomainDatabase>().getDealDetailsCacheDao() }
     single { get<DomainDatabase>().getGameDetailsCacheDao() }
     single { get<DomainDatabase>().getPriceHistoryCacheDao() }
+    single { get<DomainDatabase>().getBundlesCacheDao() }
+    single { get<DomainDatabase>().getStatsRankingsCacheDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
@@ -68,7 +70,7 @@ val domainModule = module {
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
-    single<BundlesRepository> { BundlesRepositoryImpl(get()) }
+    single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // ITAD account (epic #219). AuthTokenStore is Storage-backed (like RegionRepository). Waitlist/
     // Collection are backed by the live ITAD account source (Phase 2.3); Stats by the live ITAD stats
@@ -77,5 +79,5 @@ val domainModule = module {
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get()) }
-    single<StatsRepository> { StatsRepositoryImpl(get()) }
+    single<StatsRepository> { StatsRepositoryImpl(get(), get(), get(), get(), get()) }
 }
