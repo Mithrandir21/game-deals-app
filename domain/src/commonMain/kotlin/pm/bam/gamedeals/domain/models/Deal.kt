@@ -1,3 +1,5 @@
+@file:UseSerializers(ImmutableListSerializer::class)
+
 package pm.bam.gamedeals.domain.models
 
 
@@ -10,6 +12,8 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
 
 @OptIn(ExperimentalSerializationApi::class)
 @Entity(tableName = "Deal")

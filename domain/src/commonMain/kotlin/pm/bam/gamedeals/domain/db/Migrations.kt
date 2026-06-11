@@ -123,6 +123,20 @@ private val MIGRATION_11_12 = object : Migration(11, 12) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+/**
+ * v12 → v13 — transact-tier detail caches (ITAD caching strategy, Phase 3, #264). Creates two new
+ * region-keyed cache tables, `DealDetailsCache` and `GameDetailsCache`, each holding a serialized
+ * details blob keyed by `(id, country)` with an `expires` TTL stamp. New tables only — nothing
+ * existing is touched. The `CREATE TABLE` DDL is copied verbatim from the generated schema
+ * `domain/schemas/.../13.json` so the post-migration identity hash matches the compiled v13 database.
+ */
+private val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `DealDetailsCache` (`dealId` TEXT NOT NULL, `country` TEXT NOT NULL, `json` TEXT NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`dealId`, `country`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `GameDetailsCache` (`gameId` TEXT NOT NULL, `country` TEXT NOT NULL, `json` TEXT NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`gameId`, `country`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

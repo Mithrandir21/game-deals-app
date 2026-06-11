@@ -14,15 +14,19 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.db.cache.DealDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.dao.DealDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -32,6 +36,7 @@ import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.dealDetails
 
 
 class DealsRepositoryTest {
@@ -47,8 +52,11 @@ class DealsRepositoryTest {
 
     private val dealsSource: DealsSource = mockk()
 
+    private val dealDetailsCacheDao: DealDetailsCacheDao = mockk()
+
     private val now = 1_000_000L
     private val clock = Clock { now }
+    private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
     private val country = "US"
     private val regionRepository: RegionRepository = mockk {
@@ -58,7 +66,7 @@ class DealsRepositoryTest {
     private val transactor: Transactor = mockk()
     private val txScope: TransactionScope<Unit> = mockk()
 
-    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, dealsSource, clock, regionRepository)
+    private val impl = DealsRepositoryImpl(logger, dealsDao, domainDatabase, dealsSource, clock, regionRepository, dealDetailsCacheDao, json)
 
     /**
      * Wires Room KMP's two-layer transaction API so the body inside
@@ -93,17 +101,53 @@ class DealsRepositoryTest {
 
 
     @Test
-    fun `get deal returns DealDetails from source`() = runTest {
-        val id = "abc123"
-        val details: DealDetails = mockk()
+    fun `getDeal - cold cache - fetches, caches the region blob, and returns the fresh value`() = runTest {
+        val dealId = "abc123"
+        val details = dealDetails()
 
-        coEvery { dealsSource.fetchDealDetails(id) } returns details
+        coEvery { dealDetailsCacheDao.get(dealId, country) } returns null
+        coEvery { dealsSource.fetchDealDetails(dealId) } returns details
+        coEvery { dealDetailsCacheDao.upsert(any()) } just runs
 
 
-        val result = impl.getDeal(id)
+        val result = impl.getDeal(dealId)
         assertEquals(details, result)
 
-        coVerify(exactly = 1) { dealsSource.fetchDealDetails(id) }
+        coVerify(exactly = 1) { dealsSource.fetchDealDetails(dealId) }
+        coVerify(exactly = 1) { dealDetailsCacheDao.upsert(any()) }
+    }
+
+
+    @Test
+    fun `getDeal - fresh cache - decodes the cached blob without a fetch`() = runTest {
+        val dealId = "abc123"
+        val details = dealDetails()
+        val entry = DealDetailsCacheEntry(
+            dealId = dealId,
+            country = country,
+            json = json.encodeToString(DealDetails.serializer(), details),
+            expires = now + 10_000,
+        )
+        coEvery { dealDetailsCacheDao.get(dealId, country) } returns entry
+
+
+        val result = impl.getDeal(dealId)
+        assertEquals(details, result)
+
+        coVerify(exactly = 0) { dealsSource.fetchDealDetails(any()) }
+        coVerify(exactly = 0) { dealDetailsCacheDao.upsert(any()) }
+    }
+
+
+    @Test
+    fun `getDeal - cold cache - refresh failure surfaces (no stale fallback)`() = runTest {
+        val dealId = "abc123"
+
+        coEvery { dealDetailsCacheDao.get(dealId, country) } returns null
+        coEvery { dealsSource.fetchDealDetails(dealId) } throws Exception("network down")
+
+
+        assertFailsWith<Exception> { impl.getDeal(dealId) }
     }
 
 

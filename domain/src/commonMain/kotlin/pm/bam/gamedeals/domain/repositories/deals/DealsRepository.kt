@@ -7,8 +7,11 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.db.cache.DealDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.dao.DealDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -23,6 +26,9 @@ import pm.bam.gamedeals.logging.debug
 
 internal const val DEAL_PAGE_COUNT = 60
 internal val DEALS_TTL_MILLIS = millisInHour * 8
+
+/** Deal details are the transact tier — short TTL, fresh-blocking (ITAD caching strategy §4.2 / Phase 3). */
+internal val DEAL_DETAILS_TTL_MILLIS = millisInHour * 2
 
 interface DealsRepository {
     fun observeAllDeals(): Flow<List<Deal>>
@@ -56,6 +62,8 @@ internal class DealsRepositoryImpl(
     private val dealsSource: DealsSource,
     private val clock: Clock,
     private val regionRepository: RegionRepository,
+    private val dealDetailsCacheDao: DealDetailsCacheDao,
+    private val json: Json,
 ) : DealsRepository {
 
     override fun observeAllDeals(): Flow<List<Deal>> =
@@ -87,8 +95,38 @@ internal class DealsRepositoryImpl(
         return dealsDao.getStoreDeals(storeId, regionRepository.getSelectedCountryCode(), limit)
     }
 
-    override suspend fun getDeal(dealId: String): DealDetails =
-        dealsSource.fetchDealDetails(dealId)
+    /**
+     * Deal details for the transact surface. Cached per `(dealId, country)` at a short 2h TTL and read
+     * **fresh-blocking** — the user is about to click through, so a stale price must not show. Bounded
+     * by serve-stale-on-error (D7): on a warm cache a failed refresh falls back to the stale row; on a
+     * cold cache the failure surfaces (retryable) instead of returning nothing.
+     */
+    override suspend fun getDeal(dealId: String): DealDetails {
+        val country = regionRepository.getSelectedCountryCode()
+        var fetched: DealDetails? = null
+        val cache = CachedResource(
+            clock = clock,
+            read = { dealDetailsCacheDao.get(dealId, country)?.let(::listOf) ?: emptyList() },
+            expiresAtMillis = { it.expires },
+            refresh = {
+                val details = dealsSource.fetchDealDetails(dealId)
+                fetched = details
+                dealDetailsCacheDao.upsert(
+                    DealDetailsCacheEntry(
+                        dealId = dealId,
+                        country = country,
+                        json = json.encodeToString(DealDetails.serializer(), details),
+                        expires = clock.nowMillis() + DEAL_DETAILS_TTL_MILLIS,
+                    )
+                )
+            },
+        )
+        cache.refreshIfNeeded()
+        fetched?.let { return it } // just refreshed — return the fresh value without a re-read/decode
+        val cached = dealDetailsCacheDao.get(dealId, country)
+            ?: error("Deal details for $dealId ($country) missing after refresh")
+        return json.decodeFromString(DealDetails.serializer(), cached.json)
+    }
 
     override suspend fun getDeals(query: DealsQuery): List<Deal> =
         dealsSource.fetchDeals(query)

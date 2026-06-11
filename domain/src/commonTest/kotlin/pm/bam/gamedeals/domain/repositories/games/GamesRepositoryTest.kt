@@ -5,6 +5,7 @@ import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify
 import dev.mokkery.verify.VerifyMode.Companion.exactly
@@ -13,9 +14,14 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
+import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -23,6 +29,7 @@ import pm.bam.gamedeals.testing.fixtures.game
 import pm.bam.gamedeals.testing.fixtures.gameDetails
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class GamesRepositoryTest {
@@ -30,11 +37,18 @@ class GamesRepositoryTest {
     private val logger: Logger = TestingLoggingListener()
     private val gamesDao: GamesDao = mock(MockMode.autoUnit)
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
+    private val gameDetailsCacheDao: GameDetailsCacheDao = mock(MockMode.autoUnit)
 
     private val now = 1_000_000L
     private val clock = Clock { now }
+    private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
-    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock)
+    private val country = "US"
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
+        everySuspend { getSelectedCountryCode() } returns country
+    }
+
+    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock, regionRepository, gameDetailsCacheDao, json)
 
     @Test
     fun observe_games_empty_cache_triggers_refresh_and_stamps_expires() = runTest {
@@ -67,17 +81,49 @@ class GamesRepositoryTest {
     }
 
     @Test
-    fun get_game() = runTest {
-        val id = "1"
-        val idString = id
-        val gameDetails = gameDetails()
+    fun get_game_details_cold_cache_fetches_caches_and_returns() = runTest {
+        val gameId = "1"
+        val details = gameDetails()
 
-        everySuspend { dealsSource.fetchGameDetails(idString) } returns gameDetails
+        everySuspend { gameDetailsCacheDao.get(gameId, country) } returns null
+        everySuspend { dealsSource.fetchGameDetails(gameId) } returns details
 
-        val result = impl.getGameDetails(id)
-        assertEquals(gameDetails, result)
+        val result = impl.getGameDetails(gameId)
+        assertEquals(details, result)
 
-        verifySuspend(exactly(1)) { dealsSource.fetchGameDetails(idString) }
+        // Cold cache: fetch, persist the region-keyed blob, return the fresh value.
+        verifySuspend(exactly(1)) { dealsSource.fetchGameDetails(gameId) }
+        verifySuspend(exactly(1)) { gameDetailsCacheDao.upsert(any()) }
+    }
+
+    @Test
+    fun get_game_details_fresh_cache_returns_decoded_without_fetch() = runTest {
+        val gameId = "1"
+        val details = gameDetails()
+        val entry = GameDetailsCacheEntry(
+            gameId = gameId,
+            country = country,
+            json = json.encodeToString(GameDetails.serializer(), details),
+            expires = now + 10_000,
+        )
+        everySuspend { gameDetailsCacheDao.get(gameId, country) } returns entry
+
+        val result = impl.getGameDetails(gameId)
+        assertEquals(details, result)
+
+        // Fresh cache: decode the blob, no network fetch.
+        verifySuspend(exactly(0)) { dealsSource.fetchGameDetails(any()) }
+    }
+
+    @Test
+    fun get_game_details_cold_cache_refresh_failure_surfaces() = runTest {
+        val gameId = "1"
+
+        everySuspend { gameDetailsCacheDao.get(gameId, country) } returns null
+        everySuspend { dealsSource.fetchGameDetails(gameId) } throws Exception("network down")
+
+        // Cold cache with no stale fallback: the failure surfaces (retryable).
+        assertFailsWith<Exception> { impl.getGameDetails(gameId) }
     }
 
     @Test

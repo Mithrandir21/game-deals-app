@@ -1,3 +1,5 @@
+@file:UseSerializers(ImmutableListSerializer::class)
+
 package pm.bam.gamedeals.domain.models
 
 
@@ -8,6 +10,8 @@ import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
 
 @Entity(tableName = "Game")
 @Immutable
