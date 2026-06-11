@@ -16,4 +16,12 @@ internal interface PriceHistoryCacheDao {
     /** Upserts the cached price-history series (one row per `(gameId, country)`). */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: PriceHistoryCacheEntry)
+
+    /** Drops series not refreshed since [threshold] — the 30-day price-history retention (Phase 8 / D9). */
+    @Query("DELETE FROM PriceHistoryCache WHERE fetchedAt < :threshold")
+    suspend fun deleteFetchedBefore(threshold: Long)
+
+    /** Clears the whole table — the `cacheSchemaVersion` bump (Phase 8). */
+    @Query("DELETE FROM PriceHistoryCache")
+    suspend fun clear()
 }

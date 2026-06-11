@@ -1,6 +1,6 @@
 # ITAD caching strategy
 
-**Status:** In progress — **Phases 0–6 shipped** (#261, #262, #263, #264, #265, #266, #267); **Phase 7 in progress** (#268) — **7a (Room persistence, remote-first writes) shipped**, 7b (optimistic + outbox) deferred. The standalone per-game `GamePrice` cache (originally Phase 3, then carried to Phase 5) has been **retired**: the transact price already lives inside the #264 detail blobs, and its only other reader — stats rankings — now **snapshots** the price into its 12h feed blob (Phase 5 decision), so a separate 2h price table has no caller and only the avoided 12h↔2h divergence as a rationale, which rankings accept. Phase 8 to follow. This document is the agreed strategy, built in phases.
+**Status:** **Complete — Phases 0–8 shipped** (#261, #262, #263, #264, #265, #266, #267, #268, #269). Two items are **deferred by design**, to be picked up on their own merits: Phase 7's **7b** (optimistic writes + pending-writes outbox, for offline waitlisting) and D9's **negative-result caching**. The standalone per-game `GamePrice` cache (originally Phase 3, then carried to Phase 5) was **retired**: the transact price already lives inside the #264 detail blobs, and its only other reader — stats rankings — now **snapshots** the price into its 12h feed blob (Phase 5 decision), so a separate 2h price table has no caller and only the avoided 12h↔2h divergence as a rationale, which rankings accept. This document is the agreed strategy, built in phases.
 **Scope:** Caching of IsThereAnyDeal (ITAD) data across the app. Sibling sources (IGDB releases,
 GamerPower giveaways) are touched only where they share the same `CachedResource` seam.
 **Related:** deal-source migration [`docs/deal-source-migration/HANDOVER.md`](../deal-source-migration/HANDOVER.md) ·
@@ -256,7 +256,13 @@ Waitlist & Collection move from in-memory `StateFlow` to Room, with **remote as 
   an app update to force a one-time clear of volatile tables (Room migrations cover schema, this covers
   semantic format changes that aren't a column change).
 
----
+**As built (Phase 8, #269):** `CacheMaintenance.runStartupMaintenance()` runs once per cold start (fire-and-forget
+off the app's background scope). The format-version guard reads/writes `cacheSchemaVersion` via `Storage` and, on
+a bump, clears the blob caches + `GameIdMapping`. The sweep is age-based per table — `expires < now − 7d` grace
+for the detail/feed blobs (so recent serve-stale rows survive), `fetchedAt < now − 30d` for price history,
+`expires < now` for the identity mappings. The "keep latest row per key / superseded regions" nuance is moot in
+practice: every cache table is PK-keyed (one row per key), and a region switch's old-region rows fall out via the
+same grace sweep once their short TTL lapses. **Negative-result caching remains deferred** (no phase assigned).
 
 ## 10. Cross-cutting
 
@@ -283,7 +289,7 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 | **5** | ✅ **Done (#266)** — three sub-PRs: **(5a) concurrency limiter** — `ItadConcurrencyLimiter` Ktor `Semaphore` plugin in `ItadHttpClient` (default 5 in-flight), caps the per-game `/games/info` fan-out; no schema. **(5b) bundles cache** — `BundlesCache` blob (v15), 12h, keyed `(country)`; `getBundle(id)` resolves from the cached list. **(5c) stats rankings cache** — `StatsRankingsCache` blob (v16) of `List<RankedGame>` incl. snapshotted price + boxart, 12h, keyed `(rankingType, country)`. `GamePrice` retired (§4.2). Feeds use the suspend read-through pattern (cold blocks, fresh instant, stale refreshes, serve-stale-on-error), not Flow-SWR — Home reads them as suspend one-shots. | Stats' per-game `/games/info` boxart fan-out is the heaviest path; the limiter caps it and the 12h blob removes it on the 2nd load. | `BundlesCache` (v15), `StatsRankingsCache` (v16) |
 | **6** | ✅ **Done (#267).** Steam-appID→ITAD-UUID **long-TTL mapping** in `findGameIdBySteamAppId`: new `GameIdMapping` table (v17), keyed `steamAppId` (region-invariant), 30d TTL. Genuine misses are **not** cached (D3); a lookup failure serves a stale mapping if present. `title` confirmed vestigial on this path (lookup is by appID via `/games/lookup`). | Removes a repeated lookup on the Steam-bridge path. | `GameIdMapping` (v17) |
 | **7** | 🟡 **In progress (#268)** — split (§8): **✅ (7a) Room persistence, remote-first writes** — `WaitlistGameId` / `CollectionGameId` **id-set** tables (v18) behind a DAO Flow, **auth-gated** (the observed set is empty whenever logged out; a logged-out `get*` clears the rows). `observeIs*`/`observeIds` now correct **instantly on cold start + offline**; `get*` is the remote-as-truth `replaceAll` reconcile; `toggle*` stays **remote-first** (Room never holds an unconfirmed edit ⇒ refresh always safe ⇒ no outbox). Public API unchanged (no feature edits). Display fields + an offline *list* are deferred (the list screen still reads `get*` from remote, so storing title/boxart would be unread). **⬜ (7b, deferred)** optimistic writes + pending-writes outbox — enables offline waitlisting; carries the reconcile-ordering risk, decided later. | UX polish (no cold-start flicker) + offline read. | `WaitlistGameId` + `CollectionGameId` (v18) |
-| **8** | **Eviction sweep** on launch + `cacheSchemaVersion`. | Bounds growth once the new tables exist. | No |
+| **8** | ✅ **Done (#269).** `CacheMaintenance.runStartupMaintenance()` (fire-and-forget off the app's background scope, mirroring `warmDomainDatabase`): a **`cacheSchemaVersion`** guard (stored in `Storage`; on bump, clears the format-versioned ITAD caches + `GameIdMapping` per D3) and an **eviction sweep** — `PriceHistoryCache` 30d-by-`fetchedAt`, the detail/feed blobs by `expires < now − 7d` grace (keeps recent serve-stale rows), `GameIdMapping` by `expires < now`. User data + migration-covered column tables untouched. Negative-result caching (D9) deferred. | Bounds growth once the new tables exist. | No (version lives in `Storage`) |
 
 ---
 

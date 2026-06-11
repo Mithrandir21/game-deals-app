@@ -24,6 +24,7 @@ import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.deals.di.dealsModule
@@ -100,6 +101,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             )
         }
         warmDomainDatabase()
+        runCacheMaintenance()
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
@@ -141,6 +143,27 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             } catch (t: Throwable) {
                 try {
                     error(logger, throwable = t) { "Failed to warm DomainDatabase" }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Run startup cache maintenance (Phase 8) off the Main thread: the `cacheSchemaVersion` guard and the
+     * eviction sweep over the ITAD caches. Fire-and-forget on the [applicationScope] (mirrors
+     * [warmDomainDatabase]) — maintenance is best-effort and must never crash the app or block cold start;
+     * [CancellationException] is rethrown so structured concurrency stays honest.
+     */
+    private fun runCacheMaintenance() {
+        applicationScope.launch {
+            try {
+                get<CacheMaintenance>().runStartupMaintenance()
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                try {
+                    error(logger, throwable = t) { "Cache maintenance failed" }
                 } catch (_: Throwable) {
                 }
             }

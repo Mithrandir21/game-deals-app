@@ -16,4 +16,12 @@ internal interface BundlesCacheDao {
     /** Upserts the cached bundles row (one row per `country`). */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: BundlesCacheEntry)
+
+    /** Drops rows whose TTL expired before [threshold] — the launch eviction sweep (Phase 8). */
+    @Query("DELETE FROM BundlesCache WHERE expires < :threshold")
+    suspend fun deleteExpiredBefore(threshold: Long)
+
+    /** Clears the whole table — the `cacheSchemaVersion` bump (Phase 8). */
+    @Query("DELETE FROM BundlesCache")
+    suspend fun clear()
 }

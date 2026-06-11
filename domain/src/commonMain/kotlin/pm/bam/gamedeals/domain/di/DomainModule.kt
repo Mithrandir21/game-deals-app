@@ -17,6 +17,8 @@ import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenanceImpl
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -82,5 +84,10 @@ val domainModule = module {
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
+
+    // Startup cache maintenance (Phase 8): cacheSchemaVersion guard + eviction sweep over the ITAD caches.
+    single<CacheMaintenance> {
+        CacheMaintenanceImpl(get(SETTINGS_QUALIFIER), get(), get(), get(), get(), get(), get(), get(), get())
+    }
     single<StatsRepository> { StatsRepositoryImpl(get(), get(), get(), get(), get()) }
 }
