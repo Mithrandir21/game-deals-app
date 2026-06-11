@@ -47,8 +47,13 @@ interface DealsSource {
     /**
      * The historical low-price time series for a game (by its source game id), for the price-history
      * chart (#208). Providers that cannot supply a series return an empty [PriceHistory].
+     *
+     * [since] is an optional epoch-millisecond lower bound used by the repository's incremental cache
+     * (ITAD caching strategy, Phase 4): when non-null, the provider returns only the points at/after that
+     * instant so a stale series can be topped-up rather than refetched. A null [since] returns the full
+     * series (cold cache). Providers that can't filter by time may ignore it and return the full series.
      */
-    suspend fun fetchPriceHistory(gameId: String): PriceHistory
+    suspend fun fetchPriceHistory(gameId: String, since: Long? = null): PriceHistory
 
     /**
      * Active storefront bundles for the current region (#205 Phase 3c). Providers without bundles

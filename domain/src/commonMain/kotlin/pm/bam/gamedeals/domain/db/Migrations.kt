@@ -137,6 +137,19 @@ private val MIGRATION_12_13 = object : Migration(12, 13) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+/**
+ * v13 → v14 — price-history cache (ITAD caching strategy, Phase 4, #265). Creates the region-keyed
+ * `PriceHistoryCache` table, holding a serialized price-history series blob keyed by `(gameId, country)`
+ * with a `fetchedAt` stamp (for the 30-day retention sweep) and an `expires` TTL stamp. New table only —
+ * nothing existing is touched. The `CREATE TABLE` DDL is copied verbatim from the generated schema
+ * `domain/schemas/.../14.json` so the post-migration identity hash matches the compiled v14 database.
+ */
+private val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `PriceHistoryCache` (`gameId` TEXT NOT NULL, `country` TEXT NOT NULL, `json` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`gameId`, `country`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

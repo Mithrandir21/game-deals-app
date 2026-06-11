@@ -7,11 +7,13 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import pm.bam.gamedeals.domain.db.cache.DealDetailsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.dao.DealDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
+import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.db.dao.StoresDao
 import pm.bam.gamedeals.domain.models.Deal
@@ -23,13 +25,13 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-internal const val DOMAIN_DB_VERSION = 13
+internal const val DOMAIN_DB_VERSION = 14
 
 @Database(
     version = DOMAIN_DB_VERSION,
     entities = [
         Deal::class, Game::class, Store::class, Release::class, Giveaway::class,
-        DealDetailsCacheEntry::class, GameDetailsCacheEntry::class,
+        DealDetailsCacheEntry::class, GameDetailsCacheEntry::class, PriceHistoryCacheEntry::class,
     ],
     exportSchema = true,
 )
@@ -50,6 +52,8 @@ abstract class DomainDatabase : RoomDatabase() {
     internal abstract fun getDealDetailsCacheDao(): DealDetailsCacheDao
 
     internal abstract fun getGameDetailsCacheDao(): GameDetailsCacheDao
+
+    internal abstract fun getPriceHistoryCacheDao(): PriceHistoryCacheDao
 
 }
 

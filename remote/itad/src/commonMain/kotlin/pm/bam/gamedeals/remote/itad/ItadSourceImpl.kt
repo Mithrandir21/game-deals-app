@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad
 
 import com.skydoves.sandwich.getOrThrow
+import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
@@ -119,8 +120,13 @@ internal class ItadSourceImpl(
         return prices.toGameDetails(title = info.title, boxart = info.boxart)
     }
 
-    override suspend fun fetchPriceHistory(gameId: String): PriceHistory =
-        fetchItadPriceHistory(gameId = gameId, country = regionRepository.getSelectedCountryCode()).toPriceHistory(gameId)
+    override suspend fun fetchPriceHistory(gameId: String, since: Long?): PriceHistory =
+        fetchItadPriceHistory(
+            gameId = gameId,
+            country = regionRepository.getSelectedCountryCode(),
+            // ITAD's `since` is an ISO-8601 instant; the domain bound is epoch-ms (source-neutral).
+            since = since?.let { Instant.fromEpochMilliseconds(it).toString() },
+        ).toPriceHistory(gameId)
 
     override suspend fun fetchBundles(): List<Bundle> =
         bundlesApi.getBundles(country = regionRepository.getSelectedCountryCode())
@@ -163,8 +169,8 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .map { it.toItadGamePrices() }
 
-    suspend fun fetchItadPriceHistory(gameId: String, country: String? = null): List<ItadPriceHistoryEntry> =
-        gamesApi.getHistory(gameId = gameId, country = country)
+    suspend fun fetchItadPriceHistory(gameId: String, country: String? = null, since: String? = null): List<ItadPriceHistoryEntry> =
+        gamesApi.getHistory(gameId = gameId, country = country, since = since)
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()

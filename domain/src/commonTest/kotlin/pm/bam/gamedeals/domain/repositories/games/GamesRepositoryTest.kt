@@ -17,8 +17,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
+import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -38,6 +40,7 @@ class GamesRepositoryTest {
     private val gamesDao: GamesDao = mock(MockMode.autoUnit)
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
     private val gameDetailsCacheDao: GameDetailsCacheDao = mock(MockMode.autoUnit)
+    private val priceHistoryCacheDao: PriceHistoryCacheDao = mock(MockMode.autoUnit)
 
     private val now = 1_000_000L
     private val clock = Clock { now }
@@ -48,7 +51,7 @@ class GamesRepositoryTest {
         everySuspend { getSelectedCountryCode() } returns country
     }
 
-    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock, regionRepository, gameDetailsCacheDao, json)
+    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock, regionRepository, gameDetailsCacheDao, priceHistoryCacheDao, json)
 
     @Test
     fun observe_games_empty_cache_triggers_refresh_and_stamps_expires() = runTest {
@@ -153,19 +156,80 @@ class GamesRepositoryTest {
     }
 
     @Test
-    fun get_price_history_delegates_to_source() = runTest {
+    fun get_price_history_cold_cache_fetches_full_series_caches_and_returns() = runTest {
         val gameId = "uuid-1"
-        val priceHistory = PriceHistory(
-            gameID = gameId,
-            points = persistentListOf(PriceHistory.PricePoint(1_704_067_200_000L, 9.99, "$9.99")),
-        )
-        everySuspend { dealsSource.fetchPriceHistory(gameId) } returns priceHistory
+        val series = priceHistory(gameId, point(1_000L, 9.99, "$9.99"))
+
+        everySuspend { priceHistoryCacheDao.get(gameId, country) } returns null
+        everySuspend { dealsSource.fetchPriceHistory(gameId, null) } returns series
+
+        val result = impl.getPriceHistory(gameId)
+        assertEquals(series, result)
+
+        // Cold cache: full fetch (since = null), persist the region-keyed blob.
+        verifySuspend(exactly(1)) { dealsSource.fetchPriceHistory(gameId, null) }
+        verifySuspend(exactly(1)) { priceHistoryCacheDao.upsert(any()) }
+    }
+
+    @Test
+    fun get_price_history_fresh_cache_returns_decoded_without_fetch() = runTest {
+        val gameId = "uuid-1"
+        val series = priceHistory(gameId, point(1_000L, 9.99, "$9.99"))
+        everySuspend { priceHistoryCacheDao.get(gameId, country) } returns entryFor(gameId, series, expires = now + 10_000)
+
+        val result = impl.getPriceHistory(gameId)
+        assertEquals(series, result)
+
+        // Fresh cache: decode the blob, no network fetch.
+        verifySuspend(exactly(0)) { dealsSource.fetchPriceHistory(any(), any()) }
+    }
+
+    @Test
+    fun get_price_history_stale_cache_tops_up_incrementally_and_merges() = runTest {
+        val gameId = "uuid-1"
+        val cached = priceHistory(gameId, point(1_000L, 5.0, "$5"), point(2_000L, 4.0, "$4"))
+        // Stale entry (expired): the latest cached point (2_000) is the `since` lower bound.
+        everySuspend { priceHistoryCacheDao.get(gameId, country) } returns entryFor(gameId, cached, expires = now - 1)
+        // Delta re-returns the boundary point (2_000) plus a new one (3_000).
+        val delta = priceHistory(gameId, point(2_000L, 4.0, "$4"), point(3_000L, 3.0, "$3"))
+        everySuspend { dealsSource.fetchPriceHistory(gameId, 2_000L) } returns delta
 
         val result = impl.getPriceHistory(gameId)
 
-        assertEquals(priceHistory, result)
-        verifySuspend(exactly(1)) { dealsSource.fetchPriceHistory(gameId) }
+        // Merged, de-duplicated by timestamp, sorted oldest → newest.
+        val expected = priceHistory(gameId, point(1_000L, 5.0, "$5"), point(2_000L, 4.0, "$4"), point(3_000L, 3.0, "$3"))
+        assertEquals(expected, result)
+        verifySuspend(exactly(1)) { dealsSource.fetchPriceHistory(gameId, 2_000L) }
+        verifySuspend(exactly(1)) { priceHistoryCacheDao.upsert(any()) }
     }
+
+    @Test
+    fun get_price_history_stale_cache_refresh_failure_serves_stale() = runTest {
+        val gameId = "uuid-1"
+        val cached = priceHistory(gameId, point(1_000L, 5.0, "$5"))
+        everySuspend { priceHistoryCacheDao.get(gameId, country) } returns entryFor(gameId, cached, expires = now - 1)
+        everySuspend { dealsSource.fetchPriceHistory(gameId, 1_000L) } throws Exception("network down")
+
+        // Warm cache + failed refresh: fall back to the stale series (D7), don't throw, don't upsert.
+        val result = impl.getPriceHistory(gameId)
+        assertEquals(cached, result)
+        verifySuspend(exactly(0)) { priceHistoryCacheDao.upsert(any()) }
+    }
+
+    private fun point(timestampEpochMs: Long, value: Double, denominated: String) =
+        PriceHistory.PricePoint(timestampEpochMs, value, denominated)
+
+    private fun priceHistory(gameId: String, vararg points: PriceHistory.PricePoint) =
+        PriceHistory(gameID = gameId, points = persistentListOf(*points))
+
+    private fun entryFor(gameId: String, series: PriceHistory, expires: Long) =
+        PriceHistoryCacheEntry(
+            gameId = gameId,
+            country = country,
+            json = json.encodeToString(PriceHistory.serializer(), series),
+            fetchedAt = expires - 1,
+            expires = expires,
+        )
 
     @Test
     fun find_cheapshark_game_id_by_steam_app_id_returns_gameID_when_match_found() = runTest {
