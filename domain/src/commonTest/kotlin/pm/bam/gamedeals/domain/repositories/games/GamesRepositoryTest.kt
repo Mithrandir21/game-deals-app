@@ -17,8 +17,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.cache.GameIdMappingEntry
 import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
+import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -41,6 +43,7 @@ class GamesRepositoryTest {
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
     private val gameDetailsCacheDao: GameDetailsCacheDao = mock(MockMode.autoUnit)
     private val priceHistoryCacheDao: PriceHistoryCacheDao = mock(MockMode.autoUnit)
+    private val gameIdMappingDao: GameIdMappingDao = mock(MockMode.autoUnit)
 
     private val now = 1_000_000L
     private val clock = Clock { now }
@@ -51,7 +54,7 @@ class GamesRepositoryTest {
         everySuspend { getSelectedCountryCode() } returns country
     }
 
-    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock, regionRepository, gameDetailsCacheDao, priceHistoryCacheDao, json)
+    private val impl = GamesRepositoryImpl(logger, gamesDao, dealsSource, clock, regionRepository, gameDetailsCacheDao, priceHistoryCacheDao, gameIdMappingDao, json)
 
     @Test
     fun observe_games_empty_cache_triggers_refresh_and_stamps_expires() = runTest {
@@ -232,31 +235,60 @@ class GamesRepositoryTest {
         )
 
     @Test
-    fun find_cheapshark_game_id_by_steam_app_id_returns_gameID_when_match_found() = runTest {
+    fun find_game_id_by_steam_app_id_cold_cache_looks_up_caches_and_returns() = runTest {
         val match = game().copy(gameID = "12345")
+        everySuspend { gameIdMappingDao.get(1240440) } returns null
         everySuspend { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } returns listOf(match)
 
         val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
 
         assertEquals("12345", result)
         verifySuspend(exactly(1)) { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) }
+        // The resolved mapping is cached.
+        verifySuspend(exactly(1)) { gameIdMappingDao.upsert(GameIdMappingEntry(1240440, "12345", now + GAME_ID_MAPPING_TTL_MILLIS)) }
     }
 
     @Test
-    fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_no_match() = runTest {
+    fun find_game_id_by_steam_app_id_fresh_cache_returns_mapping_without_lookup() = runTest {
+        everySuspend { gameIdMappingDao.get(1240440) } returns GameIdMappingEntry(1240440, "12345", expires = now + 10_000)
+
+        val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+
+        assertEquals("12345", result)
+        verifySuspend(exactly(0)) { dealsSource.fetchGames(title = any(), steamAppID = any(), limit = any()) }
+    }
+
+    @Test
+    fun find_game_id_by_steam_app_id_genuine_miss_is_not_cached() = runTest {
+        everySuspend { gameIdMappingDao.get(999999) } returns null
         everySuspend { dealsSource.fetchGames(title = "Unknown Game", steamAppID = 999999, limit = 1) } returns emptyList()
 
         val result = impl.findGameIdBySteamAppId(steamAppId = 999999, title = "Unknown Game")
 
         assertEquals(null, result)
+        // A genuine "no match" must not be cached, so a later retry can still resolve (D3).
+        verifySuspend(exactly(0)) { gameIdMappingDao.upsert(any()) }
     }
 
     @Test
-    fun find_cheapshark_game_id_by_steam_app_id_returns_null_when_source_throws() = runTest {
+    fun find_game_id_by_steam_app_id_lookup_failure_serves_stale_mapping() = runTest {
+        // Stale (expired) mapping present + the lookup throws → fall back to the stale UUID.
+        everySuspend { gameIdMappingDao.get(1240440) } returns GameIdMappingEntry(1240440, "12345", expires = now - 1)
         everySuspend { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } throws Exception("network down")
 
         val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
 
-        assertEquals(null, result, "runCatching must swallow the exception and surface null")
+        assertEquals("12345", result)
+        verifySuspend(exactly(0)) { gameIdMappingDao.upsert(any()) }
+    }
+
+    @Test
+    fun find_game_id_by_steam_app_id_cold_cache_lookup_failure_returns_null() = runTest {
+        everySuspend { gameIdMappingDao.get(1240440) } returns null
+        everySuspend { dealsSource.fetchGames(title = "Halo Infinite", steamAppID = 1240440, limit = 1) } throws Exception("network down")
+
+        val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
+
+        assertEquals(null, result, "no stale mapping to fall back to → null")
     }
 }

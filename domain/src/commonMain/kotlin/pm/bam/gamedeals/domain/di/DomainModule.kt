@@ -62,10 +62,11 @@ val domainModule = module {
     single { get<DomainDatabase>().getPriceHistoryCacheDao() }
     single { get<DomainDatabase>().getBundlesCacheDao() }
     single { get<DomainDatabase>().getStatsRankingsCacheDao() }
+    single { get<DomainDatabase>().getGameIdMappingDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
-    single<GamesRepository> { GamesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<GamesRepository> { GamesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }

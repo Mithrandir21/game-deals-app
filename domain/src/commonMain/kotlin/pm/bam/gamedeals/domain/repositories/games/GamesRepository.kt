@@ -8,8 +8,10 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
+import pm.bam.gamedeals.domain.db.cache.GameIdMappingEntry
 import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
+import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.Deal
@@ -36,6 +38,13 @@ internal val GAME_DETAILS_TTL_MILLIS = millisInHour * 2
  * (only points newer than the latest cached one are fetched). ITAD caching strategy §4 / Phase 4.
  */
 internal val PRICE_HISTORY_TTL_MILLIS = millisInDay
+
+/**
+ * Steam-appID → ITAD-UUID identity mapping — a long TTL (not literal): the mapping is stable, so a
+ * monthly self-heal covers the rare ITAD UUID merge (the `cacheSchemaVersion` clear in Phase 8 is the
+ * other guard). ITAD caching strategy §4 / Phase 6.
+ */
+internal val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
 
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>
@@ -65,6 +74,7 @@ internal class GamesRepositoryImpl(
     private val regionRepository: RegionRepository,
     private val gameDetailsCacheDao: GameDetailsCacheDao,
     private val priceHistoryCacheDao: PriceHistoryCacheDao,
+    private val gameIdMappingDao: GameIdMappingDao,
     private val json: Json,
 ) : GamesRepository {
 
@@ -190,10 +200,32 @@ internal class GamesRepositoryImpl(
         debug(logger) { "Games refresh needed: $refreshed" }
     }
 
-    override suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String? =
-        runCatching {
+    /**
+     * Resolves a Steam appID to its ITAD game UUID, cached at a long TTL (ITAD caching strategy, Phase 6).
+     * A fresh cached mapping short-circuits the `/games/lookup` call. On a miss the lookup runs and a
+     * **resolved** UUID is cached; a genuine "no match" is **not** cached (D3) so a later retry can still
+     * succeed. A lookup *failure* (network) falls back to a stale mapping if one exists (identity is
+     * stable), else null — the caller treats this enrichment as best-effort.
+     */
+    override suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String? {
+        val cached = gameIdMappingDao.get(steamAppId)
+        if (cached != null && cached.expires > clock.nowMillis()) return cached.gameId
+
+        val lookup = runCatching {
             dealsSource.fetchGames(title = title, steamAppID = steamAppId, limit = 1)
                 .firstOrNull()
                 ?.gameID
-        }.getOrNull()
+        }
+        return lookup.fold(
+            onSuccess = { resolved ->
+                // Cache only a resolved mapping; a genuine miss stays uncached (D3).
+                if (resolved != null) {
+                    gameIdMappingDao.upsert(GameIdMappingEntry(steamAppId, resolved, clock.nowMillis() + GAME_ID_MAPPING_TTL_MILLIS))
+                }
+                resolved
+            },
+            // Lookup failed: serve the stale mapping if present (identity is stable), else null.
+            onFailure = { cached?.gameId },
+        )
+    }
 }
