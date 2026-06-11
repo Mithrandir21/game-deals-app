@@ -7,8 +7,11 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -431,6 +434,40 @@ class ItadSourceImplTest {
 
         // 1 initial attempt + 3 retries (ITAD_MAX_RETRIES)
         assertEquals(4, attempts)
+    }
+
+    @Test
+    fun itadHttpClient_caps_simultaneous_in_flight_requests() = runTest {
+        var inFlight = 0
+        var maxInFlight = 0
+        var handled = 0
+        val engine = MockEngine { _ ->
+            inFlight++
+            maxInFlight = maxOf(maxInFlight, inFlight)
+            delay(100) // hold the "connection" open so overlap is observable
+            inFlight--
+            handled++
+            respond(
+                content = SHOPS_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            maxConcurrency = 2,
+            engine = engine,
+        )
+
+        // Fire five requests at once; the limiter must keep no more than two in flight.
+        coroutineScope {
+            repeat(5) { launch { ItadShopsApi(client).getShops().getOrThrow() } }
+        }
+
+        assertEquals(5, handled) // all five still complete, just throttled
+        assertEquals(2, maxInFlight) // never more than the permit count, and the cap is actually reached
     }
 
     private companion object {

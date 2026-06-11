@@ -1,6 +1,6 @@
 # ITAD caching strategy
 
-**Status:** In progress — **Phases 0–4 shipped** (#261, #262, #263, #264, #265). Phase 3's per-game `GamePrice` cache was **folded into Phase 5**: it has no standalone caller today (the transact price already lives inside the #264 detail blobs, and the only other reader — stats ranking enrichment — is Phase 5), so building it now would be speculative (violates D10). Phases 5–8 to follow. This document is the agreed strategy, built in phases.
+**Status:** In progress — **Phases 0–4 shipped** (#261, #262, #263, #264, #265); **Phase 5 in progress** (#266) — **5a (concurrency limiter) shipped**, 5b (bundles cache) + 5c (stats rankings cache) to follow. The standalone per-game `GamePrice` cache (originally Phase 3, then carried to Phase 5) has been **retired**: the transact price already lives inside the #264 detail blobs, and its only other reader — stats rankings — now **snapshots** the price into its 12h feed blob (Phase 5 decision), so a separate 2h price table has no caller and only the avoided 12h↔2h divergence as a rationale, which rankings accept. Phases 6–8 to follow. This document is the agreed strategy, built in phases.
 **Scope:** Caching of IsThereAnyDeal (ITAD) data across the app. Sibling sources (IGDB releases,
 GamerPower giveaways) are touched only where they share the same `CachedResource` seam.
 **Related:** deal-source migration [`docs/deal-source-migration/HANDOVER.md`](../deal-source-migration/HANDOVER.md) ·
@@ -101,12 +101,12 @@ TTLs are expressed against the existing `millisInHour` helper. (Today only `mill
 | All-stores deals page | `/deals/v2` (paged) | volatile-browse, paged | **not persisted** | — | — | coalesce + 429 only (see §4.1) |
 | Deal details | (source) | **volatile-transact** | **2h** | `(dealId, country)` | `DealDetailsCache` ✅ v13 (#264) | **fresh-blocking** |
 | Game details | (source) | **volatile-transact** | **2h** | `(gameId, country)` | `GameDetailsCache` ✅ v13 (#264) | **fresh-blocking** |
-| Current prices | `/games/prices/v3` | volatile | **2h** (single) | `(gameId, country, shops)` | new `GamePrice` (Phase 5 — transact role already met by the detail blobs above) | fresh-blocking (transact) / SWR (list) |
+| Current prices | `/games/prices/v3` | volatile | n/a | — | ~~`GamePrice`~~ **retired** — transact price is in the detail blobs above; rankings snapshot it (§4.2) | n/a |
 | Price history | `/games/history/v2` | append-only | **incremental**, sweep at 30d | `(gameId, country)` | `PriceHistoryCache` ✅ v14 (#265) (blob, not per-point) | SWR |
 | Game info | `/games/info/v2` | metadata | **7d** | `(gameId)` | `Game` table (+`expires`) | SWR |
 | appid→UUID lookup | `/games/lookup`, `/games/search` | identity | **long-TTL** (not literal) | `(appid)` / `(normalizedTitle)` | new `GameIdMapping` | long-lived; **misses not cached** |
 | Free-text search | `/games/search` | query | **in-memory, short** (or none) | `(query)` | in-memory only | n/a |
-| Stats rankings | `/stats/*` (+`/games/prices/v3`) | curated feed | **12h** | `(rankingType, country)` | new `RankedGame` | SWR |
+| Stats rankings | `/stats/*` (+`/games/prices/v3`, +`/games/info/v2`) | curated feed | **12h** | `(rankingType, country)` | new `StatsRankingsCache` (blob: `List<RankedGame>` incl. snapshotted price + boxart) | read-through (12h) |
 | Bundles | `/bundles/v1` | curated feed | **12h** | `(country)` | new `Bundle*` tables | SWR |
 | Waitlist | `/waitlist/games/v1` | user-specific | login-scoped (not TTL) | `(userScope)` | new `WaitlistEntry` | refresh on launch/login |
 | Collection | `/collection/games/v1` | user-specific | login-scoped (not TTL) | `(userScope)` | new `CollectionEntry` | refresh on launch/login |
@@ -122,27 +122,31 @@ backoff. (If profiling later shows the first page is hot, an in-memory first-pag
 
 ### 4.2 Transact vs list price reads
 
-`/games/prices/v3` serves two callers. A `GamePrice` row carries exactly one `expires` (stamped at write
-time), so two TTLs on one row is unmodelable — both callers share a **single 2h TTL** and differ only in
-**staleness UX**, not freshness:
+`/games/prices/v3` serves two callers that differ in how fresh a price must be:
 - **Transact** (deal/game detail open): **fresh-blocking** — never show a dead price on the surface the user
   is about to click through from. On a warm cache a failed refresh falls back to stale (D7); on a cold/empty
   cache the path **fast-fails** instead of spinning through the full 429 backoff (see §6).
-- **List enrichment** (e.g. stats rankings): **SWR** — the list paints from cache immediately and updates in
-  place.
+- **List enrichment** (e.g. stats rankings): tolerant — a ranking tile can show a slightly stale price.
 
-The single 2h TTL means list-enrich refetches prices every 2h (rather than a longer feed tier), so the stats
-path's call volume is higher — the concurrency limiter in §7 matters *more*, not less.
+The original design gave both a shared 2h `GamePrice` cache; the **as-built decision below** instead lets the
+transact surface own its price (inside the detail blobs) and lets rankings snapshot theirs into the 12h feed
+blob — which retires `GamePrice` entirely.
 
-`RankedGame` (and any feed that shows prices) **references the `GamePrice` cache rather than snapshotting
-prices into its own rows**, so the 12h feed TTL and the 2h price TTL can't diverge into two prices for one
+The original plan was for `RankedGame` to **reference** a shared `GamePrice` cache rather than snapshot
+prices into its own rows, so the 12h feed TTL and the 2h price TTL couldn't diverge into two prices for one
 game.
 
-**As built (Phase 3):** the **transact** half of this is already covered — `/games/prices/v3` is not a
-domain-level resource but an enrichment call *inside* `ItadSourceImpl` when it assembles `DealDetails` /
-`GameDetails`, and those whole objects are now blob-cached at the 2h transact TTL by #264. The standalone
-`GamePrice` **table** therefore has no caller until the **list** half exists, so it's **deferred to Phase 5**
-(stats), where `RankedGame` enrichment (`ItadStatsSourceImpl`) becomes its first reader.
+**As built / decided:**
+- **Transact** half — already covered. `/games/prices/v3` is not a domain-level resource but an enrichment
+  call *inside* `ItadSourceImpl` when it assembles `DealDetails` / `GameDetails`, and those whole objects are
+  blob-cached at the 2h transact TTL by #264.
+- **List** half (Phase 5 decision) — stats rankings **snapshot** the enriched price into their 12h feed blob
+  (`StatsRankingsCache`) instead of referencing a separate price cache. A ranking-tile price may therefore be
+  up to 12h stale, which is acceptable off the transact surface; in exchange the heaviest cost (the per-game
+  `/games/info/v2` boxart fan-out, see §7) is eliminated on the second load by the same blob.
+- The standalone **`GamePrice` table is therefore retired** — with both halves covered, it has no caller, and
+  building it would be speculative (D10). If a surface ever needs a *fresh* price independent of the detail
+  blobs, revisit it then.
 
 ---
 
@@ -151,8 +155,9 @@ domain-level resource but an enrichment call *inside* `ItadSourceImpl` when it a
 Prices, deals, stats and bundles all vary by `country`. Moving from clear-on-region-change to
 `(resource × country)` keying means:
 
-- Add a **`country` column** to every region-scoped entity (`Deal`, `Store`, `GamePrice`,
-  `PriceHistoryPoint`, `RankedGame`, `Bundle`), part of the primary key / read predicate.
+- Add a **`country` column** to every region-scoped entity (`Deal`, `Store`, `PriceHistoryCache`,
+  `StatsRankingsCache`, `BundlesCache`), part of the primary key / read predicate. (The new cache tables
+  bake `country` into their composite key from the start; `GamePrice` was retired — see §4.2.)
   - **As built (Phase 2):** only `Deal` is keyed — by `(storeID, country)` via an `ADD COLUMN`
     that keeps the `dealID` primary key (a refetch under another region overwrites the same
     `dealID`, so the cache self-heals rather than coexisting). `Store` is **deferred as
@@ -194,10 +199,11 @@ Prices, deals, stats and bundles all vary by `country`. Moving from clear-on-reg
 | **In-flight de-duplication** | `RequestCoalescer` (next to `CachedResource`) | Keyed by `(resource, key, country)`; concurrent identical refreshes await one shared `Deferred`. Prevents a list and its visible tiles each firing the same price call. |
 | **429 backoff + `Retry-After`** | `ItadHttpClient` (Ktor `HttpRequestRetry`) | Exponential backoff that respects the server header. Cross-cutting for every ITAD call, cached or not. Maps cleanly onto the existing `RemoteExceptionTransformer`. |
 
-**Concurrency limiter (Phase 5):** a lightweight client-side semaphore bounding simultaneous ITAD calls —
-cheaper than a full budget and enough to cap the stats per-game price fan-out (the heaviest path). Pull it in
-under Phase 5, or gate Phase 5 on it; its value rose now that prices use a single 2h TTL. If `shops` joins the
-price key, it must also join the **coalescer** key, or two different-`shops` refreshes collide into one call.
+**Concurrency limiter (Phase 5a):** a lightweight client-side semaphore bounding simultaneous ITAD calls —
+cheaper than a full budget and enough to cap the heaviest path, the stats **per-game `/games/info` boxart
+fan-out** (`ItadStatsSourceImpl` issues one info call per ranked game). Ships first within Phase 5 as a Ktor
+plugin in `ItadHttpClient`, so it benefits even the cold/stale-refresh fetch that the 12h ranking blob can't
+avoid. (The `GamePrice`/`shops` coalescer-key caveat is moot now that `GamePrice` is retired — §4.2.)
 
 **Deferred:** a global per-interval request budget/throttle. Revisit if coalescing + the limiter + 429 backoff
 prove insufficient under real traffic (e.g. Home loading deals + stats + bundles concurrently on cold start).
@@ -262,9 +268,9 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 | **0** | ✅ **Done (#261).** Cross-cutting foundation: serve-stale-on-error (`CachedResource`), `RequestCoalescer`, and 429/`Retry-After` (`ItadHttpClient`), all unit-tested. | Pure behaviour, no schema; immediately reduces wasted/duplicate calls everywhere. | No |
 | **1** | ✅ **Done (#262).** Gate `Games` (7d) / `Releases` (24h) / `Giveaways` (12h) behind TTL via `CachedResource`; stop refetch-on-every-subscribe. | Biggest call-count win for the least work. | `Game`/`Release`/`Giveaway.expires` (v11) |
 | **2** | ✅ **Done (#263).** Region dimension: `Deal` keyed by `(storeID, country)`; reads filter by the active region; #212 clear-on-change retired. **Store kept region-invariant** (fetched globally today); `ADD COLUMN` backfilling the default region. | Unblocks correct multi-region caching for later phases. | `Deal.country` (v12) |
-| **3** | ✅ **Done (#264).** **deal/game details** caches: new `DealDetailsCache` / `GameDetailsCache` tables (v13), region-keyed `(id, country)`, 2h TTL, fresh-blocking via `CachedResource`. The per-game **`GamePrice`** cache is **folded into Phase 5** — no standalone caller today (transact price is in the detail blobs; list price is the stats fan-out). | The money-facing surfaces; needs Phase 2's `country`. | `DealDetailsCache` / `GameDetailsCache` (v13) |
+| **3** | ✅ **Done (#264).** **deal/game details** caches: new `DealDetailsCache` / `GameDetailsCache` tables (v13), region-keyed `(id, country)`, 2h TTL, fresh-blocking via `CachedResource`. The per-game **`GamePrice`** cache from this issue was **retired** (§4.2) — the transact price is in the detail blobs and rankings snapshot theirs, so it has no caller. | The money-facing surfaces; needs Phase 2's `country`. | `DealDetailsCache` / `GameDetailsCache` (v13) |
 | **4** | ✅ **Done (#265).** **Price history** incremental cache: new `PriceHistoryCache` table (v14), region-keyed `(gameId, country)`, full series stored as a blob; stale entries top-up incrementally via the source's new `since` bound and merge. Long SWR TTL (24h) + serve-stale-on-error; `fetchedAt` stored for the 30d retention sweep (the sweep job itself lands in Phase 8). | High-value, append-only; independent of the price caches. | `PriceHistoryCache` (v14) |
-| **5** | **Stats rankings** + **bundles** caches (feed tier, 12h, SWR), the per-game **`GamePrice`** cache (2h — the shared price substrate `RankedGame` references, folded down from Phase 3 as this is its first caller), **plus a client-side concurrency limiter** over ITAD calls. | Stats' per-game price enrichment is the heaviest path; the limiter caps its fan-out (more important now prices use a single 2h TTL). | New tables (incl. `GamePrice`) |
+| **5** | 🟡 **In progress (#266)** — three independently-shippable sub-PRs: **✅ (5a) concurrency limiter** — `ItadConcurrencyLimiter` Ktor `Semaphore` plugin in `ItadHttpClient` (default 5 in-flight), caps the per-game `/games/info` fan-out; no schema. **⬜ (5b) bundles cache** (`BundlesCache` blob, 12h, keyed `(country)`). **⬜ (5c) stats rankings cache** (`StatsRankingsCache` blob of `List<RankedGame>` incl. snapshotted price + boxart, 12h, keyed `(rankingType, country)`). `GamePrice` retired (§4.2). Feeds use the suspend read-through pattern (cold blocks, fresh instant, stale refreshes, serve-stale-on-error), not Flow-SWR — Home reads them as suspend one-shots. | Stats' per-game `/games/info` boxart fan-out is the heaviest path; the limiter caps it and the 12h blob removes it on the 2nd load. | `BundlesCache` (v15), `StatsRankingsCache` (v16) |
 | **6** | appid→UUID **long-TTL mapping** table (misses not cached). | Removes a repeated lookup on the Steam-bridge path. | New table |
 | **7** | Persist **Waitlist/Collection** to Room (remote-as-truth, optimistic writes). | UX polish (no cold-start flicker) + offline read. | New tables |
 | **8** | **Eviction sweep** on launch + `cacheSchemaVersion`. | Bounds growth once the new tables exist. | No |
@@ -273,10 +279,9 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 
 ## 12. Open questions / risks
 
-- **`shops` in the price key.** `/games/prices/v3` takes a `shops` filter; if the app ever requests subsets,
-  `shops` must join the cache key or caches will cross-contaminate — and then it must also join the
-  **coalescer** key (§7), or two different-`shops` refreshes collide into one shared call. Today calls appear
-  unfiltered — confirm before keying.
+- ~~**`shops` in the price key.**~~ **Resolved (moot).** This only mattered for the standalone `GamePrice`
+  cache, which is retired (§4.2). Prices are now snapshotted into the detail blobs (transact) and the stats
+  ranking blob (list), neither keyed by `shops`. Revisit only if a dedicated price cache is ever reintroduced.
 - **Stores TTL bump (8h→7d).** Low risk (shops are static), but a new store/logo would take up to 7d to
   appear. Acceptable; flagged for sign-off.
 - **History retention vs the chart.** 30d retention means a rarely-opened game re-downloads its series; fine
