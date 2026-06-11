@@ -4,9 +4,12 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
+import pm.bam.gamedeals.domain.db.dao.WaitlistDao
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
@@ -14,10 +17,13 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
  * The user's ITAD waitlist (epic #219). Replaces the removed local Favourites (Phase 3); the heart is
  * login-gated and writes here. Mirrors the old `FavouritesRepository` shape so call sites swap cleanly.
  *
- * Backed by [ItadAccountSource] (remote) with a local [MutableStateFlow] id cache for reactive UI:
- * [getWaitlist] refreshes the cache from the source, and [toggleWaitlist] applies an optimistic local
- * update around the remote add/remove. All writes are login-gated — a no-op when logged out (the UI
- * gates the heart, and [getWaitlist] returns empty so logged-out users simply see nothing).
+ * Backed by [ItadAccountSource] (remote) over a Room-persisted **gameId set** ([WaitlistDao]) for reactive
+ * UI (ITAD caching strategy, Phase 7a, #268): the id set survives process death, so the heart state is
+ * correct **instantly on cold start and offline** instead of empty-until-refresh. [getWaitlist] is the
+ * remote-as-truth reconcile (replaces the cached id set); [toggleWaitlist] is **remote-first** (await the
+ * ITAD add/remove, then update Room) so Room never holds an unconfirmed edit and the reconcile is always
+ * safe. The observed set is auth-gated — empty whenever logged out — and the rows are cleared on logout.
+ * All writes are login-gated.
  */
 /** Outcome of a [WaitlistRepository.toggleWaitlist] call, so callers can react to the login gate. */
 enum class WaitlistToggleResult {
@@ -44,31 +50,38 @@ interface WaitlistRepository {
 internal class WaitlistRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
+    private val waitlistDao: WaitlistDao,
 ) : WaitlistRepository {
 
-    private val ids = MutableStateFlow<ImmutableSet<String>>(persistentSetOf())
+    // Auth-gated so the persisted id set is never surfaced while logged out (it is also cleared on logout,
+    // but this guards the window before a reconcile and any cross-account switch).
+    override fun observeWaitlistIds(): Flow<ImmutableSet<String>> =
+        combine(authTokenStore.observeAuthState(), waitlistDao.observeAll()) { authState, rows ->
+            if (authState is AuthState.LoggedIn) rows.map { it.gameId }.toImmutableSet() else persistentSetOf()
+        }
 
-    override fun observeWaitlistIds(): Flow<ImmutableSet<String>> = ids
-    override fun observeIsWaitlisted(gameId: String): Flow<Boolean> = ids.map { gameId in it }
+    override fun observeIsWaitlisted(gameId: String): Flow<Boolean> =
+        observeWaitlistIds().map { gameId in it }
 
     override suspend fun getWaitlist(): List<WaitlistEntry> {
         if (!loggedIn()) {
-            ids.value = persistentSetOf()
+            waitlistDao.clear()
             return emptyList()
         }
         val entries = accountSource.getWaitlist()
-        ids.value = entries.map { it.gameId }.toImmutableSet()
+        waitlistDao.replaceAll(entries.map { it.gameId })
         return entries
     }
 
     override suspend fun toggleWaitlist(gameId: String): WaitlistToggleResult {
         if (!loggedIn()) return WaitlistToggleResult.NOT_LOGGED_IN
-        if (gameId in ids.value) {
+        // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
+        if (waitlistDao.contains(gameId)) {
             accountSource.removeFromWaitlist(gameId)
-            ids.value = (ids.value - gameId).toImmutableSet()
+            waitlistDao.delete(gameId)
         } else {
             accountSource.addToWaitlist(gameId)
-            ids.value = (ids.value + gameId).toImmutableSet()
+            waitlistDao.add(WaitlistGameIdEntry(gameId))
         }
         return WaitlistToggleResult.UPDATED
     }

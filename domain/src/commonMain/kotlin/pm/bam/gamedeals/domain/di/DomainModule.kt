@@ -63,6 +63,8 @@ val domainModule = module {
     single { get<DomainDatabase>().getBundlesCacheDao() }
     single { get<DomainDatabase>().getStatsRankingsCacheDao() }
     single { get<DomainDatabase>().getGameIdMappingDao() }
+    single { get<DomainDatabase>().getWaitlistDao() }
+    single { get<DomainDatabase>().getCollectionDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
@@ -78,7 +80,7 @@ val domainModule = module {
     // source (Phase 5.1, #235).
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
-    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get()) }
-    single<CollectionRepository> { CollectionRepositoryImpl(get(), get()) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
     single<StatsRepository> { StatsRepositoryImpl(get(), get(), get(), get(), get()) }
 }

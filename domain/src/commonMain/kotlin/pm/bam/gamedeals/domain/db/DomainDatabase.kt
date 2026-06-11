@@ -6,12 +6,15 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import pm.bam.gamedeals.domain.db.cache.BundlesCacheEntry
+import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.cache.DealDetailsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.GameIdMappingEntry
 import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.cache.StatsRankingsCacheEntry
+import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.BundlesCacheDao
+import pm.bam.gamedeals.domain.db.dao.CollectionDao
 import pm.bam.gamedeals.domain.db.dao.DealDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
@@ -22,6 +25,7 @@ import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.db.dao.StatsRankingsCacheDao
 import pm.bam.gamedeals.domain.db.dao.StoresDao
+import pm.bam.gamedeals.domain.db.dao.WaitlistDao
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -31,7 +35,7 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-internal const val DOMAIN_DB_VERSION = 17
+internal const val DOMAIN_DB_VERSION = 18
 
 @Database(
     version = DOMAIN_DB_VERSION,
@@ -39,6 +43,7 @@ internal const val DOMAIN_DB_VERSION = 17
         Deal::class, Game::class, Store::class, Release::class, Giveaway::class,
         DealDetailsCacheEntry::class, GameDetailsCacheEntry::class, PriceHistoryCacheEntry::class,
         BundlesCacheEntry::class, StatsRankingsCacheEntry::class, GameIdMappingEntry::class,
+        WaitlistGameIdEntry::class, CollectionGameIdEntry::class,
     ],
     exportSchema = true,
 )
@@ -67,6 +72,10 @@ abstract class DomainDatabase : RoomDatabase() {
     internal abstract fun getStatsRankingsCacheDao(): StatsRankingsCacheDao
 
     internal abstract fun getGameIdMappingDao(): GameIdMappingDao
+
+    internal abstract fun getWaitlistDao(): WaitlistDao
+
+    internal abstract fun getCollectionDao(): CollectionDao
 
 }
 

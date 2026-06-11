@@ -1,8 +1,12 @@
 package pm.bam.gamedeals.domain.repositories.collection
 
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
+import pm.bam.gamedeals.domain.db.dao.CollectionDao
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
@@ -17,6 +21,7 @@ class CollectionRepositoryTest {
         val repo = CollectionRepositoryImpl(
             FakeAccountSource(collection = listOf(CollectionEntry("a", "A"))),
             FakeAuthTokenStore(access = null),
+            FakeCollectionDao(initial = listOf("a")),
         )
         assertEquals(emptyList(), repo.getCollection())
         assertEquals(persistentSetOf(), repo.observeCollectionIds().first())
@@ -27,19 +32,42 @@ class CollectionRepositoryTest {
         val repo = CollectionRepositoryImpl(
             FakeAccountSource(collection = listOf(CollectionEntry("a", "A"), CollectionEntry("b", "B"))),
             FakeAuthTokenStore(access = "token"),
+            FakeCollectionDao(),
         )
         assertEquals(2, repo.getCollection().size)
         assertEquals(setOf("a", "b"), repo.observeCollectionIds().first().toSet())
     }
 
     @Test
+    fun cold_start_observe_reads_the_persisted_id_set_before_any_refresh() = runTest {
+        val repo = CollectionRepositoryImpl(
+            FakeAccountSource(),
+            FakeAuthTokenStore(access = "token"),
+            FakeCollectionDao(initial = listOf("a", "b")),
+        )
+        assertEquals(setOf("a", "b"), repo.observeCollectionIds().first().toSet())
+    }
+
+    @Test
     fun logged_in_toggle_adds_when_absent() = runTest {
         val source = FakeAccountSource()
-        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = "token"))
+        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeCollectionDao())
 
         repo.toggleCollection("a")
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsCollected("a").first())
     }
+}
+
+/** In-memory [CollectionDao] backed by a reactive [MutableStateFlow] so `observeAll()` emits on every change. */
+internal class FakeCollectionDao(initial: List<String> = emptyList()) : CollectionDao {
+    private val rows = MutableStateFlow(initial.map { CollectionGameIdEntry(it) })
+    override fun observeAll(): Flow<List<CollectionGameIdEntry>> = rows
+    override suspend fun contains(gameId: String): Boolean = rows.value.any { it.gameId == gameId }
+    override suspend fun add(vararg entries: CollectionGameIdEntry) {
+        rows.value = (rows.value + entries).distinctBy { it.gameId }
+    }
+    override suspend fun delete(gameId: String) { rows.value = rows.value.filterNot { it.gameId == gameId } }
+    override suspend fun clear() { rows.value = emptyList() }
 }

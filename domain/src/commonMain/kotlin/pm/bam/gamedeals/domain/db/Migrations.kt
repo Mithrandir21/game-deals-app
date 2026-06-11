@@ -187,6 +187,19 @@ private val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+/**
+ * v17 → v18 — user-data persistence (ITAD caching strategy, Phase 7a, #268). Creates the login-scoped
+ * `WaitlistGameId` and `CollectionGameId` id-set tables (one `gameId` PK each) backing the heart/collected
+ * state. New tables only — nothing existing is touched. The `CREATE TABLE` DDL is copied verbatim from the
+ * generated schema `domain/schemas/.../18.json`.
+ */
+private val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `WaitlistGameId` (`gameId` TEXT NOT NULL, PRIMARY KEY(`gameId`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `CollectionGameId` (`gameId` TEXT NOT NULL, PRIMARY KEY(`gameId`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

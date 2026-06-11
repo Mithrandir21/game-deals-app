@@ -1,6 +1,6 @@
 # ITAD caching strategy
 
-**Status:** In progress — **Phases 0–6 shipped** (#261, #262, #263, #264, #265, #266, #267). The standalone per-game `GamePrice` cache (originally Phase 3, then carried to Phase 5) has been **retired**: the transact price already lives inside the #264 detail blobs, and its only other reader — stats rankings — now **snapshots** the price into its 12h feed blob (Phase 5 decision), so a separate 2h price table has no caller and only the avoided 12h↔2h divergence as a rationale, which rankings accept. Phases 7–8 to follow. This document is the agreed strategy, built in phases.
+**Status:** In progress — **Phases 0–6 shipped** (#261, #262, #263, #264, #265, #266, #267); **Phase 7 in progress** (#268) — **7a (Room persistence, remote-first writes) shipped**, 7b (optimistic + outbox) deferred. The standalone per-game `GamePrice` cache (originally Phase 3, then carried to Phase 5) has been **retired**: the transact price already lives inside the #264 detail blobs, and its only other reader — stats rankings — now **snapshots** the price into its 12h feed blob (Phase 5 decision), so a separate 2h price table has no caller and only the avoided 12h↔2h divergence as a rationale, which rankings accept. Phase 8 to follow. This document is the agreed strategy, built in phases.
 **Scope:** Caching of IsThereAnyDeal (ITAD) data across the app. Sibling sources (IGDB releases,
 GamerPower giveaways) are touched only where they share the same `CachedResource` seam.
 **Related:** deal-source migration [`docs/deal-source-migration/HANDOVER.md`](../deal-source-migration/HANDOVER.md) ·
@@ -108,8 +108,8 @@ TTLs are expressed against the existing `millisInHour` helper. (Today only `mill
 | Free-text search | `/games/search` | query | **in-memory, short** (or none) | `(query)` | in-memory only | n/a |
 | Stats rankings | `/stats/*` (+`/games/prices/v3`, +`/games/info/v2`) | curated feed | **12h** | `(rankingType, country)` | `StatsRankingsCache` ✅ v16 (#266) (blob: `List<RankedGame>` incl. snapshotted price + boxart) | read-through (12h) |
 | Bundles | `/bundles/v1` | curated feed | **12h** | `(country)` | `BundlesCache` ✅ v15 (#266) (blob: `List<Bundle>`) | read-through (12h) |
-| Waitlist | `/waitlist/games/v1` | user-specific | login-scoped (not TTL) | `(userScope)` | new `WaitlistEntry` | refresh on launch/login |
-| Collection | `/collection/games/v1` | user-specific | login-scoped (not TTL) | `(userScope)` | new `CollectionEntry` | refresh on launch/login |
+| Waitlist | `/waitlist/games/v1` | user-specific | login-scoped (not TTL) | `(gameId)` | `WaitlistGameId` ✅ v18 (#268) (id set; display fields deferred) | refresh on launch/login |
+| Collection | `/collection/games/v1` | user-specific | login-scoped (not TTL) | `(gameId)` | `CollectionGameId` ✅ v18 (#268) (id set; display fields deferred) | refresh on launch/login |
 | User info | `/user/info/v2` | user-specific | session/short | `(userScope)` | optional | refresh on login |
 
 ### 4.1 The all-stores deals page (special case)
@@ -214,16 +214,26 @@ prove insufficient under real traffic (e.g. Home loading deals + stats + bundles
 
 Waitlist & Collection move from in-memory `StateFlow` to Room, with **remote as source of truth**:
 
-- New `WaitlistEntry` / `CollectionEntry` tables (id set + minimal display fields) so the heart/collected state
-  is populated **instantly on cold start** and readable offline — no empty-then-fill flicker.
-- Writes stay **optimistic**: update Room locally, push to ITAD, reconcile with a remote refresh on
-  launch/login. A push that fails offline must enqueue to a **pending-writes outbox** replayed *before* the
-  reconciling refresh — otherwise remote-as-truth silently reverts the user's edit and the heart-tap is lost
-  with no signal. (Today's code is remote-first and sidesteps this; the optimistic flip introduces it.)
+- New `WaitlistGameId` / `CollectionGameId` tables so the heart/collected state is populated **instantly on
+  cold start** and readable offline — no empty-then-fill flicker. **As built (7a):** the **id set only**;
+  display fields (title/boxart for an offline *list*) are deferred until a surface reads the list from Room
+  rather than from `get*` (which fetches them from remote today).
 - **Not TTL-cached.** Invalidation is login-scoped: a fresh login refreshes from remote; logout clears the
   tables. (These are the only caches keyed to identity rather than `country`.)
 - Keeps the existing `WaitlistRepository` / `CollectionRepository` public shape; only the backing store changes
   (StateFlow → DAO-backed Flow).
+
+**Split into 7a (shipping) and 7b (deferred):**
+- **7a — Room persistence, remote-first writes.** The backing store change above, keeping today's
+  **remote-first** writes (`toggle*` awaits the ITAD add/remove, *then* writes Room). Because Room therefore
+  never holds an unconfirmed local edit, the remote-as-truth `replaceAll` refresh is **always safe** — no
+  reconcile conflict, no outbox. Delivers the cold-start / offline-read UX win at low risk. Offline *writes*
+  are not supported (an offline toggle fails, as today).
+- **7b — optimistic writes + outbox (deferred).** Flip `toggle*` to Room-first (instant heart) and add a
+  **pending-writes outbox** replayed *before* the reconciling refresh — otherwise remote-as-truth silently
+  reverts the user's edit. This is the only part that enables **offline waitlisting**, and it is where all the
+  reconcile-ordering correctness risk lives, so it is deferred and decided on its own merits. (Today's code is
+  already remote-first and sidesteps the outbox — 7a keeps that property; only 7b's optimistic flip needs it.)
 
 ---
 
@@ -272,7 +282,7 @@ Ordered for early wins and minimal blast radius. Each phase is independently shi
 | **4** | ✅ **Done (#265).** **Price history** incremental cache: new `PriceHistoryCache` table (v14), region-keyed `(gameId, country)`, full series stored as a blob; stale entries top-up incrementally via the source's new `since` bound and merge. Long SWR TTL (24h) + serve-stale-on-error; `fetchedAt` stored for the 30d retention sweep (the sweep job itself lands in Phase 8). | High-value, append-only; independent of the price caches. | `PriceHistoryCache` (v14) |
 | **5** | ✅ **Done (#266)** — three sub-PRs: **(5a) concurrency limiter** — `ItadConcurrencyLimiter` Ktor `Semaphore` plugin in `ItadHttpClient` (default 5 in-flight), caps the per-game `/games/info` fan-out; no schema. **(5b) bundles cache** — `BundlesCache` blob (v15), 12h, keyed `(country)`; `getBundle(id)` resolves from the cached list. **(5c) stats rankings cache** — `StatsRankingsCache` blob (v16) of `List<RankedGame>` incl. snapshotted price + boxart, 12h, keyed `(rankingType, country)`. `GamePrice` retired (§4.2). Feeds use the suspend read-through pattern (cold blocks, fresh instant, stale refreshes, serve-stale-on-error), not Flow-SWR — Home reads them as suspend one-shots. | Stats' per-game `/games/info` boxart fan-out is the heaviest path; the limiter caps it and the 12h blob removes it on the 2nd load. | `BundlesCache` (v15), `StatsRankingsCache` (v16) |
 | **6** | ✅ **Done (#267).** Steam-appID→ITAD-UUID **long-TTL mapping** in `findGameIdBySteamAppId`: new `GameIdMapping` table (v17), keyed `steamAppId` (region-invariant), 30d TTL. Genuine misses are **not** cached (D3); a lookup failure serves a stale mapping if present. `title` confirmed vestigial on this path (lookup is by appID via `/games/lookup`). | Removes a repeated lookup on the Steam-bridge path. | `GameIdMapping` (v17) |
-| **7** | Persist **Waitlist/Collection** to Room (remote-as-truth, optimistic writes). | UX polish (no cold-start flicker) + offline read. | New tables |
+| **7** | 🟡 **In progress (#268)** — split (§8): **✅ (7a) Room persistence, remote-first writes** — `WaitlistGameId` / `CollectionGameId` **id-set** tables (v18) behind a DAO Flow, **auth-gated** (the observed set is empty whenever logged out; a logged-out `get*` clears the rows). `observeIs*`/`observeIds` now correct **instantly on cold start + offline**; `get*` is the remote-as-truth `replaceAll` reconcile; `toggle*` stays **remote-first** (Room never holds an unconfirmed edit ⇒ refresh always safe ⇒ no outbox). Public API unchanged (no feature edits). Display fields + an offline *list* are deferred (the list screen still reads `get*` from remote, so storing title/boxart would be unread). **⬜ (7b, deferred)** optimistic writes + pending-writes outbox — enables offline waitlisting; carries the reconcile-ordering risk, decided later. | UX polish (no cold-start flicker) + offline read. | `WaitlistGameId` + `CollectionGameId` (v18) |
 | **8** | **Eviction sweep** on launch + `cacheSchemaVersion`. | Bounds growth once the new tables exist. | No |
 
 ---
