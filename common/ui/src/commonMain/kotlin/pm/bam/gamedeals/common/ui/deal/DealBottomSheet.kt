@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -27,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -57,6 +59,8 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_row_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
@@ -88,9 +92,11 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 fun DealBottomSheet(
     data: DealBottomSheetData?,
     isWaitlisted: Boolean = false,
+    isIgnored: Boolean = false,
     onDismiss: () -> Unit,
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
+    onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -103,7 +109,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, goToWeb, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
+            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, isIgnored, onToggleIgnore, goToWeb, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
         }
     }
 }
@@ -114,6 +120,8 @@ private fun DealContent(
     isWaitlisted: Boolean,
     onShare: (data: DealBottomSheetData) -> Unit,
     onToggleWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    isIgnored: Boolean = false,
+    onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
@@ -178,6 +186,19 @@ private fun DealContent(
                         ),
                     )
                 }
+            }
+            IconButton(
+                enabled = data is DealBottomSheetData.DealDetailsData,
+                onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleIgnore) },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Clear,
+                    tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                    contentDescription = stringResource(
+                        if (isIgnored) Res.string.deal_ignore_remove_action
+                        else Res.string.deal_ignore_add_action
+                    ),
+                )
             }
             IconButton(onClick = { onShare(data) }) {
                 Icon(

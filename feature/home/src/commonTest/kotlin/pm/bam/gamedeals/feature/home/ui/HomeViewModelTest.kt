@@ -30,6 +30,7 @@ import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
@@ -84,6 +85,9 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
     }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIgnoredIds() } returns flowOf(persistentSetOf())
+    }
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -102,6 +106,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         collectionRepository = collectionRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         regionRepository = regionRepository,
+        ignoredRepository = ignoredRepository,
         logger = logger,
     )
 

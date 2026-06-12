@@ -33,6 +33,7 @@ import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
@@ -46,6 +47,7 @@ internal class SearchViewModel(
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository,
     private val waitlistRepository: WaitlistRepository,
+    private val ignoredRepository: IgnoredRepository,
 ) : ViewModel() {
 
     val initialQuery: String? = savedStateHandle.get<String>("initialQuery")?.takeIf { it.isNotBlank() }
@@ -61,6 +63,12 @@ internal class SearchViewModel(
         field = MutableStateFlow<SearchData>(SearchData.Empty)
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    /** Games on the user's ignore list — hidden from the search results (#280). */
+    val ignoredIds: StateFlow<ImmutableSet<String>> = ignoredRepository.observeIgnoredIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())

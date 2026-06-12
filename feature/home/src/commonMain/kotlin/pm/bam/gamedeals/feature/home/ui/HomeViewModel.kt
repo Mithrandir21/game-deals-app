@@ -46,6 +46,8 @@ import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
@@ -86,6 +88,7 @@ internal class HomeViewModel(
     private val collectionRepository: CollectionRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val regionRepository: RegionRepository,
+    private val ignoredRepository: IgnoredRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -93,6 +96,12 @@ internal class HomeViewModel(
         field = MutableStateFlow(HomeScreenData())
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    /** Games on the user's ignore list — drives the deal sheet's ignore toggle (#280). */
+    val ignoredIds: StateFlow<ImmutableSet<String>> = ignoredRepository.observeIgnoredIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -184,6 +193,17 @@ internal class HomeViewModel(
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(HomeUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun toggleIgnoreFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleIgnore(data.gameId)
+
+    /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
+    fun toggleIgnore(gameId: String) {
+        viewModelScope.launch {
+            if (ignoredRepository.toggleIgnored(gameId) == IgnoredToggleResult.NOT_LOGGED_IN) {
                 events.tryEmit(HomeUiEvent.SignInRequired)
             }
         }

@@ -32,6 +32,8 @@ import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
@@ -47,6 +49,7 @@ internal class GameViewModel(
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val waitlistRepository: WaitlistRepository,
     private val igdbRepository: IgdbRepository,
+    private val ignoredRepository: IgnoredRepository,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
@@ -55,6 +58,12 @@ internal class GameViewModel(
     val isWaitlisted: StateFlow<Boolean> = gameIdFlow
         .flatMapLatest { id ->
             if (id == null) flowOf(false) else waitlistRepository.observeIsWaitlisted(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val isIgnored: StateFlow<Boolean> = gameIdFlow
+        .flatMapLatest { id ->
+            if (id == null) flowOf(false) else ignoredRepository.observeIsIgnored(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
@@ -102,6 +111,16 @@ internal class GameViewModel(
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(id) == WaitlistToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(GameUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun toggleIgnore() {
+        if (uiState.value !is GameScreenData.Data) return
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch {
+            if (ignoredRepository.toggleIgnored(id) == IgnoredToggleResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }

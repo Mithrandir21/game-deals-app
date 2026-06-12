@@ -91,6 +91,7 @@ internal fun StoreScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: ImmutableList<Deal> by viewModel.deals.collectAsStateWithLifecycle()
     val favouriteIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
@@ -109,6 +110,7 @@ internal fun StoreScreen(
     StoreDeals(
         deals = deals,
         favouriteIds = favouriteIds,
+        ignoredIds = ignoredIds,
         dealDetails = dealDetails,
         storeDetails = store,
         snackbarHostState = snackbarHostState,
@@ -127,6 +129,7 @@ internal fun StoreScreen(
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealFavourite = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -157,6 +160,7 @@ internal fun StoreScreen(
 private fun StoreDeals(
     deals: ImmutableList<Deal>,
     favouriteIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String> = persistentSetOf(),
     dealDetails: DealBottomSheetData? = null,
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -166,6 +170,7 @@ private fun StoreDeals(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit = {},
+    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
@@ -217,12 +222,14 @@ private fun StoreDeals(
         DealBottomSheet(
             data = dealDetails,
             isWaitlisted = dealDetails?.gameId?.let { it in favouriteIds } == true,
+            isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
             goToGameDetailsByTitle = goToGameDetailsByTitle,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
             onToggleWaitlist = { sheetData -> onToggleDealFavourite(sheetData) },
+            onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
             onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } }
         )
     }

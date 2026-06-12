@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -31,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -80,6 +82,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loadin
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_add_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_remove_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_remove_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
@@ -104,6 +108,7 @@ internal fun GameScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
+    val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -123,11 +128,13 @@ internal fun GameScreen(
             isCompact = maxWidth < 600.dp,
             data = data.value,
             isFavourite = isFavourite.value,
+            isIgnored = isIgnored.value,
             onBack = onBack,
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onToggleFavourite = { viewModel.toggleWaitlist() },
+            onToggleIgnore = { viewModel.toggleIgnore() },
             onRetry = onRetry,
             snackbarHostState = snackbarHostState,
         )
@@ -415,6 +422,8 @@ private fun GameScreenContent(
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
     onRetry: () -> Unit,
+    isIgnored: Boolean = false,
+    onToggleIgnore: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val topAppBarState = rememberTopAppBarState()
@@ -469,6 +478,19 @@ private fun GameScreenContent(
                                         ),
                                     )
                                 }
+                            }
+                            IconButton(
+                                enabled = data is GameScreenData.Data,
+                                onClick = onToggleIgnore,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Clear,
+                                    tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                    contentDescription = stringResource(
+                                        if (isIgnored) Res.string.game_screen_ignore_remove_action
+                                        else Res.string.game_screen_ignore_add_action
+                                    ),
+                                )
                             }
                         },
                         scrollBehavior = scrollBehavior,

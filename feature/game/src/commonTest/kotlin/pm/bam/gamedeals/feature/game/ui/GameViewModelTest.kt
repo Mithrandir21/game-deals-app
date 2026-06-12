@@ -24,6 +24,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -58,6 +59,9 @@ class GameViewModelTest : MainDispatcherTest() {
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit) {
         everySuspend { fetchGameBySteamId(any()) } returns null
     }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIsIgnored(any()) } returns flowOf(false)
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -70,6 +74,7 @@ class GameViewModelTest : MainDispatcherTest() {
         dealShareTextBuilder = dealShareTextBuilder,
         waitlistRepository = waitlistRepository,
         igdbRepository = igdbRepository,
+        ignoredRepository = ignoredRepository,
     )
 
     @Test

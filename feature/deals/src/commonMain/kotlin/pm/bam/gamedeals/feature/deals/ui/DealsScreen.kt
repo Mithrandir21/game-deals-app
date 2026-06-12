@@ -82,6 +82,7 @@ internal fun DealsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val data by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
@@ -100,6 +101,7 @@ internal fun DealsScreen(
     DealsContent(
         data = data,
         waitlistIds = waitlistIds,
+        ignoredIds = ignoredIds,
         stores = stores,
         selectedShops = selectedShops,
         dealDetails = dealDetails,
@@ -116,6 +118,7 @@ internal fun DealsScreen(
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -127,6 +130,7 @@ internal fun DealsScreen(
 private fun DealsContent(
     data: DealsScreenData,
     waitlistIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String> = persistentSetOf(),
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
     dealDetails: DealBottomSheetData? = null,
@@ -141,10 +145,14 @@ private fun DealsContent(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit = {},
+    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
+    // Hide ignored games from the deals list (#280). Paging still tracks the full fetched list (offset),
+    // so only the rendered list is filtered; the id set is Room-backed (correct on cold start + offline).
+    val visibleDeals = remember(data.deals, ignoredIds) { data.deals.filter { it.gameID !in ignoredIds } }
     val listState = rememberLazyListState()
     val errorMessage = stringResource(Res.string.deals_screen_loading_error_msg)
     val errorRetry = stringResource(Res.string.deals_screen_loading_error_retry)
@@ -154,10 +162,12 @@ private fun DealsContent(
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
     // against duplicate/exhausted calls (appending / endReached / non-Data state).
-    val shouldLoadMore by remember(data.deals.size) {
+    val shouldLoadMore by remember(visibleDeals.size, data.deals.size) {
         derivedStateOf {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            data.deals.isNotEmpty() && lastVisible >= data.deals.size - LOAD_MORE_THRESHOLD
+            // Also fetch more when the whole loaded page is filtered out (all ignored); the VM guards
+            // against duplicate/exhausted calls (appending / endReached).
+            data.deals.isNotEmpty() && (visibleDeals.isEmpty() || lastVisible >= visibleDeals.size - LOAD_MORE_THRESHOLD)
         }
     }
     LaunchedEffect(shouldLoadMore) {
@@ -215,7 +225,7 @@ private fun DealsContent(
                             state = listState,
                             contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         ) {
-                            items(items = data.deals, key = { it.dealID }) { deal ->
+                            items(items = visibleDeals, key = { it.dealID }) { deal ->
                                 val store = storesById[deal.storeID]
                                 val isWaitlisted = deal.gameID in waitlistIds
                                 DealListRow(
@@ -256,12 +266,14 @@ private fun DealsContent(
             DealBottomSheet(
                 data = dealDetails,
                 isWaitlisted = dealDetails?.gameId?.let { it in waitlistIds } == true,
+                isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
                 goToWeb = goToWeb,
                 goToGameDetails = goToGameDetails,
                 goToGameDetailsByTitle = goToGameDetailsByTitle,
                 onDismiss = { onDismissDealDetails() },
                 onShare = { sheetData -> onShareDealDetails(sheetData) },
                 onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },
+                onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
                 onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } },
             )
         }

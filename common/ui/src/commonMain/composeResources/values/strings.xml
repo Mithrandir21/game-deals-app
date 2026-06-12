@@ -9,6 +9,9 @@
     <string name="deal_favourite_add_action">Add to waitlist</string>
     <string name="deal_favourite_remove_action">Remove from waitlist</string>
 
+    <string name="deal_ignore_add_action">Ignore game</string>
+    <string name="deal_ignore_remove_action">Stop ignoring game</string>
+
     <!-- ITAD-style deal flag badges shown around the discount on tiles/rows (deal-badge work). The
          single-letter labels mirror the ITAD website ("N" = new historical low, "S" = store low). -->
     <string name="deal_new_low_badge_label">N</string>

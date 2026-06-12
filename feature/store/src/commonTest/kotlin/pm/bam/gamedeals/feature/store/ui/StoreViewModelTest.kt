@@ -28,6 +28,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -57,6 +58,9 @@ class StoreViewModelTest : MainDispatcherTest() {
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
     }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIgnoredIds() } returns flowOf(persistentSetOf())
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -69,6 +73,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         dealShareTextBuilder = dealShareTextBuilder,
         waitlistRepository = waitlistRepository,
         regionRepository = regionRepository,
+        ignoredRepository = ignoredRepository,
     )
 
     @Test

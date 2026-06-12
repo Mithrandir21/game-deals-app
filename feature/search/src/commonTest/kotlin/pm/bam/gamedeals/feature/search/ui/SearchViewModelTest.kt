@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -44,13 +45,16 @@ class SearchViewModelTest : MainDispatcherTest() {
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIgnoredIds() } returns flowOf(persistentSetOf())
+    }
 
     private lateinit var viewModel: SearchViewModel
 
     @BeforeTest
     fun setup() {
         installMainDispatcher()
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository, ignoredRepository)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -166,7 +170,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     fun waitlistIds_emits_values_from_repository() = runTest {
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("1", "2", "3"))
         // Rebuild because the @BeforeTest viewModel captured the original stub.
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository, ignoredRepository)
 
         val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(setOf("1", "2", "3"), ids.last())
@@ -175,7 +179,7 @@ class SearchViewModelTest : MainDispatcherTest() {
     @Test
     fun waitlistIds_recovers_from_repository_error_with_empty_set() = runTest {
         every { waitlistRepository.observeWaitlistIds() } returns flow { throw Exception() }
-        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository)
+        viewModel = SearchViewModel(SavedStateHandle(), TestingLoggingListener(), gamesRepository, storesRepository, waitlistRepository, ignoredRepository)
 
         val ids = viewModel.waitlistIds.observeEmissions(this.backgroundScope, testDispatcher)
         assertEquals(emptySet<String>(), ids.last())
@@ -234,6 +238,7 @@ class SearchViewModelTest : MainDispatcherTest() {
             gamesRepository,
             storesRepository,
             waitlistRepository,
+            ignoredRepository,
         )
 
         assertEquals("Halo Infinite", viewModel.initialQuery)
@@ -256,6 +261,7 @@ class SearchViewModelTest : MainDispatcherTest() {
             gamesRepository,
             storesRepository,
             waitlistRepository,
+            ignoredRepository,
         )
 
         assertEquals(null, viewModel.initialQuery)

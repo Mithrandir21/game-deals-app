@@ -115,6 +115,7 @@ internal fun SearchScreen(
 ) {
     val data = searchViewModel.resultState.collectAsStateWithLifecycle()
     val favouriteIds = searchViewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds = searchViewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = searchViewModel.stores.collectAsStateWithLifecycle()
 
     val initialTitle = searchViewModel.initialQuery
@@ -146,6 +147,7 @@ internal fun SearchScreen(
         initialTitle = initialTitle,
         searchData = data.value,
         favouriteIds = favouriteIds.value,
+        ignoredIds = ignoredIds.value,
         stores = stores.value,
         events = searchViewModel.events,
         onSearchTitleChanged = {
@@ -170,6 +172,7 @@ private fun SearchScreenContent(
     initialTitle: String? = null,
     searchData: SearchViewModel.SearchData,
     favouriteIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String> = persistentSetOf(),
     stores: ImmutableMap<Int, Store> = persistentMapOf(),
     events: Flow<SearchViewModel.SearchUiEvent> = emptyFlow(),
     onSearchTitleChanged: (text: String) -> Unit,
@@ -234,15 +237,19 @@ private fun SearchScreenContent(
                 )
 
                 is SearchViewModel.SearchData.SearchResults -> {
+                    // Hide ignored games from the results (#280); the id set is Room-backed (cold-start/offline correct).
+                    val visibleResults = remember(searchData.searchResults, ignoredIds) {
+                        searchData.searchResults.filter { it.gameID !in ignoredIds }
+                    }
                     LazyColumn(
                         modifier = Modifier.padding(innerPadding),
                         contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         content = {
                             items(
-                                key = { index -> searchData.searchResults[index].gameID },
-                                count = searchData.searchResults.size
+                                key = { index -> visibleResults[index].gameID },
+                                count = visibleResults.size
                             ) {
-                                val group = searchData.searchResults[it]
+                                val group = visibleResults[it]
                                 SearchResultListItem(
                                     deal = group.cheapestDeal,
                                     dealCount = group.totalDealCount,

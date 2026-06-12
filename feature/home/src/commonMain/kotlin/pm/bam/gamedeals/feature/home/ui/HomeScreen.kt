@@ -146,6 +146,7 @@ internal fun HomeScreen(
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = viewModel.stores.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -156,6 +157,7 @@ internal fun HomeScreen(
         onReleaseTitle = { title -> viewModel.onReleaseGame(title) },
         data = data.value,
         waitlistIds = waitlistIds.value,
+        ignoredIds = ignoredIds.value,
         stores = stores.value,
         snackbarHostState = snackbarHostState,
         dealDetails = dealDetails.value,
@@ -170,6 +172,7 @@ internal fun HomeScreen(
         onDismissDealDetails = { viewModel.dismissDealDetails() },
         onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
         onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
+        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
@@ -195,6 +198,8 @@ private fun HomeScreenContent(
     dealDetails: DealBottomSheetData?,
     onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
+    ignoredIds: ImmutableSet<String> = persistentSetOf(),
+    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToGame: (gameId: String) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
@@ -247,9 +252,11 @@ private fun HomeScreenContent(
                 DealBottomSheet(
                     data = dealDetails,
                     isWaitlisted = dealDetails?.gameId?.let { it in waitlistIds } == true,
+                    isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
                     onDismiss = { onDismissDealDetails() },
                     onShare = { sheetData -> onShareDealDetails(sheetData) },
                     onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },
+                    onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
                     goToWeb = goToWeb,
                     goToGameDetails = goToGameDetails,
                     goToGameDetailsByTitle = goToGameDetailsByTitle,
