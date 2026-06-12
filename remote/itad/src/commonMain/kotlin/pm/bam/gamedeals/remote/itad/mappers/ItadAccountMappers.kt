@@ -1,13 +1,18 @@
 package pm.bam.gamedeals.remote.itad.mappers
 
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
+import pm.bam.gamedeals.remote.itad.models.RemoteItadNotification
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadUser
 import pm.bam.gamedeals.remote.itad.models.bestArt
 
 internal fun RemoteItadUser.toItadUser(): ItadUser = ItadUser(username = username)
+
+internal fun RemoteItadNotification.toItadNotification(): ItadNotification =
+    ItadNotification(id = id, type = type, title = title, timestamp = timestamp, read = read != null)
 
 internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
     WaitlistEntry(gameId = id, title = title, boxart = boxartUrl())

@@ -30,7 +30,7 @@ val itadRemoteModule = module {
         )
     }
 
-    single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get()) }
+    single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get(), get()) }
 
     // Global ranking stats (epic #219, Phase 5.1): rankings + best-effort price enrichment.
     single<StatsSource> { ItadStatsSourceImpl(get(), get(), get(), get(), get()) }

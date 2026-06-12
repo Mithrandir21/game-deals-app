@@ -7,6 +7,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
+import pm.bam.gamedeals.remote.itad.api.ItadNotificationsApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
 import pm.bam.gamedeals.remote.itad.api.ItadStatsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
@@ -52,4 +53,5 @@ val itadNetworkModule = module {
     single { ItadUserApi(get(ITAD_AUTH_QUALIFIER)) }
     single { ItadWaitlistApi(get(ITAD_AUTH_QUALIFIER)) }
     single { ItadCollectionApi(get(ITAD_AUTH_QUALIFIER)) }
+    single { ItadNotificationsApi(get(ITAD_AUTH_QUALIFIER)) }
 }

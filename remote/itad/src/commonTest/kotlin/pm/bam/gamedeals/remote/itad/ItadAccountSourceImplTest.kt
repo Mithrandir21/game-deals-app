@@ -11,12 +11,14 @@ import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
+import pm.bam.gamedeals.remote.itad.api.ItadNotificationsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
 import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /**
  * HTTP-level coverage for [ItadAccountSourceImpl] + the user `*Api` classes against a MockEngine
@@ -39,6 +41,8 @@ class ItadAccountSourceImplTest {
                     respond("""[{"id":"uuid-1","title":"Hades","assets":{"boxart":"box.jpg","banner300":"banner300.jpg"}}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/collection/games/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"uuid-2","title":"Celeste"}]""", HttpStatusCode.OK, jsonHeaders)
+                request.url.encodedPath == "/notifications/v1" && request.method == HttpMethod.Get ->
+                    respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
                 else -> respond("", HttpStatusCode.NoContent) // PUT/DELETE writes
             }
         }
@@ -47,6 +51,7 @@ class ItadAccountSourceImplTest {
             userApi = ItadUserApi(client),
             waitlistApi = ItadWaitlistApi(client),
             collectionApi = ItadCollectionApi(client),
+            notificationsApi = ItadNotificationsApi(client),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
         )
     }
@@ -95,5 +100,29 @@ class ItadAccountSourceImplTest {
         source().addToCollection("uuid-2")
         assertEquals(HttpMethod.Put, recorded.single().method)
         assertEquals("/collection/games/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun getNotifications_maps_unread() = runTest {
+        val list = source().getNotifications()
+        assertEquals("n1", list.single().id)
+        assertEquals("Price drop", list.single().title)
+        assertFalse(list.single().read) // read=null ⇒ unread
+        assertEquals("/notifications/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun markNotificationRead_puts_with_id() = runTest {
+        source().markNotificationRead("n1")
+        assertEquals(HttpMethod.Put, recorded.single().method)
+        assertEquals("/notifications/read/v1", recorded.single().url.encodedPath)
+        assertEquals("n1", recorded.single().url.parameters["id"])
+    }
+
+    @Test
+    fun markAllNotificationsRead_puts() = runTest {
+        source().markAllNotificationsRead()
+        assertEquals(HttpMethod.Put, recorded.single().method)
+        assertEquals("/notifications/read/all/v1", recorded.single().url.encodedPath)
     }
 }

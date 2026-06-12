@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.source
 
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 
@@ -19,4 +20,8 @@ interface ItadAccountSource {
     suspend fun getCollection(): List<CollectionEntry>
     suspend fun addToCollection(gameId: String)
     suspend fun removeFromCollection(gameId: String)
+
+    suspend fun getNotifications(): List<ItadNotification>
+    suspend fun markNotificationRead(id: String)
+    suspend fun markAllNotificationsRead()
 }
