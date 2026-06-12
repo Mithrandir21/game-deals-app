@@ -17,13 +17,14 @@ import pm.bam.gamedeals.feature.account.ui.WaitlistListScreen
 
 /**
  * Registers the Account hub (#272, P1.2) and its sub-screens. The hub routes to the library lists and
- * the (placeholder) discovery/connection screens via [navController]; Region reuses the app's existing
- * Settings destination ([goToSettings]). Library rows reach game detail via [goToGame].
+ * the (placeholder) discovery/connection screens via [navController]; region is an in-hub bottom sheet
+ * (#276) and the website-only settings open externally via [goToWeb]. Library rows reach game detail
+ * via [goToGame].
  */
 fun NavGraphBuilder.accountScreen(
     navController: NavController,
     goToGame: (gameId: String) -> Unit,
-    goToSettings: () -> Unit,
+    goToWeb: (url: String) -> Unit,
 ) {
     composable<Destination.Account> {
         AccountScreen(
@@ -33,7 +34,7 @@ fun NavGraphBuilder.accountScreen(
             onOpenIgnored = { navController.navigate(Destination.IgnoredGames) },
             onOpenMyNotes = { navController.navigate(Destination.MyNotes) },
             onOpenLinkedAccounts = { navController.navigate(Destination.LinkedAccounts) },
-            onOpenSettings = goToSettings,
+            onOpenWebsite = goToWeb,
         )
     }
 

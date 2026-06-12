@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_more_action
-import pm.bam.gamedeals.common.ui.generated.resources.app_shell_overflow_settings
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_overflow_stores
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_action
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_title
@@ -54,7 +53,6 @@ fun GameDealsAppShell(
     showBottomBar: Boolean,
     onSelectTab: (TopLevelDestination) -> Unit,
     onSearch: () -> Unit,
-    onOpenSettings: () -> Unit,
     onBrowseStores: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
@@ -73,21 +71,16 @@ fun GameDealsAppShell(
                         IconButton(onClick = onSearch) {
                             Icon(Icons.Filled.Search, contentDescription = stringResource(Res.string.app_shell_search_action))
                         }
-                        IconButton(onClick = { overflowExpanded = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.app_shell_more_action))
-                        }
-                        DropdownMenu(
-                            expanded = overflowExpanded,
-                            onDismissRequest = { overflowExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.app_shell_overflow_settings)) },
-                                onClick = {
-                                    overflowExpanded = false
-                                    onOpenSettings()
-                                },
-                            )
-                            if (onBrowseStores != null) {
+                        // The overflow only appears when there's something in it (Settings folded into the
+                        // Account hub in #276; "Browse by store" is the remaining — currently unused — entry).
+                        if (onBrowseStores != null) {
+                            IconButton(onClick = { overflowExpanded = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.app_shell_more_action))
+                            }
+                            DropdownMenu(
+                                expanded = overflowExpanded,
+                                onDismissRequest = { overflowExpanded = false },
+                            ) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(Res.string.app_shell_overflow_stores)) },
                                     onClick = {

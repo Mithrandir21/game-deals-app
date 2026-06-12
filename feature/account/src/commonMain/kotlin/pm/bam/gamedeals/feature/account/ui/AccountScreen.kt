@@ -24,6 +24,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -31,9 +34,11 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_action
@@ -44,10 +49,13 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_region
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings_desc
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_app
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_connections
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_discovery
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_library
+import pm.bam.gamedeals.feature.account.generated.resources.account_section_website
 import pm.bam.gamedeals.feature.account.generated.resources.account_sign_in
 import pm.bam.gamedeals.feature.account.generated.resources.account_sign_out
 import pm.bam.gamedeals.feature.account.generated.resources.account_signed_in_as
@@ -57,6 +65,9 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_stat_collect
 import pm.bam.gamedeals.feature.account.generated.resources.account_stat_waitlisted
 import pm.bam.gamedeals.feature.account.ui.AccountViewModel.AccountScreenData
 
+/** The ITAD website settings page — for the shop/persona/notification-rule options the API can't reach (#276). */
+private const val ITAD_SETTINGS_URL = "https://isthereanydeal.com/settings/"
+
 @Composable
 internal fun AccountScreen(
     onOpenWaitlist: () -> Unit = {},
@@ -65,39 +76,47 @@ internal fun AccountScreen(
     onOpenIgnored: () -> Unit = {},
     onOpenMyNotes: () -> Unit = {},
     onOpenLinkedAccounts: () -> Unit = {},
-    onOpenSettings: () -> Unit = {},
+    onOpenWebsite: (url: String) -> Unit = {},
     viewModel: AccountViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
     AccountScreenContent(
         data = data,
+        countries = viewModel.countries,
         onLogin = viewModel::onLogin,
         onLogout = viewModel::onLogout,
+        onCountrySelected = viewModel::onCountrySelected,
         onOpenWaitlist = onOpenWaitlist,
         onOpenCollection = onOpenCollection,
         onOpenNotifications = onOpenNotifications,
         onOpenIgnored = onOpenIgnored,
         onOpenMyNotes = onOpenMyNotes,
         onOpenLinkedAccounts = onOpenLinkedAccounts,
-        onOpenSettings = onOpenSettings,
+        onOpenWebsite = onOpenWebsite,
     )
 }
 
 @Composable
 private fun AccountScreenContent(
     data: AccountScreenData,
+    countries: ImmutableList<Country>,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
+    onCountrySelected: (Country) -> Unit,
     onOpenWaitlist: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenIgnored: () -> Unit,
     onOpenMyNotes: () -> Unit,
     onOpenLinkedAccounts: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenWebsite: (url: String) -> Unit,
 ) {
+    var showRegionPicker by rememberSaveable { mutableStateOf(false) }
+    val onOpenRegion = { showRegionPicker = true }
+    val regionName = data.selectedCountry?.name
+
     if (!data.loggedIn) {
-        LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin, onOpenSettings = onOpenSettings)
+        LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin, regionName = regionName, onOpenRegion = onOpenRegion)
     } else {
         LoggedInContent(
             data = data,
@@ -111,7 +130,18 @@ private fun AccountScreenContent(
             onOpenIgnored = onOpenIgnored,
             onOpenMyNotes = onOpenMyNotes,
             onOpenLinkedAccounts = onOpenLinkedAccounts,
-            onOpenSettings = onOpenSettings,
+            onOpenRegion = onOpenRegion,
+            regionName = regionName,
+            onOpenWebsite = { onOpenWebsite(ITAD_SETTINGS_URL) },
+        )
+    }
+
+    if (showRegionPicker) {
+        RegionPickerSheet(
+            countries = countries,
+            selectedCode = data.selectedCountry?.code,
+            onSelect = { onCountrySelected(it); showRegionPicker = false },
+            onDismiss = { showRegionPicker = false },
         )
     }
 }
@@ -120,7 +150,8 @@ private fun AccountScreenContent(
 private fun LoggedOutContent(
     loggingIn: Boolean,
     onLogin: () -> Unit,
-    onOpenSettings: () -> Unit,
+    regionName: String?,
+    onOpenRegion: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -130,7 +161,7 @@ private fun LoggedOutContent(
         item { SignInCard(loggingIn = loggingIn, onLogin = onLogin) }
         // App-level preferences are reachable without signing in.
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
-        item { HubRow(label = stringResource(Res.string.account_row_region), onClick = onOpenSettings) }
+        item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
     }
 }
 
@@ -170,7 +201,9 @@ private fun LoggedInContent(
     onOpenIgnored: () -> Unit,
     onOpenMyNotes: () -> Unit,
     onOpenLinkedAccounts: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenRegion: () -> Unit,
+    regionName: String?,
+    onOpenWebsite: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -206,7 +239,16 @@ private fun LoggedInContent(
         }
 
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
-        item { HubRow(label = stringResource(Res.string.account_row_region), onClick = onOpenSettings) }
+        item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
+
+        item { SectionHeader(stringResource(Res.string.account_section_website)) }
+        item {
+            HubRow(
+                label = stringResource(Res.string.account_row_website_settings),
+                subtitle = stringResource(Res.string.account_row_website_settings_desc),
+                onClick = onOpenWebsite,
+            )
+        }
     }
 }
 

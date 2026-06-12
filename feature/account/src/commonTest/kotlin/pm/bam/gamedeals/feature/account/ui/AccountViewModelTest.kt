@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -33,21 +35,24 @@ class AccountViewModelTest : MainDispatcherTest() {
     private val accountRepository: AccountRepository = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit)
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest
     fun setUp() {
         installMainDispatcher()
-        // Defaults so the VM's count observers + login reconcile don't hit unstubbed calls; tests override.
+        // Defaults so the VM's count/region observers + login reconcile don't hit unstubbed calls; tests override.
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf())
         every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
         everySuspend { waitlistRepository.getWaitlist() } returns emptyList()
         everySuspend { collectionRepository.getCollection() } returns emptyList()
+        every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
+        every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun viewModel() = AccountViewModel(accountRepository, waitlistRepository, collectionRepository, logger)
+    private fun viewModel() = AccountViewModel(accountRepository, waitlistRepository, collectionRepository, regionRepository, logger)
 
     @Test
     fun logged_out_when_auth_state_is_logged_out() = runTest {

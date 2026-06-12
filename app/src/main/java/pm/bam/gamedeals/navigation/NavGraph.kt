@@ -25,7 +25,6 @@ import pm.bam.gamedeals.feature.game.navigation.gameScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
-import pm.bam.gamedeals.feature.settings.navigation.settingsScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 
@@ -54,7 +53,6 @@ internal fun NavGraph(
         showBottomBar = isTab,
         onSelectTab = { navActions.navigateTopLevel(it.destination) },
         onSearch = { navActions.navigateToSearch() },
-        onOpenSettings = { navActions.navigateToSettings() },
         onBrowseStores = null,
     ) { padding ->
         NavHost(
@@ -80,7 +78,7 @@ internal fun NavGraph(
             accountScreen(
                 navController = navController,
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
-                goToSettings = { navActions.navigateToSettings() },
+                goToWeb = { url -> uriHandler.openUri(url) },
             )
 
             storeScreen(
@@ -110,8 +108,6 @@ internal fun NavGraph(
                 navController = navController,
                 goToWeb = { url, _ -> uriHandler.openUri(url) }
             )
-
-            settingsScreen(navController = navController)
 
             bundlesScreen(
                 navController = navController,

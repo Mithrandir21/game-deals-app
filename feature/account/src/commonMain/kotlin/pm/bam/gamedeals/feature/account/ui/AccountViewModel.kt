@@ -3,6 +3,8 @@ package pm.bam.gamedeals.feature.account.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,8 +12,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
@@ -27,13 +31,24 @@ internal class AccountViewModel(
     private val accountRepository: AccountRepository,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
+    private val regionRepository: RegionRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
     val uiState: StateFlow<AccountScreenData>
         field = MutableStateFlow(AccountScreenData())
 
+    /** The full region list for the picker — static reference data, not part of the reactive state. */
+    val countries: ImmutableList<Country> = regionRepository.supportedCountries.toImmutableList()
+
     init {
+        // The selected storefront region (app-local preference folded into the hub, #276).
+        viewModelScope.launch {
+            regionRepository.observeSelectedCountry().collect { country ->
+                uiState.update { it.copy(selectedCountry = country) }
+            }
+        }
+
         // Reactive, Room-backed library counts. The id sets are auth-gated (empty when logged out), so
         // the counts zero out on logout without any extra wiring.
         viewModelScope.launch {
@@ -80,6 +95,10 @@ internal class AccountViewModel(
         viewModelScope.launch { accountRepository.logout() }
     }
 
+    fun onCountrySelected(country: Country) {
+        viewModelScope.launch { regionRepository.setSelectedCountry(country) }
+    }
+
     /** Refreshes the Room-backed id sets from ITAD (remote-as-truth) on login; counts then flow reactively. */
     private suspend fun reconcileLibrary() {
         runCatching { waitlistRepository.getWaitlist() }.onFailure { fatal(logger, it) }
@@ -99,5 +118,7 @@ internal class AccountViewModel(
         val unreadNotifications: Int = 0,
         /** Whether a Steam profile is linked; populated in P5 (#285/#286), false until then. */
         val linkedSteam: Boolean = false,
+        /** The selected storefront region, shown on the Region row and pre-selected in the picker (#276). */
+        val selectedCountry: Country? = null,
     )
 }

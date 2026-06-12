@@ -68,9 +68,6 @@ sealed interface Destination {
     data object Giveaways : Destination
 
     @Serializable
-    data object Settings : Destination
-
-    @Serializable
     data object Bundles : Destination
 
     @Serializable

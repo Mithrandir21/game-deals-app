@@ -32,6 +32,14 @@
     <string name="account_row_region">Region</string>
     <string name="account_linked_steam_connected">Steam connected</string>
 
+    <!-- Region picker bottom sheet -->
+    <string name="account_region_picker_title">Select region</string>
+
+    <!-- Website-only settings (P1.4, #276) — opened on isthereanydeal.com -->
+    <string name="account_section_website">On IsThereAnyDeal.com</string>
+    <string name="account_row_website_settings">Manage website settings</string>
+    <string name="account_row_website_settings_desc">Hidden shops, notification rules, persona &amp; more</string>
+
     <!-- Sub-screen scaffolding -->
     <string name="account_navigation_back">Back</string>
     <string name="account_waitlist_empty">Your waitlist is empty.</string>

@@ -55,8 +55,6 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
-import pm.bam.gamedeals.feature.settings.di.settingsModule
-import pm.bam.gamedeals.feature.settings.navigation.settingsScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -121,7 +119,6 @@ private fun bootstrapKoin() {
             gameModule,
             giveawaysModule,
             storeModule,
-            settingsModule,
             bundlesModule,
             accountModule,
             dealsModule,
@@ -170,7 +167,6 @@ private fun AppNavHost() {
         showBottomBar = isTab,
         onSelectTab = { navigateTopLevel(it.destination) },
         onSearch = { navController.navigate(Destination.Search()) },
-        onOpenSettings = { navController.navigate(Destination.Settings) },
         onBrowseStores = null,
     ) { padding ->
         NavHost(
@@ -192,7 +188,11 @@ private fun AppNavHost() {
             goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
             goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
-        accountScreen(goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) })
+        accountScreen(
+            navController = navController,
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+            goToWeb = { url -> uriHandler.openUri(url) },
+        )
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
@@ -206,7 +206,6 @@ private fun AppNavHost() {
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
         )
-        settingsScreen(navController = navController)
         bundlesScreen(
             navController = navController,
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
