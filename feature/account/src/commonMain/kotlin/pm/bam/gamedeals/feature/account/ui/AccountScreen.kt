@@ -3,44 +3,51 @@ package pm.bam.gamedeals.feature.account.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
+import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_action
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_body
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_title
-import pm.bam.gamedeals.feature.account.generated.resources.account_section_collection
-import pm.bam.gamedeals.feature.account.generated.resources.account_section_waitlist
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_region
+import pm.bam.gamedeals.feature.account.generated.resources.account_section_app
+import pm.bam.gamedeals.feature.account.generated.resources.account_section_connections
+import pm.bam.gamedeals.feature.account.generated.resources.account_section_discovery
+import pm.bam.gamedeals.feature.account.generated.resources.account_section_library
 import pm.bam.gamedeals.feature.account.generated.resources.account_sign_in
 import pm.bam.gamedeals.feature.account.generated.resources.account_sign_out
 import pm.bam.gamedeals.feature.account.generated.resources.account_signed_in_as
@@ -49,12 +56,16 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_signed_out_t
 import pm.bam.gamedeals.feature.account.generated.resources.account_stat_collected
 import pm.bam.gamedeals.feature.account.generated.resources.account_stat_waitlisted
 import pm.bam.gamedeals.feature.account.ui.AccountViewModel.AccountScreenData
-import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun AccountScreen(
-    onGameClick: (gameId: String) -> Unit = {},
+    onOpenWaitlist: () -> Unit = {},
+    onOpenCollection: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    onOpenIgnored: () -> Unit = {},
+    onOpenMyNotes: () -> Unit = {},
+    onOpenLinkedAccounts: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: AccountViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
@@ -62,7 +73,13 @@ internal fun AccountScreen(
         data = data,
         onLogin = viewModel::onLogin,
         onLogout = viewModel::onLogout,
-        onGameClick = onGameClick,
+        onOpenWaitlist = onOpenWaitlist,
+        onOpenCollection = onOpenCollection,
+        onOpenNotifications = onOpenNotifications,
+        onOpenIgnored = onOpenIgnored,
+        onOpenMyNotes = onOpenMyNotes,
+        onOpenLinkedAccounts = onOpenLinkedAccounts,
+        onOpenSettings = onOpenSettings,
     )
 }
 
@@ -71,41 +88,72 @@ private fun AccountScreenContent(
     data: AccountScreenData,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
-    onGameClick: (gameId: String) -> Unit,
+    onOpenWaitlist: () -> Unit,
+    onOpenCollection: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenIgnored: () -> Unit,
+    onOpenMyNotes: () -> Unit,
+    onOpenLinkedAccounts: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     if (!data.loggedIn) {
-        LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin)
+        LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin, onOpenSettings = onOpenSettings)
     } else {
-        // Reconnect re-runs the same OAuth flow as a fresh sign-in; on success the token is re-stamped
-        // with the current scope version and the banner disappears (#273).
-        LoggedInContent(data = data, onLogout = onLogout, onReconnect = onLogin, onGameClick = onGameClick)
+        LoggedInContent(
+            data = data,
+            onLogout = onLogout,
+            // Reconnect re-runs the same OAuth flow as a fresh sign-in; on success the token is
+            // re-stamped with the current scope version and the banner disappears (#273).
+            onReconnect = onLogin,
+            onOpenWaitlist = onOpenWaitlist,
+            onOpenCollection = onOpenCollection,
+            onOpenNotifications = onOpenNotifications,
+            onOpenIgnored = onOpenIgnored,
+            onOpenMyNotes = onOpenMyNotes,
+            onOpenLinkedAccounts = onOpenLinkedAccounts,
+            onOpenSettings = onOpenSettings,
+        )
     }
 }
 
 @Composable
-private fun LoggedOutContent(loggingIn: Boolean, onLogin: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(GameDealsCustomTheme.spacing.large),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+private fun LoggedOutContent(
+    loggingIn: Boolean,
+    onLogin: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        Text(
-            text = stringResource(Res.string.account_signed_out_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(
-            text = stringResource(Res.string.account_signed_out_body),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.medium),
-        )
-        if (loggingIn) {
-            CircularProgressIndicator()
-        } else {
-            Button(onClick = onLogin) {
-                Text(stringResource(Res.string.account_sign_in))
+        item { SignInCard(loggingIn = loggingIn, onLogin = onLogin) }
+        // App-level preferences are reachable without signing in.
+        item { SectionHeader(stringResource(Res.string.account_section_app)) }
+        item { HubRow(label = stringResource(Res.string.account_row_region), onClick = onOpenSettings) }
+    }
+}
+
+@Composable
+private fun SignInCard(loggingIn: Boolean, onLogin: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large)) {
+            Text(
+                text = stringResource(Res.string.account_signed_out_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(Res.string.account_signed_out_body),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.medium),
+            )
+            if (loggingIn) {
+                CircularProgressIndicator()
+            } else {
+                Button(onClick = onLogin, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(Res.string.account_sign_in))
+                }
             }
         }
     }
@@ -116,52 +164,73 @@ private fun LoggedInContent(
     data: AccountScreenData,
     onLogout: () -> Unit,
     onReconnect: () -> Unit,
-    onGameClick: (gameId: String) -> Unit,
+    onOpenWaitlist: () -> Unit,
+    onOpenCollection: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenIgnored: () -> Unit,
+    onOpenMyNotes: () -> Unit,
+    onOpenLinkedAccounts: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(GameDealsCustomTheme.spacing.large),
+        contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(Res.string.account_signed_in_as, data.username),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.semantics { heading() },
-                )
-                OutlinedButton(onClick = onLogout) { Text(stringResource(Res.string.account_sign_out)) }
-            }
-        }
+        item { ProfileHeader(username = data.username, onLogout = onLogout) }
 
         if (data.needsReconnect) {
             item { ReconnectBanner(loggingIn = data.loggingIn, onReconnect = onReconnect) }
         }
 
+        item { SectionHeader(stringResource(Res.string.account_section_library)) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                StatCard(stringResource(Res.string.account_stat_waitlisted), data.waitlist.size, Modifier.weight(1f))
-                StatCard(stringResource(Res.string.account_stat_collected), data.collection.size, Modifier.weight(1f))
+                StatCard(stringResource(Res.string.account_stat_waitlisted), data.waitlistCount, onOpenWaitlist, Modifier.weight(1f))
+                StatCard(stringResource(Res.string.account_stat_collected), data.collectionCount, onOpenCollection, Modifier.weight(1f))
             }
         }
 
-        if (data.waitlist.isNotEmpty()) {
-            item { SectionHeader(stringResource(Res.string.account_section_waitlist)) }
-            items(data.waitlist.size, key = { "wl-${data.waitlist[it].gameId}" }) { i ->
-                GameRow(data.waitlist[i].title, data.waitlist[i].boxart) { onGameClick(data.waitlist[i].gameId) }
-            }
+        item { SectionHeader(stringResource(Res.string.account_section_discovery)) }
+        item { HubRow(label = stringResource(Res.string.account_row_notifications), badgeCount = data.unreadNotifications, onClick = onOpenNotifications) }
+        item { HubRow(label = stringResource(Res.string.account_row_ignored), onClick = onOpenIgnored) }
+        item { HubRow(label = stringResource(Res.string.account_row_notes), onClick = onOpenMyNotes) }
+
+        item { SectionHeader(stringResource(Res.string.account_section_connections)) }
+        item {
+            HubRow(
+                label = stringResource(Res.string.account_row_linked),
+                subtitle = if (data.linkedSteam) stringResource(Res.string.account_linked_steam_connected) else null,
+                onClick = onOpenLinkedAccounts,
+            )
         }
 
-        if (data.collection.isNotEmpty()) {
-            item { SectionHeader(stringResource(Res.string.account_section_collection)) }
-            items(data.collection.size, key = { "co-${data.collection[it].gameId}" }) { i ->
-                GameRow(data.collection[i].title, data.collection[i].boxart) { onGameClick(data.collection[i].gameId) }
-            }
-        }
+        item { SectionHeader(stringResource(Res.string.account_section_app)) }
+        item { HubRow(label = stringResource(Res.string.account_row_region), onClick = onOpenSettings) }
+    }
+}
+
+@Composable
+private fun ProfileHeader(username: String, onLogout: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AccountCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp),
+        )
+        Text(
+            text = stringResource(Res.string.account_signed_in_as, username),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = GameDealsCustomTheme.spacing.medium)
+                .semantics { heading() },
+        )
+        OutlinedButton(onClick = onLogout) { Text(stringResource(Res.string.account_sign_out)) }
     }
 }
 
@@ -193,10 +262,7 @@ private fun ReconnectBanner(loggingIn: Boolean, onReconnect: () -> Unit) {
                     .padding(top = GameDealsCustomTheme.spacing.medium),
             ) {
                 if (loggingIn) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(20.dp).width(20.dp),
-                        strokeWidth = 2.dp,
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(Res.string.account_reconnect_action))
                 }
@@ -206,8 +272,8 @@ private fun ReconnectBanner(loggingIn: Boolean, onReconnect: () -> Unit) {
 }
 
 @Composable
-private fun StatCard(label: String, count: Int, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+private fun StatCard(label: String, count: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(onClick = onClick, modifier = modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -224,39 +290,29 @@ private fun StatCard(label: String, count: Int, modifier: Modifier = Modifier) {
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier
-            .padding(top = GameDealsCustomTheme.spacing.medium)
+            .padding(top = GameDealsCustomTheme.spacing.small)
             .semantics { heading() },
     )
 }
 
 @Composable
-private fun GameRow(title: String, boxart: String?, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = GameDealsCustomTheme.spacing.small),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = boxart,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            error = painterResource(CommonRes.drawable.videogame_thumb),
-            modifier = Modifier
-                .height(60.dp)
-                .width(100.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
-        )
-        Text(
-            text = title,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = GameDealsCustomTheme.spacing.medium),
-        )
-    }
+private fun HubRow(
+    label: String,
+    subtitle: String? = null,
+    badgeCount: Int = 0,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
+        headlineContent = { Text(label) },
+        supportingContent = subtitle?.let { { Text(it) } },
+        trailingContent = if (badgeCount > 0) {
+            { Badge { Text(badgeCount.toString()) } }
+        } else {
+            null
+        },
+    )
 }

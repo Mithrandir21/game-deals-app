@@ -9,14 +9,13 @@ import dev.mokkery.everySuspend
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
-import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.ItadUser
-import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -36,7 +35,16 @@ class AccountViewModelTest : MainDispatcherTest() {
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
-    @BeforeTest fun setUp() = installMainDispatcher()
+    @BeforeTest
+    fun setUp() {
+        installMainDispatcher()
+        // Defaults so the VM's count observers + login reconcile don't hit unstubbed calls; tests override.
+        every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf())
+        every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
+        everySuspend { waitlistRepository.getWaitlist() } returns emptyList()
+        everySuspend { collectionRepository.getCollection() } returns emptyList()
+    }
+
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun viewModel() = AccountViewModel(accountRepository, waitlistRepository, collectionRepository, logger)
@@ -49,13 +57,15 @@ class AccountViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.loggedIn)
+        assertEquals(0, vm.uiState.value.waitlistCount)
+        assertEquals(0, vm.uiState.value.collectionCount)
     }
 
     @Test
-    fun logged_in_loads_username_and_lists() = runTest {
+    fun logged_in_loads_username_and_counts() = runTest {
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("bob"))
-        everySuspend { waitlistRepository.getWaitlist() } returns listOf(WaitlistEntry("a", "A"))
-        everySuspend { collectionRepository.getCollection() } returns listOf(CollectionEntry("b", "B"))
+        every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("a", "b"))
+        every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf("c"))
 
         val vm = viewModel()
         advanceUntilIdle()
@@ -63,15 +73,13 @@ class AccountViewModelTest : MainDispatcherTest() {
         val state = vm.uiState.value
         assertTrue(state.loggedIn)
         assertEquals("bob", state.username)
-        assertEquals(1, state.waitlist.size)
-        assertEquals(1, state.collection.size)
+        assertEquals(2, state.waitlistCount)
+        assertEquals(1, state.collectionCount)
     }
 
     @Test
     fun needs_reconnect_propagates_from_auth_state() = runTest {
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("bob", needsReconnect = true))
-        everySuspend { waitlistRepository.getWaitlist() } returns emptyList()
-        everySuspend { collectionRepository.getCollection() } returns emptyList()
 
         val vm = viewModel()
         advanceUntilIdle()

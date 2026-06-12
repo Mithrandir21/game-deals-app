@@ -3,17 +3,13 @@ package pm.bam.gamedeals.feature.account.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.AuthState
-import pm.bam.gamedeals.domain.models.CollectionEntry
-import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -21,9 +17,11 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
 /**
- * Drives the Account tab (epic #219, Phase 2.4): observes the ITAD auth state, runs login/logout, and
- * loads the user's waitlist + collection once signed in. The auth-state observer is the single source
- * of truth — [onLogin] just triggers the OAuth flow; the resulting `LoggedIn` emission loads the lists.
+ * Drives the Account hub (epic #272, P1.2): observes the ITAD auth state and exposes the data the hub
+ * needs — login status, profile, the reconnect prompt (#273), and the Waitlist/Collection counts. The
+ * waitlist/collection *lists* now live in their own sub-screens; the hub only shows counts, sourced
+ * reactively from the Room-backed id sets (no network) while the per-list reconcile is deferred to those
+ * sub-screens. A fresh `LoggedIn` emission triggers one [reconcileLibrary] so the counts are current.
  */
 internal class AccountViewModel(
     private val accountRepository: AccountRepository,
@@ -36,15 +34,27 @@ internal class AccountViewModel(
         field = MutableStateFlow(AccountScreenData())
 
     init {
+        // Reactive, Room-backed library counts. The id sets are auth-gated (empty when logged out), so
+        // the counts zero out on logout without any extra wiring.
+        viewModelScope.launch {
+            combine(
+                waitlistRepository.observeWaitlistIds(),
+                collectionRepository.observeCollectionIds(),
+            ) { waitlistIds, collectionIds -> waitlistIds.size to collectionIds.size }
+                .collect { (waitlistCount, collectionCount) ->
+                    uiState.update { it.copy(waitlistCount = waitlistCount, collectionCount = collectionCount) }
+                }
+        }
+
         viewModelScope.launch {
             accountRepository.observeAuthState().collect { auth ->
                 when (auth) {
                     is AuthState.LoggedOut -> uiState.update {
-                        it.copy(loggedIn = false, username = "", needsReconnect = false, waitlist = persistentListOf(), collection = persistentListOf())
+                        it.copy(loggedIn = false, username = "", needsReconnect = false)
                     }
                     is AuthState.LoggedIn -> {
                         uiState.update { it.copy(loggedIn = true, username = auth.username, needsReconnect = auth.needsReconnect) }
-                        loadLists()
+                        reconcileLibrary()
                     }
                 }
             }
@@ -70,10 +80,10 @@ internal class AccountViewModel(
         viewModelScope.launch { accountRepository.logout() }
     }
 
-    private suspend fun loadLists() {
-        val waitlist = runCatching { waitlistRepository.getWaitlist() }.getOrElse { fatal(logger, it); emptyList() }
-        val collection = runCatching { collectionRepository.getCollection() }.getOrElse { fatal(logger, it); emptyList() }
-        uiState.update { it.copy(waitlist = waitlist.toImmutableList(), collection = collection.toImmutableList()) }
+    /** Refreshes the Room-backed id sets from ITAD (remote-as-truth) on login; counts then flow reactively. */
+    private suspend fun reconcileLibrary() {
+        runCatching { waitlistRepository.getWaitlist() }.onFailure { fatal(logger, it) }
+        runCatching { collectionRepository.getCollection() }.onFailure { fatal(logger, it) }
     }
 
     @Immutable
@@ -83,7 +93,11 @@ internal class AccountViewModel(
         val loggingIn: Boolean = false,
         /** The stored token predates the current OAuth scope set — prompt a reconnect (#273). */
         val needsReconnect: Boolean = false,
-        val waitlist: ImmutableList<WaitlistEntry> = persistentListOf(),
-        val collection: ImmutableList<CollectionEntry> = persistentListOf(),
+        val waitlistCount: Int = 0,
+        val collectionCount: Int = 0,
+        /** Unread ITAD notifications; populated in P2 (#277/#278), 0 until then. */
+        val unreadNotifications: Int = 0,
+        /** Whether a Steam profile is linked; populated in P5 (#285/#286), false until then. */
+        val linkedSteam: Boolean = false,
     )
 }

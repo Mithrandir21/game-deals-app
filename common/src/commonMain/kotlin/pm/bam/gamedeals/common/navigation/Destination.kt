@@ -24,6 +24,25 @@ sealed interface Destination {
     @Serializable
     data object Account : Destination
 
+    /** Account hub sub-screens (epic #272, P1.2). Sub-screens own their Scaffold/TopAppBar + back arrow. */
+    @Serializable
+    data object WaitlistList : Destination
+
+    @Serializable
+    data object CollectionList : Destination
+
+    @Serializable
+    data object Notifications : Destination
+
+    @Serializable
+    data object IgnoredGames : Destination
+
+    @Serializable
+    data object MyNotes : Destination
+
+    @Serializable
+    data object LinkedAccounts : Destination
+
     @Serializable
     data class Store(val storeId: Int) : Destination
 

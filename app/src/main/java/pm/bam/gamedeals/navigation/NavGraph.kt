@@ -77,7 +77,11 @@ internal fun NavGraph(
                 goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
                 goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
-            accountScreen(goToGame = { gameId -> navActions.navigateToGame(gameId) })
+            accountScreen(
+                navController = navController,
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToSettings = { navActions.navigateToSettings() },
+            )
 
             storeScreen(
                 navController = navController,

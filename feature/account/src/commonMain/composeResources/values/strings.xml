@@ -18,4 +18,24 @@
     <string name="account_section_waitlist">Waitlist</string>
     <string name="account_section_collection">Collection</string>
 
+    <!-- Hub section headers (P1.2, #274) -->
+    <string name="account_section_library">Library</string>
+    <string name="account_section_discovery">Discovery</string>
+    <string name="account_section_connections">Connections</string>
+    <string name="account_section_app">App</string>
+
+    <!-- Hub rows / sub-screen titles -->
+    <string name="account_row_notifications">Notifications</string>
+    <string name="account_row_ignored">Ignored games</string>
+    <string name="account_row_notes">My notes</string>
+    <string name="account_row_linked">Linked accounts</string>
+    <string name="account_row_region">Region</string>
+    <string name="account_linked_steam_connected">Steam connected</string>
+
+    <!-- Sub-screen scaffolding -->
+    <string name="account_navigation_back">Back</string>
+    <string name="account_waitlist_empty">Your waitlist is empty.</string>
+    <string name="account_collection_empty">Your collection is empty.</string>
+    <string name="account_coming_soon">Coming soon</string>
+
 </resources>
