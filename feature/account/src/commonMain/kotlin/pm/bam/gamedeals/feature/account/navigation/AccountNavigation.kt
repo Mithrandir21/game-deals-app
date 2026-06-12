@@ -9,10 +9,10 @@ import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
-import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.ui.AccountScreen
 import pm.bam.gamedeals.feature.account.ui.CollectionListScreen
 import pm.bam.gamedeals.feature.account.ui.ComingSoonScreen
+import pm.bam.gamedeals.feature.account.ui.NotificationsScreen
 import pm.bam.gamedeals.feature.account.ui.WaitlistListScreen
 
 /**
@@ -45,10 +45,11 @@ fun NavGraphBuilder.accountScreen(
         CollectionListScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
 
-    // Placeholder routes — filled in by later phases (P2–P5).
     composable<Destination.Notifications> {
-        ComingSoonScreen(title = stringResource(Res.string.account_row_notifications), onBack = { navController.popBackStack() })
+        NotificationsScreen(onBack = { navController.popBackStack() })
     }
+
+    // Placeholder routes — filled in by later phases (P3–P5).
     composable<Destination.IgnoredGames> {
         ComingSoonScreen(title = stringResource(Res.string.account_row_ignored), onBack = { navController.popBackStack() })
     }

@@ -3,6 +3,7 @@ package pm.bam.gamedeals.domain.repositories.notifications
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
@@ -18,6 +19,8 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
  * Writes are **remote-first** (confirm the ITAD mark-read before flipping the in-memory state).
  */
 interface NotificationsRepository {
+    /** The loaded notifications, auth-gated (empty when logged out). Reactive — reflects mark-read edits. */
+    fun observeNotifications(): Flow<List<ItadNotification>>
     fun observeUnreadCount(): Flow<Int>
     suspend fun getNotifications(): List<ItadNotification>
     suspend fun markRead(id: String)
@@ -31,10 +34,13 @@ internal class NotificationsRepositoryImpl(
 
     private val notifications = MutableStateFlow<List<ItadNotification>>(emptyList())
 
-    override fun observeUnreadCount(): Flow<Int> =
+    override fun observeNotifications(): Flow<List<ItadNotification>> =
         combine(authTokenStore.observeAuthState(), notifications) { authState, list ->
-            if (authState is AuthState.LoggedIn) list.count { !it.read } else 0
+            if (authState is AuthState.LoggedIn) list else emptyList()
         }
+
+    override fun observeUnreadCount(): Flow<Int> =
+        observeNotifications().map { list -> list.count { !it.read } }
 
     override suspend fun getNotifications(): List<ItadNotification> {
         if (!loggedIn()) {

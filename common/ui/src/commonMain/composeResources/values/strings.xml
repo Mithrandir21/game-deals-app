@@ -58,5 +58,6 @@
     <string name="app_shell_tab_deals">Deals</string>
     <string name="app_shell_tab_giveaways">Giveaways</string>
     <string name="app_shell_tab_account">Account</string>
+    <string name="app_shell_account_unread">%1$d unread notifications</string>
 
 </resources>

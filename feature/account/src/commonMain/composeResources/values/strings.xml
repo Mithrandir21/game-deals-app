@@ -46,4 +46,9 @@
     <string name="account_collection_empty">Your collection is empty.</string>
     <string name="account_coming_soon">Coming soon</string>
 
+    <!-- Notifications (P2.2, #278) -->
+    <string name="account_notifications_empty">No notifications yet.</string>
+    <string name="account_notifications_mark_all_read">Mark all read</string>
+    <string name="account_notifications_more_actions">More options</string>
+
 </resources>

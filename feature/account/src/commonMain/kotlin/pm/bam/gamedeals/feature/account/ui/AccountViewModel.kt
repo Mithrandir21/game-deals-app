@@ -15,6 +15,7 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
@@ -32,6 +33,7 @@ internal class AccountViewModel(
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
+    private val notificationsRepository: NotificationsRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -46,6 +48,14 @@ internal class AccountViewModel(
         viewModelScope.launch {
             regionRepository.observeSelectedCountry().collect { country ->
                 uiState.update { it.copy(selectedCountry = country) }
+            }
+        }
+
+        // Unread notifications for the hub's Notifications row badge (#278). The app-wide refresh is
+        // driven by AccountTabBadgeViewModel at the shell level; here we just observe the shared tally.
+        viewModelScope.launch {
+            notificationsRepository.observeUnreadCount().collect { unread ->
+                uiState.update { it.copy(unreadNotifications = unread) }
             }
         }
 

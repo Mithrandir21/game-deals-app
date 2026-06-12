@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,8 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.app_shell_account_unread
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_more_action
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_overflow_stores
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_action
@@ -54,6 +59,7 @@ fun GameDealsAppShell(
     onSelectTab: (TopLevelDestination) -> Unit,
     onSearch: () -> Unit,
     onBrowseStores: (() -> Unit)? = null,
+    accountUnreadCount: Int = 0,
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -98,10 +104,23 @@ fun GameDealsAppShell(
             if (showBottomBar) {
                 NavigationBar {
                     TopLevelDestination.entries.forEach { tab ->
+                        val showAccountBadge = tab == TopLevelDestination.ACCOUNT && accountUnreadCount > 0
                         NavigationBarItem(
                             selected = selectedTab == tab,
                             onClick = { onSelectTab(tab) },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = {
+                                if (showAccountBadge) {
+                                    val badgeCd = stringResource(Res.string.app_shell_account_unread, accountUnreadCount)
+                                    BadgedBox(
+                                        badge = { Badge { Text(accountUnreadCount.toString()) } },
+                                        modifier = Modifier.semantics { contentDescription = badgeCd },
+                                    ) {
+                                        Icon(tab.icon, contentDescription = null)
+                                    }
+                                } else {
+                                    Icon(tab.icon, contentDescription = null)
+                                }
+                            },
                             label = { Text(stringResource(tab.label)) },
                         )
                     }

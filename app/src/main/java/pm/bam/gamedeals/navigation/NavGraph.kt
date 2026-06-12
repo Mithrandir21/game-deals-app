@@ -17,6 +17,7 @@ import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
+import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
@@ -54,6 +55,7 @@ internal fun NavGraph(
         onSelectTab = { navActions.navigateTopLevel(it.destination) },
         onSearch = { navActions.navigateToSearch() },
         onBrowseStores = null,
+        accountUnreadCount = rememberAccountTabUnreadCount(),
     ) { padding ->
         NavHost(
             navController = navController,

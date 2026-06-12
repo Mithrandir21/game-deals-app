@@ -41,6 +41,7 @@ import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
+import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
@@ -168,6 +169,7 @@ private fun AppNavHost() {
         onSelectTab = { navigateTopLevel(it.destination) },
         onSearch = { navController.navigate(Destination.Search()) },
         onBrowseStores = null,
+        accountUnreadCount = rememberAccountTabUnreadCount(),
     ) { padding ->
         NavHost(
             navController = navController,
