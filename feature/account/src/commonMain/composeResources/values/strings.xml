@@ -51,4 +51,8 @@
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
 
+    <!-- Ignored games (P3.3, #281) -->
+    <string name="account_ignored_empty">You haven\'t ignored any games.</string>
+    <string name="account_ignored_unignore">Un-ignore</string>
+
 </resources>
