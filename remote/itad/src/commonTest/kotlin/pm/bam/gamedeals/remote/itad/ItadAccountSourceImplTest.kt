@@ -12,6 +12,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadIgnoredApi
+import pm.bam.gamedeals.remote.itad.api.ItadNotesApi
 import pm.bam.gamedeals.remote.itad.api.ItadNotificationsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
 import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
@@ -46,6 +47,8 @@ class ItadAccountSourceImplTest {
                     respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/ignored/games/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"uuid-3","title":"Untitled Goose Game"}]""", HttpStatusCode.OK, jsonHeaders)
+                request.url.encodedPath == "/user/notes/v1" && request.method == HttpMethod.Get ->
+                    respond("""[{"gid":"uuid-4","note":"Wait for a deeper sale"}]""", HttpStatusCode.OK, jsonHeaders)
                 else -> respond("", HttpStatusCode.NoContent) // PUT/DELETE writes
             }
         }
@@ -56,6 +59,7 @@ class ItadAccountSourceImplTest {
             collectionApi = ItadCollectionApi(client),
             notificationsApi = ItadNotificationsApi(client),
             ignoredApi = ItadIgnoredApi(client),
+            notesApi = ItadNotesApi(client),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
         )
     }
@@ -150,5 +154,27 @@ class ItadAccountSourceImplTest {
         source().removeFromIgnored("uuid-3")
         assertEquals(HttpMethod.Delete, recorded.single().method)
         assertEquals("/ignored/games/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun getNotes_maps_to_entries() = runTest {
+        val notes = source().getNotes()
+        assertEquals("uuid-4", notes.single().gameId)
+        assertEquals("Wait for a deeper sale", notes.single().note)
+        assertEquals("/user/notes/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun setNote_puts_to_notes_endpoint() = runTest {
+        source().setNote("uuid-4", "Buy at <$20")
+        assertEquals(HttpMethod.Put, recorded.single().method)
+        assertEquals("/user/notes/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun removeNote_deletes_from_notes_endpoint() = runTest {
+        source().removeNote("uuid-4")
+        assertEquals(HttpMethod.Delete, recorded.single().method)
+        assertEquals("/user/notes/v1", recorded.single().url.encodedPath)
     }
 }

@@ -12,6 +12,7 @@ import pm.bam.gamedeals.domain.db.dao.WaitlistDao
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.IgnoredEntry
+import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -112,6 +113,9 @@ internal class FakeAccountSource(
     override suspend fun getIgnored(): List<IgnoredEntry> = ignored
     override suspend fun addToIgnored(gameId: String) { added += gameId }
     override suspend fun removeFromIgnored(gameId: String) { removed += gameId }
+    override suspend fun getNotes(): List<ItadNote> = emptyList()
+    override suspend fun setNote(gameId: String, note: String) = Unit
+    override suspend fun removeNote(gameId: String) = Unit
 }
 
 internal class FakeAuthTokenStore(private val access: String?) : AuthTokenStore {
