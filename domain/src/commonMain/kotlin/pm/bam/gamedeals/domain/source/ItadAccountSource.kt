@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.source
 
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -24,4 +25,8 @@ interface ItadAccountSource {
     suspend fun getNotifications(): List<ItadNotification>
     suspend fun markNotificationRead(id: String)
     suspend fun markAllNotificationsRead()
+
+    suspend fun getIgnored(): List<IgnoredEntry>
+    suspend fun addToIgnored(gameId: String)
+    suspend fun removeFromIgnored(gameId: String)
 }

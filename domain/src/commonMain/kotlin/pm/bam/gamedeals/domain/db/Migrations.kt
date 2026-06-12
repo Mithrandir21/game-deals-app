@@ -200,6 +200,18 @@ private val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+/**
+ * v18 → v19 — ignore list (epic #272, P3 #279). Creates the login-scoped `IgnoredGameId` id-set table
+ * (one `gameId` PK), backing the Deals/Search ignore filter (#280). New table only — nothing existing is
+ * touched. The `CREATE TABLE` DDL is copied verbatim from the generated schema `domain/schemas/.../19.json`
+ * (identical shape to `WaitlistGameId`/`CollectionGameId`) so the post-migration identity matches the v19 database.
+ */
+private val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `IgnoredGameId` (`gameId` TEXT NOT NULL, PRIMARY KEY(`gameId`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

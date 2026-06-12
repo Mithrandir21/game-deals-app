@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
+import pm.bam.gamedeals.remote.itad.api.ItadIgnoredApi
 import pm.bam.gamedeals.remote.itad.api.ItadNotificationsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
 import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
@@ -43,6 +44,8 @@ class ItadAccountSourceImplTest {
                     respond("""[{"id":"uuid-2","title":"Celeste"}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/notifications/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
+                request.url.encodedPath == "/ignored/games/v1" && request.method == HttpMethod.Get ->
+                    respond("""[{"id":"uuid-3","title":"Untitled Goose Game"}]""", HttpStatusCode.OK, jsonHeaders)
                 else -> respond("", HttpStatusCode.NoContent) // PUT/DELETE writes
             }
         }
@@ -52,6 +55,7 @@ class ItadAccountSourceImplTest {
             waitlistApi = ItadWaitlistApi(client),
             collectionApi = ItadCollectionApi(client),
             notificationsApi = ItadNotificationsApi(client),
+            ignoredApi = ItadIgnoredApi(client),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
         )
     }
@@ -124,5 +128,27 @@ class ItadAccountSourceImplTest {
         source().markAllNotificationsRead()
         assertEquals(HttpMethod.Put, recorded.single().method)
         assertEquals("/notifications/read/all/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun getIgnored_maps_games_to_entries() = runTest {
+        val entries = source().getIgnored()
+        assertEquals("uuid-3", entries.single().gameId)
+        assertEquals("Untitled Goose Game", entries.single().title)
+        assertEquals("/ignored/games/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun addToIgnored_puts_to_ignored_endpoint() = runTest {
+        source().addToIgnored("uuid-3")
+        assertEquals(HttpMethod.Put, recorded.single().method)
+        assertEquals("/ignored/games/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun removeFromIgnored_deletes_from_ignored_endpoint() = runTest {
+        source().removeFromIgnored("uuid-3")
+        assertEquals(HttpMethod.Delete, recorded.single().method)
+        assertEquals("/ignored/games/v1", recorded.single().url.encodedPath)
     }
 }

@@ -11,6 +11,7 @@ import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.WaitlistDao
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -93,6 +94,7 @@ class WaitlistRepositoryTest {
 internal class FakeAccountSource(
     private val waitlist: List<WaitlistEntry> = emptyList(),
     private val collection: List<CollectionEntry> = emptyList(),
+    private val ignored: List<IgnoredEntry> = emptyList(),
 ) : ItadAccountSource {
     val added = mutableListOf<String>()
     val removed = mutableListOf<String>()
@@ -107,6 +109,9 @@ internal class FakeAccountSource(
     override suspend fun getNotifications(): List<ItadNotification> = emptyList()
     override suspend fun markNotificationRead(id: String) = Unit
     override suspend fun markAllNotificationsRead() = Unit
+    override suspend fun getIgnored(): List<IgnoredEntry> = ignored
+    override suspend fun addToIgnored(gameId: String) { added += gameId }
+    override suspend fun removeFromIgnored(gameId: String) { removed += gameId }
 }
 
 internal class FakeAuthTokenStore(private val access: String?) : AuthTokenStore {

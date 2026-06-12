@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad.mappers
 
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -19,5 +20,8 @@ internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
 
 internal fun RemoteItadSearchGame.toCollectionEntry(): CollectionEntry =
     CollectionEntry(gameId = id, title = title, boxart = boxartUrl())
+
+internal fun RemoteItadSearchGame.toIgnoredEntry(): IgnoredEntry =
+    IgnoredEntry(gameId = id, title = title, boxart = boxartUrl())
 
 private fun RemoteItadSearchGame.boxartUrl(): String? = assets.bestArt()

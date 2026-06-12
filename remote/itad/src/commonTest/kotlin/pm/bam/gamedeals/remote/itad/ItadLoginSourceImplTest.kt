@@ -13,6 +13,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.auth.CURRENT_SCOPE_VERSION
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -96,6 +97,9 @@ class ItadLoginSourceImplTest {
         override suspend fun getNotifications(): List<ItadNotification> = emptyList()
         override suspend fun markNotificationRead(id: String) = Unit
         override suspend fun markAllNotificationsRead() = Unit
+        override suspend fun getIgnored(): List<IgnoredEntry> = emptyList()
+        override suspend fun addToIgnored(gameId: String) = Unit
+        override suspend fun removeFromIgnored(gameId: String) = Unit
     }
 
     private class RecordingAuthTokenStore : AuthTokenStore {

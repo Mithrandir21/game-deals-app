@@ -27,6 +27,8 @@ import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -69,6 +71,7 @@ val domainModule = module {
     single { get<DomainDatabase>().getGameIdMappingDao() }
     single { get<DomainDatabase>().getWaitlistDao() }
     single { get<DomainDatabase>().getCollectionDao() }
+    single { get<DomainDatabase>().getIgnoredDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
@@ -87,6 +90,7 @@ val domainModule = module {
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
+    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
 
     // Startup cache maintenance (Phase 8): cacheSchemaVersion guard + eviction sweep over the ITAD caches.
     single<CacheMaintenance> {

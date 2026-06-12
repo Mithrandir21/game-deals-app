@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad
 
 import com.skydoves.sandwich.getOrThrow
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -9,10 +10,12 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
+import pm.bam.gamedeals.remote.itad.api.ItadIgnoredApi
 import pm.bam.gamedeals.remote.itad.api.ItadNotificationsApi
 import pm.bam.gamedeals.remote.itad.api.ItadUserApi
 import pm.bam.gamedeals.remote.itad.api.ItadWaitlistApi
 import pm.bam.gamedeals.remote.itad.mappers.toCollectionEntry
+import pm.bam.gamedeals.remote.itad.mappers.toIgnoredEntry
 import pm.bam.gamedeals.remote.itad.mappers.toItadNotification
 import pm.bam.gamedeals.remote.itad.mappers.toItadUser
 import pm.bam.gamedeals.remote.itad.mappers.toWaitlistEntry
@@ -34,6 +37,7 @@ internal class ItadAccountSourceImpl(
     private val waitlistApi: ItadWaitlistApi,
     private val collectionApi: ItadCollectionApi,
     private val notificationsApi: ItadNotificationsApi,
+    private val ignoredApi: ItadIgnoredApi,
     private val remoteExceptionTransformer: RemoteExceptionTransformer,
 ) : ItadAccountSource {
 
@@ -102,6 +106,27 @@ internal class ItadAccountSourceImpl(
 
     override suspend fun markAllNotificationsRead() {
         notificationsApi.markAllRead()
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+    }
+
+    override suspend fun getIgnored(): List<IgnoredEntry> =
+        ignoredApi.getIgnored()
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .map { it.toIgnoredEntry() }
+
+    override suspend fun addToIgnored(gameId: String) {
+        ignoredApi.addGames(listOf(gameId))
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+    }
+
+    override suspend fun removeFromIgnored(gameId: String) {
+        ignoredApi.removeGames(listOf(gameId))
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
