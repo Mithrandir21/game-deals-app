@@ -27,11 +27,34 @@ interface AuthTokenStore {
     /** Epoch-millisecond access-token expiry, or `0L` if nothing is stored. */
     suspend fun getExpiresAtEpochMs(): Long
 
-    suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String)
+    /**
+     * The OAuth scope version the persisted token was granted under (see [CURRENT_SCOPE_VERSION]), or
+     * `0` if nothing is stored. A token-refresh must preserve this (refreshing grants no new scopes).
+     */
+    suspend fun getScopeVersion(): Int
+
+    suspend fun saveTokens(
+        accessToken: String,
+        refreshToken: String,
+        expiresAtEpochMs: Long,
+        username: String,
+        scopeVersion: Int,
+    )
+
     suspend fun clear()
 }
 
 internal const val AUTH_TOKEN_KEY = "itad_auth_token"
+
+/**
+ * Bumped whenever the requested OAuth scope set changes (see
+ * [pm.bam.gamedeals.remote.itad.auth.oauth.ItadOAuthConfig.SCOPES]). A persisted token stamped with a
+ * lower [StoredAuthToken.scopeVersion] drives `AuthState.LoggedIn(needsReconnect = true)` so the UI can
+ * prompt a re-authentication to grant the newer scopes (#273).
+ *
+ * History: v1 added notifications/ignored/notes/profiles on top of the original #219 scope set (v0).
+ */
+const val CURRENT_SCOPE_VERSION = 1
 
 @Serializable
 internal data class StoredAuthToken(
@@ -39,6 +62,9 @@ internal data class StoredAuthToken(
     val refreshToken: String,
     val expiresAtEpochMs: Long,
     val username: String,
+    // Defaults to 0 so a token persisted before this field existed (the original #219 scope set) reads
+    // back as the legacy version → needsReconnect, exactly as intended for already-signed-in users.
+    val scopeVersion: Int = 0,
 )
 
 internal class AuthTokenStoreImpl(
@@ -61,8 +87,16 @@ internal class AuthTokenStoreImpl(
 
     override suspend fun getExpiresAtEpochMs(): Long = loadFromStorage()?.expiresAtEpochMs ?: 0L
 
-    override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String) {
-        val token = StoredAuthToken(accessToken, refreshToken, expiresAtEpochMs, username)
+    override suspend fun getScopeVersion(): Int = loadFromStorage()?.scopeVersion ?: 0
+
+    override suspend fun saveTokens(
+        accessToken: String,
+        refreshToken: String,
+        expiresAtEpochMs: Long,
+        username: String,
+        scopeVersion: Int,
+    ) {
+        val token = StoredAuthToken(accessToken, refreshToken, expiresAtEpochMs, username, scopeVersion)
         storage.save(AUTH_TOKEN_KEY, token, StoredAuthToken.serializer())
         authState.value = token.toAuthState()
     }
@@ -76,5 +110,6 @@ internal class AuthTokenStoreImpl(
         runCatching { storage.getNullable(AUTH_TOKEN_KEY, StoredAuthToken.serializer()) }.getOrNull()
 
     private fun StoredAuthToken?.toAuthState(): AuthState =
-        this?.let { AuthState.LoggedIn(it.username) } ?: AuthState.LoggedOut
+        this?.let { AuthState.LoggedIn(it.username, needsReconnect = it.scopeVersion < CURRENT_SCOPE_VERSION) }
+            ?: AuthState.LoggedOut
 }

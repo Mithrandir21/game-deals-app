@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.auth.CURRENT_SCOPE_VERSION
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.ItadUser
@@ -50,6 +51,7 @@ class ItadLoginSourceImplTest {
         assertEquals("RT", store.lastRefreshToken)
         assertEquals("alice", store.lastUsername) // re-saved with the real username
         assertEquals(1_000_000L + 3600 * 1000L, store.lastExpiresAt)
+        assertEquals(CURRENT_SCOPE_VERSION, store.lastScopeVersion) // fresh login stamps the current scope set
         assertEquals(2, store.saveCount) // provisional (blank username) + final
     }
 
@@ -98,18 +100,21 @@ class ItadLoginSourceImplTest {
         var lastRefreshToken: String? = null; private set
         var lastExpiresAt = 0L; private set
         var lastUsername: String? = null; private set
+        var lastScopeVersion = -1; private set
 
         override fun observeAuthState(): Flow<AuthState> = flowOf(AuthState.LoggedOut)
         override suspend fun getAccessToken(): String? = lastAccessToken
         override suspend fun getRefreshToken(): String? = lastRefreshToken
         override suspend fun getUsername(): String? = lastUsername
         override suspend fun getExpiresAtEpochMs(): Long = lastExpiresAt
-        override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String) {
+        override suspend fun getScopeVersion(): Int = lastScopeVersion
+        override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String, scopeVersion: Int) {
             saveCount++
             lastAccessToken = accessToken
             lastRefreshToken = refreshToken
             lastExpiresAt = expiresAtEpochMs
             lastUsername = username
+            lastScopeVersion = scopeVersion
         }
         override suspend fun clear() = Unit
     }

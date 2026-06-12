@@ -112,7 +112,8 @@ internal class FakeAuthTokenStore(private val access: String?) : AuthTokenStore 
     override suspend fun getRefreshToken(): String? = null
     override suspend fun getUsername(): String? = null
     override suspend fun getExpiresAtEpochMs(): Long = 0L
-    override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String) = Unit
+    override suspend fun getScopeVersion(): Int = 0
+    override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String, scopeVersion: Int) = Unit
     override suspend fun clear() = Unit
 }
 

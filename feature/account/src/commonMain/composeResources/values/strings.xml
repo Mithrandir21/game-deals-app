@@ -8,6 +8,10 @@
     <string name="account_signed_in_as">Signed in as %1$s</string>
     <string name="account_sign_out">Sign out</string>
 
+    <string name="account_reconnect_title">Reconnect to enable new features</string>
+    <string name="account_reconnect_body">New options like notifications, ignored games, notes and importing need extra permissions. Reconnect your IsThereAnyDeal account to turn them on.</string>
+    <string name="account_reconnect_action">Reconnect</string>
+
     <string name="account_stat_waitlisted">Waitlisted</string>
     <string name="account_stat_collected">Collected</string>
 

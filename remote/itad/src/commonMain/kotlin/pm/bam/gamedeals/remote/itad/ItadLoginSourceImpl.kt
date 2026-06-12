@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad
 
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.auth.CURRENT_SCOPE_VERSION
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.domain.source.ItadLoginSource
@@ -47,10 +48,11 @@ internal class ItadLoginSourceImpl(
                 val refresh = token.refreshToken.orEmpty()
 
                 // Provisional save so the bearer client can authenticate the /user/info call…
-                authTokenStore.saveTokens(token.accessToken, refresh, expiresAt, username = "")
+                authTokenStore.saveTokens(token.accessToken, refresh, expiresAt, username = "", scopeVersion = CURRENT_SCOPE_VERSION)
                 val user = accountSource.getUserInfo()
-                // …then persist with the real username.
-                authTokenStore.saveTokens(token.accessToken, refresh, expiresAt, username = user.username)
+                // …then persist with the real username. A fresh login grants the full current scope set,
+                // so it's stamped with CURRENT_SCOPE_VERSION (clearing any needsReconnect).
+                authTokenStore.saveTokens(token.accessToken, refresh, expiresAt, username = user.username, scopeVersion = CURRENT_SCOPE_VERSION)
                 user
             }
         }

@@ -38,6 +38,9 @@ class ItadTokenProvider(
                 refreshToken = newRefresh,
                 expiresAtEpochMs = clock.nowMillis() + token.expiresIn * 1000L,
                 username = authTokenStore.getUsername().orEmpty(),
+                // A refresh grants no new scopes — preserve the stored scope version so it doesn't
+                // accidentally clear (or set) the needsReconnect flag.
+                scopeVersion = authTokenStore.getScopeVersion(),
             )
             BearerTokens(token.accessToken, newRefresh)
         } catch (ce: CancellationException) {

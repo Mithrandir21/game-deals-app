@@ -68,6 +68,18 @@ class AccountViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun needs_reconnect_propagates_from_auth_state() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("bob", needsReconnect = true))
+        everySuspend { waitlistRepository.getWaitlist() } returns emptyList()
+        everySuspend { collectionRepository.getCollection() } returns emptyList()
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.needsReconnect)
+    }
+
+    @Test
     fun onLogin_invokes_repository_login() = runTest {
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
         everySuspend { accountRepository.login() } returns ItadUser("bob")

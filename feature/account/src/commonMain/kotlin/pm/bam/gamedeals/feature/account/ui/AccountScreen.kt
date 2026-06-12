@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +36,9 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
+import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_action
+import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_body
+import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_collection
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_waitlist
 import pm.bam.gamedeals.feature.account.generated.resources.account_sign_in
@@ -72,7 +76,9 @@ private fun AccountScreenContent(
     if (!data.loggedIn) {
         LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin)
     } else {
-        LoggedInContent(data = data, onLogout = onLogout, onGameClick = onGameClick)
+        // Reconnect re-runs the same OAuth flow as a fresh sign-in; on success the token is re-stamped
+        // with the current scope version and the banner disappears (#273).
+        LoggedInContent(data = data, onLogout = onLogout, onReconnect = onLogin, onGameClick = onGameClick)
     }
 }
 
@@ -109,6 +115,7 @@ private fun LoggedOutContent(loggingIn: Boolean, onLogin: () -> Unit) {
 private fun LoggedInContent(
     data: AccountScreenData,
     onLogout: () -> Unit,
+    onReconnect: () -> Unit,
     onGameClick: (gameId: String) -> Unit,
 ) {
     LazyColumn(
@@ -131,6 +138,10 @@ private fun LoggedInContent(
             }
         }
 
+        if (data.needsReconnect) {
+            item { ReconnectBanner(loggingIn = data.loggingIn, onReconnect = onReconnect) }
+        }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
                 StatCard(stringResource(Res.string.account_stat_waitlisted), data.waitlist.size, Modifier.weight(1f))
@@ -149,6 +160,46 @@ private fun LoggedInContent(
             item { SectionHeader(stringResource(Res.string.account_section_collection)) }
             items(data.collection.size, key = { "co-${data.collection[it].gameId}" }) { i ->
                 GameRow(data.collection[i].title, data.collection[i].boxart) { onGameClick(data.collection[i].gameId) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReconnectBanner(loggingIn: Boolean, onReconnect: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large)) {
+            Text(
+                text = stringResource(Res.string.account_reconnect_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(Res.string.account_reconnect_body),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.extraSmall),
+            )
+            Button(
+                onClick = onReconnect,
+                enabled = !loggingIn,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(top = GameDealsCustomTheme.spacing.medium),
+            ) {
+                if (loggingIn) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(20.dp).width(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(stringResource(Res.string.account_reconnect_action))
+                }
             }
         }
     }

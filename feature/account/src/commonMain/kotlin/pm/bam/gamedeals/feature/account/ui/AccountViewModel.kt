@@ -40,10 +40,10 @@ internal class AccountViewModel(
             accountRepository.observeAuthState().collect { auth ->
                 when (auth) {
                     is AuthState.LoggedOut -> uiState.update {
-                        it.copy(loggedIn = false, username = "", waitlist = persistentListOf(), collection = persistentListOf())
+                        it.copy(loggedIn = false, username = "", needsReconnect = false, waitlist = persistentListOf(), collection = persistentListOf())
                     }
                     is AuthState.LoggedIn -> {
-                        uiState.update { it.copy(loggedIn = true, username = auth.username) }
+                        uiState.update { it.copy(loggedIn = true, username = auth.username, needsReconnect = auth.needsReconnect) }
                         loadLists()
                     }
                 }
@@ -81,6 +81,8 @@ internal class AccountViewModel(
         val loggedIn: Boolean = false,
         val username: String = "",
         val loggingIn: Boolean = false,
+        /** The stored token predates the current OAuth scope set — prompt a reconnect (#273). */
+        val needsReconnect: Boolean = false,
         val waitlist: ImmutableList<WaitlistEntry> = persistentListOf(),
         val collection: ImmutableList<CollectionEntry> = persistentListOf(),
     )

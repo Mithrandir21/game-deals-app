@@ -28,7 +28,7 @@ class ItadTokenProviderTest {
 
     @Test
     fun refresh_success_persists_new_tokens_and_preserves_username() = runTest {
-        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob", scopeVersion = 7)
         val oauth = ItadOAuthClient(
             mockHttpClient(json) { _ ->
                 respond(
@@ -49,6 +49,7 @@ class ItadTokenProviderTest {
         assertEquals("NEW-RT", store.getRefreshToken())
         assertEquals(1_000_000L + 7200 * 1000L, store.getExpiresAtEpochMs())
         assertEquals("bob", store.getUsername()) // preserved across refresh
+        assertEquals(7, store.getScopeVersion()) // refresh grants no new scopes — scope version preserved
     }
 
     @Test
@@ -82,6 +83,7 @@ class ItadTokenProviderTest {
         private var refresh: String? = null,
         private var expiresAt: Long = 0L,
         private var username: String? = null,
+        private var scopeVersion: Int = 0,
     ) : AuthTokenStore {
         var cleared = false
             private set
@@ -93,12 +95,14 @@ class ItadTokenProviderTest {
         override suspend fun getRefreshToken(): String? = refresh
         override suspend fun getUsername(): String? = username
         override suspend fun getExpiresAtEpochMs(): Long = expiresAt
+        override suspend fun getScopeVersion(): Int = scopeVersion
 
-        override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String) {
+        override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String, scopeVersion: Int) {
             access = accessToken
             refresh = refreshToken
             expiresAt = expiresAtEpochMs
             this.username = username
+            this.scopeVersion = scopeVersion
         }
 
         override suspend fun clear() {

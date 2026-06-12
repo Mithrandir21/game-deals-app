@@ -15,6 +15,13 @@ object ItadOAuthConfig {
     const val AUTHORIZE_URL = "https://isthereanydeal.com/oauth/authorize/"
     const val TOKEN_URL = "https://isthereanydeal.com/oauth/token/"
 
-    /** Read+write scopes for the account feature (#219): profile, waitlist, collection. */
-    const val SCOPES = "user_info wait_read wait_write coll_read coll_write"
+    /**
+     * Read+write scopes for the account feature: profile, waitlist, collection (#219) plus the Account
+     * hub additions (#272/#273) — notifications, ignored games, notes, and 3rd-party profile link/sync.
+     *
+     * IMPORTANT: whenever this set changes, bump [pm.bam.gamedeals.domain.auth.CURRENT_SCOPE_VERSION] so
+     * already-signed-in users (whose token was granted under the old set) are prompted to reconnect.
+     */
+    const val SCOPES =
+        "user_info wait_read wait_write coll_read coll_write notifications ignored_read ignored_write notes_read notes_write profiles"
 }
