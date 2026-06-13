@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -37,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -46,7 +48,10 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_bo
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_permission_denied
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery_desc
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_region
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings
@@ -226,6 +231,7 @@ private fun LoggedInContent(
 
         item { SectionHeader(stringResource(Res.string.account_section_discovery)) }
         item { HubRow(label = stringResource(Res.string.account_row_notifications), badgeCount = data.unreadNotifications, onClick = onOpenNotifications) }
+        item { NotificationDeliveryRow() }
         item { HubRow(label = stringResource(Res.string.account_row_ignored), onClick = onOpenIgnored) }
         item { HubRow(label = stringResource(Res.string.account_row_notes), onClick = onOpenMyNotes) }
 
@@ -337,6 +343,49 @@ private fun SectionHeader(text: String) {
         modifier = Modifier
             .padding(top = GameDealsCustomTheme.spacing.small)
             .semantics { heading() },
+    )
+}
+
+/**
+ * Background-alerts opt-in toggle (background-notifications feature, Phase D). Self-contained: pulls its
+ * own [NotificationSettingsViewModel] + the platform permission requester. Flipping on requests the OS
+ * notification permission and only enables on grant; a denial leaves it off with an inline rationale.
+ */
+@Composable
+private fun NotificationDeliveryRow(
+    viewModel: NotificationSettingsViewModel = koinViewModel(),
+) {
+    val enabled by viewModel.enabled.collectAsStateWithLifecycle()
+    val permissionRequester = rememberNotificationPermissionRequester()
+    var permissionDenied by rememberSaveable { mutableStateOf(false) }
+
+    ListItem(
+        headlineContent = { Text(stringResource(Res.string.account_row_notification_delivery)) },
+        supportingContent = {
+            Text(
+                if (permissionDenied) {
+                    stringResource(Res.string.account_notification_permission_denied)
+                } else {
+                    stringResource(Res.string.account_row_notification_delivery_desc)
+                }
+            )
+        },
+        trailingContent = {
+            Switch(
+                checked = enabled,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        permissionRequester.request { granted ->
+                            permissionDenied = !granted
+                            if (granted) viewModel.onEnable()
+                        }
+                    } else {
+                        permissionDenied = false
+                        viewModel.onDisable()
+                    }
+                },
+            )
+        },
     )
 }
 

@@ -62,4 +62,9 @@
     <!-- My notes (P4.2, #283) -->
     <string name="account_notes_empty">You haven\'t added any notes yet.</string>
 
+    <!-- Background notification delivery toggle -->
+    <string name="account_row_notification_delivery">Background alerts</string>
+    <string name="account_row_notification_delivery_desc">Get waitlist price-drop alerts even when the app is closed</string>
+    <string name="account_notification_permission_denied">Notifications are blocked. Enable them in system settings to get alerts.</string>
+
 </resources>

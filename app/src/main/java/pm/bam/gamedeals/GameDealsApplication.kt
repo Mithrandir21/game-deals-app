@@ -21,10 +21,15 @@ import pm.bam.gamedeals.common.di.commonAndroidModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.di.appModule
+import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
+import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
+import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.deals.di.dealsModule
@@ -100,6 +105,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         }
         warmDomainDatabase()
         runCacheMaintenance()
+        runNotificationLifecycle()
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
@@ -163,6 +169,39 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 try {
                     error(logger, throwable = t) { "Cache maintenance failed" }
                 } catch (_: Throwable) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Keeps the background notification poll in sync with auth + the user's opt-in (background-notifications
+     * feature, Phase D). Observing [AuthTokenStore.observeAuthState] re-arms the [NotificationScheduler] on
+     * login when enabled (also covers app start / reboot since the StateFlow emits the current state), and on
+     * logout cancels the poll and clears the surfaced-id set so a different account re-alerts cleanly. The
+     * user's opt-in preference itself is preserved. Fire-and-forget on [applicationScope]; per-emission
+     * failures are logged but never tear down the collector.
+     */
+    private fun runNotificationLifecycle() {
+        applicationScope.launch {
+            get<AuthTokenStore>().observeAuthState().collect { state ->
+                try {
+                    when (state) {
+                        is AuthState.LoggedIn ->
+                            if (get<NotificationSettings>().isEnabled()) get<NotificationScheduler>().schedule()
+
+                        AuthState.LoggedOut -> {
+                            get<NotificationScheduler>().cancel()
+                            get<SurfacedNotificationStore>().replace(emptySet())
+                        }
+                    }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    try {
+                        error(logger, throwable = t) { "Notification lifecycle update failed" }
+                    } catch (_: Throwable) {
+                    }
                 }
             }
         }
