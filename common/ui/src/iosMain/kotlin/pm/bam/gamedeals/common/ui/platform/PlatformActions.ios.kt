@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRectMake
+import platform.Foundation.NSURL
+import platform.SafariServices.SFSafariViewController
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
 import platform.UIKit.UISceneActivationStateForegroundActive
@@ -39,6 +41,15 @@ class IosPlatformActions : PlatformActions {
         }
 
         rootViewController.presentViewController(vc, animated = true, completion = null)
+    }
+
+    override fun openInApp(url: String) {
+        // SFSafariViewController only accepts http/https URLs (all of ours are https). A malformed URL
+        // or a missing host window are the only ways this no-ops.
+        val nsUrl = NSURL.URLWithString(url) ?: return
+        val rootViewController = resolveKeyWindow()?.rootViewController ?: return
+        val safari = SFSafariViewController(uRL = nsUrl)
+        rootViewController.presentViewController(safari, animated = true, completion = null)
     }
 
     /**

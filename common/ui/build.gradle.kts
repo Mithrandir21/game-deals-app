@@ -25,6 +25,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.ktx)
             implementation(libs.androidx.appcompat)
+            implementation(libs.androidx.browser)
             implementation(libs.material)
             implementation(libs.androidx.compose.activity)
             implementation(libs.androidx.compose.navigation)

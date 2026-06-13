@@ -11,6 +11,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
  */
 interface PlatformActions {
     fun share(text: String)
+
+    /**
+     * Opens [url] in an in-app browser tab — a Chrome Custom Tab on Android, an
+     * `SFSafariViewController` on iOS — so the user stays in-context (and signed in) rather than being
+     * sent to the standalone system browser. Implementations fall back gracefully (e.g. to the system
+     * browser) if no in-app tab provider is available.
+     */
+    fun openInApp(url: String)
 }
 
 /**
@@ -19,6 +27,7 @@ interface PlatformActions {
  */
 object NoOpPlatformActions : PlatformActions {
     override fun share(text: String) = Unit
+    override fun openInApp(url: String) = Unit
 }
 
 val LocalPlatformActions = staticCompositionLocalOf<PlatformActions> { NoOpPlatformActions }

@@ -1,7 +1,10 @@
 package pm.bam.gamedeals.common.ui.platform
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -13,6 +16,21 @@ class AndroidPlatformActions(private val context: Context) : PlatformActions {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         context.startActivity(Intent.createChooser(send, null))
+    }
+
+    override fun openInApp(url: String) {
+        val uri = Uri.parse(url)
+        try {
+            // A Custom Tab degrades to a plain browser tab automatically when the default browser
+            // doesn't support the protocol; this catch only handles the no-browser-at-all case.
+            CustomTabsIntent.Builder().build().launchUrl(context, uri)
+        } catch (_: ActivityNotFoundException) {
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+            } catch (_: ActivityNotFoundException) {
+                // Nothing on the device can open a URL — give up silently rather than crash.
+            }
+        }
     }
 }
 

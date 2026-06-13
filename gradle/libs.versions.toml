@@ -28,6 +28,7 @@ core-ktx = "1.17.0"
 lifecycle-runtime-ktx = "2.9.4"
 compose-ui = "1.9.4"
 webview = "1.14.0"
+browser = "1.8.0"
 compose-bom = "2026.05.00"
 compose-navigation = "2.9.5"
 material3 = "1.4.0"
@@ -78,6 +79,7 @@ androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "l
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle-runtime-ktx" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 androidx-tracing = { group = "androidx.tracing", name = "tracing", version.ref = "tracing" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
