@@ -31,8 +31,14 @@ import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettingsImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSyncImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
+import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStoreImpl
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -92,6 +98,11 @@ val domainModule = module {
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
+    // Background (OS-tray) notification delivery (epic #272 follow-up). Scheduler is platform-bound
+    // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
+    single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationSync> { NotificationSyncImpl(get(), get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get()) }
 
