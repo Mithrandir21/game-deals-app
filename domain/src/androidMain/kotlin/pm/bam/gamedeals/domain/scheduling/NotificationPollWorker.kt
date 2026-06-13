@@ -6,8 +6,6 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
-import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
 
 /**
  * The periodic background poll (Phase B). Resolves its collaborators from the process-global Koin graph
@@ -21,8 +19,7 @@ internal class NotificationPollWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     override suspend fun doWork(): Result = try {
-        val alerts = get<NotificationSync>().syncAndCollectNew()
-        if (alerts.isNotEmpty()) get<NotificationPresenter>().present(alerts)
+        runNotificationPoll(get(), get())
         Result.success()
     } catch (ce: CancellationException) {
         throw ce

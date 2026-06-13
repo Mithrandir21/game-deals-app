@@ -66,11 +66,10 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
     }
 
     private fun tapIntent(alert: PendingNotificationAlert): PendingIntent {
-        val singleGame = alert.games.singleOrNull()
-        return if (singleGame != null) {
-            routeIntent(ROUTE_GAME, gameId = singleGame.gameId, requestCode = alert.notificationId.hashCode())
-        } else {
-            routeIntent(ROUTE_NOTIFICATIONS, gameId = null, requestCode = alert.notificationId.hashCode())
+        val requestCode = alert.notificationId.hashCode()
+        return when (val route = alert.toNotificationRoute()) {
+            is NotificationRoute.Game -> routeIntent(ROUTE_GAME, gameId = route.gameId, requestCode = requestCode)
+            NotificationRoute.Notifications -> routeIntent(ROUTE_NOTIFICATIONS, gameId = null, requestCode = requestCode)
         }
     }
 

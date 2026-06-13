@@ -25,11 +25,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
-import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
-import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
-import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
-import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.deals.di.dealsModule
@@ -41,6 +37,7 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.notifications.applyNotificationLifecycle
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -186,15 +183,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         applicationScope.launch {
             get<AuthTokenStore>().observeAuthState().collect { state ->
                 try {
-                    when (state) {
-                        is AuthState.LoggedIn ->
-                            if (get<NotificationSettings>().isEnabled()) get<NotificationScheduler>().schedule()
-
-                        AuthState.LoggedOut -> {
-                            get<NotificationScheduler>().cancel()
-                            get<SurfacedNotificationStore>().replace(emptySet())
-                        }
-                    }
+                    applyNotificationLifecycle(state, get(), get(), get())
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {

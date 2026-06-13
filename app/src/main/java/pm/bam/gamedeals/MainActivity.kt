@@ -9,12 +9,8 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.navigation.NavGraph
-import pm.bam.gamedeals.notifications.EXTRA_NOTIFICATION_GAME_ID
-import pm.bam.gamedeals.notifications.EXTRA_NOTIFICATION_ROUTE
-import pm.bam.gamedeals.notifications.NotificationRoute
 import pm.bam.gamedeals.notifications.NotificationRouteBus
-import pm.bam.gamedeals.notifications.ROUTE_GAME
-import pm.bam.gamedeals.notifications.ROUTE_NOTIFICATIONS
+import pm.bam.gamedeals.notifications.toNotificationRoute
 
 class MainActivity : ComponentActivity() {
 
@@ -39,10 +35,6 @@ class MainActivity : ComponentActivity() {
 
     /** Routes a tapped background notification (Phase B) into the Compose nav via [NotificationRouteBus]. */
     private fun handleNotificationIntent(intent: Intent?) {
-        when (intent?.getStringExtra(EXTRA_NOTIFICATION_ROUTE)) {
-            ROUTE_GAME -> intent.getStringExtra(EXTRA_NOTIFICATION_GAME_ID)
-                ?.let { NotificationRouteBus.deliver(NotificationRoute.Game(it)) }
-            ROUTE_NOTIFICATIONS -> NotificationRouteBus.deliver(NotificationRoute.Notifications)
-        }
+        intent?.toNotificationRoute()?.let { NotificationRouteBus.deliver(it) }
     }
 }
