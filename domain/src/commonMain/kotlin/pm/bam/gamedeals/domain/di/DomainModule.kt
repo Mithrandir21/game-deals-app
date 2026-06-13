@@ -93,7 +93,7 @@ val domainModule = module {
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
-    single<NotesRepository> { NotesRepositoryImpl(get(), get()) }
+    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get()) }
 
     // Startup cache maintenance (Phase 8): cacheSchemaVersion guard + eviction sweep over the ITAD caches.
     single<CacheMaintenance> {

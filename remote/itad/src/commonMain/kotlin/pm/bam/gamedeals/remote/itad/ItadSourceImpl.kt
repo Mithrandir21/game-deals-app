@@ -120,6 +120,8 @@ internal class ItadSourceImpl(
         return prices.toGameDetails(title = info.title, boxart = info.boxart)
     }
 
+    override suspend fun fetchGame(gameId: String): Game = fetchGameInfo(gameId).toGame()
+
     override suspend fun fetchPriceHistory(gameId: String, since: Long?): PriceHistory =
         fetchItadPriceHistory(
             gameId = gameId,

@@ -7,11 +7,11 @@ import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
-import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.feature.account.ui.AccountScreen
 import pm.bam.gamedeals.feature.account.ui.CollectionListScreen
 import pm.bam.gamedeals.feature.account.ui.ComingSoonScreen
 import pm.bam.gamedeals.feature.account.ui.IgnoredScreen
+import pm.bam.gamedeals.feature.account.ui.MyNotesScreen
 import pm.bam.gamedeals.feature.account.ui.NotificationsScreen
 import pm.bam.gamedeals.feature.account.ui.WaitlistListScreen
 
@@ -53,10 +53,11 @@ fun NavGraphBuilder.accountScreen(
         IgnoredScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
 
-    // Placeholder routes — filled in by later phases (P4–P5).
     composable<Destination.MyNotes> {
-        ComingSoonScreen(title = stringResource(Res.string.account_row_notes), onBack = { navController.popBackStack() })
+        MyNotesScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
+
+    // Placeholder routes — filled in by later phases (P5).
     composable<Destination.LinkedAccounts> {
         ComingSoonScreen(title = stringResource(Res.string.account_row_linked), onBack = { navController.popBackStack() })
     }

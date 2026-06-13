@@ -24,10 +24,15 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,8 +51,10 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -88,6 +95,14 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_delete_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_cancel
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_placeholder
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_save
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_edit_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_section_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
@@ -109,6 +124,7 @@ internal fun GameScreen(
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
     val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
+    val note = viewModel.note.collectAsStateWithLifecycle()
     val onRetry: () -> Unit = { viewModel.reloadGameDetails() }
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -129,12 +145,15 @@ internal fun GameScreen(
             data = data.value,
             isFavourite = isFavourite.value,
             isIgnored = isIgnored.value,
+            note = note.value,
             onBack = onBack,
             goToWeb = goToWeb,
             goToGameDetails = goToGameDetails,
             onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
             onToggleFavourite = { viewModel.toggleWaitlist() },
             onToggleIgnore = { viewModel.toggleIgnore() },
+            onSaveNote = { viewModel.setNote(it) },
+            onDeleteNote = { viewModel.deleteNote() },
             onRetry = onRetry,
             snackbarHostState = snackbarHostState,
         )
@@ -145,6 +164,9 @@ internal fun GameScreen(
 private fun CompactGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
+    note: String?,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
@@ -154,6 +176,15 @@ private fun CompactGameDealsDetails(
         horizontalAlignment = Alignment.Start
     ) {
         CompactGameDetail(data.gameDetails)
+
+        NotesSection(
+            note = note,
+            onSaveNote = onSaveNote,
+            onDeleteNote = onDeleteNote,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = GameDealsCustomTheme.spacing.large, end = GameDealsCustomTheme.spacing.large, bottom = GameDealsCustomTheme.spacing.medium),
+        )
 
         PriceHistoryChart(
             priceHistory = data.priceHistory,
@@ -212,6 +243,9 @@ private fun CompactGameDealsDetails(
 private fun WideGameDealsDetails(
     modifier: Modifier,
     data: GameScreenData.Data,
+    note: String?,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
@@ -226,6 +260,13 @@ private fun WideGameDealsDetails(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)
         ) {
+            NotesSection(
+                note = note,
+                onSaveNote = onSaveNote,
+                onDeleteNote = onDeleteNote,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             PriceHistoryChart(
                 priceHistory = data.priceHistory,
                 modifier = Modifier.fillMaxWidth(),
@@ -410,6 +451,105 @@ private fun StoreGameDealRow(
     }
 }
 
+/**
+ * The user's personal note for this game (#283). Always shown on the Data screen: when a note exists it
+ * renders with edit/delete actions; otherwise it offers an "Add a note" affordance. Editing opens
+ * [NoteEditDialog]; saving an empty note deletes it. Writes are login-gated upstream (a logged-out save
+ * surfaces the sign-in snackbar).
+ */
+@Composable
+private fun NotesSection(
+    note: String?,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var editing by remember { mutableStateOf(false) }
+
+    Card(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(GameDealsCustomTheme.spacing.medium),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(Res.string.game_screen_note_section_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (note != null) {
+                    IconButton(onClick = { editing = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = stringResource(Res.string.game_screen_note_edit_action),
+                        )
+                    }
+                    IconButton(onClick = onDeleteNote) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = stringResource(Res.string.game_screen_note_delete_action),
+                        )
+                    }
+                }
+            }
+            if (note != null) {
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                TextButton(onClick = { editing = true }) {
+                    Text(stringResource(Res.string.game_screen_note_add_action))
+                }
+            }
+        }
+    }
+
+    if (editing) {
+        NoteEditDialog(
+            initial = note.orEmpty(),
+            onDismiss = { editing = false },
+            onConfirm = { text ->
+                editing = false
+                val trimmed = text.trim()
+                if (trimmed.isEmpty()) onDeleteNote() else onSaveNote(trimmed)
+            },
+        )
+    }
+}
+
+@Composable
+private fun NoteEditDialog(
+    initial: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.game_screen_note_dialog_title)) },
+        text = {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text(stringResource(Res.string.game_screen_note_dialog_placeholder)) },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) {
+                Text(stringResource(Res.string.game_screen_note_dialog_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.game_screen_note_dialog_cancel))
+            }
+        },
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameScreenContent(
@@ -424,6 +564,9 @@ private fun GameScreenContent(
     onRetry: () -> Unit,
     isIgnored: Boolean = false,
     onToggleIgnore: () -> Unit = {},
+    note: String? = null,
+    onSaveNote: (String) -> Unit = {},
+    onDeleteNote: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val topAppBarState = rememberTopAppBarState()
@@ -520,9 +663,9 @@ private fun GameScreenContent(
 
                     is GameScreenData.Data -> {
                         if (isCompact) {
-                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
+                            CompactGameDealsDetails(Modifier.padding(innerPadding), data, note, onSaveNote, onDeleteNote, goToWeb, goToGameDetails, onShareDeal)
                         } else {
-                            WideGameDealsDetails(Modifier.padding(innerPadding), data, goToWeb, goToGameDetails, onShareDeal)
+                            WideGameDealsDetails(Modifier.padding(innerPadding), data, note, onSaveNote, onDeleteNote, goToWeb, goToGameDetails, onShareDeal)
                         }
                     }
 
@@ -612,6 +755,7 @@ private fun GameScreenContent_Compact_Success_Favourited_Dark_Preview() {
                 priceHistory = previewPriceHistory,
             ),
             isFavourite = true,
+            note = "Wait for a sub-$15 sale.",
             onBack = {},
             goToWeb = { _, _ -> },
             onShareDeal = { _, _, _ -> },

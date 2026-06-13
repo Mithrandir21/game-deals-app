@@ -24,6 +24,16 @@
     <string name="game_screen_share_action">Share %1$s deal</string>
     <string name="game_screen_store_deal_row_description">%1$s, save %2$s\%%, %3$s</string>
 
+    <!-- Personal notes (P4.2, #283) -->
+    <string name="game_screen_note_section_title">My note</string>
+    <string name="game_screen_note_add_action">Add a note</string>
+    <string name="game_screen_note_edit_action">Edit note</string>
+    <string name="game_screen_note_delete_action">Delete note</string>
+    <string name="game_screen_note_dialog_title">Your note</string>
+    <string name="game_screen_note_dialog_placeholder">Write a note about this game…</string>
+    <string name="game_screen_note_dialog_save">Save</string>
+    <string name="game_screen_note_dialog_cancel">Cancel</string>
+
     <string name="game_screen_summary_read_more">Read more</string>
     <string name="game_screen_summary_show_less">Show less</string>
     <string name="game_screen_view_details">Game details</string>

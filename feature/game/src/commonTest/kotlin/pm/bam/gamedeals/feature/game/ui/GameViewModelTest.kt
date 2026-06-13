@@ -25,6 +25,8 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.notes.NotesUpdateResult
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -62,6 +64,9 @@ class GameViewModelTest : MainDispatcherTest() {
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIsIgnored(any()) } returns flowOf(false)
     }
+    private val notesRepository: NotesRepository = mock(MockMode.autoUnit) {
+        every { observeNote(any()) } returns flowOf(null)
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -75,6 +80,7 @@ class GameViewModelTest : MainDispatcherTest() {
         waitlistRepository = waitlistRepository,
         igdbRepository = igdbRepository,
         ignoredRepository = ignoredRepository,
+        notesRepository = notesRepository,
     )
 
     @Test
@@ -358,6 +364,61 @@ class GameViewModelTest : MainDispatcherTest() {
         val last = emissions.last() as GameViewModel.GameScreenData.Data
         assertEquals(null, last.igdbGame, "IGDB failure must NOT hide the deal screen")
         assertEquals(details, last.gameDetails)
+    }
+
+    @Test
+    fun note_reflects_the_repository_value_for_the_gameId() = runTest {
+        every { notesRepository.observeNote("1") } returns flowOf("Wait for a sale")
+
+        val viewModel = createViewModel(gameId = "1")
+        val emissions = viewModel.note.observeEmissions(this.backgroundScope, testDispatcher)
+
+        assertEquals("Wait for a sale", emissions.last())
+    }
+
+    @Test
+    fun note_is_null_when_gameId_is_null_without_querying_repository() = runTest {
+        val viewModel = createViewModel(gameId = null)
+        val emissions = viewModel.note.observeEmissions(this.backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertEquals(null, emissions.last())
+        verify(exactly(0)) { notesRepository.observeNote(any()) }
+    }
+
+    @Test
+    fun setNote_forwards_the_text_to_the_repository() = runTest {
+        everySuspend { notesRepository.setNote("1", "Buy under $20") } returns NotesUpdateResult.UPDATED
+
+        val viewModel = createViewModel(gameId = "1")
+        viewModel.setNote("Buy under $20")
+        runCurrent()
+
+        verifySuspend(exactly(1)) { notesRepository.setNote("1", "Buy under $20") }
+    }
+
+    @Test
+    fun setNote_when_logged_out_emits_SignInRequired() = runTest {
+        everySuspend { notesRepository.setNote(any(), any()) } returns NotesUpdateResult.NOT_LOGGED_IN
+
+        val viewModel = createViewModel(gameId = "1")
+        val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
+
+        viewModel.setNote("x")
+        runCurrent()
+
+        assertEquals(GameViewModel.GameUiEvent.SignInRequired, events.last())
+    }
+
+    @Test
+    fun deleteNote_forwards_to_the_repository() = runTest {
+        everySuspend { notesRepository.deleteNote("1") } returns NotesUpdateResult.UPDATED
+
+        val viewModel = createViewModel(gameId = "1")
+        viewModel.deleteNote()
+        runCurrent()
+
+        verifySuspend(exactly(1)) { notesRepository.deleteNote("1") }
     }
 
     @Test

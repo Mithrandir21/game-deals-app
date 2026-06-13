@@ -45,6 +45,13 @@ interface DealsSource {
     suspend fun fetchGameDetails(id: String): GameDetails
 
     /**
+     * Lightweight game identity (title + boxart) by its source game id, over ITAD `/games/info/v2`.
+     * Unlike [fetchGameDetails] this skips the price/deal fetch — it's used to enrich id-only lists such
+     * as the user's notes ("My notes", #283). The returned [Game]'s price fields are unset.
+     */
+    suspend fun fetchGame(gameId: String): Game
+
+    /**
      * The historical low-price time series for a game (by its source game id), for the price-history
      * chart (#208). Providers that cannot supply a series return an empty [PriceHistory].
      *

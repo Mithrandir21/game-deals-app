@@ -55,4 +55,7 @@
     <string name="account_ignored_empty">You haven\'t ignored any games.</string>
     <string name="account_ignored_unignore">Un-ignore</string>
 
+    <!-- My notes (P4.2, #283) -->
+    <string name="account_notes_empty">You haven\'t added any notes yet.</string>
+
 </resources>

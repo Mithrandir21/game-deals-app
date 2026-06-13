@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.repositories.notes
 
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.everySuspend
@@ -14,7 +15,10 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.ItadNote
+import pm.bam.gamedeals.domain.models.NotedGame
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.testing.fixtures.game
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -23,8 +27,9 @@ class NotesRepositoryTest {
 
     private val accountSource: ItadAccountSource = mock(MockMode.autoUnit)
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
+    private val dealsSource: DealsSource = mock(MockMode.autoUnit)
 
-    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore)
+    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore, dealsSource)
 
     private fun loggedIn(loggedIn: Boolean) {
         every { authTokenStore.observeAuthState() } returns
@@ -83,5 +88,36 @@ class NotesRepositoryTest {
 
         verifySuspend(exactly(0)) { accountSource.setNote(any(), any()) }
         verifySuspend(exactly(0)) { accountSource.removeNote(any()) }
+    }
+
+    @Test
+    fun getNotedGames_enriches_each_note_with_its_title_and_boxart() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotes() } returns listOf(ItadNote("g1", "Wait for a sale"))
+        everySuspend { dealsSource.fetchGame("g1") } returns game(gameID = "g1", title = "Halo", thumb = "art")
+
+        val result = repo().getNotedGames()
+
+        assertEquals(listOf(NotedGame("g1", "Wait for a sale", "Halo", "art")), result)
+    }
+
+    @Test
+    fun getNotedGames_falls_back_to_the_gameId_when_the_lookup_fails() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotes() } returns listOf(ItadNote("g1", "note"))
+        everySuspend { dealsSource.fetchGame("g1") } calls { throw Exception("info lookup down") }
+
+        val result = repo().getNotedGames()
+
+        assertEquals(listOf(NotedGame("g1", "note", "g1", null)), result)
+    }
+
+    @Test
+    fun getNotedGames_is_empty_when_logged_out() = runTest {
+        loggedIn(false)
+
+        assertEquals(emptyList(), repo().getNotedGames())
+
+        verifySuspend(exactly(0)) { accountSource.getNotes() }
     }
 }

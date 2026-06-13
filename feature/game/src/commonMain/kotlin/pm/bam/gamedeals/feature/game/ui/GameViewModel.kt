@@ -34,6 +34,8 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
+import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.notes.NotesUpdateResult
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
@@ -50,6 +52,7 @@ internal class GameViewModel(
     private val waitlistRepository: WaitlistRepository,
     private val igdbRepository: IgdbRepository,
     private val ignoredRepository: IgnoredRepository,
+    private val notesRepository: NotesRepository,
 ) : ViewModel() {
 
     // We store and react to the GameId changes so that only a single 'game deals' flow can exists.
@@ -66,6 +69,13 @@ internal class GameViewModel(
             if (id == null) flowOf(false) else ignoredRepository.observeIsIgnored(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** The user's personal note for this game, or null when there is none / they're logged out (#283). */
+    val note: StateFlow<String?> = gameIdFlow
+        .flatMapLatest { id ->
+            if (id == null) flowOf(null) else notesRepository.observeNote(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val uiState: StateFlow<GameScreenData>
         field = MutableStateFlow<GameScreenData>(GameScreenData.Loading)
@@ -121,6 +131,24 @@ internal class GameViewModel(
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
             if (ignoredRepository.toggleIgnored(id) == IgnoredToggleResult.NOT_LOGGED_IN) {
+                events.tryEmit(GameUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun setNote(text: String) {
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch {
+            if (notesRepository.setNote(id, text) == NotesUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(GameUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun deleteNote() {
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch {
+            if (notesRepository.deleteNote(id) == NotesUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }
