@@ -51,6 +51,10 @@
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
 
+    <!-- Notification → game deep-link chooser (#288) -->
+    <string name="account_notifications_chooser_title">Open which game?</string>
+    <string name="account_notifications_chooser_dismiss">Cancel</string>
+
     <!-- Ignored games (P3.3, #281) -->
     <string name="account_ignored_empty">You haven\'t ignored any games.</string>
     <string name="account_ignored_unignore">Un-ignore</string>

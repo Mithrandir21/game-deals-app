@@ -45,6 +45,13 @@ class ItadAccountSourceImplTest {
                     respond("""[{"id":"uuid-2","title":"Celeste"}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/notifications/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
+                request.url.encodedPath == "/notifications/waitlist/v1" && request.method == HttpMethod.Get ->
+                    // Extra game fields (slug/type/mature/prices/deals) are present on the wire and must be ignored.
+                    respond(
+                        """{"id":"n1","timestamp":"2026-06-12T00:00:00+00:00","read":null,"games":[{"id":"uuid-9","slug":"hades","title":"Hades","type":"game","mature":false,"historyLow":null,"lastPrice":null,"deals":[]}]}""",
+                        HttpStatusCode.OK,
+                        jsonHeaders,
+                    )
                 request.url.encodedPath == "/ignored/games/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"uuid-3","title":"Untitled Goose Game"}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/user/notes/v1" && request.method == HttpMethod.Get ->
@@ -132,6 +139,15 @@ class ItadAccountSourceImplTest {
         source().markAllNotificationsRead()
         assertEquals(HttpMethod.Put, recorded.single().method)
         assertEquals("/notifications/read/all/v1", recorded.single().url.encodedPath)
+    }
+
+    @Test
+    fun getWaitlistNotificationGames_parses_games_and_passes_id() = runTest {
+        val games = source().getWaitlistNotificationGames("n1")
+        assertEquals("uuid-9", games.single().gameId)
+        assertEquals("Hades", games.single().title)
+        assertEquals("/notifications/waitlist/v1", recorded.single().url.encodedPath)
+        assertEquals("n1", recorded.single().url.parameters["id"])
     }
 
     @Test

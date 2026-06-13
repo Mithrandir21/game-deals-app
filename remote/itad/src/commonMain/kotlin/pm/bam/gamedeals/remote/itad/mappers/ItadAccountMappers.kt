@@ -5,9 +5,11 @@ import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadNote
 import pm.bam.gamedeals.remote.itad.models.RemoteItadNotification
+import pm.bam.gamedeals.remote.itad.models.RemoteItadNotificationGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadUser
 import pm.bam.gamedeals.remote.itad.models.bestArt
@@ -18,6 +20,9 @@ internal fun RemoteItadNotification.toItadNotification(): ItadNotification =
     ItadNotification(id = id, type = type, title = title, timestamp = timestamp, read = read != null)
 
 internal fun RemoteItadNote.toItadNote(): ItadNote = ItadNote(gameId = gid, note = note)
+
+internal fun RemoteItadNotificationGame.toNotificationGame(): NotificationGame =
+    NotificationGame(gameId = id, title = title)
 
 internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
     WaitlistEntry(gameId = id, title = title, boxart = boxartUrl())

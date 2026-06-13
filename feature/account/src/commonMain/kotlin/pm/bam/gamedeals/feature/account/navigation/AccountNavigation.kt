@@ -46,7 +46,7 @@ fun NavGraphBuilder.accountScreen(
     }
 
     composable<Destination.Notifications> {
-        NotificationsScreen(onBack = { navController.popBackStack() })
+        NotificationsScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
 
     composable<Destination.IgnoredGames> {

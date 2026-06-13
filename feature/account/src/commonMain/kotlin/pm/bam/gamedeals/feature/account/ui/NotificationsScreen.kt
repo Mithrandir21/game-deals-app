@@ -3,8 +3,10 @@ package pm.bam.gamedeals.feature.account.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -24,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -37,30 +41,52 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_chooser_dismiss
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_chooser_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_mark_all_read
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_more_actions
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationsScreenData
+import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationsUiEvent
 
 @Composable
 internal fun NotificationsScreen(
     onBack: () -> Unit,
+    onGameClick: (gameId: String) -> Unit,
     viewModel: NotificationsViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
+
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is NotificationsUiEvent.OpenGame -> onGameClick(event.gameId)
+        }
+    }
+
     NotificationsScreenContent(
         data = data,
         onBack = onBack,
-        onMarkRead = viewModel::onMarkRead,
+        onNotificationClick = viewModel::onNotificationClick,
         onMarkAllRead = viewModel::onMarkAllRead,
     )
+
+    if (data.chooser.isNotEmpty()) {
+        NotificationGameChooser(
+            games = data.chooser,
+            onGameClick = viewModel::onChooserGameClick,
+            onDismiss = viewModel::onChooserDismiss,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +94,7 @@ internal fun NotificationsScreen(
 private fun NotificationsScreenContent(
     data: NotificationsScreenData,
     onBack: () -> Unit,
-    onMarkRead: (id: String) -> Unit,
+    onNotificationClick: (notification: ItadNotification) -> Unit,
     onMarkAllRead: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -111,7 +137,7 @@ private fun NotificationsScreenContent(
 
                 else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                     items(data.notifications, key = { it.id }) { notification ->
-                        NotificationRow(notification = notification, onClick = { onMarkRead(notification.id) })
+                        NotificationRow(notification = notification, onClick = { onNotificationClick(notification) })
                     }
                 }
             }
@@ -152,6 +178,36 @@ private fun NotificationRow(notification: ItadNotification, onClick: () -> Unit)
             null
         } else {
             { UnreadDot() }
+        },
+    )
+}
+
+@Composable
+private fun NotificationGameChooser(
+    games: ImmutableList<NotificationGame>,
+    onGameClick: (gameId: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.account_notifications_chooser_title)) },
+        text = {
+            Column {
+                games.forEach { game ->
+                    Text(
+                        text = game.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onGameClick(game.gameId) }
+                            .padding(vertical = GameDealsCustomTheme.spacing.medium),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.account_notifications_chooser_dismiss))
+            }
         },
     )
 }

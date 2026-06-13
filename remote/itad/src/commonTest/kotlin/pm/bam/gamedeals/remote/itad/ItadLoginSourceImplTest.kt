@@ -17,6 +17,7 @@ import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
@@ -98,6 +99,7 @@ class ItadLoginSourceImplTest {
         override suspend fun getNotifications(): List<ItadNotification> = emptyList()
         override suspend fun markNotificationRead(id: String) = Unit
         override suspend fun markAllNotificationsRead() = Unit
+        override suspend fun getWaitlistNotificationGames(id: String): List<NotificationGame> = emptyList()
         override suspend fun getIgnored(): List<IgnoredEntry> = emptyList()
         override suspend fun addToIgnored(gameId: String) = Unit
         override suspend fun removeFromIgnored(gameId: String) = Unit

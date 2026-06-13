@@ -4,6 +4,7 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -93,5 +95,26 @@ class NotificationsRepositoryTest {
 
         verifySuspend(exactly(0)) { accountSource.markNotificationRead("n1") }
         verifySuspend(exactly(0)) { accountSource.markAllNotificationsRead() }
+    }
+
+    @Test
+    fun getWaitlistGames_returns_source_games_when_logged_in() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlistNotificationGames("n1") } returns
+            listOf(NotificationGame("g1", "Halo"), NotificationGame("g2", "Hades"))
+
+        assertEquals(
+            listOf(NotificationGame("g1", "Halo"), NotificationGame("g2", "Hades")),
+            repo().getWaitlistGames("n1"),
+        )
+    }
+
+    @Test
+    fun getWaitlistGames_is_empty_when_logged_out_without_calling_remote() = runTest {
+        loggedIn(false)
+
+        assertEquals(emptyList(), repo().getWaitlistGames("n1"))
+
+        verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationGames(any()) }
     }
 }

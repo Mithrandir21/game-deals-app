@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.update
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
 /**
@@ -25,6 +26,9 @@ interface NotificationsRepository {
     suspend fun getNotifications(): List<ItadNotification>
     suspend fun markRead(id: String)
     suspend fun markAllRead()
+
+    /** The games a waitlist notification refers to, for deep-linking (#288). Empty when logged out. */
+    suspend fun getWaitlistGames(notificationId: String): List<NotificationGame>
 }
 
 internal class NotificationsRepositoryImpl(
@@ -63,6 +67,11 @@ internal class NotificationsRepositoryImpl(
         if (!loggedIn()) return
         accountSource.markAllNotificationsRead()
         notifications.update { list -> list.map { it.copy(read = true) } }
+    }
+
+    override suspend fun getWaitlistGames(notificationId: String): List<NotificationGame> {
+        if (!loggedIn()) return emptyList()
+        return accountSource.getWaitlistNotificationGames(notificationId)
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null
