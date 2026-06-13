@@ -6,11 +6,16 @@ import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.scheduling.AndroidNotificationScheduler
+import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.verbose
 import java.util.concurrent.Executors
 
 val domainAndroidModule = module {
+
+    single<NotificationScheduler> { AndroidNotificationScheduler(androidContext()) }
+
     single<RoomDatabase.Builder<DomainDatabase>> {
         val logger = get<Logger>()
         Room.databaseBuilder<DomainDatabase>(

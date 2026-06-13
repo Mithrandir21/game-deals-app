@@ -26,6 +26,8 @@ kotlin {
             implementation(libs.koin.android)
 
             implementation(libs.room.runtime)
+            // Background notification polling (Phase B): WorkManager periodic worker + scheduler.
+            implementation(libs.androidx.work.runtime.ktx)
         }
 
         iosMain.dependencies {

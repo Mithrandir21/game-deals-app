@@ -2,6 +2,7 @@ package pm.bam.gamedeals.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -28,6 +29,8 @@ import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
+import pm.bam.gamedeals.notifications.NotificationRoute
+import pm.bam.gamedeals.notifications.NotificationRouteBus
 
 @Composable
 internal fun NavGraph(
@@ -39,6 +42,17 @@ internal fun NavGraph(
     // External / website links open in an in-app Custom Tab (Android) / SFSafariViewController (iOS)
     // rather than the standalone system browser, so the user stays in-context (#287).
     val platformActions = LocalPlatformActions.current
+
+    // Route taps on background (OS-tray) notifications into the nav graph (#288): single game → its
+    // detail, otherwise the Notifications sub-screen. The bus is consume-once, so this won't re-navigate.
+    LaunchedEffect(Unit) {
+        NotificationRouteBus.routes.collect { route ->
+            when (route) {
+                is NotificationRoute.Game -> navActions.navigateToGame(route.gameId)
+                NotificationRoute.Notifications -> navActions.navigateToNotifications()
+            }
+        }
+    }
 
     // Drive the shell chrome from the current route (epic #219, Phase 1): bottom nav on the top-level
     // tabs, top bar on all tabs except Giveaways (which keeps its own top bar — interim), no chrome on

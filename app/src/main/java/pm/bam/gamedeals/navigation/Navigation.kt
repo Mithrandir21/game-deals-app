@@ -46,6 +46,11 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped multi-game background alert, #288). */
+    fun navigateToNotifications() {
+        navController.navigate(Destination.Notifications)
+    }
+
     fun navigateToGameDetails(steamAppId: Int, title: String? = null) {
         navController.navigate(Destination.GameDetails(steamAppId, title))
     }

@@ -10,11 +10,16 @@ import okio.Path.Companion.toPath
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.notifications.AndroidNotificationPresenter
 
 val appModule = module {
     single<Clock> { Clock { System.currentTimeMillis() } }
+
+    // Background notification presentation (Phase B) — bound here because the tap PendingIntent targets MainActivity.
+    single<NotificationPresenter> { AndroidNotificationPresenter(androidContext()) }
 
     single<CoilLogger> {
         val logger: Logger = get()
