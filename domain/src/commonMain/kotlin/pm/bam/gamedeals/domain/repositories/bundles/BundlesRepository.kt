@@ -12,7 +12,7 @@ import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 
 /** Bundles are a curated feed (12-hour tier — ITAD caching strategy §4 / Phase 5b). */
-internal val BUNDLES_TTL_MILLIS = millisInHour * 12
+internal const val BUNDLES_TTL_MILLIS = millisInHour * 12
 
 /**
  * Active storefront bundles (epic #205, Phase 3c). Region-keyed read-through cache (ITAD caching

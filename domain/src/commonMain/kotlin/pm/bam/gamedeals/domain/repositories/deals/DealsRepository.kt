@@ -25,10 +25,10 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 
 internal const val DEAL_PAGE_COUNT = 60
-internal val DEALS_TTL_MILLIS = millisInHour * 8
+internal const val DEALS_TTL_MILLIS = millisInHour * 8
 
 /** Deal details are the transact tier — short TTL, fresh-blocking (ITAD caching strategy §4.2 / Phase 3). */
-internal val DEAL_DETAILS_TTL_MILLIS = millisInHour * 2
+internal const val DEAL_DETAILS_TTL_MILLIS = millisInHour * 2
 
 interface DealsRepository {
     fun observeAllDeals(): Flow<List<Deal>>

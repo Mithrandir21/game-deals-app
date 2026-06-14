@@ -11,7 +11,7 @@ import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 
-internal val STORES_TTL_MILLIS = millisInHour * 8
+internal const val STORES_TTL_MILLIS = millisInHour * 8
 
 interface StoresRepository {
     fun observeStores(): Flow<List<Store>>

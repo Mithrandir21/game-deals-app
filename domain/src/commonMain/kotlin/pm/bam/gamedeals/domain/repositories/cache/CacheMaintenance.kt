@@ -18,10 +18,10 @@ internal const val CACHE_SCHEMA_VERSION = 1
 internal const val CACHE_SCHEMA_VERSION_KEY = "cache_schema_version"
 
 /** Keep rows for a grace window past TTL expiry so serve-stale-on-error (D7) still has something to fall back on. */
-internal val CACHE_SWEEP_EXPIRY_GRACE_MILLIS = millisInDay * 7
+internal const val CACHE_SWEEP_EXPIRY_GRACE_MILLIS = millisInDay * 7
 
 /** Price-history retention — drop a game's series if not refreshed within this window (D9). */
-internal val PRICE_HISTORY_RETENTION_MILLIS = millisInDay * 30
+internal const val PRICE_HISTORY_RETENTION_MILLIS = millisInDay * 30
 
 /**
  * Startup cache maintenance (ITAD caching strategy, Phase 8, #269). Runs once per cold start (fire-and-forget

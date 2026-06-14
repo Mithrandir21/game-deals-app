@@ -32,23 +32,23 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 
 /** Games are metadata (7-day tier — ITAD caching strategy §4 / Phase 1). */
-internal val GAMES_TTL_MILLIS = millisInDay * 7
+internal const val GAMES_TTL_MILLIS = millisInDay * 7
 
 /** Game details are the transact tier — short TTL, fresh-blocking (ITAD caching strategy §4.2 / Phase 3). */
-internal val GAME_DETAILS_TTL_MILLIS = millisInHour * 2
+internal const val GAME_DETAILS_TTL_MILLIS = millisInHour * 2
 
 /**
  * Price history is append-only metadata — a long SWR TTL is enough since the refresh is incremental
  * (only points newer than the latest cached one are fetched). ITAD caching strategy §4 / Phase 4.
  */
-internal val PRICE_HISTORY_TTL_MILLIS = millisInDay
+internal const val PRICE_HISTORY_TTL_MILLIS = millisInDay
 
 /**
  * Steam-appID → ITAD-UUID identity mapping — a long TTL (not literal): the mapping is stable, so a
  * monthly self-heal covers the rare ITAD UUID merge (the `cacheSchemaVersion` clear in Phase 8 is the
  * other guard). ITAD caching strategy §4 / Phase 6.
  */
-internal val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
+internal const val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
 
 /**
  * Curated regions for the Game Page's "Regions" tab (epic #291, Phase 7). Each is a separate

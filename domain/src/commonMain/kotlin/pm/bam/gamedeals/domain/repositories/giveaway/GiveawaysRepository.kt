@@ -16,7 +16,7 @@ import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.fatal
 
 /** Giveaways rotate intra-day (12-hour tier — ITAD caching strategy, Phase 1). */
-internal val GIVEAWAYS_TTL_MILLIS = millisInHour * 12
+internal const val GIVEAWAYS_TTL_MILLIS = millisInHour * 12
 
 interface GiveawaysRepository {
     fun observeGiveaways(): Flow<List<Giveaway>>

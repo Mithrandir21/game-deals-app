@@ -14,7 +14,7 @@ import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.fatal
 
 /** New releases are a slow-moving feed (24-hour tier — ITAD caching strategy, Phase 1). */
-internal val RELEASES_TTL_MILLIS = millisInDay
+internal const val RELEASES_TTL_MILLIS = millisInDay
 
 interface ReleasesRepository {
     fun observeReleases(): Flow<List<Release>>

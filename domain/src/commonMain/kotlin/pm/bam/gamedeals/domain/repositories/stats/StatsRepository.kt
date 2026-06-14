@@ -12,7 +12,7 @@ import pm.bam.gamedeals.domain.source.StatsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 
 /** Rankings are a curated feed (12-hour tier — ITAD caching strategy §4 / Phase 5c). */
-internal val STATS_RANKINGS_TTL_MILLIS = millisInHour * 12
+internal const val STATS_RANKINGS_TTL_MILLIS = millisInHour * 12
 
 internal const val RANKING_MOST_WAITLISTED = "most_waitlisted"
 internal const val RANKING_MOST_COLLECTED = "most_collected"
