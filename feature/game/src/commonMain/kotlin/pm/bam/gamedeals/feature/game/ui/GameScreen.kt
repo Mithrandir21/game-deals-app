@@ -74,6 +74,7 @@ import pm.bam.gamedeals.common.ui.PreviewGameDeal
 import pm.bam.gamedeals.common.ui.PreviewGameDetails
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -109,7 +110,6 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_tit
 import pm.bam.gamedeals.feature.game.ui.GameViewModel.GameScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
-import pm.bam.gamedeals.common.ui.generated.resources.store
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 private val AlwaysScrollable: () -> Boolean = { true }
@@ -413,12 +413,11 @@ private fun StoreGameDealRow(
                     .semantics(mergeDescendants = true) { contentDescription = rowCd },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AsyncImage(
-                    model = store.images.icon,
+                StoreIcon(
+                    storeName = store.storeName,
+                    iconUrl = store.iconUrl,
+                    iconSize = GameDealsCustomTheme.spacing.large,
                     contentDescription = null,
-                    error = painterResource(CommonRes.drawable.store),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(GameDealsCustomTheme.spacing.large)
                 )
                 Text(
                     modifier = Modifier

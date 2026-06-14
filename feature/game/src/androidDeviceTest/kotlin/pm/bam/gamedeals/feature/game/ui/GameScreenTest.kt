@@ -82,6 +82,7 @@ class GameScreenTest {
     private val store: Store = mockk {
         every { storeName } returns mockStoreName
         every { images } returns storeImages
+        every { iconUrl } returns ""
     }
 
     private lateinit var screenSemantics: ScreenSemantics

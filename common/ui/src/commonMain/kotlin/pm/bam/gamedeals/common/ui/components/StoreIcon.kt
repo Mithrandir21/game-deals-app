@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -9,12 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
-import androidx.compose.foundation.Image
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
@@ -23,13 +22,14 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * A single store identity icon, resolved with a three-step precedence so every deal surface renders
  * consistently:
  *
- *  1. a **bundled brand logo** ([storeLogoFor]) for the common stores — tinted to [color] so the
- *     monochrome mark stays legible in both light and dark themes;
+ *  1. a **bundled brand logo** ([storeLogoFor]) for the stores ITAD surfaces — the store's full-colour
+ *     favicon, drawn on a white circular chip so even a black-on-transparent mark stays legible on a
+ *     dark surface;
  *  2. otherwise a remote **[iconUrl]** image (the source-neutral [pm.bam.gamedeals.domain.models.Store.iconUrl],
  *     blank under ITAD today but kept as a forward-compatible fallback) via Coil;
  *  3. otherwise a **neutral dot** tinted with [color].
  *
- * This mirrors the fallback [StoreLabel] established for ITAD deal rows; [StoreLabel] now delegates here.
+ * This is the shared primitive behind the deal bottom sheet and [StoreLabel].
  */
 @Composable
 fun StoreIcon(
@@ -46,8 +46,10 @@ fun StoreIcon(
             painter = painterResource(logo),
             contentDescription = contentDescription,
             contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(color),
-            modifier = modifier.size(iconSize),
+            modifier = modifier
+                .size(iconSize)
+                .clip(CircleShape)
+                .background(Color.White),
         )
 
         !iconUrl.isNullOrBlank() -> AsyncImage(

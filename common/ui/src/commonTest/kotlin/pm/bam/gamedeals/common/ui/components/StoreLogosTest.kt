@@ -10,8 +10,11 @@ class StoreLogosTest {
 
     @Test
     fun known_stores_resolve_to_a_bundled_logo() {
-        listOf("Steam", "GOG", "Epic Game Store", "Humble Store", "Ubisoft Store", "Battle.net", "itch.io")
-            .forEach { assertNotNull(storeLogoFor(it), "expected a bundled logo for \"$it\"") }
+        listOf(
+            "Steam", "GOG", "Epic Game Store", "Humble Store", "Ubisoft Store", "Battle.net",
+            "Fanatical", "GreenManGaming", "GamersGate", "Newegg", "Nuuvem", "2game",
+            "ZOOM Platform", "eTail.Market", "IndieGala Store",
+        ).forEach { assertNotNull(storeLogoFor(it), "expected a bundled logo for \"$it\"") }
     }
 
     @Test
@@ -26,11 +29,14 @@ class StoreLogosTest {
         assertSame(storeLogoFor("Epic Game Store"), storeLogoFor("Epic Games Store"))
         assertSame(storeLogoFor("Battle.net"), storeLogoFor("Blizzard"))
         assertSame(storeLogoFor("Ubisoft Store"), storeLogoFor("Uplay"))
+        assertSame(storeLogoFor("GamesPlanet US"), storeLogoFor("GamesPlanet UK"))
     }
 
     @Test
-    fun unknown_store_has_no_bundled_logo() {
-        assertNull(storeLogoFor("Fanatical"))
+    fun unmapped_store_has_no_bundled_logo() {
+        // Stores whose domain exposes no real favicon fall through to the neutral dot.
+        assertNull(storeLogoFor("Fortuna Digital"))
+        assertNull(storeLogoFor("PlayerLand"))
         assertNull(storeLogoFor("Some Unlisted Store"))
         assertNull(storeLogoFor(""))
     }
