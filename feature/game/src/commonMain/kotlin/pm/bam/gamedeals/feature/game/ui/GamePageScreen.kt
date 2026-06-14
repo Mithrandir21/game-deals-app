@@ -1,0 +1,853 @@
+@file:Suppress("DEPRECATION")
+
+package pm.bam.gamedeals.feature.game.ui
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.StoreIcon
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.feature.game.generated.resources.Res
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_developer
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_porting
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_publisher
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_supporting
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_cover_image_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_critic_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_message
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_search_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_released_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_companies
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_close
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_current_tile_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_explanation
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_loading_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_warning_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_on_date_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_value_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_savings_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_delete_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_cancel
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_placeholder
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_save
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_edit_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_section_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_read_more
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_show_less
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_remove_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_remove_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
+import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+
+private val AlwaysScrollable: () -> Boolean = { true }
+private const val COVER_ASPECT_RATIO = 0.75f
+private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
+private const val COLLAPSED_LINES = 5
+
+/**
+ * The unified Game Page (epic #291). Renders [GamePageViewModel]'s aggregate state: an ITAD deal side and
+ * an IGDB metadata side that each degrade independently. Reuses the standalone [PriceHistoryChart] and
+ * [ScreenshotViewerDialog]; the remaining sections are private here so the screen stays self-contained
+ * (the old `GameScreen`/`GameDetailsScreen` are removed in Phase 8).
+ */
+@Composable
+internal fun GamePageScreen(
+    onBack: () -> Unit,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
+    onSearchDealsByTitle: (title: String) -> Unit = {},
+    viewModel: GamePageViewModel = koinViewModel(),
+) {
+    val data = viewModel.uiState.collectAsStateWithLifecycle()
+    val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
+    val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
+    val note = viewModel.note.collectAsStateWithLifecycle()
+    val platformActions = LocalPlatformActions.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
+
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is GamePageViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
+            GamePageViewModel.GameUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+        }
+    }
+
+    GamePageContent(
+        data = data.value,
+        isFavourite = isFavourite.value,
+        isIgnored = isIgnored.value,
+        note = note.value,
+        onBack = onBack,
+        goToWeb = goToWeb,
+        onSimilarGameClick = onSimilarGameClick,
+        onSearchDealsByTitle = onSearchDealsByTitle,
+        onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
+        onToggleFavourite = viewModel::toggleWaitlist,
+        onToggleIgnore = viewModel::toggleIgnore,
+        onSaveNote = viewModel::setNote,
+        onDeleteNote = viewModel::deleteNote,
+        onRetry = viewModel::reload,
+        onWarningTap = viewModel::onWarningTap,
+        onPickerDismiss = viewModel::onPickerDismiss,
+        onCandidatePicked = viewModel::onCandidatePicked,
+        snackbarHostState = snackbarHostState,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GamePageContent(
+    data: GamePageData,
+    isFavourite: Boolean,
+    isIgnored: Boolean,
+    note: String?,
+    onBack: () -> Unit,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onSearchDealsByTitle: (title: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onToggleFavourite: () -> Unit,
+    onToggleIgnore: () -> Unit,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
+    onRetry: () -> Unit,
+    onWarningTap: () -> Unit,
+    onPickerDismiss: () -> Unit,
+    onCandidatePicked: (igdbGameId: Long) -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val currentOnRetry by rememberUpdatedState(onRetry)
+    val errorMessage = stringResource(Res.string.game_screen_data_loading_error_msg)
+    val errorRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
+
+    val title = when (data) {
+        is GamePageData.Data -> data.title
+        is GamePageData.NoMatch -> data.title
+        else -> stringResource(Res.string.game_screen_toolbar_title_loading)
+    }
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    title = {
+                        Text(
+                            modifier = Modifier.semantics { heading() },
+                            text = title,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.Filled.ArrowBack,
+                                contentDescription = stringResource(Res.string.game_screen_navigation_back_button),
+                            )
+                        }
+                    },
+                    actions = {
+                        val resolvedByTitle = (data as? GamePageData.Data)?.resolvedByTitle == true
+                        if (resolvedByTitle) {
+                            IconButton(onClick = onWarningTap) {
+                                Icon(
+                                    imageVector = Icons.Filled.Warning,
+                                    contentDescription = stringResource(Res.string.game_details_title_match_warning_cd),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        IconButton(enabled = data is GamePageData.Data, onClick = onToggleFavourite) {
+                            Icon(
+                                imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = stringResource(
+                                    if (isFavourite) Res.string.game_screen_favourite_remove_action else Res.string.game_screen_favourite_add_action
+                                ),
+                            )
+                        }
+                        IconButton(enabled = data is GamePageData.Data, onClick = onToggleIgnore) {
+                            Icon(
+                                imageVector = Icons.Filled.Clear,
+                                tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                contentDescription = stringResource(
+                                    if (isIgnored) Res.string.game_screen_ignore_remove_action else Res.string.game_screen_ignore_add_action
+                                ),
+                            )
+                        }
+                    },
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        ) { innerPadding ->
+            val loadingCd = stringResource(Res.string.game_screen_loading_indicator)
+            when (data) {
+                GamePageData.Loading -> CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .semantics { contentDescription = loadingCd },
+                )
+
+                GamePageData.Error -> LaunchedEffect(snackbarHostState) {
+                    val result = snackbarHostState.showSnackbar(message = errorMessage, actionLabel = errorRetry)
+                    if (result == SnackbarResult.ActionPerformed) currentOnRetry()
+                }
+
+                is GamePageData.NoMatch -> NoMatchSection(
+                    modifier = Modifier.padding(innerPadding),
+                    title = data.title,
+                    onSearch = { onSearchDealsByTitle(data.title) },
+                    onBack = onBack,
+                )
+
+                is GamePageData.Data -> GamePageBody(
+                    modifier = Modifier.padding(innerPadding),
+                    data = data,
+                    note = note,
+                    goToWeb = goToWeb,
+                    onSimilarGameClick = onSimilarGameClick,
+                    onShareDeal = onShareDeal,
+                    onSaveNote = onSaveNote,
+                    onDeleteNote = onDeleteNote,
+                )
+            }
+        }
+    }
+
+    if (data is GamePageData.Data && data.showPicker) {
+        CandidatePickerSheet(data = data, onDismiss = onPickerDismiss, onCandidatePicked = onCandidatePicked, onRetry = onWarningTap)
+    }
+}
+
+@Composable
+private fun GamePageBody(
+    modifier: Modifier,
+    data: GamePageData.Data,
+    note: String?,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+    ) {
+        HeroSection(data)
+        PriceTabs(data = data, goToWeb = goToWeb, onShareDeal = onShareDeal)
+        NotesSection(
+            note = note,
+            onSaveNote = onSaveNote,
+            onDeleteNote = onDeleteNote,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+        )
+        data.igdbGame?.let { igdb ->
+            if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
+            if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
+            if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
+            if (igdb.similarGames.isNotEmpty()) SimilarGamesSection(igdb.similarGames, onSimilarGameClick)
+            if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
+        }
+        if (data.websites.isNotEmpty()) LinksSection(data.websites)
+    }
+}
+
+@Composable
+private fun HeroSection(data: GamePageData.Data) {
+    val igdb = data.igdbGame
+    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetails?.info?.thumb
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(132.dp)
+                .aspectRatio(COVER_ASPECT_RATIO)
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+        ) {
+            AsyncImage(
+                model = coverModel,
+                contentDescription = stringResource(Res.string.game_screen_game_image, data.title),
+                error = painterResource(CommonRes.drawable.videogame_thumb),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+            )
+        }
+        Column(
+            modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.medium).weight(1f),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            Text(text = data.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            igdb?.firstReleaseDate?.let { instant ->
+                Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (igdb != null) RatingsRow(igdb)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PriceTabs(
+    data: GamePageData.Data,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+) {
+    var selected by rememberSaveable { mutableStateOf(0) }
+    val tabs = listOf(
+        stringResource(Res.string.game_page_tab_prices),
+        stringResource(Res.string.game_page_tab_history),
+        stringResource(Res.string.game_page_tab_stats),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+        TabRow(selectedTabIndex = selected) {
+            tabs.forEachIndexed { index, label ->
+                Tab(selected = selected == index, onClick = { selected = index }, text = { Text(label) })
+            }
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            when (selected) {
+                0 -> PricesTab(data, goToWeb, onShareDeal)
+                1 -> PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth())
+                else -> StatsTab(data)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PricesTab(
+    data: GamePageData.Data,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+) {
+    val gameDetails = data.gameDetails
+    if (gameDetails == null || data.dealDetails.isEmpty()) {
+        Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.bodyMedium)
+        return
+    }
+    Text(
+        text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
+        style = MaterialTheme.typography.titleMedium,
+    )
+    data.dealDetails.forEach { pair ->
+        StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+    }
+}
+
+@Composable
+private fun StatsTab(data: GamePageData.Data) {
+    // Phase 6 fills this with ITAD review scores + current player counts. For now: cheapest-ever + ratings.
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        data.gameDetails?.let { gd ->
+            Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(Res.string.game_screen_cheapest_ever_on_date_label, gd.cheapestPriceEver.priceDenominated, gd.cheapestPriceEver.date),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        data.igdbGame?.let { RatingsRow(it) }
+    }
+}
+
+@Composable
+private fun RatingsRow(game: IgdbGame) {
+    val user = game.rating?.toInt()
+    val critic = game.aggregatedRating?.toInt()
+    if (user == null && critic == null) return
+    Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+        if (user != null) RatingPill(stringResource(Res.string.game_details_user_rating_label), user, game.ratingCount)
+        if (critic != null) RatingPill(stringResource(Res.string.game_details_critic_rating_label), critic, game.aggregatedRatingCount)
+    }
+}
+
+@Composable
+private fun RatingPill(label: String, value: Int, count: Long?) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
+    ) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        Text(text = "$value", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        if (count != null) Text(text = "($count)", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun StoreGameDealRow(
+    store: Store,
+    gameInfo: GameDetails.GameInfo,
+    deal: GameDetails.GameDeal,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+) {
+    val rowCd = stringResource(Res.string.game_screen_store_deal_row_description, store.storeName, deal.savings, deal.priceDenominated)
+    Card(onClick = { goToWeb(deal.url, gameInfo.title) }) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = rowCd },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StoreIcon(storeName = store.storeName, iconUrl = store.iconUrl, iconSize = GameDealsCustomTheme.spacing.large, contentDescription = null)
+                Text(
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.medium),
+                    text = store.storeName,
+                )
+                Text(
+                    modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+                    text = stringResource(Res.string.game_screen_list_item_savings_label, deal.savings),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background, RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                        .padding(GameDealsCustomTheme.spacing.medium),
+                    text = deal.priceDenominated,
+                )
+            }
+            IconButton(onClick = { onShareDeal(gameInfo, store, deal) }) {
+                Icon(imageVector = Icons.Filled.Share, contentDescription = stringResource(Res.string.game_screen_share_action, store.storeName))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DescriptionSection(game: IgdbGame) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            SectionHeader(stringResource(Res.string.game_details_section_description))
+            game.summary?.let { CollapsibleParagraph(it) }
+            game.storyline?.let {
+                Spacer(modifier = Modifier.height(GameDealsCustomTheme.spacing.small))
+                SectionHeader(stringResource(Res.string.game_details_section_storyline))
+                CollapsibleParagraph(it)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollapsibleParagraph(text: String) {
+    var expanded by rememberSaveable(text) { mutableStateOf(false) }
+    var hasOverflow by remember(text) { mutableStateOf(false) }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_LINES,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout -> if (!expanded) hasOverflow = layout.hasVisualOverflow },
+    )
+    if (hasOverflow || expanded) {
+        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.CenterEnd)) {
+            Text(text = stringResource(if (expanded) Res.string.game_screen_summary_show_less else Res.string.game_screen_summary_read_more))
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipsSection(chips: List<String>) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+    ) {
+        items(chips) { label -> AssistChip(onClick = {}, label = { Text(label) }) }
+    }
+}
+
+@Composable
+private fun ScreenshotsSection(game: IgdbGame) {
+    var openIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_details_section_screenshots), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            itemsIndexed(game.screenshotImageIds) { index, imageId ->
+                AsyncImage(
+                    model = igdbImageUrl(imageId, IgdbImageSize.ScreenshotMed),
+                    contentDescription = stringResource(Res.string.game_details_screenshot_image_cd, game.name, index + 1),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .height(180.dp)
+                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clickable(role = Role.Button) { openIndex = index },
+                )
+            }
+        }
+    }
+    openIndex?.let { startPage ->
+        ScreenshotViewerDialog(
+            screenshotImageIds = game.screenshotImageIds,
+            gameName = game.name,
+            initialPage = startPage,
+            onDismiss = { openIndex = null },
+        )
+    }
+}
+
+@Composable
+private fun SimilarGamesSection(games: List<IgdbGame.IgdbSimilarGame>, onSimilarGameClick: (Long) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_details_section_similar), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            items(games, key = { it.id }) { similar -> IgdbGameTile(similar, onSimilarGameClick, Modifier.width(112.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun IgdbGameTile(game: IgdbGame.IgdbSimilarGame, onClick: (Long) -> Unit, modifier: Modifier = Modifier, isCurrent: Boolean = false) {
+    val rowCd = if (isCurrent) stringResource(Res.string.game_details_title_match_picker_current_tile_cd, game.name)
+    else stringResource(Res.string.game_details_similar_game_row_description, game.name)
+    val borderModifier = if (isCurrent) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(GameDealsCustomTheme.spacing.small)) else Modifier
+    Column(
+        modifier = modifier.clickable(role = Role.Button) { onClick(game.id) }.semantics(mergeDescendants = true) { contentDescription = rowCd },
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(COVER_ASPECT_RATIO)
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                .then(borderModifier),
+        ) {
+            game.coverImageId?.let { imageId ->
+                AsyncImage(
+                    model = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
+                    contentDescription = stringResource(Res.string.game_details_cover_image_cd, game.name),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Text(text = game.name, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+@Composable
+private fun CompaniesSection(companies: List<IgdbGame.IgdbCompanyRole>) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            SectionHeader(stringResource(Res.string.game_details_section_companies))
+            companies.forEachIndexed { index, role ->
+                if (index > 0) HorizontalDivider()
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = GameDealsCustomTheme.spacing.extraSmall), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = companyRoleLabel(role.role), modifier = Modifier.width(112.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = role.companyName, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun companyRoleLabel(role: IgdbGame.IgdbCompanyRole.Role): String = when (role) {
+    IgdbGame.IgdbCompanyRole.Role.Developer -> stringResource(Res.string.game_details_company_role_developer)
+    IgdbGame.IgdbCompanyRole.Role.Publisher -> stringResource(Res.string.game_details_company_role_publisher)
+    IgdbGame.IgdbCompanyRole.Role.Porting -> stringResource(Res.string.game_details_company_role_porting)
+    IgdbGame.IgdbCompanyRole.Role.Supporting -> stringResource(Res.string.game_details_company_role_supporting)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LinksSection(websites: List<WebsiteUiModel>) {
+    val uriHandler = LocalUriHandler.current
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            SectionHeader(stringResource(Res.string.game_details_section_links))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+                websites.forEach { site ->
+                    AssistChip(onClick = { uriHandler.openUri(site.url) }, label = { Text(site.category.name) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesSection(note: String?, onSaveNote: (String) -> Unit, onDeleteNote: () -> Unit, modifier: Modifier = Modifier) {
+    var editing by remember { mutableStateOf(false) }
+    Card(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(modifier = Modifier.weight(1f), text = stringResource(Res.string.game_screen_note_section_title), style = MaterialTheme.typography.titleSmall)
+                if (note != null) {
+                    IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, stringResource(Res.string.game_screen_note_edit_action)) }
+                    IconButton(onClick = onDeleteNote) { Icon(Icons.Filled.Delete, stringResource(Res.string.game_screen_note_delete_action)) }
+                }
+            }
+            if (note != null) {
+                Text(text = note, style = MaterialTheme.typography.bodyMedium)
+            } else {
+                TextButton(onClick = { editing = true }) { Text(stringResource(Res.string.game_screen_note_add_action)) }
+            }
+        }
+    }
+    if (editing) {
+        NoteEditDialog(initial = note.orEmpty(), onDismiss = { editing = false }, onConfirm = { text ->
+            editing = false
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) onDeleteNote() else onSaveNote(trimmed)
+        })
+    }
+}
+
+@Composable
+private fun NoteEditDialog(initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.game_screen_note_dialog_title)) },
+        text = { OutlinedTextField(modifier = Modifier.fillMaxWidth(), value = text, onValueChange = { text = it }, placeholder = { Text(stringResource(Res.string.game_screen_note_dialog_placeholder)) }) },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(Res.string.game_screen_note_dialog_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.game_screen_note_dialog_cancel)) } },
+    )
+}
+
+@Composable
+private fun NoMatchSection(modifier: Modifier, title: String, onSearch: () -> Unit, onBack: () -> Unit) {
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+                Text(modifier = Modifier.semantics { heading() }, text = stringResource(Res.string.game_details_no_match_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(Res.string.game_details_no_match_message, title), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onSearch) { Text(stringResource(Res.string.game_details_no_match_search_button)) }
+        TextButton(modifier = Modifier.fillMaxWidth(), onClick = onBack) { Text(stringResource(Res.string.game_details_no_match_back_button)) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CandidatePickerSheet(
+    data: GamePageData.Data,
+    onDismiss: () -> Unit,
+    onCandidatePicked: (igdbGameId: Long) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = { BottomSheetDefaults.DragHandle() }) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            Text(text = stringResource(Res.string.game_details_title_match_picker_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(text = stringResource(Res.string.game_details_title_match_picker_explanation), style = MaterialTheme.typography.bodyMedium)
+            when (val state = data.candidatesState) {
+                GamePageViewModel.CandidatesState.Idle,
+                GamePageViewModel.CandidatesState.Loading -> {
+                    val loadingCd = stringResource(Res.string.game_details_title_match_picker_loading_cd)
+                    Box(modifier = Modifier.fillMaxWidth().height(160.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
+                    }
+                }
+                is GamePageViewModel.CandidatesState.Loaded -> {
+                    if (state.items.isEmpty()) {
+                        Text(text = stringResource(Res.string.game_details_title_match_picker_empty))
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            modifier = Modifier.fillMaxWidth().height(420.dp),
+                        ) {
+                            gridItems(state.items, key = { it.id }) { candidate ->
+                                IgdbGameTile(game = candidate, onClick = onCandidatePicked, isCurrent = candidate.id == data.igdbGame?.id)
+                            }
+                        }
+                    }
+                }
+                GamePageViewModel.CandidatesState.Error -> {
+                    Text(text = stringResource(Res.string.game_details_title_match_picker_error), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onRetry) { Text(stringResource(Res.string.game_details_title_match_picker_retry)) }
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text(stringResource(Res.string.game_details_title_match_picker_close)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
+    Text(modifier = modifier.semantics { heading() }, text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+}
+
+private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+private fun formatReleaseDate(instant: Instant): String {
+    val date = instant.toLocalDateTime(TimeZone.UTC).date
+    return "${MONTH_ABBREV[date.month.ordinal]} ${date.dayOfMonth}, ${date.year}"
+}
