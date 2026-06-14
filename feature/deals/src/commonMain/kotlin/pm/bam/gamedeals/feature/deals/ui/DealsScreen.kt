@@ -84,6 +84,7 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
@@ -448,7 +449,7 @@ private fun SearchResultsBody(
 
 @Composable
 private fun SearchResultListItem(
-    deal: pm.bam.gamedeals.domain.models.Deal,
+    deal: Deal,
     dealCount: Int,
     isWaitlisted: Boolean,
     store: Store?,
