@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.Serializable
 import pm.bam.gamedeals.common.storage.Storage
+import pm.bam.gamedeals.common.storage.getNullable
+import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.domain.models.AuthState
 
 /**
@@ -97,7 +99,7 @@ internal class AuthTokenStoreImpl(
         scopeVersion: Int,
     ) {
         val token = StoredAuthToken(accessToken, refreshToken, expiresAtEpochMs, username, scopeVersion)
-        storage.save(AUTH_TOKEN_KEY, token, StoredAuthToken.serializer())
+        storage.save(AUTH_TOKEN_KEY, token)
         authState.value = token.toAuthState()
     }
 
@@ -107,7 +109,7 @@ internal class AuthTokenStoreImpl(
     }
 
     private suspend fun loadFromStorage(): StoredAuthToken? =
-        runCatching { storage.getNullable(AUTH_TOKEN_KEY, StoredAuthToken.serializer()) }.getOrNull()
+        runCatching { storage.getNullable<StoredAuthToken>(AUTH_TOKEN_KEY) }.getOrNull()
 
     private fun StoredAuthToken?.toAuthState(): AuthState =
         this?.let { AuthState.LoggedIn(it.username, needsReconnect = it.scopeVersion < CURRENT_SCOPE_VERSION) }

@@ -88,6 +88,17 @@ class StorageImplTest {
         assertNull(storage.getNullable(key, stringStrategy))
     }
 
+    @Test
+    fun reified_extensions_work_correctly() = runTest {
+        storage.save(key, "reified-payload")
+        assertEquals("reified-payload", storage.get<String>(key))
+        assertEquals("reified-payload", storage.getNullable<String>(key))
+
+        storage.save(key, 42)
+        assertEquals(42, storage.get<Int>(key))
+        assertEquals(42, storage.getNullable<Int>(key))
+    }
+
     private class FakeKeyValueBackend : KeyValueBackend {
         private val store = mutableMapOf<String, String>()
 

@@ -5,6 +5,7 @@ import pm.bam.gamedeals.common.exceptions.DataNotFoundException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.serializer
 
 
 interface Storage {
@@ -43,3 +44,28 @@ interface Storage {
      */
     suspend fun remove(storageKey: String): Boolean
 }
+
+/**
+ * Retrieves the data found at the given [storageKey] mapping, or the [defaultValue] if given.
+ */
+suspend inline fun <reified T : Any> Storage.get(
+    storageKey: String,
+    defaultValue: T? = null
+): T = get(storageKey, serializer(), defaultValue)
+
+/**
+ * Retrieves the data found at the given [storageKey] mapping, or the [defaultValue] if given.
+ */
+suspend inline fun <reified T : Any> Storage.getNullable(
+    storageKey: String,
+    defaultValue: T? = null
+): T? = getNullable(storageKey, serializer(), defaultValue)
+
+/**
+ * Saves the data at the given [storageKey] mapping.
+ */
+suspend inline fun <reified T : Any> Storage.save(
+    storageKey: String,
+    data: T,
+    overwrite: Boolean = true
+): Boolean = save(storageKey, data, serializer(), overwrite)

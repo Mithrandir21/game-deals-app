@@ -4,8 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
-import kotlinx.serialization.builtins.serializer
 import pm.bam.gamedeals.common.storage.Storage
+import pm.bam.gamedeals.common.storage.getNullable
+import pm.bam.gamedeals.common.storage.save
 
 /**
  * The user's opt-in preference for background (OS-tray) notification delivery — **default OFF**. Backed by
@@ -36,10 +37,10 @@ internal class NotificationSettingsImpl(
     override suspend fun isEnabled(): Boolean = load()
 
     override suspend fun setEnabled(enabled: Boolean) {
-        storage.save(NOTIFICATIONS_ENABLED_KEY, enabled, Boolean.serializer())
+        storage.save(NOTIFICATIONS_ENABLED_KEY, enabled)
         this.enabled.value = enabled
     }
 
     private suspend fun load(): Boolean =
-        runCatching { storage.getNullable(NOTIFICATIONS_ENABLED_KEY, Boolean.serializer()) }.getOrNull() ?: false
+        runCatching { storage.getNullable<Boolean>(NOTIFICATIONS_ENABLED_KEY) }.getOrNull() ?: false
 }

@@ -4,8 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
-import kotlinx.serialization.builtins.serializer
 import pm.bam.gamedeals.common.storage.Storage
+import pm.bam.gamedeals.common.storage.getNullable
+import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
@@ -47,12 +48,12 @@ internal class RegionRepositoryImpl(
     }
 
     override suspend fun setSelectedCountry(country: Country) {
-        storage.save(SELECTED_COUNTRY_KEY, country.code, String.serializer())
+        storage.save(SELECTED_COUNTRY_KEY, country.code)
         selected.value = country
     }
 
     private suspend fun loadFromStorage(): Country {
-        val code = runCatching { storage.getNullable(SELECTED_COUNTRY_KEY, String.serializer()) }.getOrNull()
+        val code = runCatching { storage.getNullable<String>(SELECTED_COUNTRY_KEY) }.getOrNull()
         return SUPPORTED_COUNTRIES.firstOrNull { it.code == code } ?: DEFAULT_COUNTRY
     }
 }
