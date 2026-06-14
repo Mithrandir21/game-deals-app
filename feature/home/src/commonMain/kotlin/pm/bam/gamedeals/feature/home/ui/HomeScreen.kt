@@ -258,6 +258,7 @@ private fun HomeScreenContent(
                     onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },
                     onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
                     goToWeb = goToWeb,
+                    goToGame = goToGame,
                     goToGameDetails = goToGameDetails,
                     goToGameDetailsByTitle = goToGameDetailsByTitle,
                     onRetryDealDetails = {

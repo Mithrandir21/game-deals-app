@@ -51,6 +51,7 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.PreviewDealCheaperStore
 import pm.bam.gamedeals.common.ui.PreviewDealCheapestPrice
 import pm.bam.gamedeals.common.ui.PreviewDealGameInfo
@@ -63,7 +64,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_row_description
-import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheaper_store_thumbnail
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_no
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_on_label
@@ -82,6 +82,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_la
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_yes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -98,6 +99,7 @@ fun DealBottomSheet(
     onToggleWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     onRetryDealDetails: () -> Unit
@@ -109,7 +111,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, isIgnored, onToggleIgnore, goToWeb, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
+            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, isIgnored, onToggleIgnore, goToWeb, goToGame, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
         }
     }
 }
@@ -123,6 +125,7 @@ private fun DealContent(
     isIgnored: Boolean = false,
     onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     retry: () -> Unit
@@ -149,14 +152,13 @@ private fun DealContent(
                     .semantics(mergeDescendants = true) { contentDescription = headerCd },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AsyncImage(
-                    model = data.store.images.logo,
+                StoreIcon(
+                    storeName = data.store.storeName,
+                    iconUrl = data.store.iconUrl,
+                    iconSize = 40.dp,
+                    color = LocalContentColor.current,
                     contentDescription = null,
-                    error = painterResource(Res.drawable.videogame_thumb),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .padding(GameDealsCustomTheme.spacing.small)
+                    modifier = Modifier.padding(GameDealsCustomTheme.spacing.small),
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -227,7 +229,7 @@ private fun DealContent(
                 }
             }
 
-            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb, goToGameDetails, goToGameDetailsByTitle)
+            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb, goToGame, goToGameDetails, goToGameDetailsByTitle)
             is DealBottomSheetData.DealDetailsError -> GameDetailsError(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 retry = retry
@@ -241,6 +243,7 @@ private fun DealContent(
 private fun GameDetails(
     data: DealBottomSheetData.DealDetailsData,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
@@ -280,14 +283,13 @@ private fun GameDetails(
                             .clickable(role = Role.Button) { goToWeb(it.cheaperStore.url, data.gameName) }
                             .semantics(mergeDescendants = true) { contentDescription = cheaperStoreRowCd },
                     ) {
-                        AsyncImage(
-                            model = it.store.images.logo,
-                            contentDescription = stringResource(Res.string.deal_details_cheaper_store_thumbnail, data.store.storeName),
-                            error = painterResource(Res.drawable.videogame_thumb),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(top = GameDealsCustomTheme.spacing.small)
+                        StoreIcon(
+                            storeName = it.store.storeName,
+                            iconUrl = it.store.iconUrl,
+                            iconSize = 32.dp,
+                            color = LocalContentColor.current,
+                            contentDescription = null,
+                            modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.small),
                         )
                         Text(
                             modifier = Modifier
@@ -348,6 +350,14 @@ private fun GameDetails(
                         .align(Alignment.CenterHorizontally),
                     onClick = { goToWeb(data.dealUrl, data.gameName) }) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
+                }
+                OutlinedButton(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.CenterHorizontally),
+                    onClick = { goToGame(data.gameId) },
+                ) {
+                    Text(text = stringResource(Res.string.deal_details_view_game_page_label))
                 }
                 OutlinedButton(
                     modifier = Modifier
@@ -433,6 +443,7 @@ private fun DealContent_Success_Preview() {
                 onShare = {},
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
+                goToGame = {},
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
@@ -452,6 +463,7 @@ private fun DealContent_Success_Favourited_Dark_Preview() {
                 onShare = {},
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
+                goToGame = {},
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
@@ -488,6 +500,7 @@ private fun DealContent_WithCheaperStores_Preview() {
                 onShare = {},
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
+                goToGame = {},
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
@@ -513,6 +526,7 @@ private fun DealContent_Loading_Preview() {
                 onShare = {},
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
+                goToGame = {},
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},
@@ -538,6 +552,7 @@ private fun DealContent_Error_Preview() {
                 onShare = {},
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
+                goToGame = {},
                 goToGameDetails = { _, _ -> },
                 goToGameDetailsByTitle = {},
                 retry = {},

@@ -30,6 +30,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_la
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Store
@@ -44,10 +45,11 @@ class DealBottomSheetTest {
     private val store: Store = mockk {
         every { this@mockk.storeID } returns mockStoreId
         every { this@mockk.images.logo } returns "Logo"
+        every { this@mockk.iconUrl } returns ""
         every { this@mockk.storeName } returns mockStoreName
     }
     private val dealId = "Deal ID"
-    private val gameId = 42
+    private val gameId = "42"
     private val gameName = "Game Name"
     private val gamePrice = "Game Price"
 
@@ -62,6 +64,7 @@ class DealBottomSheetTest {
         onDismiss: () -> Unit = {},
         onShare: (DealBottomSheetData) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
+        goToGame: (String) -> Unit = {},
         goToGameDetails: (Int, String) -> Unit = { _, _ -> },
         goToGameDetailsByTitle: (String) -> Unit = {},
         onRetryDealDetails: () -> Unit = {},
@@ -83,6 +86,7 @@ class DealBottomSheetTest {
                     onDismiss = onDismiss,
                     onShare = onShare,
                     goToWeb = goToWeb,
+                    goToGame = goToGame,
                     goToGameDetails = goToGameDetails,
                     goToGameDetailsByTitle = goToGameDetailsByTitle,
                     onRetryDealDetails = onRetryDealDetails,
@@ -248,6 +252,23 @@ class DealBottomSheetTest {
     }
 
     @Test
+    fun gamePageButton_click_invokes_goToGame_with_gameId() {
+        val data = dealDetailsData(steamAppID = 1240440)
+        val goToGame: (String) -> Unit = mockk {
+            every { this@mockk.invoke(any()) } just Runs
+        }
+
+        setupCompose(data = data, goToGame = goToGame)
+
+        verify(exactly = 0) { goToGame.invoke(any()) }
+
+        composeTestRule.onNodeWithText(screenSemantics.gamePage)
+            .performClick()
+
+        verify(exactly = 1) { goToGame.invoke(gameId) }
+    }
+
+    @Test
     fun gameDetailsButton_visible_when_steamAppID_null_so_non_Steam_deals_can_route_by_title() {
         val data = dealDetailsData(steamAppID = null)
 
@@ -339,6 +360,7 @@ class DealBottomSheetTest {
         val cheapestStoreLabel: String,
         val cheapestNo: String,
         val goToDeal: String,
+        val gamePage: String,
         val gameDetails: String,
     ) {
         companion object {
@@ -350,6 +372,7 @@ class DealBottomSheetTest {
                 cheapestStoreLabel = stringResource(Res.string.deal_details_cheapest_store_label),
                 cheapestNo = stringResource(Res.string.deal_details_cheapest_no),
                 goToDeal = stringResource(Res.string.deal_details_go_to_deal_label),
+                gamePage = stringResource(Res.string.deal_details_view_game_page_label),
                 gameDetails = stringResource(Res.string.deal_details_view_game_details_label),
             )
 

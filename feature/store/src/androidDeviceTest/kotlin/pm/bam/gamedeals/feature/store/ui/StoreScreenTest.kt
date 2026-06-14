@@ -88,6 +88,7 @@ class StoreScreenTest {
                 StoreScreen(
                     onBack = onBack,
                     goToWeb = goToWeb,
+                    goToGame = {},
                     goToGameDetails = goToGameDetails,
                     goToGameDetailsByTitle = goToGameDetailsByTitle,
                     viewModel = viewModel,

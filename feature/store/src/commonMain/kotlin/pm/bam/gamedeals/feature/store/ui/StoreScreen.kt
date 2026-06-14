@@ -83,6 +83,7 @@ private val AlwaysScrollable: () -> Boolean = { true }
 internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
@@ -131,6 +132,7 @@ internal fun StoreScreen(
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
         onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
+        goToGame = goToGame,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
@@ -172,6 +174,7 @@ private fun StoreDeals(
     onToggleWaitlist: (gameId: String) -> Unit = {},
     onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit = {},
     goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
@@ -224,6 +227,7 @@ private fun StoreDeals(
             isWaitlisted = dealDetails?.gameId?.let { it in favouriteIds } == true,
             isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
             goToWeb = goToWeb,
+            goToGame = goToGame,
             goToGameDetails = goToGameDetails,
             goToGameDetailsByTitle = goToGameDetailsByTitle,
             onDismiss = { onDismissDealDetails() },

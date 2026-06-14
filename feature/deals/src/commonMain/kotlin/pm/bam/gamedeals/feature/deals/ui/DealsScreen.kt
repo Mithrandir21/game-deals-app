@@ -75,6 +75,7 @@ private const val LOAD_MORE_THRESHOLD = 5
 @Composable
 internal fun DealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
     goToGameDetails: (steamAppId: Int, title: String) -> Unit,
     goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: DealsViewModel = koinViewModel(),
@@ -120,6 +121,7 @@ internal fun DealsScreen(
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
         onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
+        goToGame = goToGame,
         goToGameDetails = goToGameDetails,
         goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
@@ -147,6 +149,7 @@ private fun DealsContent(
     onToggleWaitlist: (gameId: String) -> Unit = {},
     onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit = {},
     goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
     goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
@@ -268,6 +271,7 @@ private fun DealsContent(
                 isWaitlisted = dealDetails?.gameId?.let { it in waitlistIds } == true,
                 isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
                 goToWeb = goToWeb,
+                goToGame = goToGame,
                 goToGameDetails = goToGameDetails,
                 goToGameDetailsByTitle = goToGameDetailsByTitle,
                 onDismiss = { onDismissDealDetails() },

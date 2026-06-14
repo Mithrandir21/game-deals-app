@@ -59,7 +59,11 @@ class DealDetailsController(
                         gameSalesPriceDenominated = dealPriceDenominated,
                         gameInfo = dealDetails.gameInfo,
                         cheapestPrice = dealDetails.cheapestPrice,
-                        cheaperStores = dealDetails.cheaperStores.map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) }.toImmutableList(),
+                        cheaperStores = dealDetails.cheaperStores
+                            .sortedBy { it.salePriceValue }
+                            .take(MAX_CHEAPER_STORES)
+                            .map { StoreCheaperStorePair(store = storesRepository.getStore(it.storeID), cheaperStore = it) }
+                            .toImmutableList(),
                     )
                 }
                 dealDetails.emit(data)
@@ -91,5 +95,10 @@ class DealDetailsController(
     fun dismiss(scope: CoroutineScope) {
         loadJob?.cancel()
         scope.launch { dealDetails.emit(null) }
+    }
+
+    private companion object {
+        /** Cap the "other stores" list so a game on many shops doesn't produce an endless sheet. */
+        const val MAX_CHEAPER_STORES = 5
     }
 }

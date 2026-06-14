@@ -90,6 +90,7 @@ internal fun NavGraph(
 
             dealsScreen(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
                 goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
@@ -102,6 +103,7 @@ internal fun NavGraph(
             storeScreen(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
                 goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
