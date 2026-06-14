@@ -9,6 +9,7 @@ import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbInvolvedCompany
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbSimilarGame
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTimeToBeat
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbWebsite
 
 internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
@@ -28,6 +29,9 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
     involvedCompanies = involvedCompanies.flatMap { it.toRoles() }.toImmutableList(),
     websites = websites.mapNotNull { it.toIgdbWebsiteOrNull() }.toImmutableList(),
     similarGames = similarGames.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+    dlcs = dlcs.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+    expansions = expansions.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+    // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
     steamAppId = externalGames
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
         ?.uid
@@ -103,3 +107,10 @@ private fun RemoteIgdbSimilarGame.toIgdbSimilarGameOrNull(): IgdbGame.IgdbSimila
     val n = name ?: return null
     return IgdbGame.IgdbSimilarGame(id = id, name = n, coverImageId = cover?.imageId)
 }
+
+internal fun RemoteIgdbTimeToBeat.toIgdbTimeToBeat(): IgdbGame.IgdbTimeToBeat =
+    IgdbGame.IgdbTimeToBeat(hastily = hastily, normally = normally, completely = completely, count = count)
+
+/** First row of `/v4/game_time_to_beats`, or null when IGDB has no completion data for the game. */
+internal fun List<RemoteIgdbTimeToBeat>.toIgdbTimeToBeatOrNull(): IgdbGame.IgdbTimeToBeat? =
+    firstOrNull()?.toIgdbTimeToBeat()

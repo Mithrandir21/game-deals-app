@@ -27,6 +27,7 @@ import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchCandid
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildTimeToBeatQuery
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.escapeApicalypseString
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
@@ -173,6 +174,12 @@ class IgdbSourceImplTest {
                 coverImageId = "hkco",
                 similarGames = persistentListOf(
                     IgdbGame.IgdbSimilarGame(id = 4242L, name = "Ori and the Blind Forest", coverImageId = "oco"),
+                ),
+                dlcs = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 9001L, name = "Hollow Knight: Hidden Dreams", coverImageId = "hdc"),
+                ),
+                expansions = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 9002L, name = "Hollow Knight: Godmaster", coverImageId = "gmc"),
                 ),
             ),
             result,
@@ -338,7 +345,10 @@ class IgdbSourceImplTest {
         val normalized = "Suicide Squad: Kill the Justice League"
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
-            val body = if (recorded.size < 2) "[]" else ONE_GAME_DIRECT_BODY
+            // Both exact passes (decorated + normalized) must miss so the search fallback fires: the first
+            // TWO requests return empty, the THIRD (search) returns the game. (Pre-existing test bug fixed
+            // in #294 — this guard was `< 2`, which let the exact-normalized pass resolve before search.)
+            val body = if (recorded.size < 3) "[]" else ONE_GAME_DIRECT_BODY
             respond(
                 content = body,
                 status = HttpStatusCode.OK,
@@ -485,6 +495,39 @@ class IgdbSourceImplTest {
         )
     }
 
+    @Test
+    fun fetchTimeToBeat_posts_query_to_game_time_to_beats_and_maps_seconds() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = TIME_TO_BEAT_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchTimeToBeat(IGDB_ID)
+
+        assertEquals(
+            IgdbGame.IgdbTimeToBeat(hastily = 3600L, normally = 7200L, completely = 18000L, count = 1500L),
+            result,
+        )
+        val request = recorded.single()
+        assertEquals("/v4/game_time_to_beats", request.url.encodedPath)
+        assertEquals(buildTimeToBeatQuery(IGDB_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchTimeToBeat_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        assertNull(impl.fetchTimeToBeat(IGDB_ID), "Empty list must surface as null time-to-beat")
+        assertEquals(1, recorded.size)
+    }
+
     private fun rig(
         recorded: MutableList<HttpRequestData>,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
@@ -526,6 +569,11 @@ class IgdbSourceImplTest {
             {"id":99,"game":{"id":1,"name":"Halo Infinite","summary":"Master Chief stuff"}}
         ]"""
 
+        // language=JSON — /v4/game_time_to_beats row; times in seconds.
+        const val TIME_TO_BEAT_BODY = """[
+            {"hastily": 3600, "normally": 7200, "completely": 18000, "count": 1500}
+        ]"""
+
         // Response from `/v4/games where id = N` — flat record, no `external_games` wrapper.
         // `external_games` has only non-Steam sources here, exercising the source = 1 filter
         // (Hollow Knight ships on GOG and Itch but not Steam in this fixture, so steamAppId stays null).
@@ -538,6 +586,12 @@ class IgdbSourceImplTest {
                 "cover": {"id": 7, "image_id": "hkco"},
                 "similar_games": [
                     {"id": 4242, "name": "Ori and the Blind Forest", "cover": {"id": 8, "image_id": "oco"}}
+                ],
+                "dlcs": [
+                    {"id": 9001, "name": "Hollow Knight: Hidden Dreams", "cover": {"id": 9, "image_id": "hdc"}}
+                ],
+                "expansions": [
+                    {"id": 9002, "name": "Hollow Knight: Godmaster", "cover": {"id": 10, "image_id": "gmc"}}
                 ],
                 "external_games": [
                     {"id": 800, "uid": "hollow-knight-gog", "external_game_source": 5},
