@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +39,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
@@ -77,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
@@ -647,19 +651,60 @@ private fun PlayersBlock(players: GameMeta.Players) {
     }
 }
 
-/** Storefront/critic review scores (Steam %, Metacritic /100, …) from ITAD `reviews`. */
+/** Storefront/critic review scores (Steam %, Metacritic /100, …) from ITAD `reviews`, one card each. */
 @Composable
 private fun ReviewsBlock(reviews: List<GameMeta.Review>) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(stringResource(Res.string.game_page_section_reviews))
-        reviews.forEach { review ->
+        reviews.forEach { ReviewCard(it) }
+    }
+}
+
+/** A positive/negative split-bar review card: 👍 score% … negative% 👎, a proportional bar, source + count. */
+@Composable
+private fun ReviewCard(review: GameMeta.Review) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            val positive = review.score?.coerceIn(0, 100)
+            if (positive != null) {
+                val negative = 100 - positive
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.ThumbUp, contentDescription = null, tint = ReviewPositiveColor, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "$positive%",
+                        modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.extraSmall),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ReviewPositiveColor,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "$negative%",
+                        modifier = Modifier.padding(end = GameDealsCustomTheme.spacing.extraSmall),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Icon(Icons.Filled.ThumbDown, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
+                ) {
+                    if (positive > 0) Box(Modifier.weight(positive.toFloat()).fillMaxHeight().background(ReviewPositiveColor))
+                    if (negative > 0) Box(Modifier.weight(negative.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.error))
+                }
+            }
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(text = review.source, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                review.score?.let { Text(text = "$it", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold) }
+                Text(text = review.source, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 review.count?.let {
                     Text(
                         text = stringResource(Res.string.game_page_review_count, formatCount(it)),
-                        modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.small),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -668,6 +713,9 @@ private fun ReviewsBlock(reviews: List<GameMeta.Review>) {
         }
     }
 }
+
+/** Green used for the positive share of review bars/labels; reads on both light and dark surfaces. */
+private val ReviewPositiveColor = Color(0xFF43A047)
 
 @Composable
 private fun RatingsRow(game: IgdbGame) {
