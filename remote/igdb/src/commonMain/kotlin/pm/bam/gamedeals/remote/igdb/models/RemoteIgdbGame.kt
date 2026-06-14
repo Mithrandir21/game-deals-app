@@ -21,7 +21,22 @@ data class RemoteIgdbGame(
     @SerialName("involved_companies") val involvedCompanies: List<RemoteIgdbInvolvedCompany> = emptyList(),
     val websites: List<RemoteIgdbWebsite> = emptyList(),
     @SerialName("similar_games") val similarGames: List<RemoteIgdbSimilarGame> = emptyList(),
+    // DLCs and expansions share the similar-game shape (id, name, cover) so they map through the same path.
+    val dlcs: List<RemoteIgdbSimilarGame> = emptyList(),
+    val expansions: List<RemoteIgdbSimilarGame> = emptyList(),
     @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+/**
+ * Row from IGDB's `/v4/game_time_to_beats` endpoint (epic #291, Phase 2). Completion times are in
+ * **seconds**; any tier IGDB lacks data for is null. Keyed by `game_id` on the request, not returned here.
+ */
+@Serializable
+data class RemoteIgdbTimeToBeat(
+    val hastily: Long? = null,
+    val normally: Long? = null,
+    val completely: Long? = null,
+    val count: Long? = null,
 )
 
 @Serializable

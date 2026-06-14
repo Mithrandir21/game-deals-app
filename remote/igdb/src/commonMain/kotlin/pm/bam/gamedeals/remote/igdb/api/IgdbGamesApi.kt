@@ -10,6 +10,7 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTimeToBeat
 
 /**
  * IGDB endpoints. IGDB uses Apicalypse — a plain-text query language sent as the request body.
@@ -147,6 +148,24 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /**
+     * HowLongToBeat-style completion estimates for a game (epic #291, Phase 2). IGDB exposes these on the
+     * dedicated `/v4/game_time_to_beats` endpoint (not via the games dot-expansion), keyed by `game_id`.
+     * Returns at most one row; empty list means IGDB has no time-to-beat data for that game.
+     */
+    suspend fun fetchTimeToBeat(igdbGameId: Long): ApiResponse<List<RemoteIgdbTimeToBeat>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/game_time_to_beats") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildTimeToBeatQuery(igdbGameId))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     internal companion object {
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
@@ -166,6 +185,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 game.involved_companies.company.name, game.involved_companies.developer, game.involved_companies.publisher, game.involved_companies.porting, game.involved_companies.supporting,
                 game.websites.url, game.websites.type.id, game.websites.type.type,
                 game.similar_games.id, game.similar_games.name, game.similar_games.cover.image_id,
+                game.dlcs.id, game.dlcs.name, game.dlcs.cover.image_id,
+                game.expansions.id, game.expansions.name, game.expansions.cover.image_id,
                 game.external_games.uid, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
         """.trimIndent()
@@ -183,6 +204,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
                 websites.url, websites.type.id, websites.type.type,
                 similar_games.id, similar_games.name, similar_games.cover.image_id,
+                dlcs.id, dlcs.name, dlcs.cover.image_id,
+                expansions.id, expansions.name, expansions.cover.image_id,
                 external_games.uid, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
@@ -209,7 +232,9 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     genres.name, themes.name,
                     involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
                     websites.url, websites.type.id, websites.type.type,
-                    similar_games.id, similar_games.name, similar_games.cover.image_id;
+                    similar_games.id, similar_games.name, similar_games.cover.image_id,
+                    dlcs.id, dlcs.name, dlcs.cover.image_id,
+                    expansions.id, expansions.name, expansions.cover.image_id;
                 where name = "$escaped"; limit 1;
             """.trimIndent()
         }
@@ -227,10 +252,16 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     genres.name, themes.name,
                     involved_companies.company.name, involved_companies.developer, involved_companies.publisher, involved_companies.porting, involved_companies.supporting,
                     websites.url, websites.type.id, websites.type.type,
-                    similar_games.id, similar_games.name, similar_games.cover.image_id;
+                    similar_games.id, similar_games.name, similar_games.cover.image_id,
+                    dlcs.id, dlcs.name, dlcs.cover.image_id,
+                    expansions.id, expansions.name, expansions.cover.image_id;
                 limit 1;
             """.trimIndent()
         }
+
+        // `/v4/game_time_to_beats` is keyed by `game_id`; times come back in seconds.
+        internal fun buildTimeToBeatQuery(igdbGameId: Long): String =
+            """fields hastily, normally, completely, count; where game_id = $igdbGameId; limit 1;"""
 
         internal fun buildSearchCandidatesQuery(title: String): String {
             val escaped = escapeApicalypseString(title)

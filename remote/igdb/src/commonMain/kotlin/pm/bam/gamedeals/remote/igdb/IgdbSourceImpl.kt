@@ -12,6 +12,7 @@ import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
 import pm.bam.gamedeals.remote.igdb.mappers.toIgdbCandidateList
 import pm.bam.gamedeals.remote.igdb.mappers.toIgdbGameOrNull
+import pm.bam.gamedeals.remote.igdb.mappers.toIgdbTimeToBeatOrNull
 import pm.bam.gamedeals.remote.igdb.mappers.toReleaseOrNull
 import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
@@ -96,6 +97,13 @@ internal class IgdbSourceImpl(
             .getOrThrow()
             .toIgdbCandidateList()
     }
+
+    override suspend fun fetchTimeToBeat(igdbGameId: Long): IgdbGame.IgdbTimeToBeat? =
+        igdbGamesApi.fetchTimeToBeat(igdbGameId)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toIgdbTimeToBeatOrNull()
 
     internal companion object {
         internal const val NEW_RELEASES_LIMIT = 20

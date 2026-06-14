@@ -47,4 +47,11 @@ interface IgdbSource {
      * never null.
      */
     suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame>
+
+    /**
+     * HowLongToBeat-style completion estimates for an IGDB game (epic #291, Phase 2), from the dedicated
+     * `/v4/game_time_to_beats` endpoint. Fetched separately from the game lookup and merged onto
+     * [IgdbGame.timeToBeat] by the consumer. Returns null when IGDB has no completion data for the game.
+     */
+    suspend fun fetchTimeToBeat(igdbGameId: Long): IgdbGame.IgdbTimeToBeat?
 }

@@ -10,6 +10,7 @@ interface IgdbRepository {
     suspend fun fetchGameDetailsByIgdbId(igdbGameId: Long): IgdbGame?
     suspend fun fetchGameDetailsByTitle(title: String): IgdbGame?
     suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame>
+    suspend fun fetchTimeToBeat(igdbGameId: Long): IgdbGame.IgdbTimeToBeat?
 }
 
 internal class IgdbRepositoryImpl(
@@ -30,4 +31,7 @@ internal class IgdbRepositoryImpl(
 
     override suspend fun fetchSearchCandidatesByTitle(title: String): ImmutableList<IgdbGame.IgdbSimilarGame> =
         igdbSource.fetchSearchCandidatesByTitle(title)
+
+    override suspend fun fetchTimeToBeat(igdbGameId: Long): IgdbGame.IgdbTimeToBeat? =
+        igdbSource.fetchTimeToBeat(igdbGameId)
 }

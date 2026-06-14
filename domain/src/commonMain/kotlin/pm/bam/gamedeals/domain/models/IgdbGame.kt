@@ -23,6 +23,14 @@ data class IgdbGame(
     val involvedCompanies: ImmutableList<IgdbCompanyRole> = persistentListOf(),
     val websites: ImmutableList<IgdbWebsite> = persistentListOf(),
     val similarGames: ImmutableList<IgdbSimilarGame> = persistentListOf(),
+    val dlcs: ImmutableList<IgdbSimilarGame> = persistentListOf(),
+    val expansions: ImmutableList<IgdbSimilarGame> = persistentListOf(),
+    /**
+     * HowLongToBeat-style completion estimates (epic #291, Phase 2). Fetched separately from IGDB's
+     * `/v4/game_time_to_beats` endpoint (not part of the games dot-expansion) and merged in by the
+     * consumer, so it is null on a bare game lookup until enriched.
+     */
+    val timeToBeat: IgdbTimeToBeat? = null,
     val steamAppId: Int? = null,
 ) {
 
@@ -52,5 +60,14 @@ data class IgdbGame(
         val id: Long,
         val name: String,
         val coverImageId: String?,
+    )
+
+    /** HowLongToBeat completion estimates in **seconds** (IGDB `game_time_to_beats`); UI formats to hours. */
+    @Immutable
+    data class IgdbTimeToBeat(
+        val hastily: Long? = null,
+        val normally: Long? = null,
+        val completely: Long? = null,
+        val count: Long? = null,
     )
 }
