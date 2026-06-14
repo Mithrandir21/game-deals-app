@@ -86,4 +86,19 @@
     <string name="game_page_tab_history">History</string>
     <string name="game_page_tab_stats">Stats</string>
 
+    <!-- Game Page sections (Phase 6) -->
+    <string name="game_page_section_reviews">Reviews</string>
+    <string name="game_page_section_players">Players</string>
+    <string name="game_page_section_bundles">Found in bundles</string>
+    <string name="game_page_section_dlcs">DLC &amp; expansions</string>
+    <string name="game_page_section_hltb">How long to beat</string>
+    <string name="game_page_players_recent">%1$s playing recently</string>
+    <string name="game_page_players_peak">%1$s peak</string>
+    <string name="game_page_review_count">%1$s reviews</string>
+    <string name="game_page_bundle_games_count">%1$s games</string>
+    <string name="game_page_hltb_hours">%1$s h</string>
+    <string name="game_page_hltb_hastily">Rushed</string>
+    <string name="game_page_hltb_normally">Main</string>
+    <string name="game_page_hltb_completely">Completionist</string>
+
 </resources>

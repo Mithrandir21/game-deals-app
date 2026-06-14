@@ -98,7 +98,9 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Store
@@ -133,6 +135,19 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_matc
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_warning_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_bundle_games_count
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_completely
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_hastily
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_hours
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_normally
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_players_peak
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_players_recent
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_review_count
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_bundles
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_dlcs
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_hltb
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_players
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_reviews
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
@@ -184,6 +199,7 @@ internal fun GamePageScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
     onSearchDealsByTitle: (title: String) -> Unit = {},
+    onBundleClick: (bundleId: Int) -> Unit = {},
     viewModel: GamePageViewModel = koinViewModel(),
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -219,6 +235,7 @@ internal fun GamePageScreen(
         onWarningTap = viewModel::onWarningTap,
         onPickerDismiss = viewModel::onPickerDismiss,
         onCandidatePicked = viewModel::onCandidatePicked,
+        onBundleClick = onBundleClick,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -243,6 +260,7 @@ private fun GamePageContent(
     onWarningTap: () -> Unit,
     onPickerDismiss: () -> Unit,
     onCandidatePicked: (igdbGameId: Long) -> Unit,
+    onBundleClick: (bundleId: Int) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -343,6 +361,7 @@ private fun GamePageContent(
                     onShareDeal = onShareDeal,
                     onSaveNote = onSaveNote,
                     onDeleteNote = onDeleteNote,
+                    onBundleClick = onBundleClick,
                 )
             }
         }
@@ -363,6 +382,7 @@ private fun GamePageBody(
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
+    onBundleClick: (bundleId: Int) -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -379,10 +399,14 @@ private fun GamePageBody(
             onDeleteNote = onDeleteNote,
             modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
         )
+        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
         data.igdbGame?.let { igdb ->
             if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
             if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
             if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
+            igdb.timeToBeat?.let { HltbSection(it) }
+            val dlcs = igdb.dlcs + igdb.expansions
+            if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
             if (igdb.similarGames.isNotEmpty()) SimilarGamesSection(igdb.similarGames, onSimilarGameClick)
             if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
         }
@@ -479,16 +503,57 @@ private fun PricesTab(
 
 @Composable
 private fun StatsTab(data: GamePageData.Data) {
-    // Phase 6 fills this with ITAD review scores + current player counts. For now: cheapest-ever + ratings.
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
         data.gameDetails?.let { gd ->
-            Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = stringResource(Res.string.game_screen_cheapest_ever_on_date_label, gd.cheapestPriceEver.priceDenominated, gd.cheapestPriceEver.date),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+                Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = stringResource(Res.string.game_screen_cheapest_ever_on_date_label, gd.cheapestPriceEver.priceDenominated, gd.cheapestPriceEver.date),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
         data.igdbGame?.let { RatingsRow(it) }
+        data.gameMeta?.players?.let { PlayersBlock(it) }
+        data.gameMeta?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
+    }
+}
+
+/** Current player counts from ITAD `players` (recent + peak); a snapshot, not a history graph (see ADR 0002). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PlayersBlock(players: GameMeta.Players) {
+    val recent = players.recent
+    val peak = players.peak
+    if (recent == null && peak == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_players))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+            recent?.let { AssistChip(onClick = {}, label = { Text(stringResource(Res.string.game_page_players_recent, formatCount(it))) }) }
+            peak?.let { AssistChip(onClick = {}, label = { Text(stringResource(Res.string.game_page_players_peak, formatCount(it))) }) }
+        }
+    }
+}
+
+/** Storefront/critic review scores (Steam %, Metacritic /100, …) from ITAD `reviews`. */
+@Composable
+private fun ReviewsBlock(reviews: List<GameMeta.Review>) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_reviews))
+        reviews.forEach { review ->
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = review.source, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                review.score?.let { Text(text = "$it", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold) }
+                review.count?.let {
+                    Text(
+                        text = stringResource(Res.string.game_page_review_count, formatCount(it)),
+                        modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.small),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -786,6 +851,83 @@ private fun NoMatchSection(modifier: Modifier, title: String, onSearch: () -> Un
         FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onSearch) { Text(stringResource(Res.string.game_details_no_match_search_button)) }
         TextButton(modifier = Modifier.fillMaxWidth(), onClick = onBack) { Text(stringResource(Res.string.game_details_no_match_back_button)) }
     }
+}
+
+@Composable
+private fun BundlesSection(bundles: List<Bundle>, onBundleClick: (bundleId: Int) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+            SectionHeader(stringResource(Res.string.game_page_section_bundles))
+            bundles.forEachIndexed { index, bundle ->
+                if (index > 0) HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { onBundleClick(bundle.id) }.padding(vertical = GameDealsCustomTheme.spacing.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = bundle.title, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "${bundle.storeName} · ${stringResource(Res.string.game_page_bundle_games_count, bundle.gameCount.toString())}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    bundle.priceDenominated?.let { Text(text = it, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DlcsSection(dlcs: List<IgdbGame.IgdbSimilarGame>, onDlcClick: (igdbGameId: Long) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_dlcs), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            items(dlcs, key = { it.id }) { dlc -> IgdbGameTile(dlc, onDlcClick, Modifier.width(112.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun HltbSection(timeToBeat: IgdbGame.IgdbTimeToBeat) {
+    val tiers = buildList {
+        timeToBeat.hastily?.let { add(stringResource(Res.string.game_page_hltb_hastily) to it) }
+        timeToBeat.normally?.let { add(stringResource(Res.string.game_page_hltb_normally) to it) }
+        timeToBeat.completely?.let { add(stringResource(Res.string.game_page_hltb_completely) to it) }
+    }
+    if (tiers.isEmpty()) return
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+            SectionHeader(stringResource(Res.string.game_page_section_hltb))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+                tiers.forEach { (label, seconds) ->
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = stringResource(Res.string.game_page_hltb_hours, hoursFromSeconds(seconds)), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Seconds → nearest whole hour, as a string (HowLongToBeat values are coarse, so whole hours read fine). */
+private fun hoursFromSeconds(seconds: Long): String = ((seconds + 1800) / 3600).toString()
+
+/** KMP-safe thousands grouping for player/review counts (no java.text on common). */
+private fun formatCount(value: Int): String {
+    val digits = value.toString()
+    val sb = StringBuilder()
+    for (i in digits.indices) {
+        if (i > 0 && (digits.length - i) % 3 == 0) sb.append(',')
+        sb.append(digits[i])
+    }
+    return sb.toString()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
