@@ -14,31 +14,23 @@ import kotlinx.coroutines.flow.update
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.NotedGame
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
-
-/** Outcome of a [NotesRepository] write, so callers can react to the login gate (mirrors the waitlist/ignored repos). */
-enum class NotesUpdateResult {
-    /** The note was added, edited or deleted. */
-    UPDATED,
-
-    /** No-op: the user is logged out. Callers should prompt the user to sign in. */
-    NOT_LOGGED_IN,
-}
 
 /**
  * The user's per-game ITAD notes (epic #272, P4 #282/#283). No Room cache (schema: none) — the whole
  * gameId→note map is held in memory, lazily loaded once per session on first [observeNote] subscription.
  * [observeNote] is auth-gated: it emits `null` when logged out and clears the cached map on logout (so a
  * different account never sees the previous one's notes). Writes are **remote-first** ([setNote] /
- * [deleteNote] confirm the ITAD call before updating the in-memory map) and return [NotesUpdateResult] so
+ * [deleteNote] confirm the ITAD call before updating the in-memory map) and return [RepoUpdateResult] so
  * the UI can route a logged-out user to sign in. [getNotedGames] is the remote-as-truth reconcile for the
  * "My notes" screen — it enriches each id-only note with its game title + boxart.
  */
 interface NotesRepository {
     fun observeNote(gameId: String): Flow<String?>
-    suspend fun setNote(gameId: String, note: String): NotesUpdateResult
-    suspend fun deleteNote(gameId: String): NotesUpdateResult
+    suspend fun setNote(gameId: String, note: String): RepoUpdateResult
+    suspend fun deleteNote(gameId: String): RepoUpdateResult
     suspend fun getNotedGames(): List<NotedGame>
 }
 
@@ -63,18 +55,18 @@ internal class NotesRepositoryImpl(
             }
         }
 
-    override suspend fun setNote(gameId: String, note: String): NotesUpdateResult {
-        if (!loggedIn()) return NotesUpdateResult.NOT_LOGGED_IN
+    override suspend fun setNote(gameId: String, note: String): RepoUpdateResult {
+        if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         accountSource.setNote(gameId, note)
         notes.update { (it ?: emptyMap()) + (gameId to note) }
-        return NotesUpdateResult.UPDATED
+        return RepoUpdateResult.UPDATED
     }
 
-    override suspend fun deleteNote(gameId: String): NotesUpdateResult {
-        if (!loggedIn()) return NotesUpdateResult.NOT_LOGGED_IN
+    override suspend fun deleteNote(gameId: String): RepoUpdateResult {
+        if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         accountSource.removeNote(gameId)
         notes.update { (it ?: emptyMap()) - gameId }
-        return NotesUpdateResult.UPDATED
+        return RepoUpdateResult.UPDATED
     }
 
     /**

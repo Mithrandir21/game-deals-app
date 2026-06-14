@@ -10,6 +10,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.WaitlistDao
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
@@ -25,26 +26,17 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
  * safe. The observed set is auth-gated — empty whenever logged out — and the rows are cleared on logout.
  * All writes are login-gated.
  */
-/** Outcome of a [WaitlistRepository.toggleWaitlist] call, so callers can react to the login gate. */
-enum class WaitlistToggleResult {
-    /** The waitlist was updated (added or removed). */
-    UPDATED,
-
-    /** No-op: the user is logged out. Callers should prompt the user to sign in. */
-    NOT_LOGGED_IN,
-}
-
 interface WaitlistRepository {
     fun observeWaitlistIds(): Flow<ImmutableSet<String>>
     fun observeIsWaitlisted(gameId: String): Flow<Boolean>
     suspend fun getWaitlist(): List<WaitlistEntry>
 
     /**
-     * Adds/removes [gameId] on the user's ITAD waitlist, returning [WaitlistToggleResult]. When logged
-     * out this is a no-op and returns [WaitlistToggleResult.NOT_LOGGED_IN] so the UI can route the user
+     * Adds/removes [gameId] on the user's ITAD waitlist, returning [RepoUpdateResult]. When logged
+     * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route the user
      * to sign in (the heart is login-gated — there is no local waitlist).
      */
-    suspend fun toggleWaitlist(gameId: String): WaitlistToggleResult
+    suspend fun toggleWaitlist(gameId: String): RepoUpdateResult
 }
 
 internal class WaitlistRepositoryImpl(
@@ -73,8 +65,8 @@ internal class WaitlistRepositoryImpl(
         return entries
     }
 
-    override suspend fun toggleWaitlist(gameId: String): WaitlistToggleResult {
-        if (!loggedIn()) return WaitlistToggleResult.NOT_LOGGED_IN
+    override suspend fun toggleWaitlist(gameId: String): RepoUpdateResult {
+        if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
         if (waitlistDao.contains(gameId)) {
             accountSource.removeFromWaitlist(gameId)
@@ -83,7 +75,7 @@ internal class WaitlistRepositoryImpl(
             accountSource.addToWaitlist(gameId)
             waitlistDao.add(WaitlistGameIdEntry(gameId))
         }
-        return WaitlistToggleResult.UPDATED
+        return RepoUpdateResult.UPDATED
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

@@ -22,12 +22,12 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
@@ -144,7 +144,7 @@ class DealsViewModelTest : MainDispatcherTest() {
     @Test
     fun toggle_waitlist_when_logged_out_emits_SignInRequired() = runTest {
         everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
-        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.NOT_LOGGED_IN
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.NOT_LOGGED_IN
 
         val vm = createViewModel()
         advanceUntilIdle()

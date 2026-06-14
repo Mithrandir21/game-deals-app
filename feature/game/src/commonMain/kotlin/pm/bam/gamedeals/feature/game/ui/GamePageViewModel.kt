@@ -32,16 +32,14 @@ import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
-import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
-import pm.bam.gamedeals.domain.repositories.notes.NotesUpdateResult
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
 
@@ -195,7 +193,7 @@ internal class GamePageViewModel(
         if (uiState.value !is GamePageData.Data) return
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(id) == WaitlistToggleResult.NOT_LOGGED_IN) {
+            if (waitlistRepository.toggleWaitlist(id) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }
@@ -205,7 +203,7 @@ internal class GamePageViewModel(
         if (uiState.value !is GamePageData.Data) return
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(id) == IgnoredToggleResult.NOT_LOGGED_IN) {
+            if (ignoredRepository.toggleIgnored(id) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }
@@ -214,7 +212,7 @@ internal class GamePageViewModel(
     fun setNote(text: String) {
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            if (notesRepository.setNote(id, text) == NotesUpdateResult.NOT_LOGGED_IN) {
+            if (notesRepository.setNote(id, text) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }
@@ -223,7 +221,7 @@ internal class GamePageViewModel(
     fun deleteNote() {
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
-            if (notesRepository.deleteNote(id) == NotesUpdateResult.NOT_LOGGED_IN) {
+            if (notesRepository.deleteNote(id) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }

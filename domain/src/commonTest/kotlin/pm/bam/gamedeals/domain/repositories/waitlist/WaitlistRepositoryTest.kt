@@ -16,6 +16,7 @@ import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import kotlin.test.Test
@@ -42,7 +43,7 @@ class WaitlistRepositoryTest {
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeWaitlistDao())
-        assertEquals(WaitlistToggleResult.NOT_LOGGED_IN, repo.toggleWaitlist("a"))
+        assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.toggleWaitlist("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
     }
@@ -74,7 +75,7 @@ class WaitlistRepositoryTest {
         val source = FakeAccountSource()
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao())
 
-        assertEquals(WaitlistToggleResult.UPDATED, repo.toggleWaitlist("a"))
+        assertEquals(RepoUpdateResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsWaitlisted("a").first())
@@ -86,7 +87,7 @@ class WaitlistRepositoryTest {
         val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao())
         repo.getWaitlist() // seed cache with "a"
 
-        assertEquals(WaitlistToggleResult.UPDATED, repo.toggleWaitlist("a"))
+        assertEquals(RepoUpdateResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.removed)
         assertFalse(repo.observeIsWaitlisted("a").first())

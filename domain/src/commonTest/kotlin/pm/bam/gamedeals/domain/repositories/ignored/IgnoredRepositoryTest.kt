@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.db.cache.IgnoredGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.IgnoredDao
 import pm.bam.gamedeals.domain.models.IgnoredEntry
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
 import kotlin.test.Test
@@ -34,7 +35,7 @@ class IgnoredRepositoryTest {
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
         val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeIgnoredDao())
-        assertEquals(IgnoredToggleResult.NOT_LOGGED_IN, repo.toggleIgnored("a"))
+        assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.toggleIgnored("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
     }
@@ -66,7 +67,7 @@ class IgnoredRepositoryTest {
         val source = FakeAccountSource()
         val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao())
 
-        assertEquals(IgnoredToggleResult.UPDATED, repo.toggleIgnored("a"))
+        assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsIgnored("a").first())
@@ -78,7 +79,7 @@ class IgnoredRepositoryTest {
         val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao())
         repo.getIgnored() // seed cache with "a"
 
-        assertEquals(IgnoredToggleResult.UPDATED, repo.toggleIgnored("a"))
+        assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))
 
         assertEquals(listOf("a"), source.removed)
         assertFalse(repo.observeIsIgnored("a").first())

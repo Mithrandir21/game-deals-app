@@ -32,13 +32,12 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
-import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.info
@@ -145,7 +144,7 @@ internal class StoreViewModel(
     /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
         viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(gameId) == IgnoredToggleResult.NOT_LOGGED_IN) {
+            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(StoreUiEvent.SignInRequired)
             }
         }
@@ -154,7 +153,7 @@ internal class StoreViewModel(
     /** Toggle a game on/off the waitlist from an inline row heart; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(StoreUiEvent.SignInRequired)
             }
         }

@@ -27,10 +27,10 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -145,7 +145,7 @@ class StoreViewModelTest : MainDispatcherTest() {
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
-        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.UPDATED
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.UPDATED
 
         viewModel.toggleWaitlistFromDeal(data)
         runCurrent()
@@ -170,7 +170,7 @@ class StoreViewModelTest : MainDispatcherTest() {
             cheaperStores = persistentListOf(),
             cheapestPrice = null,
         )
-        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.NOT_LOGGED_IN
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.NOT_LOGGED_IN
 
         viewModel.toggleWaitlistFromDeal(data)
         runCurrent()

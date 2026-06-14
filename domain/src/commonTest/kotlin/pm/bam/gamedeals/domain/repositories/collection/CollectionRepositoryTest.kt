@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
 import kotlin.test.Test
@@ -53,10 +54,22 @@ class CollectionRepositoryTest {
         val source = FakeAccountSource()
         val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeCollectionDao())
 
-        repo.toggleCollection("a")
+        val result = repo.toggleCollection("a")
 
+        assertEquals(RepoUpdateResult.UPDATED, result)
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsCollected("a").first())
+    }
+
+    @Test
+    fun logged_out_toggle_is_a_no_op() = runTest {
+        val source = FakeAccountSource()
+        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeCollectionDao())
+
+        val result = repo.toggleCollection("a")
+
+        assertEquals(RepoUpdateResult.NOT_LOGGED_IN, result)
+        assertTrue(source.added.isEmpty())
     }
 }
 

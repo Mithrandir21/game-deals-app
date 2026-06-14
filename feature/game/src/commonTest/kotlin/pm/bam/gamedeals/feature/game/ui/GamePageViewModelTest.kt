@@ -16,6 +16,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
@@ -27,6 +28,7 @@ import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -203,11 +205,44 @@ class GamePageViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun title_entry_with_no_match_emits_NoMatch() = runTest {
-        everySuspend { igdbRepository.fetchGameDetailsByTitle("Obscure Game") } returns null
+    fun toggleWaitlist_SignInRequired_when_logged_out() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        everySuspend { waitlistRepository.toggleWaitlist("g1") } returns RepoUpdateResult.NOT_LOGGED_IN
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+        
+        vm.toggleWaitlist()
+        advanceUntilIdle()
+        
+        assertEquals(listOf(GamePageViewModel.GameUiEvent.SignInRequired), events)
+    }
 
-        val state = loadState(mapOf("title" to "Obscure Game"))
+    @Test
+    fun toggleIgnore_SignInRequired_when_logged_out() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        everySuspend { ignoredRepository.toggleIgnored("g1") } returns RepoUpdateResult.NOT_LOGGED_IN
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
 
-        assertEquals(GamePageViewModel.GamePageData.NoMatch("Obscure Game"), state)
+        vm.toggleIgnore()
+        advanceUntilIdle()
+
+        assertEquals(listOf(GamePageViewModel.GameUiEvent.SignInRequired), events)
+    }
+
+    @Test
+    fun setNote_SignInRequired_when_logged_out() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        everySuspend { notesRepository.setNote("g1", "text") } returns RepoUpdateResult.NOT_LOGGED_IN
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+
+        vm.setNote("text")
+        advanceUntilIdle()
+
+        assertEquals(listOf(GamePageViewModel.GameUiEvent.SignInRequired), events)
     }
 }

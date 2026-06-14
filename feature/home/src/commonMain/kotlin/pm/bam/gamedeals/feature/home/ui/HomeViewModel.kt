@@ -39,6 +39,7 @@ import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
@@ -47,13 +48,11 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
-import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 import pm.bam.gamedeals.logging.info
@@ -192,7 +191,7 @@ internal class HomeViewModel(
     /** Toggle a game on/off the waitlist from an inline heart; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(gameId) == WaitlistToggleResult.NOT_LOGGED_IN) {
+            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(HomeUiEvent.SignInRequired)
             }
         }
@@ -203,7 +202,7 @@ internal class HomeViewModel(
     /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
         viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(gameId) == IgnoredToggleResult.NOT_LOGGED_IN) {
+            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(HomeUiEvent.SignInRequired)
             }
         }

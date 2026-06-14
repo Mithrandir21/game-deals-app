@@ -11,6 +11,7 @@ import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
 /**
@@ -24,7 +25,7 @@ interface CollectionRepository {
     fun observeCollectionIds(): Flow<ImmutableSet<String>>
     fun observeIsCollected(gameId: String): Flow<Boolean>
     suspend fun getCollection(): List<CollectionEntry>
-    suspend fun toggleCollection(gameId: String)
+    suspend fun toggleCollection(gameId: String): RepoUpdateResult
 }
 
 internal class CollectionRepositoryImpl(
@@ -51,8 +52,8 @@ internal class CollectionRepositoryImpl(
         return entries
     }
 
-    override suspend fun toggleCollection(gameId: String) {
-        if (!loggedIn()) return
+    override suspend fun toggleCollection(gameId: String): RepoUpdateResult {
+        if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         // Remote-first: confirm the ITAD write before mutating Room.
         if (collectionDao.contains(gameId)) {
             accountSource.removeFromCollection(gameId)
@@ -61,6 +62,7 @@ internal class CollectionRepositoryImpl(
             accountSource.addToCollection(gameId)
             collectionDao.add(CollectionGameIdEntry(gameId))
         }
+        return RepoUpdateResult.UPDATED
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

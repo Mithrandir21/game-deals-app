@@ -16,6 +16,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.NotedGame
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.testing.fixtures.game
@@ -59,8 +60,9 @@ class NotesRepositoryTest {
         everySuspend { accountSource.getNotes() } returns emptyList()
 
         val repo = repo()
-        repo.setNote("g1", "Buy under $20")
+        val result = repo.setNote("g1", "Buy under $20")
 
+        assertEquals(RepoUpdateResult.UPDATED, result)
         assertEquals("Buy under $20", repo.observeNote("g1").first())
         verifySuspend(exactly(1)) { accountSource.setNote("g1", "Buy under $20") }
     }
@@ -72,8 +74,9 @@ class NotesRepositoryTest {
 
         val repo = repo()
         assertEquals("note", repo.observeNote("g1").first()) // load
-        repo.deleteNote("g1")
+        val result = repo.deleteNote("g1")
 
+        assertEquals(RepoUpdateResult.UPDATED, result)
         assertNull(repo.observeNote("g1").first())
         verifySuspend(exactly(1)) { accountSource.removeNote("g1") }
     }
@@ -83,8 +86,8 @@ class NotesRepositoryTest {
         loggedIn(false)
 
         val repo = repo()
-        repo.setNote("g1", "x")
-        repo.deleteNote("g1")
+        assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.setNote("g1", "x"))
+        assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.deleteNote("g1"))
 
         verifySuspend(exactly(0)) { accountSource.setNote(any(), any()) }
         verifySuspend(exactly(0)) { accountSource.removeNote(any()) }

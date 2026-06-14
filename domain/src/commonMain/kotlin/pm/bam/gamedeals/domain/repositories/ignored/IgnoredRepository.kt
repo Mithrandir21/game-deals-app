@@ -11,16 +11,8 @@ import pm.bam.gamedeals.domain.db.cache.IgnoredGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.IgnoredDao
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.IgnoredEntry
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
-
-/** Outcome of a [IgnoredRepository.toggleIgnored] call, so callers can react to the login gate. */
-enum class IgnoredToggleResult {
-    /** The ignore list was updated (added or removed). */
-    UPDATED,
-
-    /** No-op: the user is logged out. Callers should prompt the user to sign in. */
-    NOT_LOGGED_IN,
-}
 
 /**
  * The user's ITAD ignore list (epic #272, P3 #279). A 1:1 mirror of
@@ -37,10 +29,10 @@ interface IgnoredRepository {
     suspend fun getIgnored(): List<IgnoredEntry>
 
     /**
-     * Adds/removes [gameId] on the user's ITAD ignore list, returning [IgnoredToggleResult]. When logged
-     * out this is a no-op and returns [IgnoredToggleResult.NOT_LOGGED_IN] so the UI can route to sign in.
+     * Adds/removes [gameId] on the user's ITAD ignore list, returning [RepoUpdateResult]. When logged
+     * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route to sign in.
      */
-    suspend fun toggleIgnored(gameId: String): IgnoredToggleResult
+    suspend fun toggleIgnored(gameId: String): RepoUpdateResult
 }
 
 internal class IgnoredRepositoryImpl(
@@ -67,8 +59,8 @@ internal class IgnoredRepositoryImpl(
         return entries
     }
 
-    override suspend fun toggleIgnored(gameId: String): IgnoredToggleResult {
-        if (!loggedIn()) return IgnoredToggleResult.NOT_LOGGED_IN
+    override suspend fun toggleIgnored(gameId: String): RepoUpdateResult {
+        if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
         if (ignoredDao.contains(gameId)) {
             accountSource.removeFromIgnored(gameId)
@@ -77,7 +69,7 @@ internal class IgnoredRepositoryImpl(
             accountSource.addToIgnored(gameId)
             ignoredDao.add(IgnoredGameIdEntry(gameId))
         }
-        return IgnoredToggleResult.UPDATED
+        return RepoUpdateResult.UPDATED
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

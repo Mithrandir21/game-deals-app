@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
-import pm.bam.gamedeals.domain.repositories.ignored.IgnoredToggleResult
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
@@ -39,7 +39,7 @@ internal class IgnoredViewModel(
         viewModelScope.launch {
             val result = runCatching { ignoredRepository.toggleIgnored(gameId) }
                 .getOrElse { fatal(logger, it); return@launch }
-            if (result == IgnoredToggleResult.UPDATED) {
+            if (result == RepoUpdateResult.UPDATED) {
                 uiState.update { state ->
                     state.copy(items = state.items.filterNot { it.gameId == gameId }.toImmutableList())
                 }

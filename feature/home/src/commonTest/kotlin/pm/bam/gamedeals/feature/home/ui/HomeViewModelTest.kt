@@ -23,6 +23,7 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.RankedGame
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
@@ -36,7 +37,6 @@ import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
-import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistToggleResult
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -166,7 +166,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleWaitlistFromDeal_delegates_to_repository() = runTest {
-        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.UPDATED
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.UPDATED
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -179,7 +179,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleWaitlistFromDeal_when_logged_out_emits_SignInRequired() = runTest {
-        everySuspend { waitlistRepository.toggleWaitlist("42") } returns WaitlistToggleResult.NOT_LOGGED_IN
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.NOT_LOGGED_IN
 
         val vm = createViewModel()
         advanceUntilIdle()
