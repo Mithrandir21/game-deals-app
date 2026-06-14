@@ -176,7 +176,7 @@ internal class GamesRepositoryImpl(
      * and merged, rather than refetching the whole log. A cold cache fetches the full series.
      *
      * Bounded by serve-stale-on-error (D7): on a warm cache a failed refresh falls back to the cached
-     * series; on a cold cache the failure surfaces (the caller — `GameViewModel` — already treats price
+     * series; on a cold cache the failure surfaces (the caller — `GamePageViewModel` — already treats price
      * history as best-effort and hides the chart on failure).
      */
     override suspend fun getPriceHistory(gameId: String): PriceHistory {

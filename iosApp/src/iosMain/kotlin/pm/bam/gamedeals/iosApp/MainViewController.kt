@@ -48,8 +48,7 @@ import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.deals.di.dealsModule
 import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
-import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
-import pm.bam.gamedeals.feature.game.navigation.gameScreen
+import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
@@ -198,12 +197,11 @@ private fun AppNavHost() {
         searchScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
-        gameScreen(
+        gamePageScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
+            goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
-        gameDetailsScreen(navController = navController)
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },

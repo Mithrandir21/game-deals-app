@@ -22,8 +22,7 @@ import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
-import pm.bam.gamedeals.feature.game.navigation.gameDetailsScreen
-import pm.bam.gamedeals.feature.game.navigation.gameScreen
+import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.search.navigation.searchScreen
@@ -108,13 +107,11 @@ internal fun NavGraph(
                 goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
 
-            gameScreen(
+            gamePageScreen(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
-                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) }
+                goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
             )
-
-            gameDetailsScreen(navController = navController)
 
             searchScreen(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) }
