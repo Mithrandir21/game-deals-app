@@ -9,6 +9,7 @@ import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
@@ -25,6 +26,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toDeal
 import pm.bam.gamedeals.remote.itad.mappers.toDealDetails
 import pm.bam.gamedeals.remote.itad.mappers.toGame
 import pm.bam.gamedeals.remote.itad.mappers.toGameDetails
+import pm.bam.gamedeals.remote.itad.mappers.toGameMeta
 import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toItadGameSearchResult
@@ -132,6 +134,20 @@ internal class ItadSourceImpl(
 
     override suspend fun fetchBundles(): List<Bundle> =
         bundlesApi.getBundles(country = regionRepository.getSelectedCountryCode())
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .map { it.toBundle() }
+
+    override suspend fun fetchGameMeta(gameId: String): GameMeta =
+        gamesApi.getInfo(gameId)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toGameMeta()
+
+    override suspend fun fetchBundlesForGame(gameId: String): List<Bundle> =
+        gamesApi.getBundlesForGame(gameId)
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()

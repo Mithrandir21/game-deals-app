@@ -10,6 +10,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.ItadShop
 import pm.bam.gamedeals.remote.itad.models.RemoteItadDealEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsGame
+import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadPrice
@@ -83,6 +84,16 @@ internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null
         title = title,
         slug = slug,
         steamAppId = steamAppId,
+        boxart = assets.bestArt(),
+    )
+
+/** `/games/info/v2` carries the same header fields as a search game, so reduce it to the lightweight identity used for deal/game headers. */
+internal fun RemoteItadGameInfo.toItadGameSearchResult(): ItadGameSearchResult =
+    ItadGameSearchResult(
+        id = id,
+        title = title,
+        slug = slug,
+        steamAppId = appid,
         boxart = assets.bestArt(),
     )
 

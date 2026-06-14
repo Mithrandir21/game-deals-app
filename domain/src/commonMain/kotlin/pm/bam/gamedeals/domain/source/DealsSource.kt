@@ -6,6 +6,7 @@ import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
@@ -67,6 +68,21 @@ interface DealsSource {
      * return an empty list.
      */
     suspend fun fetchBundles(): List<Bundle>
+
+    /**
+     * Catalogue + live-signal metadata for a game (by its source game id), over ITAD `/games/info/v2`
+     * (epic #291, Phase 1) — developers/publishers, tags, release date, storefront/critic reviews,
+     * waitlist/collection stats, and current player counts. Powers the redesigned Game Page's Stats tab
+     * and header. Providers without this data return a [GameMeta] with empty collections / null signals.
+     */
+    suspend fun fetchGameMeta(gameId: String): GameMeta
+
+    /**
+     * The bundles that contain the given game (by its source game id), over ITAD `/games/bundles/v2`
+     * (epic #291, Phase 1) — drives the Game Page's "Found in bundles" section. Providers without this
+     * data return an empty list.
+     */
+    suspend fun fetchBundlesForGame(gameId: String): List<Bundle>
 
     suspend fun fetchStores(): List<Store>
 }
