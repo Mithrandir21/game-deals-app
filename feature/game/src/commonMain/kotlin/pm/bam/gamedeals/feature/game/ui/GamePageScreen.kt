@@ -497,7 +497,10 @@ private fun GameTabs(
             1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
                 PricesTab(data, goToWeb, onShareDeal)
             }
-            2 -> Box(inset) { PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth()) }
+            2 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+                data.gameDetails?.let { CheapestEverBlock(it) }
+                PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth())
+            }
             3 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
                 StatsTab(data)
             }
@@ -605,18 +608,25 @@ private fun PricesTab(
 @Composable
 private fun StatsTab(data: GamePageData.Data) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        data.gameDetails?.let { gd ->
-            Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
-                Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = stringResource(Res.string.game_screen_cheapest_ever_on_date_label, gd.cheapestPriceEver.priceDenominated, gd.cheapestPriceEver.date),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
         data.igdbGame?.let { RatingsRow(it) }
         data.gameMeta?.players?.let { PlayersBlock(it) }
         data.gameMeta?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
+    }
+}
+
+/** The all-time historical low ("Cheapest ever") — shown on the History tab alongside the price chart. */
+@Composable
+private fun CheapestEverBlock(gameDetails: GameDetails) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+        Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = stringResource(
+                Res.string.game_screen_cheapest_ever_on_date_label,
+                gameDetails.cheapestPriceEver.priceDenominated,
+                gameDetails.cheapestPriceEver.date,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
