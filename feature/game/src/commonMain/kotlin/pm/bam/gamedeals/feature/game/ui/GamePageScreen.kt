@@ -56,12 +56,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -152,6 +152,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_error
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_loading_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_overview
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_regions
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
@@ -399,26 +400,20 @@ private fun GamePageBody(
             .padding(vertical = GameDealsCustomTheme.spacing.large),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
+        // The hero is the persistent header; everything else lives under a tab so each tab shows only its
+        // own data — the game info/metadata sits under the first "Overview" tab (epic #291).
         HeroSection(data)
-        PriceTabs(data = data, goToWeb = goToWeb, onShareDeal = onShareDeal, onRegionsSelected = onRegionsSelected)
-        NotesSection(
+        GameTabs(
+            data = data,
             note = note,
+            goToWeb = goToWeb,
+            onSimilarGameClick = onSimilarGameClick,
+            onShareDeal = onShareDeal,
             onSaveNote = onSaveNote,
             onDeleteNote = onDeleteNote,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+            onBundleClick = onBundleClick,
+            onRegionsSelected = onRegionsSelected,
         )
-        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
-        data.igdbGame?.let { igdb ->
-            if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
-            if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
-            if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
-            igdb.timeToBeat?.let { HltbSection(it) }
-            val dlcs = igdb.dlcs + igdb.expansions
-            if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
-            if (igdb.similarGames.isNotEmpty()) SimilarGamesSection(igdb.similarGames, onSimilarGameClick)
-            if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
-        }
-        if (data.websites.isNotEmpty()) LinksSection(data.websites)
     }
 }
 
@@ -459,39 +454,93 @@ private fun HeroSection(data: GamePageData.Data) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PriceTabs(
+private fun GameTabs(
     data: GamePageData.Data,
+    note: String?,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
+    onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableStateOf(0) }
     val tabs = listOf(
+        stringResource(Res.string.game_page_tab_overview),
         stringResource(Res.string.game_page_tab_prices),
         stringResource(Res.string.game_page_tab_history),
         stringResource(Res.string.game_page_tab_stats),
         stringResource(Res.string.game_page_tab_regions),
     )
-    val regionsIndex = 3
+    val regionsIndex = 4
     // Regional prices are N per-country fetches → load lazily, only once the Regions tab is first opened.
     LaunchedEffect(selected) { if (selected == regionsIndex) onRegionsSelected() }
+    // Scrollable (not fixed) — five labels would cramp on a phone. The Overview tab's sections pad
+    // themselves horizontally; the price-family tabs are wrapped in a horizontal-inset column.
+    val inset = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        TabRow(selectedTabIndex = selected) {
+        ScrollableTabRow(selectedTabIndex = selected, edgePadding = GameDealsCustomTheme.spacing.large) {
             tabs.forEachIndexed { index, label ->
                 Tab(selected = selected == index, onClick = { selected = index }, text = { Text(label) })
             }
         }
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-        ) {
-            when (selected) {
-                0 -> PricesTab(data, goToWeb, onShareDeal)
-                1 -> PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth())
-                2 -> StatsTab(data)
-                else -> RegionsTab(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb)
+        when (selected) {
+            0 -> OverviewTab(
+                data = data,
+                note = note,
+                onSimilarGameClick = onSimilarGameClick,
+                onSaveNote = onSaveNote,
+                onDeleteNote = onDeleteNote,
+                onBundleClick = onBundleClick,
+            )
+            1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+                PricesTab(data, goToWeb, onShareDeal)
+            }
+            2 -> Box(inset) { PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth()) }
+            3 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+                StatsTab(data)
+            }
+            else -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+                RegionsTab(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb)
             }
         }
+    }
+}
+
+/**
+ * The "Overview" tab — all the game info/metadata that used to sit below the tab strip (epic #291): the
+ * user's note, "found in bundles", description + tags, screenshots, HowLongToBeat, DLCs, similar games,
+ * companies and external links. Each section manages its own horizontal inset, so this column adds none.
+ */
+@Composable
+private fun OverviewTab(
+    data: GamePageData.Data,
+    note: String?,
+    onSimilarGameClick: (igdbGameId: Long) -> Unit,
+    onSaveNote: (String) -> Unit,
+    onDeleteNote: () -> Unit,
+    onBundleClick: (bundleId: Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large)) {
+        NotesSection(
+            note = note,
+            onSaveNote = onSaveNote,
+            onDeleteNote = onDeleteNote,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+        )
+        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
+        data.igdbGame?.let { igdb ->
+            if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
+            if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
+            if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
+            igdb.timeToBeat?.let { HltbSection(it) }
+            val dlcs = igdb.dlcs + igdb.expansions
+            if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
+            if (igdb.similarGames.isNotEmpty()) SimilarGamesSection(igdb.similarGames, onSimilarGameClick)
+            if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
+        }
+        if (data.websites.isNotEmpty()) LinksSection(data.websites)
     }
 }
 

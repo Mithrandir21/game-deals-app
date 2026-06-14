@@ -82,6 +82,7 @@
     <string name="game_details_no_match_back_button">Go back</string>
 
     <!-- Unified Game Page (epic #291) -->
+    <string name="game_page_tab_overview">Overview</string>
     <string name="game_page_tab_prices">Prices</string>
     <string name="game_page_tab_history">History</string>
     <string name="game_page_tab_stats">Stats</string>
