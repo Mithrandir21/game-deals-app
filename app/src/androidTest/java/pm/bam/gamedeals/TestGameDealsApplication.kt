@@ -16,7 +16,6 @@ import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.home.di.homeModule
-import pm.bam.gamedeals.feature.search.di.searchModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.remote.di.remoteModule
@@ -59,7 +58,6 @@ class TestGameDealsApplication : Application() {
                 homeModule,
                 gameModule,
                 giveawaysModule,
-                searchModule,
                 storeModule,
                 testNetworkOverridesModule,
                 testDatabaseOverridesModule,

@@ -133,7 +133,6 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:game"))
     implementation(project(":feature:store"))
-    implementation(project(":feature:search"))
     implementation(project(":feature:webview"))
     implementation(project(":feature:giveaways"))
     implementation(project(":feature:bundles"))

@@ -59,9 +59,6 @@ sealed interface Destination {
     data class GameDetailsByTitle(val title: String) : Destination
 
     @Serializable
-    data class Search(val initialQuery: String? = null) : Destination
-
-    @Serializable
     data class WebView(val url: String, val gameTitle: String) : Destination
 
     @Serializable

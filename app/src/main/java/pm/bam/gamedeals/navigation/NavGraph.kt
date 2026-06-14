@@ -25,7 +25,6 @@ import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
-import pm.bam.gamedeals.feature.search.navigation.searchScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.notifications.NotificationRoute
@@ -105,10 +104,7 @@ internal fun NavGraph(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
-            )
-
-            searchScreen(
-                goToGame = { gameId -> navActions.navigateToGame(gameId) }
+                goToSearchByTitle = { title -> navActions.navigateToSearch(title) },
             )
 
             webViewScreen(

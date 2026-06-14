@@ -30,6 +30,7 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.SearchRequestBus
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -53,8 +54,6 @@ import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
-import pm.bam.gamedeals.feature.search.di.searchModule
-import pm.bam.gamedeals.feature.search.navigation.searchScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -115,7 +114,6 @@ private fun bootstrapKoin() {
             itadRemoteModule,
             itadIosModule,
             homeModule,
-            searchModule,
             gameModule,
             giveawaysModule,
             storeModule,
@@ -166,7 +164,10 @@ private fun AppNavHost() {
         showTopBar = isTab && selectedTab != TopLevelDestination.GIVEAWAYS,
         showBottomBar = isTab,
         onSelectTab = { navigateTopLevel(it.destination) },
-        onSearch = { navController.navigate(Destination.Search()) },
+        onSearch = {
+            navigateTopLevel(Destination.Deals)
+            SearchRequestBus.request()
+        },
         onBrowseStores = null,
         accountUnreadCount = rememberAccountTabUnreadCount(),
     ) { padding ->
@@ -190,13 +191,14 @@ private fun AppNavHost() {
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToWeb = { url -> uriHandler.openUri(url) },
         )
-        searchScreen(
-            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
-        )
         gamePageScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
+            goToSearchByTitle = { title ->
+                navigateTopLevel(Destination.Deals)
+                SearchRequestBus.request(title)
+            },
         )
         giveawaysScreen(
             navController = navController,

@@ -48,7 +48,6 @@ kotlin {
             implementation(project(":remote:itad"))
             implementation(libs.androidx.compose.navigation)
             implementation(project(":feature:home"))
-            implementation(project(":feature:search"))
             implementation(project(":feature:game"))
             implementation(project(":feature:giveaways"))
             implementation(project(":feature:store"))

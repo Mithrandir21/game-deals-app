@@ -26,7 +26,6 @@ dependencies {
     kover(project(":domain"))
     kover(project(":feature:store"))
     kover(project(":feature:game"))
-    kover(project(":feature:search"))
     kover(project(":feature:home"))
     kover(project(":feature:webview"))
     kover(project(":feature:giveaways"))
@@ -43,7 +42,6 @@ val jacocoCoveredModulePaths = listOf(
     ":feature:home",
     ":feature:store",
     ":feature:game",
-    ":feature:search",
     ":feature:giveaways",
     ":feature:webview",
 )

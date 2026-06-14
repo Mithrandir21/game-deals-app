@@ -34,7 +34,6 @@ include(":domain")
 
 include(":feature:store")
 include(":feature:game")
-include(":feature:search")
 include(":feature:home")
 include(":feature:webview")
 include(":feature:giveaways")

@@ -19,13 +19,14 @@ fun NavGraphBuilder.gamePageScreen(
     navController: NavController,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
+    goToSearchByTitle: (title: String) -> Unit,
 ) {
     val content: @Composable () -> Unit = {
         GamePageScreen(
             onBack = { navController.popBackStack() },
             goToWeb = goToWeb,
             onSimilarGameClick = { igdbGameId -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) },
-            onSearchDealsByTitle = { title -> navController.navigate(Destination.Search(initialQuery = title)) },
+            onSearchDealsByTitle = goToSearchByTitle,
             onBundleClick = goToBundle,
         )
     }
