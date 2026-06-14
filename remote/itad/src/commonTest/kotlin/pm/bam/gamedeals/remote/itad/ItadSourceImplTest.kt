@@ -159,6 +159,7 @@ class ItadSourceImplTest {
         assertEquals("61,16", recorded.parameters["shops"])
         assertEquals("30", recorded.parameters["offset"])
         assertEquals("30", recorded.parameters["limit"])
+        assertNull(recorded.parameters["mature"]) // mature omitted unless opted in
     }
 
     @Test
@@ -169,6 +170,15 @@ class ItadSourceImplTest {
         assertEquals("/deals/v2", recorded.encodedPath)
         assertEquals("price", recorded.parameters["sort"])
         assertNull(recorded.parameters["shops"])
+    }
+
+    @Test
+    fun fetchDeals_query_sends_mature_only_when_opted_in() = runTest {
+        impl.fetchDeals(DealsQuery(sort = DealsSort.Trending, mature = true))
+
+        val recorded = recordedRequests.single().url
+        assertEquals("trending", recorded.parameters["sort"])
+        assertEquals("true", recorded.parameters["mature"])
     }
 
     @Test

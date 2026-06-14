@@ -21,6 +21,7 @@ class ItadDealsApi(private val httpClient: HttpClient) {
         limit: Int? = null,
         sort: String? = null,
         shops: String? = null,
+        mature: Boolean? = null,
     ): ApiResponse<RemoteItadDealsResponse> = try {
         ApiResponse.Success(
             httpClient.get("/deals/v2") {
@@ -29,6 +30,7 @@ class ItadDealsApi(private val httpClient: HttpClient) {
                 parameter("limit", limit)
                 parameter("sort", sort)
                 parameter("shops", shops)
+                parameter("mature", mature)
             }.body<RemoteItadDealsResponse>()
         )
     } catch (e: CancellationException) {

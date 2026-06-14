@@ -14,6 +14,7 @@ import androidx.compose.runtime.Immutable
 data class DealsQuery(
     val sort: DealsSort = DealsSort.TopDiscount,
     val shopIds: List<Int> = emptyList(),
+    val mature: Boolean = false,
     val offset: Int = 0,
     val limit: Int = DEALS_PAGE_SIZE,
 ) {
@@ -25,6 +26,9 @@ data class DealsQuery(
 
 /** Sort orders supported by ITAD `/deals/v2`, exposed as the Deals tab filter. */
 enum class DealsSort(val apiValue: String) {
+    /** Hottest / most-trending first (`trending`) — ITAD's default deals ordering. */
+    Trending("trending"),
+
     /** Biggest discount first (`-cut`). */
     TopDiscount("-cut"),
 
@@ -33,4 +37,7 @@ enum class DealsSort(val apiValue: String) {
 
     /** Cheapest first (`price`). */
     PriceLowToHigh("price"),
+
+    /** Soonest to expire first (`expiry`, ascending). */
+    ExpiringSoon("expiry"),
 }

@@ -100,6 +100,8 @@ internal class ItadSourceImpl(
             limit = query.limit,
             sort = query.sort.apiValue,
             shops = query.shopIds.takeIf { it.isNotEmpty() }?.joinToString(separator = ","),
+            // Only send `mature=true` to opt in; the default (param omitted) excludes adult titles.
+            mature = query.mature.takeIf { it },
         ).map { it.toDeal() }
 
     override suspend fun fetchDealDetails(id: String): DealDetails {
@@ -190,8 +192,9 @@ internal class ItadSourceImpl(
         limit: Int? = null,
         sort: String? = null,
         shops: String? = null,
+        mature: Boolean? = null,
     ): List<ItadDeal> =
-        dealsApi.getDeals(country = country, offset = offset, limit = limit, sort = sort, shops = shops)
+        dealsApi.getDeals(country = country, offset = offset, limit = limit, sort = sort, shops = shops, mature = mature)
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
