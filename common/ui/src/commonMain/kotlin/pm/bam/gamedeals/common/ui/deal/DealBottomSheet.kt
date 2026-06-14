@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -189,7 +189,7 @@ private fun DealContent(
                 onClick = { (data as? DealBottomSheetData.DealDetailsData)?.let(onToggleIgnore) },
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Clear,
+                    imageVector = Icons.Filled.VisibilityOff,
                     tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
                     contentDescription = stringResource(
                         if (isIgnored) Res.string.deal_ignore_remove_action
