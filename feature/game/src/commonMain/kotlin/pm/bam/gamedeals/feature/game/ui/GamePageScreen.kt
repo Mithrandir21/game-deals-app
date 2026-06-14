@@ -607,8 +607,9 @@ private fun PricesTab(
 
 @Composable
 private fun StatsTab(data: GamePageData.Data) {
+    // The Players/Critics rating pills (RatingsRow) live in the hero header — not repeated here. Stats
+    // shows the ITAD-only signals: current player counts + storefront/critic review scores.
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        data.igdbGame?.let { RatingsRow(it) }
         data.gameMeta?.players?.let { PlayersBlock(it) }
         data.gameMeta?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
     }
