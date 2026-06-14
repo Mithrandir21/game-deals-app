@@ -5,5 +5,5 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel
 
 val dealsModule = module {
-    viewModel { DealsViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { DealsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
 }

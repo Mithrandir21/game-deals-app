@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalCoroutinesApi::class)
+@file:OptIn(ExperimentalCoroutinesApi::class, ExperimentalSerializationApi::class)
 
 package pm.bam.gamedeals.feature.deals.ui
 
@@ -13,10 +13,14 @@ import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
@@ -24,6 +28,7 @@ import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -57,6 +62,7 @@ class DealsViewModelTest : MainDispatcherTest() {
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf())
     }
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -69,6 +75,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         waitlistRepository = waitlistRepository,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
+        gamesRepository = gamesRepository,
     )
 
     @Test
@@ -166,5 +173,81 @@ class DealsViewModelTest : MainDispatcherTest() {
 
         assertEquals(1, events.size)
         assertEquals(DealsViewModel.DealsUiEvent.SignInRequired, events.first())
+    }
+
+    @Test
+    fun setMature_reloads_page_zero_with_mature_opt_in() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.setMature(true)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.mature)
+        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, mature = true, offset = 0)) }
+    }
+
+    @Test
+    fun search_results_are_idle_until_a_query_is_set() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(DealsViewModel.SearchResultsState.Idle, vm.searchResults.value)
+    }
+
+    @Test
+    fun setSearchQuery_emits_loading_then_grouped_results() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+        val deals = listOf(deal("d1", gameID = "g1"))
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } returns deals
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        val emissions = vm.searchResults.observeEmissions(this.backgroundScope, testDispatcher)
+
+        vm.setSearchQuery("Halo")
+        runCurrent()
+        assertEquals(DealsViewModel.SearchResultsState.Loading, emissions.last())
+
+        advanceTimeBy(1200)
+        runCurrent()
+        assertEquals(DealsViewModel.SearchResultsState.Results(deals.groupByGame().toImmutableList()), emissions.last())
+    }
+
+    @Test
+    fun setSearchQuery_with_no_matches_emits_no_results() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } returns emptyList()
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        val emissions = vm.searchResults.observeEmissions(this.backgroundScope, testDispatcher)
+
+        vm.setSearchQuery("zzzz")
+        advanceTimeBy(1200)
+        runCurrent()
+
+        assertEquals(DealsViewModel.SearchResultsState.NoResults, emissions.last())
+    }
+
+    @Test
+    fun clearSearch_returns_results_to_idle() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+        everySuspend { gamesRepository.searchGames(searchParameters = any()) } returns listOf(deal("d1", gameID = "g1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.setSearchQuery("Halo")
+        advanceTimeBy(1200)
+        runCurrent()
+
+        vm.clearSearch()
+        advanceUntilIdle()
+
+        assertEquals(DealsViewModel.SearchResultsState.Idle, vm.searchResults.value)
     }
 }

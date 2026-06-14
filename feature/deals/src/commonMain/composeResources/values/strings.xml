@@ -9,9 +9,30 @@
     <string name="deals_screen_deal_row_description_waitlisted">Deal: %1$s, waitlisted, %2$s</string>
 
     <string name="deals_sort_label">Sort</string>
+    <string name="deals_sort_trending">Trending</string>
     <string name="deals_sort_top_discount">Top discount</string>
     <string name="deals_sort_recently_added">Recently added</string>
     <string name="deals_sort_price_low_high">Cheapest</string>
+    <string name="deals_sort_expiring_soon">Expiring soon</string>
 
     <string name="deals_filter_all_stores">All stores</string>
+
+    <!-- Filter bottom sheet -->
+    <string name="deals_filter_button">Filter</string>
+    <string name="deals_filter_button_count">Filter (%1$d)</string>
+    <string name="deals_filter_sheet_title">Filters</string>
+    <string name="deals_filter_section_sort">Sort</string>
+    <string name="deals_filter_section_stores">Stores</string>
+    <string name="deals_filter_mature_label">Show adult titles</string>
+    <string name="deals_filter_mature_switch_description">Show adult titles toggle</string>
+
+    <!-- Title search (merged from the former Search screen) -->
+    <string name="deals_search_field_label">Search game title</string>
+    <string name="deals_search_icon">Search icon</string>
+    <string name="deals_search_close">Close search</string>
+    <string name="deals_search_loading_indicator">Searching for games</string>
+    <string name="deals_search_no_results_label">No results found</string>
+    <string name="deals_search_result_count">%1$d deals</string>
+    <string name="deals_search_result_row_description">%1$s, %2$s</string>
+    <string name="deals_search_result_row_description_waitlisted">%1$s, waitlisted, %2$s</string>
 </resources>

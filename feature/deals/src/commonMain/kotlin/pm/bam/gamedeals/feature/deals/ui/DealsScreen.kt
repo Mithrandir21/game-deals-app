@@ -5,32 +5,64 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
@@ -41,10 +73,12 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.navigation.SearchRequestBus
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.components.WaitlistHeartButton
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -53,17 +87,35 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealsSort
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button_count
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_mature_label
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_mature_switch_description
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_sort
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_stores
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_sheet_title
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description_waitlisted
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_empty_label
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_load_more_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_retry
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_close
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_field_label
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_icon
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_loading_indicator
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_no_results_label
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_count
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_row_description
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_row_description_waitlisted
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_expiring_soon
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_price_low_high
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_recently_added
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_top_discount
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_trending
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
+import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.SearchResultsState
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
@@ -84,10 +136,25 @@ internal fun DealsScreen(
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
+    val mature by viewModel.mature.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
+
+    var searchRevealed by rememberSaveable { mutableStateOf(false) }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+
+    // Reveal (and optionally prefill) the search field when requested from elsewhere — the app-shell
+    // search icon, or the Game Page's "search by title" deep-link (consumed once via the bus).
+    LaunchedEffect(Unit) {
+        SearchRequestBus.requests.collect { title ->
+            searchRevealed = true
+            if (!title.isNullOrBlank()) viewModel.setSearchQuery(title)
+        }
+    }
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
@@ -103,11 +170,23 @@ internal fun DealsScreen(
         ignoredIds = ignoredIds,
         stores = stores,
         selectedShops = selectedShops,
+        mature = mature,
+        searchRevealed = searchRevealed,
+        searchQuery = searchQuery,
+        searchResults = searchResults,
+        showFilters = showFilters,
         dealDetails = dealDetails,
         snackbarHostState = snackbarHostState,
         onSelectSort = { viewModel.setSort(it) },
         onToggleShop = { viewModel.toggleShop(it) },
         onClearShops = { viewModel.clearShopFilter() },
+        onSetMature = { viewModel.setMature(it) },
+        onShowFiltersChange = { showFilters = it },
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+        onCloseSearch = {
+            searchRevealed = false
+            viewModel.clearSearch()
+        },
         onLoadMore = { viewModel.loadNextPage() },
         onRetry = { viewModel.retry() },
         onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
@@ -131,11 +210,20 @@ private fun DealsContent(
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
+    mature: Boolean = false,
+    searchRevealed: Boolean = false,
+    searchQuery: String = "",
+    searchResults: SearchResultsState = SearchResultsState.Idle,
+    showFilters: Boolean = false,
     dealDetails: DealBottomSheetData? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSelectSort: (DealsSort) -> Unit,
     onToggleShop: (Int) -> Unit = {},
     onClearShops: () -> Unit = {},
+    onSetMature: (Boolean) -> Unit = {},
+    onShowFiltersChange: (Boolean) -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onCloseSearch: () -> Unit = {},
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
@@ -147,6 +235,7 @@ private fun DealsContent(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
 ) {
+    val searching = searchQuery.isNotBlank()
     // Hide ignored games from the deals list (#280). Paging still tracks the full fetched list (offset),
     // so only the rendered list is filtered; the id set is Room-backed (correct on cold start + offline).
     val visibleDeals = remember(data.deals, ignoredIds) { data.deals.filter { it.gameID !in ignoredIds } }
@@ -158,9 +247,10 @@ private fun DealsContent(
     val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
-    // against duplicate/exhausted calls (appending / endReached / non-Data state).
-    val shouldLoadMore by remember(visibleDeals.size, data.deals.size) {
+    // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
+    val shouldLoadMore by remember(visibleDeals.size, data.deals.size, searching) {
         derivedStateOf {
+            if (searching) return@derivedStateOf false
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             // Also fetch more when the whole loaded page is filtered out (all ignored); the VM guards
             // against duplicate/exhausted calls (appending / endReached).
@@ -171,7 +261,7 @@ private fun DealsContent(
         if (shouldLoadMore) onLoadMore()
     }
 
-    if (data.status == DealsScreenData.Status.ERROR) {
+    if (data.status == DealsScreenData.Status.ERROR && !searching) {
         LaunchedEffect(snackbarHostState) {
             val result = snackbarHostState.showSnackbar(message = errorMessage, actionLabel = errorRetry)
             if (result == SnackbarResult.ActionPerformed) onRetry()
@@ -190,24 +280,34 @@ private fun DealsContent(
                 .fillMaxSize(),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                SortFilterRow(
-                    selected = data.sort,
-                    onSelectSort = onSelectSort,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                if (stores.isNotEmpty()) {
-                    ShopFilterRow(
-                        stores = stores,
-                        selected = selectedShops,
-                        onToggleShop = onToggleShop,
-                        onClearShops = onClearShops,
-                        modifier = Modifier.fillMaxWidth(),
+                // Toolbar: the title-search field when revealed, otherwise a Filter button opening the sheet.
+                if (searchRevealed) {
+                    DealsSearchField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        onClose = onCloseSearch,
+                    )
+                } else {
+                    FilterBar(
+                        activeCount = selectedShops.size + if (mature) 1 else 0,
+                        onClick = { onShowFiltersChange(true) },
                     )
                 }
 
                 Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     when {
+                        searching -> SearchResultsBody(
+                            state = searchResults,
+                            ignoredIds = ignoredIds,
+                            waitlistIds = waitlistIds,
+                            storesById = storesById,
+                            addToWaitlistCd = addToWaitlistCd,
+                            removeFromWaitlistCd = removeFromWaitlistCd,
+                            errorMessage = errorMessage,
+                            onGame = goToGame,
+                            onToggleWaitlist = onToggleWaitlist,
+                        )
+
                         data.status == DealsScreenData.Status.LOADING -> CircularProgressIndicator(
                             modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
                         )
@@ -272,68 +372,303 @@ private fun DealsContent(
                 onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
                 onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } },
             )
+
+            DealsFilterSheet(
+                show = showFilters,
+                onDismiss = { onShowFiltersChange(false) },
+                selectedSort = data.sort,
+                onSelectSort = onSelectSort,
+                stores = stores,
+                selectedShops = selectedShops,
+                onToggleShop = onToggleShop,
+                onClearShops = onClearShops,
+                mature = mature,
+                onSetMature = onSetMature,
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SortFilterRow(
-    selected: DealsSort,
-    onSelectSort: (DealsSort) -> Unit,
+private fun SearchResultsBody(
+    state: SearchResultsState,
+    ignoredIds: ImmutableSet<String>,
+    waitlistIds: ImmutableSet<String>,
+    storesById: Map<Int, Store>,
+    addToWaitlistCd: String,
+    removeFromWaitlistCd: String,
+    errorMessage: String,
+    onGame: (gameId: String) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
+) {
+    when (state) {
+        SearchResultsState.Idle -> Unit
+
+        SearchResultsState.Loading -> {
+            val loadingCd = stringResource(Res.string.deals_search_loading_indicator)
+            CircularProgressIndicator(
+                modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
+                    .semantics { contentDescription = loadingCd }
+            )
+        }
+
+        SearchResultsState.NoResults -> Text(
+            text = stringResource(Res.string.deals_search_no_results_label),
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+        )
+
+        SearchResultsState.Error -> Text(
+            text = errorMessage,
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+        )
+
+        is SearchResultsState.Results -> {
+            // Hide ignored games from the results (#280); the id set is Room-backed (cold-start/offline correct).
+            val visible = remember(state.results, ignoredIds) { state.results.filter { it.gameID !in ignoredIds } }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
+            ) {
+                items(items = visible, key = { it.gameID }) { group ->
+                    SearchResultListItem(
+                        deal = group.cheapestDeal,
+                        dealCount = group.totalDealCount,
+                        isWaitlisted = group.gameID in waitlistIds,
+                        store = storesById[group.cheapestDeal.storeID],
+                        addToWaitlistCd = addToWaitlistCd,
+                        removeFromWaitlistCd = removeFromWaitlistCd,
+                        onGame = { onGame(group.gameID) },
+                        onToggleWaitlist = { onToggleWaitlist(group.gameID) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultListItem(
+    deal: pm.bam.gamedeals.domain.models.Deal,
+    dealCount: Int,
+    isWaitlisted: Boolean,
+    store: Store?,
+    addToWaitlistCd: String,
+    removeFromWaitlistCd: String,
+    onGame: () -> Unit,
+    onToggleWaitlist: () -> Unit,
+) {
+    val showBadge = dealCount > 1
+    // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
+    // node carries the count, so we keep it out of the row CD to avoid TalkBack announcing it twice (#257).
+    val rowCd = if (isWaitlisted) {
+        stringResource(Res.string.deals_search_result_row_description_waitlisted, deal.title, deal.salePriceDenominated)
+    } else {
+        stringResource(Res.string.deals_search_result_row_description, deal.title, deal.salePriceDenominated)
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DealListRow(
+            modifier = Modifier.weight(1f),
+            title = deal.title,
+            contentDescription = rowCd,
+            onClick = onGame,
+            imageUrl = deal.thumb,
+            salePrice = deal.salePriceDenominated,
+            regularPrice = deal.normalPriceDenominated,
+            discountPercent = deal.savings.roundToInt(),
+            hasVoucher = deal.hasVoucher,
+            isNewHistoricalLow = deal.isNewHistoricalLow,
+            isStoreLow = deal.isStoreLow,
+            storeName = store?.storeName,
+            storeIconUrl = store?.iconUrl,
+        )
+        if (showBadge) {
+            DealCountBadge(count = dealCount)
+        }
+        WaitlistHeartButton(
+            isWaitlisted = isWaitlisted,
+            onToggle = onToggleWaitlist,
+            addToWaitlistContentDescription = addToWaitlistCd,
+            removeFromWaitlistContentDescription = removeFromWaitlistCd,
+        )
+    }
+}
+
+@Composable
+private fun DealCountBadge(count: Int) {
+    Surface(
+        shape = RoundedCornerShape(GameDealsCustomTheme.spacing.small),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Text(
+            text = stringResource(Res.string.deals_search_result_count, count),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(
+                horizontal = GameDealsCustomTheme.spacing.small,
+                vertical = GameDealsCustomTheme.spacing.extraSmall,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun FilterBar(
+    activeCount: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
-            .horizontalScroll(rememberScrollState())
+            .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        DealsSort.entries.forEach { sort ->
-            FilterChip(
-                selected = sort == selected,
-                onClick = { onSelectSort(sort) },
-                label = { Text(stringResource(sort.labelRes())) },
+        OutlinedButton(onClick = onClick) {
+            Icon(Icons.Filled.FilterList, contentDescription = null)
+            Text(
+                modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.small),
+                text = if (activeCount > 0) stringResource(Res.string.deals_filter_button_count, activeCount)
+                else stringResource(Res.string.deals_filter_button),
             )
+        }
+    }
+}
+
+@Composable
+private fun DealsSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+
+    // Focus the field as soon as it is revealed so the user can type immediately.
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    TextField(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
+            .focusRequester(focusRequester),
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        maxLines = 1,
+        leadingIcon = {
+            Icon(Icons.Filled.Search, contentDescription = stringResource(Res.string.deals_search_icon))
+        },
+        trailingIcon = {
+            IconButton(onClick = onClose) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.deals_search_close))
+            }
+        },
+        label = { Text(stringResource(Res.string.deals_search_field_label)) },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions {
+            keyboardController?.hide()
+            focusManager.clearFocus()
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun DealsFilterSheet(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    selectedSort: DealsSort,
+    onSelectSort: (DealsSort) -> Unit,
+    stores: ImmutableList<Store>,
+    selectedShops: ImmutableSet<Int>,
+    onToggleShop: (Int) -> Unit,
+    onClearShops: () -> Unit,
+    mature: Boolean,
+    onSetMature: (Boolean) -> Unit,
+) {
+    if (!show) return
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val matureCd = stringResource(Res.string.deals_filter_mature_switch_description)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GameDealsCustomTheme.spacing.large)
+                .padding(bottom = GameDealsCustomTheme.spacing.large)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            Text(
+                text = stringResource(Res.string.deals_filter_sheet_title),
+                style = MaterialTheme.typography.titleLarge,
+            )
+
+            // Sort (single-select)
+            Text(text = stringResource(Res.string.deals_filter_section_sort), style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+                DealsSort.entries.forEach { sort ->
+                    FilterChip(
+                        selected = sort == selectedSort,
+                        onClick = { onSelectSort(sort) },
+                        label = { Text(stringResource(sort.labelRes())) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Stores (multi-select; empty == all)
+            Text(text = stringResource(Res.string.deals_filter_section_stores), style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+                FilterChip(
+                    selected = selectedShops.isEmpty(),
+                    onClick = onClearShops,
+                    label = { Text(stringResource(Res.string.deals_filter_all_stores)) },
+                )
+                stores.forEach { store ->
+                    FilterChip(
+                        selected = store.storeID in selectedShops,
+                        onClick = { onToggleShop(store.storeID) },
+                        label = { Text(store.storeName) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Mature toggle
+            Row(
+                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = stringResource(Res.string.deals_filter_mature_label), modifier = Modifier.weight(1f))
+                Switch(
+                    modifier = Modifier.semantics { contentDescription = matureCd },
+                    checked = mature,
+                    onCheckedChange = onSetMature,
+                )
+            }
         }
     }
 }
 
 private fun DealsSort.labelRes(): StringResource = when (this) {
+    DealsSort.Trending -> Res.string.deals_sort_trending
     DealsSort.TopDiscount -> Res.string.deals_sort_top_discount
     DealsSort.RecentlyAdded -> Res.string.deals_sort_recently_added
     DealsSort.PriceLowToHigh -> Res.string.deals_sort_price_low_high
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ShopFilterRow(
-    stores: ImmutableList<Store>,
-    selected: ImmutableSet<Int>,
-    onToggleShop: (Int) -> Unit,
-    onClearShops: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-    ) {
-        // Empty selection == all stores; the "All stores" chip clears the filter.
-        FilterChip(
-            selected = selected.isEmpty(),
-            onClick = onClearShops,
-            label = { Text(stringResource(Res.string.deals_filter_all_stores)) },
-        )
-        stores.forEach { store ->
-            FilterChip(
-                selected = store.storeID in selected,
-                onClick = { onToggleShop(store.storeID) },
-                label = { Text(store.storeName) },
-            )
-        }
-    }
+    DealsSort.ExpiringSoon -> Res.string.deals_sort_expiring_soon
 }
 
 private val previewDeals = persistentListOf(
