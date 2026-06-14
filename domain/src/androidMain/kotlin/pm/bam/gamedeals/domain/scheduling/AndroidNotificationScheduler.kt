@@ -27,7 +27,7 @@ internal class AndroidNotificationScheduler(private val context: Context) : Noti
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             NOTIFICATION_POLL_WORK,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request,
         )
     }

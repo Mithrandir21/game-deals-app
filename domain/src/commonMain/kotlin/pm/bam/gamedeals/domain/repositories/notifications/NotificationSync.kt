@@ -1,6 +1,9 @@
 package pm.bam.gamedeals.domain.repositories.notifications
 
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.NotificationGame
 
@@ -42,13 +45,17 @@ internal class NotificationSyncImpl(
         val surfaced = surfacedStore.get()
         val new = all.filter { !it.read && it.id !in surfaced }
 
-        val alerts = new.map { notification ->
-            val games = if (notification.type == WAITLIST_TYPE) {
-                runCatching { repository.getWaitlistGames(notification.id) }.getOrDefault(emptyList())
-            } else {
-                emptyList()
-            }
-            PendingNotificationAlert(notification.id, notification.title, games)
+        val alerts = coroutineScope {
+            new.map { notification ->
+                async {
+                    val games = if (notification.type == WAITLIST_TYPE) {
+                        runCatching { repository.getWaitlistGames(notification.id) }.getOrDefault(emptyList())
+                    } else {
+                        emptyList()
+                    }
+                    PendingNotificationAlert(notification.id, notification.title, games)
+                }
+            }.awaitAll()
         }
 
         // Remember everything currently on the server as "surfaced", pruning ids the server no longer

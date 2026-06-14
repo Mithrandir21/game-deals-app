@@ -48,7 +48,7 @@ class AndroidNotificationSchedulerTest {
         verify(exactly = 1) {
             workManager.enqueueUniquePeriodicWork(
                 NOTIFICATION_POLL_WORK,
-                ExistingPeriodicWorkPolicy.KEEP, // idempotent re-arm on every app start
+                ExistingPeriodicWorkPolicy.UPDATE, // update existing users' interval/constraints
                 capture(request),
             )
         }

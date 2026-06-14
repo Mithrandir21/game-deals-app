@@ -50,10 +50,18 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
                 )
             }
             if (alerts.size > 1) {
+                val summaryTitle = context.getString(R.string.notification_channel_waitlist)
+                val summaryText = context.getString(R.string.notification_summary_text, alerts.size)
                 manager.notify(
                     SUMMARY_ID,
                     NotificationCompat.Builder(context, CHANNEL_ID)
                         .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentTitle(summaryTitle)
+                        .setContentText(summaryText)
+                        .setStyle(
+                            NotificationCompat.InboxStyle()
+                                .setSummaryText(summaryText)
+                        )
                         .setGroup(GROUP_KEY)
                         .setGroupSummary(true)
                         .setContentIntent(routeIntent(ROUTE_NOTIFICATIONS, gameId = null, requestCode = SUMMARY_ID))
@@ -85,7 +93,7 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
     private companion object {
         const val CHANNEL_ID = "itad_waitlist"
         const val GROUP_KEY = "itad_waitlist_group"
-        const val SUMMARY_ID = 0
+        const val SUMMARY_ID = Int.MIN_VALUE
         const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     }
 }

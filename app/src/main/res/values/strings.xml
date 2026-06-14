@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Game Deals</string>
     <string name="notification_channel_waitlist">Waitlist alerts</string>
+    <string name="notification_summary_text">%1$d new deals</string>
 </resources>
