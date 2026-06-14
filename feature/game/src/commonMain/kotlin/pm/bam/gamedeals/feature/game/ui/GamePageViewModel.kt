@@ -31,6 +31,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
@@ -267,6 +268,31 @@ internal class GamePageViewModel(
         uiState.value = current.copy(showPicker = false)
     }
 
+    /**
+     * Lazily loads the cross-region price comparison the first time the Regions tab is opened (epic #291,
+     * Phase 7) — it's N per-country round-trips, so it must not run on every page open. No ITAD id (a
+     * metadata-only page) → an empty Loaded state (nothing to compare).
+     */
+    fun onRegionsSelected() {
+        val current = uiState.value as? GamePageData.Data ?: return
+        if (current.regionalPricesState != RegionalPricesState.Idle) return
+        val id = gameIdFlow.value
+        if (id == null) {
+            uiState.value = current.copy(regionalPricesState = RegionalPricesState.Loaded(persistentListOf()))
+            return
+        }
+        uiState.value = current.copy(regionalPricesState = RegionalPricesState.Loading)
+        viewModelScope.launch {
+            val next: RegionalPricesState = try {
+                RegionalPricesState.Loaded(gamesRepository.getRegionalPrices(id).toImmutableList())
+            } catch (_: Throwable) {
+                RegionalPricesState.Error
+            }
+            val after = uiState.value as? GamePageData.Data ?: return@launch
+            uiState.value = after.copy(regionalPricesState = next)
+        }
+    }
+
     /** Swap only the IGDB metadata side to the picked match; the ITAD deal side (gameId) is unchanged. */
     fun onCandidatePicked(igdbGameId: Long) {
         val current = uiState.value as? GamePageData.Data ?: return
@@ -317,6 +343,13 @@ internal class GamePageViewModel(
         data object Error : CandidatesState()
     }
 
+    sealed class RegionalPricesState {
+        data object Idle : RegionalPricesState()
+        data object Loading : RegionalPricesState()
+        data class Loaded(val items: ImmutableList<RegionalPrice>) : RegionalPricesState()
+        data object Error : RegionalPricesState()
+    }
+
     sealed class GamePageData {
         data object Loading : GamePageData()
         data object Error : GamePageData()
@@ -337,6 +370,7 @@ internal class GamePageViewModel(
             val resolvedByTitle: Boolean = false,
             val candidatesState: CandidatesState = CandidatesState.Idle,
             val showPicker: Boolean = false,
+            val regionalPricesState: RegionalPricesState = RegionalPricesState.Idle,
         ) : GamePageData()
     }
 }

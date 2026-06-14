@@ -23,8 +23,10 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -172,6 +174,32 @@ class GamePageViewModelTest : MainDispatcherTest() {
         assertNull(state.gameDetails)
         assertTrue(state.dealDetails.isEmpty())
         verifySuspend(exactly(0)) { gamesRepository.findGameIdBySteamAppId(any(), any()) }
+    }
+
+    @Test
+    fun regions_tab_lazily_loads_regional_prices_on_selection() = runTest {
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(1240440) } returns igdb(steamAppId = 1240440)
+        everySuspend { gamesRepository.getGameDetails("g1") } returns gameDetails(
+            info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"),
+            deals = persistentListOf(gameDeal()),
+        )
+        everySuspend { gamesRepository.getRegionalPrices("g1") } returns listOf(
+            RegionalPrice(Country("US", "United States"), 9.99, "$9.99", "https://store/x"),
+        )
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
+        runCurrent()
+
+        // Not loaded until the Regions tab is opened.
+        assertEquals(GamePageViewModel.RegionalPricesState.Idle, (emissions.last() as GamePageViewModel.GamePageData.Data).regionalPricesState)
+
+        vm.onRegionsSelected()
+        runCurrent()
+
+        val regions = (emissions.last() as GamePageViewModel.GamePageData.Data).regionalPricesState
+        assertTrue(regions is GamePageViewModel.RegionalPricesState.Loaded)
+        assertEquals(1, regions.items.size)
+        verifySuspend(exactly(1)) { gamesRepository.getRegionalPrices("g1") }
     }
 
     @Test

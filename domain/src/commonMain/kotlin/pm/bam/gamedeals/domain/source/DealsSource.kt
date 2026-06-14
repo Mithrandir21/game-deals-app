@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.source
 
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
@@ -8,6 +9,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 
@@ -83,6 +85,13 @@ interface DealsSource {
      * data return an empty list.
      */
     suspend fun fetchBundlesForGame(gameId: String): List<Bundle>
+
+    /**
+     * The game's cheapest current price in each of [countries] (epic #291, Phase 7 — the Game Page's
+     * "Regions" tab), one `/games/prices/v3` query per region. Regions with no current deal are omitted.
+     * Prices are in each region's own currency and are not converted/comparable as raw values.
+     */
+    suspend fun fetchRegionalPrices(gameId: String, countries: List<Country>): List<RegionalPrice>
 
     suspend fun fetchStores(): List<Store>
 }

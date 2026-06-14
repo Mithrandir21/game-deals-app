@@ -15,11 +15,13 @@ import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -48,6 +50,22 @@ internal val PRICE_HISTORY_TTL_MILLIS = millisInDay
  */
 internal val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
 
+/**
+ * Curated regions for the Game Page's "Regions" tab (epic #291, Phase 7). Each is a separate
+ * `/games/prices/v3` round-trip, so the set is kept small and skewed to regions whose pricing differs
+ * most (cheap: TR/BR/IN/AR; reference: US/GB/DE/JP). Drawn from [SUPPORTED_COUNTRIES].
+ */
+internal val REGIONAL_COMPARISON_COUNTRIES: List<Country> = listOf(
+    Country("US", "United States"),
+    Country("GB", "United Kingdom"),
+    Country("DE", "Germany"),
+    Country("BR", "Brazil"),
+    Country("TR", "Türkiye"),
+    Country("IN", "India"),
+    Country("AR", "Argentina"),
+    Country("JP", "Japan"),
+)
+
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>
     suspend fun searchGames(query: String): List<Game>
@@ -72,6 +90,9 @@ interface GamesRepository {
 
     /** Bundles that contain the game (ITAD `/games/bundles/v2`) for the Game Page's "Found in bundles" section (#291). */
     suspend fun getBundlesForGame(gameId: String): List<Bundle>
+
+    /** The game's cheapest price across [REGIONAL_COMPARISON_COUNTRIES] for the Game Page's "Regions" tab (#291). */
+    suspend fun getRegionalPrices(gameId: String): List<RegionalPrice>
 }
 
 internal class GamesRepositoryImpl(
@@ -250,4 +271,7 @@ internal class GamesRepositoryImpl(
 
     override suspend fun getBundlesForGame(gameId: String): List<Bundle> =
         dealsSource.fetchBundlesForGame(gameId)
+
+    override suspend fun getRegionalPrices(gameId: String): List<RegionalPrice> =
+        dealsSource.fetchRegionalPrices(gameId, REGIONAL_COMPARISON_COUNTRIES)
 }

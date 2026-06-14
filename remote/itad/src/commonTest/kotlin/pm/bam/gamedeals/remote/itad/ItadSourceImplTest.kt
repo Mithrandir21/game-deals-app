@@ -357,6 +357,20 @@ class ItadSourceImplTest {
     }
 
     @Test
+    fun fetchRegionalPrices_queries_each_country_and_maps_cheapest_deal() = runTest {
+        val regions = listOf(Country("US", "United States"), Country("GB", "United Kingdom"))
+
+        val prices = impl.fetchRegionalPrices("uuid-1", regions)
+
+        assertEquals(2, prices.size)
+        assertEquals("United States", prices[0].country.name)
+        assertEquals(7.49, prices[0].priceValue) // cheapest deal in PRICES_BODY (shop 35)
+        assertEquals("\$7.49", prices[0].priceDenominated)
+        assertEquals("GB", prices[1].country.code)
+        assertEquals(2, recordedRequests.count { it.url.encodedPath == "/games/prices/v3" })
+    }
+
+    @Test
     fun fetchGameMeta_maps_catalogue_reviews_stats_and_players_from_info() = runTest {
         val meta = impl.fetchGameMeta("uuid-1")
 

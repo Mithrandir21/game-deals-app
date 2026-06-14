@@ -24,9 +24,11 @@ import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.logging.Logger
@@ -333,5 +335,16 @@ class GamesRepositoryTest {
 
         assertEquals(bundles, result)
         verifySuspend(exactly(1)) { dealsSource.fetchBundlesForGame(gameId) }
+    }
+
+    @Test
+    fun get_regional_prices_delegates_with_the_curated_country_set() = runTest {
+        val regions = listOf(RegionalPrice(Country("US", "United States"), 9.99, "$9.99", "https://store/x"))
+        everySuspend { dealsSource.fetchRegionalPrices("uuid-1", REGIONAL_COMPARISON_COUNTRIES) } returns regions
+
+        val result = impl.getRegionalPrices("uuid-1")
+
+        assertEquals(regions, result)
+        verifySuspend(exactly(1)) { dealsSource.fetchRegionalPrices("uuid-1", REGIONAL_COMPARISON_COUNTRIES) }
     }
 }

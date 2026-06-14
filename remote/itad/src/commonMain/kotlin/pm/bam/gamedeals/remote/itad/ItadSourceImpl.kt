@@ -4,6 +4,7 @@ import com.skydoves.sandwich.getOrThrow
 import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
@@ -11,6 +12,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -21,6 +23,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
+import pm.bam.gamedeals.remote.itad.mappers.denominated
 import pm.bam.gamedeals.remote.itad.mappers.gameIdFromDealId
 import pm.bam.gamedeals.remote.itad.mappers.toDeal
 import pm.bam.gamedeals.remote.itad.mappers.toDealDetails
@@ -152,6 +155,21 @@ internal class ItadSourceImpl(
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .map { it.toBundle() }
+
+    override suspend fun fetchRegionalPrices(gameId: String, countries: List<Country>): List<RegionalPrice> =
+        countries.mapNotNull { country ->
+            val cheapest = fetchGamePrices(listOf(gameId), country = country.code)
+                .firstOrNull()
+                ?.deals
+                ?.minByOrNull { it.price.amount }
+                ?: return@mapNotNull null
+            RegionalPrice(
+                country = country,
+                priceValue = cheapest.price.amount,
+                priceDenominated = cheapest.price.denominated(),
+                url = cheapest.url,
+            )
+        }
 
     /** Cheapest current deal per game for a title search; carries the game's title/boxart onto the deal. */
     private suspend fun dealsByTitle(title: String, limit: Int?, country: String): List<Deal> {

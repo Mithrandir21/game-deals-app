@@ -148,8 +148,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_dlcs
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_hltb
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_players
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_reviews
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_loading_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_regions
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_on_date_label
@@ -236,6 +240,7 @@ internal fun GamePageScreen(
         onPickerDismiss = viewModel::onPickerDismiss,
         onCandidatePicked = viewModel::onCandidatePicked,
         onBundleClick = onBundleClick,
+        onRegionsSelected = viewModel::onRegionsSelected,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -261,6 +266,7 @@ private fun GamePageContent(
     onPickerDismiss: () -> Unit,
     onCandidatePicked: (igdbGameId: Long) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
+    onRegionsSelected: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -362,6 +368,7 @@ private fun GamePageContent(
                     onSaveNote = onSaveNote,
                     onDeleteNote = onDeleteNote,
                     onBundleClick = onBundleClick,
+                    onRegionsSelected = onRegionsSelected,
                 )
             }
         }
@@ -383,6 +390,7 @@ private fun GamePageBody(
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
+    onRegionsSelected: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -392,7 +400,7 @@ private fun GamePageBody(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
         HeroSection(data)
-        PriceTabs(data = data, goToWeb = goToWeb, onShareDeal = onShareDeal)
+        PriceTabs(data = data, goToWeb = goToWeb, onShareDeal = onShareDeal, onRegionsSelected = onRegionsSelected)
         NotesSection(
             note = note,
             onSaveNote = onSaveNote,
@@ -455,13 +463,18 @@ private fun PriceTabs(
     data: GamePageData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onRegionsSelected: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableStateOf(0) }
     val tabs = listOf(
         stringResource(Res.string.game_page_tab_prices),
         stringResource(Res.string.game_page_tab_history),
         stringResource(Res.string.game_page_tab_stats),
+        stringResource(Res.string.game_page_tab_regions),
     )
+    val regionsIndex = 3
+    // Regional prices are N per-country fetches → load lazily, only once the Regions tab is first opened.
+    LaunchedEffect(selected) { if (selected == regionsIndex) onRegionsSelected() }
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
         TabRow(selectedTabIndex = selected) {
             tabs.forEachIndexed { index, label ->
@@ -475,7 +488,46 @@ private fun PriceTabs(
             when (selected) {
                 0 -> PricesTab(data, goToWeb, onShareDeal)
                 1 -> PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth())
-                else -> StatsTab(data)
+                2 -> StatsTab(data)
+                else -> RegionsTab(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegionsTab(
+    state: GamePageViewModel.RegionalPricesState,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+) {
+    when (state) {
+        GamePageViewModel.RegionalPricesState.Idle,
+        GamePageViewModel.RegionalPricesState.Loading -> {
+            val loadingCd = stringResource(Res.string.game_page_regions_loading_cd)
+            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
+            }
+        }
+        GamePageViewModel.RegionalPricesState.Error -> Text(
+            text = stringResource(Res.string.game_page_regions_error),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        is GamePageViewModel.RegionalPricesState.Loaded -> {
+            if (state.items.isEmpty()) {
+                Text(text = stringResource(Res.string.game_page_regions_empty), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                state.items.forEachIndexed { index, region ->
+                    if (index > 0) HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { goToWeb(region.url, gameTitle) }.padding(vertical = GameDealsCustomTheme.spacing.small),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = region.country.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Text(text = region.priceDenominated, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         }
     }

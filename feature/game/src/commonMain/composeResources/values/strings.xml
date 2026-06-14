@@ -85,6 +85,10 @@
     <string name="game_page_tab_prices">Prices</string>
     <string name="game_page_tab_history">History</string>
     <string name="game_page_tab_stats">Stats</string>
+    <string name="game_page_tab_regions">Regions</string>
+    <string name="game_page_regions_empty">No regional prices available.</string>
+    <string name="game_page_regions_error">Couldn\'t load regional prices.</string>
+    <string name="game_page_regions_loading_cd">Loading regional prices</string>
 
     <!-- Game Page sections (Phase 6) -->
     <string name="game_page_section_reviews">Reviews</string>
