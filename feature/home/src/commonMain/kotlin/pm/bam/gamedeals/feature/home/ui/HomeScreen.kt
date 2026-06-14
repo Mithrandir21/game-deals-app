@@ -139,8 +139,6 @@ internal fun HomeScreen(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -174,8 +172,6 @@ internal fun HomeScreen(
         onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
         onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
-        goToGameDetails = goToGameDetails,
-        goToGameDetailsByTitle = goToGameDetailsByTitle,
         onRetry = { viewModel.retry() },
     )
 
@@ -208,8 +204,6 @@ private fun HomeScreenContent(
     onShareDealDetails: (data: DealBottomSheetData) -> Unit,
     onToggleDealWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -259,8 +253,6 @@ private fun HomeScreenContent(
                     onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
                     goToWeb = goToWeb,
                     goToGame = goToGame,
-                    goToGameDetails = goToGameDetails,
-                    goToGameDetailsByTitle = goToGameDetailsByTitle,
                     onRetryDealDetails = {
                         dealDetails?.let { onViewDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) }
                     },
@@ -737,8 +729,6 @@ private fun HomeScreenContent_Success_Preview() {
             onShareDealDetails = {},
             onToggleDealWaitlist = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = { _, _ -> },
-            goToGameDetailsByTitle = {},
             onRetry = {},
         )
     }
@@ -764,8 +754,6 @@ private fun HomeScreenContent_Success_Dark_Preview() {
             onShareDealDetails = {},
             onToggleDealWaitlist = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = { _, _ -> },
-            goToGameDetailsByTitle = {},
             onRetry = {},
         )
     }
@@ -791,8 +779,6 @@ private fun HomeScreenContent_Loading_Preview() {
             onShareDealDetails = {},
             onToggleDealWaitlist = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = { _, _ -> },
-            goToGameDetailsByTitle = {},
             onRetry = {},
         )
     }
@@ -818,8 +804,6 @@ private fun HomeScreenContent_Error_Preview() {
             onShareDealDetails = {},
             onToggleDealWaitlist = {},
             goToWeb = { _, _ -> },
-            goToGameDetails = { _, _ -> },
-            goToGameDetailsByTitle = {},
             onRetry = {},
         )
     }

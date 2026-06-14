@@ -81,8 +81,6 @@ internal fun NavGraph(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
-                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
-                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
             )
@@ -90,8 +88,6 @@ internal fun NavGraph(
             dealsScreen(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
-                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
-                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
             accountScreen(
                 navController = navController,
@@ -103,8 +99,6 @@ internal fun NavGraph(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
-                goToGameDetails = { steamAppId, title -> navActions.navigateToGameDetails(steamAppId, title) },
-                goToGameDetailsByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
             )
 
             gamePageScreen(

@@ -10,16 +10,12 @@ fun NavGraphBuilder.storeScreen(
     navController: NavController,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     composable<Destination.Store> {
         StoreScreen(
             onBack = { navController.popBackStack() },
             goToWeb = goToWeb,
             goToGame = goToGame,
-            goToGameDetails = goToGameDetails,
-            goToGameDetailsByTitle = goToGameDetailsByTitle,
         )
     }
 }

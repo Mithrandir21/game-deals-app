@@ -29,7 +29,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
-import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -65,8 +64,6 @@ class DealBottomSheetTest {
         onShare: (DealBottomSheetData) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
         goToGame: (String) -> Unit = {},
-        goToGameDetails: (Int, String) -> Unit = { _, _ -> },
-        goToGameDetailsByTitle: (String) -> Unit = {},
         onRetryDealDetails: () -> Unit = {},
         cheapestOnArgs: Pair<String, String>? = null,
         cheaperStoreRowArgs: Pair<String, String>? = null,
@@ -87,8 +84,6 @@ class DealBottomSheetTest {
                     onShare = onShare,
                     goToWeb = goToWeb,
                     goToGame = goToGame,
-                    goToGameDetails = goToGameDetails,
-                    goToGameDetailsByTitle = goToGameDetailsByTitle,
                     onRetryDealDetails = onRetryDealDetails,
                 )
             }
@@ -241,17 +236,6 @@ class DealBottomSheetTest {
     }
 
     @Test
-    fun gameDetailsButton_visible_when_steamAppID_present() {
-        val steamId = 1240440
-        val data = dealDetailsData(steamAppID = steamId)
-
-        setupCompose(data = data)
-
-        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
-            .assertIsDisplayed()
-    }
-
-    @Test
     fun gamePageButton_click_invokes_goToGame_with_gameId() {
         val data = dealDetailsData(steamAppID = 1240440)
         val goToGame: (String) -> Unit = mockk {
@@ -266,66 +250,6 @@ class DealBottomSheetTest {
             .performClick()
 
         verify(exactly = 1) { goToGame.invoke(gameId) }
-    }
-
-    @Test
-    fun gameDetailsButton_visible_when_steamAppID_null_so_non_Steam_deals_can_route_by_title() {
-        val data = dealDetailsData(steamAppID = null)
-
-        setupCompose(data = data)
-
-        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
-            .assertIsDisplayed()
-    }
-
-    @Test
-    fun gameDetailsButton_click_invokes_callback_with_steamAppID_and_title() {
-        val steamId = 1240440
-        val data = dealDetailsData(steamAppID = steamId)
-        val goToGameDetails: (Int, String) -> Unit = mockk {
-            every { this@mockk.invoke(any(), any()) } just Runs
-        }
-        val goToGameDetailsByTitle: (String) -> Unit = mockk {
-            every { this@mockk.invoke(any()) } just Runs
-        }
-
-        setupCompose(
-            data = data,
-            goToGameDetails = goToGameDetails,
-            goToGameDetailsByTitle = goToGameDetailsByTitle,
-        )
-
-        verify(exactly = 0) { goToGameDetails.invoke(any(), any()) }
-
-        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
-            .performClick()
-
-        // Steam-id path now carries the title for the VM's fallback cascade (handles bundles / sub-ids).
-        verify(exactly = 1) { goToGameDetails.invoke(steamId, gameName) }
-        verify(exactly = 0) { goToGameDetailsByTitle.invoke(any()) }
-    }
-
-    @Test
-    fun gameDetailsButton_click_routes_via_title_when_steamAppID_null() {
-        val data = dealDetailsData(steamAppID = null)
-        val goToGameDetails: (Int, String) -> Unit = mockk {
-            every { this@mockk.invoke(any(), any()) } just Runs
-        }
-        val goToGameDetailsByTitle: (String) -> Unit = mockk {
-            every { this@mockk.invoke(any()) } just Runs
-        }
-
-        setupCompose(
-            data = data,
-            goToGameDetails = goToGameDetails,
-            goToGameDetailsByTitle = goToGameDetailsByTitle,
-        )
-
-        composeTestRule.onNodeWithText(screenSemantics.gameDetails)
-            .performClick()
-
-        verify(exactly = 1) { goToGameDetailsByTitle.invoke(gameName) }
-        verify(exactly = 0) { goToGameDetails.invoke(any(), any()) }
     }
 
     private fun dealDetailsData(steamAppID: Int?): DealBottomSheetData.DealDetailsData {
@@ -361,7 +285,6 @@ class DealBottomSheetTest {
         val cheapestNo: String,
         val goToDeal: String,
         val gamePage: String,
-        val gameDetails: String,
     ) {
         companion object {
             @Composable
@@ -373,7 +296,6 @@ class DealBottomSheetTest {
                 cheapestNo = stringResource(Res.string.deal_details_cheapest_no),
                 goToDeal = stringResource(Res.string.deal_details_go_to_deal_label),
                 gamePage = stringResource(Res.string.deal_details_view_game_page_label),
-                gameDetails = stringResource(Res.string.deal_details_view_game_details_label),
             )
 
             @Composable

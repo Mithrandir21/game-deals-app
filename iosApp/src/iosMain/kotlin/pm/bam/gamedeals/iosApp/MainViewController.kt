@@ -179,15 +179,11 @@ private fun AppNavHost() {
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToGiveaway = { navigateTopLevel(Destination.Giveaways) },
             goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
-            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
         dealsScreen(
             goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
-            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         accountScreen(
             navController = navController,
@@ -217,8 +213,6 @@ private fun AppNavHost() {
         storeScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGameDetails = { steamAppId, title -> navController.navigate(Destination.GameDetails(steamAppId, title)) },
-            goToGameDetailsByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
         )
         webViewScreen(
             onBack = { navController.popBackStack() },

@@ -78,8 +78,6 @@ class StoreScreenTest {
     private fun setupCompose(
         onBack: () -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
-        goToGameDetails: (Int, String) -> Unit = { _, _ -> },
-        goToGameDetailsByTitle: (String) -> Unit = { _ -> },
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
@@ -89,8 +87,6 @@ class StoreScreenTest {
                     onBack = onBack,
                     goToWeb = goToWeb,
                     goToGame = {},
-                    goToGameDetails = goToGameDetails,
-                    goToGameDetailsByTitle = goToGameDetailsByTitle,
                     viewModel = viewModel,
                 )
             }

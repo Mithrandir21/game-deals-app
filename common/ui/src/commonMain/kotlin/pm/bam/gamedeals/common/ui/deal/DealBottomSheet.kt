@@ -81,7 +81,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steam_reviews
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_no
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_steamworks_label_yes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_title_label
-import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_details_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_wiki_label
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
@@ -100,8 +99,6 @@ fun DealBottomSheet(
     onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     onRetryDealDetails: () -> Unit
 ) {
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -111,7 +108,7 @@ fun DealBottomSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, isIgnored, onToggleIgnore, goToWeb, goToGame, goToGameDetails, goToGameDetailsByTitle, onRetryDealDetails)
+            DealContent(data, isWaitlisted, onShare, onToggleWaitlist, isIgnored, onToggleIgnore, goToWeb, goToGame, onRetryDealDetails)
         }
     }
 }
@@ -126,8 +123,6 @@ private fun DealContent(
     onToggleIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     retry: () -> Unit
 ) {
     Column(
@@ -229,7 +224,7 @@ private fun DealContent(
                 }
             }
 
-            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb, goToGame, goToGameDetails, goToGameDetailsByTitle)
+            is DealBottomSheetData.DealDetailsData -> GameDetails(data, goToWeb, goToGame)
             is DealBottomSheetData.DealDetailsError -> GameDetailsError(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 retry = retry
@@ -244,8 +239,6 @@ private fun GameDetails(
     data: DealBottomSheetData.DealDetailsData,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     Box(modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small)) {
         Row {
@@ -359,18 +352,6 @@ private fun GameDetails(
                 ) {
                     Text(text = stringResource(Res.string.deal_details_view_game_page_label))
                 }
-                OutlinedButton(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.CenterHorizontally),
-                    onClick = {
-                        val steamId = data.gameInfo.steamAppID
-                        if (steamId != null) goToGameDetails(steamId, data.gameName)
-                        else goToGameDetailsByTitle(data.gameName)
-                    },
-                ) {
-                    Text(text = stringResource(Res.string.deal_details_view_game_details_label))
-                }
                 data.gameInfo.metacriticScore?.let { Text(text = stringResource(Res.string.deal_details_metacritic_score_label, it)) }
                 data.gameInfo.steamRatingPercent?.let { Text(text = stringResource(Res.string.deal_details_steam_reviews_label, it)) }
                 data.gameInfo.releaseDate?.let { Text(text = stringResource(Res.string.deal_details_release_label, it)) }
@@ -444,8 +425,6 @@ private fun DealContent_Success_Preview() {
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGame = {},
-                goToGameDetails = { _, _ -> },
-                goToGameDetailsByTitle = {},
                 retry = {},
             )
         }
@@ -464,8 +443,6 @@ private fun DealContent_Success_Favourited_Dark_Preview() {
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGame = {},
-                goToGameDetails = { _, _ -> },
-                goToGameDetailsByTitle = {},
                 retry = {},
             )
         }
@@ -501,8 +478,6 @@ private fun DealContent_WithCheaperStores_Preview() {
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGame = {},
-                goToGameDetails = { _, _ -> },
-                goToGameDetailsByTitle = {},
                 retry = {},
             )
         }
@@ -527,8 +502,6 @@ private fun DealContent_Loading_Preview() {
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGame = {},
-                goToGameDetails = { _, _ -> },
-                goToGameDetailsByTitle = {},
                 retry = {},
             )
         }
@@ -553,8 +526,6 @@ private fun DealContent_Error_Preview() {
                 onToggleWaitlist = {},
                 goToWeb = { _, _ -> },
                 goToGame = {},
-                goToGameDetails = { _, _ -> },
-                goToGameDetailsByTitle = {},
                 retry = {},
             )
         }

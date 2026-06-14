@@ -52,8 +52,6 @@ class HomeScreenTest {
         onViewBundles: () -> Unit = {},
         onViewBundle: (Int) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
-        goToGameDetails: (Int, String) -> Unit = { _, _ -> },
-        goToGameDetailsByTitle: (String) -> Unit = { _ -> },
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
@@ -63,8 +61,6 @@ class HomeScreenTest {
                 onViewBundles = onViewBundles,
                 onViewBundle = onViewBundle,
                 goToWeb = goToWeb,
-                goToGameDetails = goToGameDetails,
-                goToGameDetailsByTitle = goToGameDetailsByTitle,
                 viewModel = viewModel,
             )
         }

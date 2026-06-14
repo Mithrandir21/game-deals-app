@@ -9,8 +9,6 @@ fun NavGraphBuilder.homeScreen(
     goToGame: (gameId: String) -> Unit,
     goToGiveaway: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     goToBundles: () -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
 ) {
@@ -23,8 +21,6 @@ fun NavGraphBuilder.homeScreen(
             onViewBundles = goToBundles,
             onViewBundle = goToBundle,
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) },
-            goToGameDetails = goToGameDetails,
-            goToGameDetailsByTitle = goToGameDetailsByTitle,
         )
     }
 }

@@ -76,8 +76,6 @@ private const val LOAD_MORE_THRESHOLD = 5
 internal fun DealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: DealsViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -122,8 +120,6 @@ internal fun DealsScreen(
         onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGame = goToGame,
-        goToGameDetails = goToGameDetails,
-        goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
 }
 
@@ -150,8 +146,6 @@ private fun DealsContent(
     onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
-    goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
     // Hide ignored games from the deals list (#280). Paging still tracks the full fetched list (offset),
     // so only the rendered list is filtered; the id set is Room-backed (correct on cold start + offline).
@@ -272,8 +266,6 @@ private fun DealsContent(
                 isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
                 goToWeb = goToWeb,
                 goToGame = goToGame,
-                goToGameDetails = goToGameDetails,
-                goToGameDetailsByTitle = goToGameDetailsByTitle,
                 onDismiss = { onDismissDealDetails() },
                 onShare = { sheetData -> onShareDealDetails(sheetData) },
                 onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },

@@ -84,8 +84,6 @@ internal fun StoreScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
     viewModel: StoreViewModel = koinViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -133,8 +131,6 @@ internal fun StoreScreen(
         onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
         goToWeb = goToWeb,
         goToGame = goToGame,
-        goToGameDetails = goToGameDetails,
-        goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
 
     when (uiState) {
@@ -175,8 +171,6 @@ private fun StoreDeals(
     onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit = { _, _ -> },
-    goToGameDetailsByTitle: (title: String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
@@ -228,8 +222,6 @@ private fun StoreDeals(
             isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
             goToWeb = goToWeb,
             goToGame = goToGame,
-            goToGameDetails = goToGameDetails,
-            goToGameDetailsByTitle = goToGameDetailsByTitle,
             onDismiss = { onDismissDealDetails() },
             onShare = { sheetData -> onShareDealDetails(sheetData) },
             onToggleWaitlist = { sheetData -> onToggleDealFavourite(sheetData) },

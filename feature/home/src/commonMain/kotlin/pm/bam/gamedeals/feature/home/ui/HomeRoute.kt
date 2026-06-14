@@ -14,8 +14,6 @@ fun HomeRoute(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGameDetails: (steamAppId: Int, title: String) -> Unit,
-    goToGameDetailsByTitle: (title: String) -> Unit,
 ) {
     HomeScreen(
         goToGame = goToGame,
@@ -23,7 +21,5 @@ fun HomeRoute(
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
         goToWeb = goToWeb,
-        goToGameDetails = goToGameDetails,
-        goToGameDetailsByTitle = goToGameDetailsByTitle,
     )
 }
