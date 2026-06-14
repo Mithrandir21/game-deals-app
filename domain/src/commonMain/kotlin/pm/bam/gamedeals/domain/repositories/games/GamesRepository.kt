@@ -14,9 +14,11 @@ import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
@@ -64,6 +66,12 @@ interface GamesRepository {
     suspend fun refreshGames()
 
     suspend fun findGameIdBySteamAppId(steamAppId: Int, title: String): String?
+
+    /** Catalogue + live-signal metadata (ITAD `/games/info/v2`) for the unified Game Page — Stats tab/header (#291). */
+    suspend fun getGameMeta(gameId: String): GameMeta
+
+    /** Bundles that contain the game (ITAD `/games/bundles/v2`) for the Game Page's "Found in bundles" section (#291). */
+    suspend fun getBundlesForGame(gameId: String): List<Bundle>
 }
 
 internal class GamesRepositoryImpl(
@@ -228,4 +236,18 @@ internal class GamesRepositoryImpl(
             onFailure = { cached?.gameId },
         )
     }
+
+    /**
+     * Fetched **live** (no persistent cache) on purpose: [GameMeta] carries volatile current-player
+     * counts that a cache would stale, and bundles-for-a-game change across a bundle's lifetime. Both are
+     * per-open Game-Page fetches, bounded by the ITAD client's retry + concurrency limiter (epic #291,
+     * Phase 3). The `GamePageViewModel` treats them as best-effort enrichment (hidden on failure), so a
+     * thrown error here just hides the section. If a stable-subset cache proves worthwhile, add a
+     * short-TTL [CachedResource] like [getGameDetails].
+     */
+    override suspend fun getGameMeta(gameId: String): GameMeta =
+        dealsSource.fetchGameMeta(gameId)
+
+    override suspend fun getBundlesForGame(gameId: String): List<Bundle> =
+        dealsSource.fetchBundlesForGame(gameId)
 }

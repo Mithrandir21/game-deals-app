@@ -23,7 +23,9 @@ import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -290,5 +292,46 @@ class GamesRepositoryTest {
         val result = impl.findGameIdBySteamAppId(steamAppId = 1240440, title = "Halo Infinite")
 
         assertEquals(null, result, "no stale mapping to fall back to → null")
+    }
+
+    @Test
+    fun get_game_meta_fetches_live_from_deals_source() = runTest {
+        val gameId = "uuid-1"
+        val meta = GameMeta(
+            gameId = gameId,
+            developers = persistentListOf("343 Industries"),
+            tags = persistentListOf("Shooter"),
+            players = GameMeta.Players(recent = 16763, peak = 30000),
+        )
+        everySuspend { dealsSource.fetchGameMeta(gameId) } returns meta
+
+        val result = impl.getGameMeta(gameId)
+
+        // No persistent cache (volatile player counts): always a live fetch, value passes straight through.
+        assertEquals(meta, result)
+        verifySuspend(exactly(1)) { dealsSource.fetchGameMeta(gameId) }
+    }
+
+    @Test
+    fun get_bundles_for_game_fetches_live_from_deals_source() = runTest {
+        val gameId = "uuid-1"
+        val bundles = listOf(
+            Bundle(
+                id = 16232,
+                title = "Humble Choice",
+                storeName = "Humble Bundle",
+                url = "https://humble.example/c/123",
+                expiryEpochMs = null,
+                gameCount = 8,
+                priceDenominated = "$14.99",
+                games = persistentListOf(),
+            )
+        )
+        everySuspend { dealsSource.fetchBundlesForGame(gameId) } returns bundles
+
+        val result = impl.getBundlesForGame(gameId)
+
+        assertEquals(bundles, result)
+        verifySuspend(exactly(1)) { dealsSource.fetchBundlesForGame(gameId) }
     }
 }

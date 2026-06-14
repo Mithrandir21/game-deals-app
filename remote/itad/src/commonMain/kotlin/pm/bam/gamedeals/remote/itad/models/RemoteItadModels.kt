@@ -64,6 +64,63 @@ data class RemoteItadLookupResponse(
     @SerialName("game") val game: RemoteItadSearchGame? = null,
 )
 
+// --- /games/info/v2 (the rich game-info shape; superset of the search game) ---
+@Serializable
+data class RemoteItadCompanyRef(
+    @SerialName("id") val id: Int? = null,
+    @SerialName("name") val name: String,
+)
+
+@Serializable
+data class RemoteItadReview(
+    @SerialName("score") val score: Int? = null,
+    @SerialName("source") val source: String,
+    @SerialName("count") val count: Int? = null,
+    @SerialName("url") val url: String? = null,
+)
+
+@Serializable
+data class RemoteItadStats(
+    @SerialName("rank") val rank: Int? = null,
+    @SerialName("waitlisted") val waitlisted: Int? = null,
+    @SerialName("collected") val collected: Int? = null,
+)
+
+@Serializable
+data class RemoteItadPlayers(
+    @SerialName("recent") val recent: Int? = null,
+    @SerialName("day") val day: Int? = null,
+    @SerialName("week") val week: Int? = null,
+    @SerialName("peak") val peak: Int? = null,
+)
+
+/**
+ * `/games/info/v2` — the full game-info object. A superset of [RemoteItadSearchGame]: the same
+ * id/slug/title/assets header plus catalogue metadata (developers, publishers, tags, release date) and
+ * the live signals the redesigned Game Page surfaces (storefront/critic [reviews], waitlist/collection
+ * [stats], current [players] counts). `ignoreUnknownKeys = true` tolerates ITAD's further extras.
+ */
+@Serializable
+data class RemoteItadGameInfo(
+    @SerialName("id") val id: String,
+    @SerialName("slug") val slug: String? = null,
+    @SerialName("title") val title: String,
+    @SerialName("type") val type: String? = null,
+    @SerialName("mature") val mature: Boolean? = null,
+    @SerialName("assets") val assets: RemoteItadGameAssets? = null,
+    @SerialName("appid") val appid: Int? = null,
+    @SerialName("earlyAccess") val earlyAccess: Boolean = false,
+    @SerialName("achievements") val achievements: Boolean = false,
+    @SerialName("tradingCards") val tradingCards: Boolean = false,
+    @SerialName("releaseDate") val releaseDate: String? = null,
+    @SerialName("tags") val tags: List<String> = emptyList(),
+    @SerialName("developers") val developers: List<RemoteItadCompanyRef> = emptyList(),
+    @SerialName("publishers") val publishers: List<RemoteItadCompanyRef> = emptyList(),
+    @SerialName("reviews") val reviews: List<RemoteItadReview> = emptyList(),
+    @SerialName("stats") val stats: RemoteItadStats? = null,
+    @SerialName("players") val players: RemoteItadPlayers? = null,
+)
+
 // --- /deals/v2 and the deal entries reused by /games/prices/v3 ---
 @Serializable
 data class RemoteItadDealEntry(

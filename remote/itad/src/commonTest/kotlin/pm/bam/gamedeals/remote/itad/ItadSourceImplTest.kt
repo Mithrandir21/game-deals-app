@@ -82,6 +82,7 @@ class ItadSourceImplTest {
                 "/games/lookup/v1" -> LOOKUP_BODY
                 "/games/info/v2" -> INFO_BODY
                 "/bundles/v1" -> BUNDLES_BODY
+                "/games/bundles/v2" -> BUNDLES_BODY
                 else -> ""
             }
             respond(
@@ -356,6 +357,47 @@ class ItadSourceImplTest {
     }
 
     @Test
+    fun fetchGameMeta_maps_catalogue_reviews_stats_and_players_from_info() = runTest {
+        val meta = impl.fetchGameMeta("uuid-1")
+
+        assertEquals("uuid-1", meta.gameId)
+        assertEquals(1240, meta.steamAppId) // from info `appid`
+        assertEquals("2021-12-08", meta.releaseDate)
+        assertEquals(listOf("343 Industries"), meta.developers) // companies flattened to names
+        assertEquals(listOf("Xbox Game Studios"), meta.publishers)
+        assertEquals(listOf("Shooter", "Sci-fi"), meta.tags)
+        assertEquals(2, meta.reviews.size)
+        assertEquals("steam", meta.reviews.first().source)
+        assertEquals(85, meta.reviews.first().score)
+        assertEquals(12345, meta.reviews.first().count)
+        assertEquals(16763, meta.players?.recent)
+        assertEquals(30000, meta.players?.peak)
+        assertEquals(5, meta.stats?.rank)
+        assertEquals(1000, meta.stats?.waitlisted)
+        assertEquals(5000, meta.stats?.collected)
+        assertTrue(meta.achievements)
+        assertTrue(meta.tradingCards)
+        assertFalse(meta.earlyAccess)
+
+        val recorded = recordedRequests.single().url
+        assertEquals("/games/info/v2", recorded.encodedPath)
+        assertEquals("uuid-1", recorded.parameters["id"])
+    }
+
+    @Test
+    fun fetchBundlesForGame_maps_the_bundles_containing_the_game() = runTest {
+        val bundles = impl.fetchBundlesForGame("uuid-1")
+
+        assertEquals(1, bundles.size)
+        assertEquals(16232, bundles.first().id)
+        assertEquals("Humble Choice (June 2026)", bundles.first().title)
+
+        val recorded = recordedRequests.single().url
+        assertEquals("/games/bundles/v2", recorded.encodedPath)
+        assertEquals("uuid-1", recorded.parameters["id"])
+    }
+
+    @Test
     fun itadHttpClient_sends_the_api_key_header_to_the_itad_host() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val engine = MockEngine { request ->
@@ -497,9 +539,29 @@ class ItadSourceImplTest {
             ]
           }"""
 
-        // language=JSON — /games/info/v2 returns a single game object (title + assets).
-        private const val INFO_BODY =
-            """{ "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "info-box.png", "banner400": "info-banner400.png" } }"""
+        // language=JSON — /games/info/v2 returns the rich game-info object (header + catalogue + live signals).
+        private const val INFO_BODY = """{
+            "id": "uuid-1",
+            "slug": "halo",
+            "title": "Halo",
+            "type": "game",
+            "mature": false,
+            "assets": { "boxart": "info-box.png", "banner400": "info-banner400.png" },
+            "appid": 1240,
+            "earlyAccess": false,
+            "achievements": true,
+            "tradingCards": true,
+            "releaseDate": "2021-12-08",
+            "tags": [ "Shooter", "Sci-fi" ],
+            "developers": [ { "id": 1, "name": "343 Industries" } ],
+            "publishers": [ { "id": 2, "name": "Xbox Game Studios" } ],
+            "reviews": [
+              { "score": 85, "source": "steam", "count": 12345, "url": "https://steam/reviews" },
+              { "score": 87, "source": "Metacritic", "count": 42, "url": "https://mc/halo" }
+            ],
+            "stats": { "rank": 5, "waitlisted": 1000, "collected": 5000 },
+            "players": { "recent": 16763, "day": 16967, "week": 20000, "peak": 30000 }
+          }"""
 
         // language=JSON
         private const val PRICES_BODY = """[

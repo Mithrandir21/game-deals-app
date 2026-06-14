@@ -8,6 +8,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
@@ -15,6 +16,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.models.ItadMoney
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
+import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.bestArt
 
 /**
@@ -123,6 +125,26 @@ internal fun RemoteItadBundle.toBundle(): Bundle {
         games = games,
     )
 }
+
+/**
+ * ITAD `/games/info/v2` → domain [GameMeta] (epic #291, Phase 1). Companies are flattened to their names
+ * (the UI shows names, not ITAD company ids); reviews/stats/players carry through one-to-one. Empty
+ * collections and null objects are preserved so the consumer can hide each section when ITAD omits it.
+ */
+internal fun RemoteItadGameInfo.toGameMeta(): GameMeta = GameMeta(
+    gameId = id,
+    steamAppId = appid,
+    releaseDate = releaseDate,
+    developers = developers.map { it.name }.toImmutableList(),
+    publishers = publishers.map { it.name }.toImmutableList(),
+    tags = tags.toImmutableList(),
+    reviews = reviews.map { GameMeta.Review(source = it.source, score = it.score, count = it.count, url = it.url) }.toImmutableList(),
+    players = players?.let { GameMeta.Players(recent = it.recent, day = it.day, week = it.week, peak = it.peak) },
+    stats = stats?.let { GameMeta.Stats(rank = it.rank, waitlisted = it.waitlisted, collected = it.collected) },
+    earlyAccess = earlyAccess,
+    achievements = achievements,
+    tradingCards = tradingCards,
+)
 
 internal fun ItadGameSearchResult.toGame(): Game = Game(
     gameID = id,

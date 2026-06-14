@@ -10,6 +10,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
+import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
+import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadLookupResponse
@@ -34,12 +36,25 @@ class ItadGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
-    /** Basic game info (title + assets) by UUID — `/games/info/v2` returns the same shape as search. */
-    suspend fun getInfo(id: String): ApiResponse<RemoteItadSearchGame> = try {
+    /** Full game info by UUID — `/games/info/v2` returns the rich [RemoteItadGameInfo] (header + catalogue + live signals). */
+    suspend fun getInfo(id: String): ApiResponse<RemoteItadGameInfo> = try {
         ApiResponse.Success(
             httpClient.get("/games/info/v2") {
                 parameter("id", id)
-            }.body<RemoteItadSearchGame>()
+            }.body<RemoteItadGameInfo>()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /** Bundles that contain the given game — `/games/bundles/v2?id=<uuid>` returns the same bundle shape as `/bundles/v1`. */
+    suspend fun getBundlesForGame(id: String): ApiResponse<List<RemoteItadBundle>> = try {
+        ApiResponse.Success(
+            httpClient.get("/games/bundles/v2") {
+                parameter("id", id)
+            }.body<List<RemoteItadBundle>>()
         )
     } catch (e: CancellationException) {
         throw e
