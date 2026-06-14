@@ -34,13 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
@@ -329,7 +329,7 @@ private fun GamePageContent(
                         }
                         IconButton(enabled = data is GamePageData.Data, onClick = onToggleIgnore) {
                             Icon(
-                                imageVector = Icons.Filled.Clear,
+                                imageVector = Icons.Filled.VisibilityOff,
                                 tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
                                 contentDescription = stringResource(
                                     if (isIgnored) Res.string.game_screen_ignore_remove_action else Res.string.game_screen_ignore_add_action
