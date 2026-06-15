@@ -333,8 +333,8 @@ private fun GiveawayCard(
                     error = painterResource(CommonRes.drawable.videogame_thumb),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .height(120.dp)
-                        .width(200.dp)
+                        .height(90.dp)
+                        .width(160.dp)
                         .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
                 )
                 // Platforms / store badges + the countdown sit beside the (now larger) art; the title
@@ -349,10 +349,10 @@ private fun GiveawayCard(
                         StoreLabel(storeName = platform.platformValue)
                     }
                     endDateMillis?.let {
-                        GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelLarge)
+                        GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelMedium)
                     } ?: Text(
                         text = stringResource(Res.string.giveaway_screen_no_expiry),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
