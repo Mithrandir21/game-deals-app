@@ -115,13 +115,6 @@ internal class DealsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
     /**
-     * Whether adult titles are included (`mature=true` on `/deals/v2`); default off. Backed by the
-     * persisted, cross-app [SettingsRepository] so the choice is remembered and shared with the Bundles tab.
-     */
-    val mature: StateFlow<Boolean> = settingsRepository.observeMatureOptIn()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    /**
      * The active server-side deal filters (discount, price, type, DRM-free, deal flag, Steam %, release
      * recency) applied to `/deals/v2`; default empty. Persisted via [SettingsRepository] so it survives
      * relaunches (Deals-only — not shared with Bundles). Changing it reloads the list from offset 0.
@@ -204,11 +197,6 @@ internal class DealsViewModel(
 
     fun clearShopFilter() = selectedShopIds.update { emptySet() }
 
-    /** Toggle whether adult titles are included in the browse list (persisted, shared with Bundles). */
-    fun setMature(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
-    }
-
     // --- Server-side deal filters (persisted; each change reloads the list from offset 0) ---
 
     /** Minimum discount percent, or null for no discount floor. */
@@ -249,7 +237,9 @@ internal class DealsViewModel(
     fun clearSearch() = searchQueryState.update { "" }
 
     fun retry() {
-        viewModelScope.launch { loadFirstPage(BrowseParams(sort.value, selectedShopIds.value, mature.value, filter.value)) }
+        viewModelScope.launch {
+            loadFirstPage(BrowseParams(sort.value, selectedShopIds.value, settingsRepository.getMatureOptIn(), filter.value))
+        }
     }
 
     private suspend fun loadFirstPage(params: BrowseParams) {

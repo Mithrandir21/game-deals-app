@@ -194,13 +194,14 @@ class DealsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun setMature_reloads_page_zero_with_mature_opt_in() = runTest {
+    fun mature_opt_in_change_reloads_page_zero_with_mature() = runTest {
+        // The mature toggle now lives in Account; the Deals list just reacts to the shared persisted flag.
         everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
 
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.setMature(true)
+        matureFlow.value = true
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.mature)

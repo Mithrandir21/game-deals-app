@@ -98,8 +98,6 @@ import pm.bam.gamedeals.feature.deals.generated.resources.Res
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button_count
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_mature_label
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_mature_switch_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_sort
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_sheet_title
@@ -173,7 +171,6 @@ internal fun DealsScreen(
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
-    val mature by viewModel.mature.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -208,7 +205,6 @@ internal fun DealsScreen(
         ignoredIds = ignoredIds,
         stores = stores,
         selectedShops = selectedShops,
-        mature = mature,
         filter = filter,
         searchRevealed = searchRevealed,
         searchQuery = searchQuery,
@@ -219,7 +215,6 @@ internal fun DealsScreen(
         onSelectSort = { viewModel.setSort(it) },
         onToggleShop = { viewModel.toggleShop(it) },
         onClearShops = { viewModel.clearShopFilter() },
-        onSetMature = { viewModel.setMature(it) },
         onSetMinCut = { viewModel.setMinCut(it) },
         onSetMaxPrice = { viewModel.setMaxPrice(it) },
         onToggleType = { viewModel.toggleType(it) },
@@ -257,7 +252,6 @@ private fun DealsContent(
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
-    mature: Boolean = false,
     filter: DealsFilter = DealsFilter(),
     searchRevealed: Boolean = false,
     searchQuery: String = "",
@@ -268,7 +262,6 @@ private fun DealsContent(
     onSelectSort: (DealsSort) -> Unit,
     onToggleShop: (Int) -> Unit = {},
     onClearShops: () -> Unit = {},
-    onSetMature: (Boolean) -> Unit = {},
     onSetMinCut: (Int?) -> Unit = {},
     onSetMaxPrice: (Double?) -> Unit = {},
     onToggleType: (ProductType) -> Unit = {},
@@ -345,7 +338,7 @@ private fun DealsContent(
                     )
                 } else {
                     FilterBar(
-                        activeCount = selectedShops.size + (if (mature) 1 else 0) + filter.activeCount,
+                        activeCount = selectedShops.size + filter.activeCount,
                         onClick = { onShowFiltersChange(true) },
                     )
                 }
@@ -438,8 +431,6 @@ private fun DealsContent(
                 selectedShops = selectedShops,
                 onToggleShop = onToggleShop,
                 onClearShops = onClearShops,
-                mature = mature,
-                onSetMature = onSetMature,
                 filter = filter,
                 // The currency symbol/affix for price-bucket labels is read from a loaded deal's
                 // pre-formatted price (ITAD denominates per region); null until the first page loads.
@@ -657,8 +648,6 @@ private fun DealsFilterSheet(
     selectedShops: ImmutableSet<Int>,
     onToggleShop: (Int) -> Unit,
     onClearShops: () -> Unit,
-    mature: Boolean,
-    onSetMature: (Boolean) -> Unit,
     filter: DealsFilter,
     currencySample: String?,
     onSetMinCut: (Int?) -> Unit,
@@ -672,7 +661,6 @@ private fun DealsFilterSheet(
 ) {
     if (!show) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val matureCd = stringResource(Res.string.deals_filter_mature_switch_description)
     val drmFreeCd = stringResource(Res.string.deals_filter_drm_free_switch_description)
     val anyLabel = stringResource(Res.string.deals_filter_chip_any)
 
@@ -838,16 +826,6 @@ private fun DealsFilterSheet(
                 description = drmFreeCd,
                 checked = filter.drmFree,
                 onCheckedChange = onSetDrmFree,
-            )
-
-            HorizontalDivider()
-
-            // Mature toggle
-            FilterToggleRow(
-                label = stringResource(Res.string.deals_filter_mature_label),
-                description = matureCd,
-                checked = mature,
-                onCheckedChange = onSetMature,
             )
         }
     }

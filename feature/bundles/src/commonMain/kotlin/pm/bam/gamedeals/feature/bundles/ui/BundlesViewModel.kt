@@ -49,9 +49,9 @@ internal class BundlesViewModel(
             error -> BundlesScreenData.Error
             raw == null -> BundlesScreenData.Loading
             else -> BundlesScreenData.Data(
+                // Mature bundles stay hidden unless the app-wide opt-in (set in Account ▸ App) is on.
                 bundles = raw.filter { matureOptIn || !it.isMature }.sorted(sortOrder).toImmutableList(),
                 sort = sortOrder,
-                matureOptIn = matureOptIn,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, BundlesScreenData.Loading)
@@ -77,11 +77,6 @@ internal class BundlesViewModel(
 
     fun setSort(newSort: BundleSort) = sort.update { newSort }
 
-    /** Toggle whether mature bundles are shown (persisted, shared with the Deals tab). */
-    fun setMatureOptIn(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
-    }
-
     /** Sentinels keep null publish/expiry/price at the end of each order without comparator nullability. */
     private fun List<Bundle>.sorted(order: BundleSort): List<Bundle> = when (order) {
         BundleSort.Newest -> sortedWith(
@@ -99,7 +94,6 @@ internal class BundlesViewModel(
         data class Data(
             val bundles: ImmutableList<Bundle>,
             val sort: BundleSort = BundleSort.Newest,
-            val matureOptIn: Boolean = false,
         ) : BundlesScreenData()
     }
 }

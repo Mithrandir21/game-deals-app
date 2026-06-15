@@ -43,7 +43,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_mature_toggle
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_empty
@@ -67,7 +66,6 @@ internal fun BundlesScreen(
         onBack = onBack,
         onBundleClick = onBundleClick,
         onSetSort = viewModel::setSort,
-        onSetMature = viewModel::setMatureOptIn,
         onRetry = viewModel::load,
     )
 }
@@ -79,7 +77,6 @@ private fun BundlesScreenContent(
     onBack: () -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onSetSort: (BundleSort) -> Unit,
-    onSetMature: (Boolean) -> Unit,
     onRetry: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -129,9 +126,7 @@ private fun BundlesScreenContent(
                 is BundlesScreenData.Data -> Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                     BundlesControls(
                         sort = state.sort,
-                        matureOptIn = state.matureOptIn,
                         onSetSort = onSetSort,
-                        onSetMature = onSetMature,
                     )
                     if (state.bundles.isEmpty()) {
                         CenteredMessage(message = stringResource(Res.string.bundles_screen_empty))
@@ -156,9 +151,7 @@ private fun BundlesScreenContent(
 @Composable
 private fun BundlesControls(
     sort: BundleSort,
-    matureOptIn: Boolean,
     onSetSort: (BundleSort) -> Unit,
-    onSetMature: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -182,11 +175,6 @@ private fun BundlesControls(
             selected = sort == BundleSort.Price,
             onClick = { onSetSort(BundleSort.Price) },
             label = { Text(stringResource(Res.string.bundles_sort_price)) },
-        )
-        FilterChip(
-            selected = matureOptIn,
-            onClick = { onSetMature(!matureOptIn) },
-            label = { Text(stringResource(Res.string.bundles_mature_toggle)) },
         )
     }
 }
@@ -255,11 +243,10 @@ private val previewBundles = persistentListOf(
 private fun BundlesScreenPreview() {
     GameDealsTheme {
         BundlesScreenContent(
-            state = BundlesScreenData.Data(previewBundles, sort = BundleSort.Newest, matureOptIn = false),
+            state = BundlesScreenData.Data(previewBundles, sort = BundleSort.Newest),
             onBack = {},
             onBundleClick = {},
             onSetSort = {},
-            onSetMature = {},
             onRetry = {},
         )
     }

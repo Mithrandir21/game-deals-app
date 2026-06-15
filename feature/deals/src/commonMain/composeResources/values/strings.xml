@@ -23,8 +23,6 @@
     <string name="deals_filter_sheet_title">Filters</string>
     <string name="deals_filter_section_sort">Sort</string>
     <string name="deals_filter_section_stores">Stores</string>
-    <string name="deals_filter_mature_label">Show adult titles</string>
-    <string name="deals_filter_mature_switch_description">Show adult titles toggle</string>
 
     <!-- Server-side deal filters -->
     <string name="deals_filter_reset">Reset all</string>

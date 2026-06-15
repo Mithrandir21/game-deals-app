@@ -17,6 +17,7 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
@@ -33,6 +34,7 @@ internal class AccountViewModel(
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
+    private val settingsRepository: SettingsRepository,
     private val notificationsRepository: NotificationsRepository,
     private val logger: Logger,
 ) : ViewModel() {
@@ -48,6 +50,14 @@ internal class AccountViewModel(
         viewModelScope.launch {
             regionRepository.observeSelectedCountry().collect { country ->
                 uiState.update { it.copy(selectedCountry = country) }
+            }
+        }
+
+        // Show-adult-titles opt-in: a single app-wide preference (the Deals & Bundles lists react to it),
+        // surfaced here instead of in each list's filters.
+        viewModelScope.launch {
+            settingsRepository.observeMatureOptIn().collect { mature ->
+                uiState.update { it.copy(matureOptIn = mature) }
             }
         }
 
@@ -109,6 +119,11 @@ internal class AccountViewModel(
         viewModelScope.launch { regionRepository.setSelectedCountry(country) }
     }
 
+    /** Toggle whether adult titles are shown across the app (persisted; Deals & Bundles react to it). */
+    fun onSetMatureOptIn(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
+    }
+
     /** Refreshes the Room-backed id sets from ITAD (remote-as-truth) on login; counts then flow reactively. */
     private suspend fun reconcileLibrary() {
         runCatching { waitlistRepository.getWaitlist() }.onFailure { fatal(logger, it) }
@@ -130,5 +145,7 @@ internal class AccountViewModel(
         val linkedSteam: Boolean = false,
         /** The selected storefront region, shown on the Region row and pre-selected in the picker (#276). */
         val selectedCountry: Country? = null,
+        /** Whether adult titles are shown app-wide (the single mature opt-in, moved out of the filters). */
+        val matureOptIn: Boolean = false,
     )
 }

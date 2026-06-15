@@ -21,6 +21,7 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -37,6 +38,7 @@ class AccountViewModelTest : MainDispatcherTest() {
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit)
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit)
+    private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit)
     private val notificationsRepository: NotificationsRepository = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
@@ -50,12 +52,13 @@ class AccountViewModelTest : MainDispatcherTest() {
         everySuspend { collectionRepository.getCollection() } returns emptyList()
         every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
         every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
+        every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
         every { notificationsRepository.observeUnreadCount() } returns flowOf(0)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun viewModel() = AccountViewModel(accountRepository, waitlistRepository, collectionRepository, regionRepository, notificationsRepository, logger)
+    private fun viewModel() = AccountViewModel(accountRepository, waitlistRepository, collectionRepository, regionRepository, settingsRepository, notificationsRepository, logger)
 
     @Test
     fun logged_out_when_auth_state_is_logged_out() = runTest {
@@ -118,5 +121,28 @@ class AccountViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         verifySuspend(exactly(1)) { accountRepository.logout() }
+    }
+
+    @Test
+    fun mature_opt_in_is_observed_into_state() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
+        every { settingsRepository.observeMatureOptIn() } returns flowOf(true)
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.matureOptIn)
+    }
+
+    @Test
+    fun onSetMatureOptIn_persists_to_settings_repository() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
+
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.onSetMatureOptIn(true)
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { settingsRepository.setMatureOptIn(true) }
     }
 }

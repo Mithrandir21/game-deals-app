@@ -12,7 +12,7 @@ import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel
 import pm.bam.gamedeals.feature.account.ui.WaitlistListViewModel
 
 val accountModule = module {
-    viewModel { AccountViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { AccountViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WaitlistListViewModel(get(), get()) }
     viewModel { CollectionListViewModel(get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }

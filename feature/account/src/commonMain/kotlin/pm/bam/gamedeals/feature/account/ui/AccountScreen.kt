@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,9 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_notification
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery_desc
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_desc
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_switch_description
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_region
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings
@@ -91,6 +95,7 @@ internal fun AccountScreen(
         onLogin = viewModel::onLogin,
         onLogout = viewModel::onLogout,
         onCountrySelected = viewModel::onCountrySelected,
+        onSetMature = viewModel::onSetMatureOptIn,
         onOpenWaitlist = onOpenWaitlist,
         onOpenCollection = onOpenCollection,
         onOpenNotifications = onOpenNotifications,
@@ -108,6 +113,7 @@ private fun AccountScreenContent(
     onLogin: () -> Unit,
     onLogout: () -> Unit,
     onCountrySelected: (Country) -> Unit,
+    onSetMature: (Boolean) -> Unit,
     onOpenWaitlist: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -121,7 +127,14 @@ private fun AccountScreenContent(
     val regionName = data.selectedCountry?.name
 
     if (!data.loggedIn) {
-        LoggedOutContent(loggingIn = data.loggingIn, onLogin = onLogin, regionName = regionName, onOpenRegion = onOpenRegion)
+        LoggedOutContent(
+            loggingIn = data.loggingIn,
+            onLogin = onLogin,
+            regionName = regionName,
+            onOpenRegion = onOpenRegion,
+            matureOptIn = data.matureOptIn,
+            onSetMature = onSetMature,
+        )
     } else {
         LoggedInContent(
             data = data,
@@ -137,6 +150,8 @@ private fun AccountScreenContent(
             onOpenLinkedAccounts = onOpenLinkedAccounts,
             onOpenRegion = onOpenRegion,
             regionName = regionName,
+            matureOptIn = data.matureOptIn,
+            onSetMature = onSetMature,
             onOpenWebsite = { onOpenWebsite(ITAD_SETTINGS_URL) },
         )
     }
@@ -157,6 +172,8 @@ private fun LoggedOutContent(
     onLogin: () -> Unit,
     regionName: String?,
     onOpenRegion: () -> Unit,
+    matureOptIn: Boolean,
+    onSetMature: (Boolean) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -167,6 +184,7 @@ private fun LoggedOutContent(
         // App-level preferences are reachable without signing in.
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
+        item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
     }
 }
 
@@ -208,6 +226,8 @@ private fun LoggedInContent(
     onOpenLinkedAccounts: () -> Unit,
     onOpenRegion: () -> Unit,
     regionName: String?,
+    matureOptIn: Boolean,
+    onSetMature: (Boolean) -> Unit,
     onOpenWebsite: () -> Unit,
 ) {
     LazyColumn(
@@ -246,6 +266,7 @@ private fun LoggedInContent(
 
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
+        item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
 
         item { SectionHeader(stringResource(Res.string.account_section_website)) }
         item {
@@ -384,6 +405,26 @@ private fun NotificationDeliveryRow(
                         viewModel.onDisable()
                     }
                 },
+            )
+        },
+    )
+}
+
+/**
+ * The single app-wide "show adult titles" opt-in (moved out of the Deals & Bundles filters). Flipping it
+ * persists via [AccountViewModel.onSetMatureOptIn]; both lists react to the shared preference.
+ */
+@Composable
+private fun MatureContentRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val switchCd = stringResource(Res.string.account_row_mature_switch_description)
+    ListItem(
+        headlineContent = { Text(stringResource(Res.string.account_row_mature)) },
+        supportingContent = { Text(stringResource(Res.string.account_row_mature_desc)) },
+        trailingContent = {
+            Switch(
+                modifier = Modifier.semantics { contentDescription = switchCd },
+                checked = checked,
+                onCheckedChange = onCheckedChange,
             )
         },
     )

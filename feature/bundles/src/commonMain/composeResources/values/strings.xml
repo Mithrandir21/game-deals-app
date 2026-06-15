@@ -14,7 +14,6 @@
     <string name="bundles_sort_newest">Newest</string>
     <string name="bundles_sort_expiring">Expiring</string>
     <string name="bundles_sort_price">Price</string>
-    <string name="bundles_mature_toggle">Show mature</string>
 
     <string name="bundle_detail_get_bundle">Get bundle</string>
     <string name="bundle_detail_included_games">Included games</string>
