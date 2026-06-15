@@ -13,6 +13,9 @@
     <string name="giveaway_screen_tab_live">Live</string>
     <string name="giveaway_screen_tab_expired">Expired</string>
 
+    <string name="giveaway_screen_empty_live">No live giveaways right now. Check back soon.</string>
+    <string name="giveaway_screen_empty_expired">No expired giveaways to show.</string>
+
     <string name="giveaway_screen_countdown_label">Ends in</string>
     <string name="giveaway_screen_countdown_ended">Ended</string>
     <string name="giveaway_screen_no_expiry">No expiry</string>

@@ -22,6 +22,8 @@ import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_expired
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_live
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_detail
@@ -117,6 +119,39 @@ class GiveawaysScreenTest {
     }
 
     @Test
+    fun emptyLiveTabShowsPlaceholder() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = persistentListOf(),
+                selectedTab = GiveawayStatusTab.LIVE,
+            )
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
+        composeTestRule.onNodeWithText(screenSemantics.emptyLive).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.emptyExpired).assertDoesNotExist()
+    }
+
+    @Test
+    fun emptyExpiredTabShowsPlaceholder() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = persistentListOf(),
+                selectedTab = GiveawayStatusTab.EXPIRED,
+            )
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.emptyExpired).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.emptyLive).assertDoesNotExist()
+    }
+
+    @Test
     fun selectingExpiredTabSwitchesStatus() {
         every { viewModel.uiState } returns MutableStateFlow(
             GiveawaysViewModel.GiveawaysScreenData(
@@ -158,6 +193,8 @@ class GiveawaysScreenTest {
         val opensDetail: String,
         val liveTab: String,
         val expiredTab: String,
+        val emptyLive: String,
+        val emptyExpired: String,
     ) {
         companion object {
             @Composable
@@ -170,6 +207,8 @@ class GiveawaysScreenTest {
                 opensDetail = stringResource(Res.string.giveaway_screen_list_item_opens_detail),
                 liveTab = stringResource(Res.string.giveaway_screen_tab_live),
                 expiredTab = stringResource(Res.string.giveaway_screen_tab_expired),
+                emptyLive = stringResource(Res.string.giveaway_screen_empty_live),
+                emptyExpired = stringResource(Res.string.giveaway_screen_empty_expired),
             )
         }
     }
