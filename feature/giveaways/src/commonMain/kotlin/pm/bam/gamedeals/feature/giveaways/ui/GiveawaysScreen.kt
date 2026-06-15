@@ -296,7 +296,6 @@ private fun GiveawayStatusTabs(
  * "Go to giveaway" claim button. Tapping the card body opens the in-app detail; the button is the
  * fast path straight to the claim URL.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GiveawayCard(
     giveaway: Giveaway,
@@ -334,56 +333,50 @@ private fun GiveawayCard(
                     error = painterResource(CommonRes.drawable.videogame_thumb),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .height(60.dp)
-                        .width(100.dp)
+                        .height(120.dp)
+                        .width(200.dp)
                         .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
                 )
+                // Platforms / store badges + the countdown sit beside the (now larger) art; the title
+                // and worth drop to full width below.
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = GameDealsCustomTheme.spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-                ) {
-                    Text(
-                        text = titleText,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    giveaway.worthDenominated?.let {
-                        Text(text = buildAnnotatedString {
-                            withStyle(style = MaterialTheme.typography.bodyMedium.toSpanStyle()) {
-                                append(stringResource(Res.string.giveaway_screen_list_item_free_label))
-                            }
-                            append(" ")
-                            withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                                append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
-                            }
-                        })
-                    } ?: Text(
-                        text = stringResource(Res.string.giveaway_screen_list_item_free_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-
-            if (giveaway.platforms.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                 ) {
                     giveaway.platforms.forEach { platform ->
                         StoreLabel(storeName = platform.platformValue)
                     }
+                    endDateMillis?.let {
+                        GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelLarge)
+                    } ?: Text(
+                        text = stringResource(Res.string.giveaway_screen_no_expiry),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
-            endDateMillis?.let {
-                GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            giveaway.worthDenominated?.let {
+                Text(text = buildAnnotatedString {
+                    withStyle(style = MaterialTheme.typography.bodyMedium.toSpanStyle()) {
+                        append(stringResource(Res.string.giveaway_screen_list_item_free_label))
+                    }
+                    append(" ")
+                    withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                        append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
+                    }
+                })
             } ?: Text(
-                text = stringResource(Res.string.giveaway_screen_no_expiry),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(Res.string.giveaway_screen_list_item_free_label),
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             Button(onClick = onGoToGiveaway, modifier = Modifier.fillMaxWidth()) {
