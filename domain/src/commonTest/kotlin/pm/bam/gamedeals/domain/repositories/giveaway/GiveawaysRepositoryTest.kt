@@ -28,6 +28,7 @@ import pm.bam.gamedeals.testing.fixtures.MIN_DATETIME
 import pm.bam.gamedeals.testing.fixtures.giveaway
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GiveawaysRepositoryTest {
@@ -80,6 +81,22 @@ class GiveawaysRepositoryTest {
 
         verifySuspend(exactly(0)) { gamerPowerSource.fetchGiveaways() }
         verifySuspend(exactly(1)) { giveawaysDao.getAllGiveaways() }
+    }
+
+    @Test
+    fun get_giveaway_returns_the_cached_item() = runTest {
+        val cached = giveaway(id = 42)
+        everySuspend { giveawaysDao.getGiveaway(42) } returns cached
+
+        assertEquals(cached, impl.getGiveaway(42))
+        verifySuspend(exactly(1)) { giveawaysDao.getGiveaway(42) }
+    }
+
+    @Test
+    fun get_giveaway_returns_null_when_not_cached() = runTest {
+        everySuspend { giveawaysDao.getGiveaway(99) } returns null
+
+        assertNull(impl.getGiveaway(99))
     }
 
     @Test

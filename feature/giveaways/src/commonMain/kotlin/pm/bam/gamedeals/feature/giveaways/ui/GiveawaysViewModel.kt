@@ -4,8 +4,11 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +22,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.common.logFlow
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
@@ -29,12 +34,15 @@ import pm.bam.gamedeals.logging.Logger
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class GiveawaysViewModel(
     private val logger: Logger,
-    private val giveawaysRepository: GiveawaysRepository
+    private val giveawaysRepository: GiveawaysRepository,
+    private val datetimeParsing: DatetimeParsing,
+    private val clock: Clock,
 ) : ViewModel() {
 
     private val parametersFlow = MutableStateFlow<GiveawaySearchParameters?>(null)
     private val refreshOutcomeFlow = MutableStateFlow<RefreshOutcome>(RefreshOutcome.Idle)
     private val loadingFlow = MutableStateFlow(false)
+    private val statusTabFlow = MutableStateFlow(GiveawayStatusTab.LIVE)
 
     private val giveawaysFlow = parametersFlow
         .flatMapLatest { params ->
@@ -53,13 +61,32 @@ internal class GiveawaysViewModel(
         giveawaysFlow,
         refreshOutcomeFlow,
         loadingFlow,
-    ) { giveaways, outcome, loading ->
+        statusTabFlow,
+    ) { giveaways, outcome, loading, tab ->
         val status = when {
             outcome is RefreshOutcome.Error -> GiveawaysScreenStatus.ERROR
             loading -> GiveawaysScreenStatus.LOADING
             else -> GiveawaysScreenStatus.SUCCESS
         }
-        GiveawaysScreenData(status = status, giveaways = giveaways.toImmutableList())
+
+        // Partition Live/Expired AFTER the repository's platform/type/sort filtering, so the tab
+        // composes with the filter sheet without changing the repository contract. Each item's parsed
+        // expiry (UTC) feeds both the partition and the per-card countdown chip.
+        val now = clock.nowMillis()
+        val withExpiry = giveaways.map { it to parseGiveawayEndDateMillis(it.endDate, datetimeParsing) }
+        val visible = withExpiry.filter { (giveaway, endMs) ->
+            val live = isLive(giveaway, endMs, now)
+            if (tab == GiveawayStatusTab.LIVE) live else !live
+        }
+
+        GiveawaysScreenData(
+            status = status,
+            giveaways = visible.map { it.first }.toImmutableList(),
+            selectedTab = tab,
+            endDateMillis = visible.mapNotNull { (giveaway, endMs) -> endMs?.let { giveaway.id to it } }
+                .toMap()
+                .toImmutableMap(),
+        )
     }
         .logFlow(logger)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GiveawaysScreenData())
@@ -82,11 +109,18 @@ internal class GiveawaysViewModel(
         parametersFlow.value = parameters
     }
 
+    fun selectStatusTab(tab: GiveawayStatusTab) {
+        statusTabFlow.value = tab
+    }
+
 
     @Immutable
     data class GiveawaysScreenData(
         val status: GiveawaysScreenStatus = GiveawaysScreenStatus.LOADING,
-        val giveaways: ImmutableList<Giveaway> = persistentListOf()
+        val giveaways: ImmutableList<Giveaway> = persistentListOf(),
+        val selectedTab: GiveawayStatusTab = GiveawayStatusTab.LIVE,
+        /** Parsed expiry (epoch ms) per giveaway id, for the per-card countdown; absent = no expiry. */
+        val endDateMillis: ImmutableMap<Int, Long> = persistentMapOf(),
     )
 
 

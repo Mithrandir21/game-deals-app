@@ -5,8 +5,17 @@
 
     <string name="giveaway_screen_list_item_worth_label">%1$s</string>
     <string name="giveaway_screen_list_item_free_label">FREE</string>
+    <string name="giveaway_screen_list_item_title_free_on">%1$s - FREE on %2$s</string>
+    <string name="giveaway_screen_list_item_go_to_giveaway">Go to giveaway</string>
     <string name="giveaway_screen_game_image">%1$s Giveaway image</string>
     <string name="giveaway_screen_navigation_back_button">Back</string>
+
+    <string name="giveaway_screen_tab_live">Live</string>
+    <string name="giveaway_screen_tab_expired">Expired</string>
+
+    <string name="giveaway_screen_countdown_label">Ends in</string>
+    <string name="giveaway_screen_countdown_ended">Ended</string>
+    <string name="giveaway_screen_no_expiry">No expiry</string>
 
     <string name="giveaway_screen_filters_platform_label">Platforms</string>
     <string name="giveaway_screen_filters_type_label">Type</string>
@@ -27,10 +36,21 @@
     <string name="giveaway_screen_list_item_row_description">FREE, %1$s</string>
     <string name="giveaway_screen_list_item_row_description_worth">FREE, %1$s, originally %2$s</string>
     <string name="giveaway_screen_list_item_opens_externally">opens in browser</string>
+    <string name="giveaway_screen_list_item_opens_detail">opens giveaway details</string>
 
     <string name="giveaway_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="giveaway_screen_data_loading_error_retry">Retry</string>
 
     <string name="giveaway_screen_loading_indicator">Loading giveaways</string>
+
+    <!-- Giveaway detail screen -->
+    <string name="giveaway_detail_image">%1$s image</string>
+    <string name="giveaway_detail_go_to_giveaway">Go to giveaway</string>
+    <string name="giveaway_detail_description_heading">Description</string>
+    <string name="giveaway_detail_instructions_heading">How to claim</string>
+    <string name="giveaway_detail_loading_indicator">Loading giveaway</string>
+    <string name="giveaway_detail_error_msg">Something went wrong. Please try again.</string>
+    <string name="giveaway_detail_error_retry">Retry</string>
+    <string name="giveaway_detail_back_button">Back</string>
 
 </resources>

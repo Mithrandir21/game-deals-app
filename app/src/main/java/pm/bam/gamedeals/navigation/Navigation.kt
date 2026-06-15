@@ -76,6 +76,10 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    fun navigateToGiveawayDetail(giveawayId: Int) {
+        navController.navigate(Destination.GiveawayDetail(giveawayId))
+    }
+
     fun navigateToBundles() {
         navController.navigate(Destination.Bundles) {
             restoreState = true

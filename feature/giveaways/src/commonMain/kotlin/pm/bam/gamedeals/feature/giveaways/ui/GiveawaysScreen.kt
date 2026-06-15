@@ -2,12 +2,12 @@
 
 package pm.bam.gamedeals.feature.giveaways.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,13 +22,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -36,6 +37,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -53,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -66,12 +68,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
+import pm.bam.gamedeals.common.ui.components.StoreLabel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -88,25 +92,28 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_fi
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_toolbar_title
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_ascending_label
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_descending_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_type_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_game_image
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_externally
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_go_to_giveaway
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_detail
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description_worth
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_title_free_on
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_navigation_back_button
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_expired
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_live
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun GiveawaysScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGiveawayDetail: (giveawayId: Int) -> Unit,
     viewModel: GiveawaysViewModel = koinViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -120,6 +127,8 @@ internal fun GiveawaysScreen(
         onBack = onBack,
         onReload = { viewModel.reloadGiveaways() },
         goToWeb = goToWeb,
+        goToGiveawayDetail = goToGiveawayDetail,
+        onTabSelected = { viewModel.selectStatusTab(it) },
         existingParameters = existingParameters,
         showFilters = showFilters,
         onShowFiltersChanged = { newShowFilters ->
@@ -154,6 +163,8 @@ private fun GiveawaysScreenContent(
     onBack: () -> Unit,
     onReload: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGiveawayDetail: (giveawayId: Int) -> Unit,
+    onTabSelected: (tab: GiveawayStatusTab) -> Unit,
     existingParameters: GiveawaySearchParameters,
     showFilters: Boolean,
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
@@ -171,45 +182,47 @@ private fun GiveawaysScreenContent(
     val loadingCd = stringResource(Res.string.giveaway_screen_loading_indicator)
 
     Surface(color = MaterialTheme.colorScheme.background) {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        title = {
-                            Text(
-                                modifier = Modifier.semantics { heading() },
-                                text = stringResource(Res.string.giveaway_screen_toolbar_title),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    title = {
+                        Text(
+                            modifier = Modifier.semantics { heading() },
+                            text = stringResource(Res.string.giveaway_screen_toolbar_title),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { onBack() }) {
+                            Icon(
+                                imageVector = Icons.Filled.ArrowBack,
+                                contentDescription = stringResource(Res.string.giveaway_screen_navigation_back_button)
                             )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { onBack() }) {
-                                Icon(
-                                    imageVector = Icons.Filled.ArrowBack,
-                                    contentDescription = stringResource(Res.string.giveaway_screen_navigation_back_button)
-                                )
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    stringResource(Res.string.giveaway_screen_filters_icon)
-                                )
-                            }
                         }
-                    )
-                },
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-            ) { innerPadding: PaddingValues ->
+                    },
+                    actions = {
+                        IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                stringResource(Res.string.giveaway_screen_filters_icon)
+                            )
+                        }
+                    }
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        ) { innerPadding: PaddingValues ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                GiveawayStatusTabs(selectedTab = data.selectedTab, onTabSelected = onTabSelected)
+
                 when (data.status) {
                     GiveawaysViewModel.GiveawaysScreenStatus.LOADING -> CircularProgressIndicator(
                         modifier = Modifier
-                            .padding(innerPadding)
                             .fillMaxSize()
                             .wrapContentSize(Alignment.Center)
                             .semantics { contentDescription = loadingCd }
@@ -217,13 +230,18 @@ private fun GiveawaysScreenContent(
 
                     GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS -> LazyColumn(
                         state = scrollState,
-                        modifier = Modifier.padding(innerPadding),
                         content = {
                             items(
                                 count = data.giveaways.size,
                                 key = { index -> data.giveaways[index].id }
-                            ) {
-                                GiveawayListItem(data.giveaways[it]) { goToWeb(data.giveaways[it].gamerpowerUrl, data.giveaways[it].title) }
+                            ) { index ->
+                                val giveaway = data.giveaways[index]
+                                GiveawayCard(
+                                    giveaway = giveaway,
+                                    endDateMillis = data.endDateMillis[giveaway.id],
+                                    onOpenDetail = { goToGiveawayDetail(giveaway.id) },
+                                    onGoToGiveaway = { goToWeb(giveaway.openGiveawayUrl, giveaway.title) },
+                                )
                             }
                         }
                     )
@@ -238,69 +256,141 @@ private fun GiveawaysScreenContent(
                         }
                     }
                 }
-
-                GiveawayFilters(
-                    existingParameters = existingParameters,
-                    showFilters = showFilters,
-                    onDismiss = { onShowFiltersChanged(false) },
-                    onPlatformSelection = onPlatformSelection,
-                    onTypeSelection = onTypeSelection,
-                    onSortBySelection = onSortBySelection
-                )
             }
+
+            GiveawayFilters(
+                existingParameters = existingParameters,
+                showFilters = showFilters,
+                onDismiss = { onShowFiltersChanged(false) },
+                onPlatformSelection = onPlatformSelection,
+                onTypeSelection = onTypeSelection,
+                onSortBySelection = onSortBySelection
+            )
         }
+    }
 }
 
 @Composable
-private fun GiveawayListItem(
-    giveaway: Giveaway,
-    onGiveaway: () -> Unit
+private fun GiveawayStatusTabs(
+    selectedTab: GiveawayStatusTab,
+    onTabSelected: (tab: GiveawayStatusTab) -> Unit,
 ) {
+    val tabs = listOf(
+        GiveawayStatusTab.LIVE to stringResource(Res.string.giveaway_screen_tab_live),
+        GiveawayStatusTab.EXPIRED to stringResource(Res.string.giveaway_screen_tab_expired),
+    )
+    TabRow(selectedTabIndex = selectedTab.ordinal) {
+        tabs.forEach { (tab, label) ->
+            Tab(
+                selected = selectedTab == tab,
+                onClick = { onTabSelected(tab) },
+                text = { Text(label) },
+            )
+        }
+    }
+}
+
+/**
+ * An ITAD-styled giveaway card: game art + "<title> - FREE on <platform>", the original worth
+ * struck through, the platforms as store badges, a live countdown (or "No expiry"), and a prominent
+ * "Go to giveaway" claim button. Tapping the card body opens the in-app detail; the button is the
+ * fast path straight to the claim URL.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GiveawayCard(
+    giveaway: Giveaway,
+    endDateMillis: Long?,
+    onOpenDetail: () -> Unit,
+    onGoToGiveaway: () -> Unit,
+) {
+    val platformsText = giveaway.platforms.joinToString { it.platformValue }
+    val titleText = if (platformsText.isNotBlank()) {
+        stringResource(Res.string.giveaway_screen_list_item_title_free_on, giveaway.title, platformsText)
+    } else {
+        giveaway.title
+    }
+
     val rowCd = giveaway.worthDenominated?.let {
         stringResource(Res.string.giveaway_screen_list_item_row_description_worth, giveaway.title, it)
     } ?: stringResource(Res.string.giveaway_screen_list_item_row_description, giveaway.title)
-    val opensExternallyCd = stringResource(Res.string.giveaway_screen_list_item_opens_externally)
-    ListItem(
+    val opensDetailCd = stringResource(Res.string.giveaway_screen_list_item_opens_detail)
+
+    Card(
+        onClick = onOpenDetail,
         modifier = Modifier
-            .clickable(role = Role.Button) { onGiveaway() }
             .fillMaxWidth()
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-            .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensExternallyCd" },
-        headlineContent = { Text(giveaway.title) },
-        supportingContent = {
-            giveaway.worthDenominated?.let {
-                Text(text = buildAnnotatedString {
-                    withStyle(style = MaterialTheme.typography.bodyLarge.toSpanStyle()) {
-                        append(stringResource(Res.string.giveaway_screen_list_item_free_label))
+            .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensDetailCd" },
+    ) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                AsyncImage(
+                    model = giveaway.image,
+                    contentDescription = stringResource(Res.string.giveaway_screen_game_image, giveaway.title),
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .height(60.dp)
+                        .width(100.dp)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = GameDealsCustomTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                ) {
+                    Text(
+                        text = titleText,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    giveaway.worthDenominated?.let {
+                        Text(text = buildAnnotatedString {
+                            withStyle(style = MaterialTheme.typography.bodyMedium.toSpanStyle()) {
+                                append(stringResource(Res.string.giveaway_screen_list_item_free_label))
+                            }
+                            append(" ")
+                            withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                                append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
+                            }
+                        })
+                    } ?: Text(
+                        text = stringResource(Res.string.giveaway_screen_list_item_free_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            if (giveaway.platforms.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                ) {
+                    giveaway.platforms.forEach { platform ->
+                        StoreLabel(storeName = platform.platformValue)
                     }
-                    append(" ")
-                    withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                        append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
-                    }
-                })
-            } ?: Text(stringResource(Res.string.giveaway_screen_list_item_free_label))
-        },
-        leadingContent = {
-            AsyncImage(
-                model = giveaway.thumbnail,
-                contentDescription = stringResource(Res.string.giveaway_screen_game_image, giveaway.title),
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .height(60.dp)
-                    .width(100.dp)
-                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                }
+            }
+
+            endDateMillis?.let {
+                GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelLarge)
+            } ?: Text(
+                text = stringResource(Res.string.giveaway_screen_no_expiry),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        },
-        trailingContent = {
-            Icon(
-                painter = painterResource(CommonRes.drawable.open_in_new),
-                contentDescription = null, // decorative; the row's contentDescription carries the spoken hint
-                tint = MaterialTheme.colorScheme.primary,
-            )
+
+            Button(onClick = onGoToGiveaway, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.giveaway_screen_list_item_go_to_giveaway))
+            }
         }
-    )
-    HorizontalDivider()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -456,6 +546,9 @@ private val previewGiveawaysList = persistentListOf(
     ),
 )
 
+// A fixed far-future expiry so the preview's countdown renders a stable value (PreviewGiveaway is "N/A" → no chip).
+private val previewEndDateMillis = persistentMapOf(456 to 4_102_444_800_000L)
+
 @Preview
 @Composable
 private fun GiveawaysScreen_Success_Preview() {
@@ -464,10 +557,13 @@ private fun GiveawaysScreen_Success_Preview() {
             data = GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
                 giveaways = previewGiveawaysList,
+                endDateMillis = previewEndDateMillis,
             ),
             onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
+            goToGiveawayDetail = {},
+            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -486,10 +582,13 @@ private fun GiveawaysScreen_Success_Dark_Preview() {
             data = GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
                 giveaways = previewGiveawaysList,
+                endDateMillis = previewEndDateMillis,
             ),
             onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
+            goToGiveawayDetail = {},
+            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -511,6 +610,8 @@ private fun GiveawaysScreen_Loading_Preview() {
             onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
+            goToGiveawayDetail = {},
+            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},

@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
 import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.domain.models.GiveawayType
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -37,10 +38,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class GiveawaysViewModelTest : MainDispatcherTest() {
 
     private val giveawaysRepository: GiveawaysRepository = mock(MockMode.autoUnit)
+
+    // "Now" for the Live/Expired partition; tests that exercise end-date expiry set this before constructing the VM.
+    private var now = 0L
+    private val testClock = Clock { now }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -48,7 +54,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     @Test
     fun initially_loading() = runTest {
         every { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         val emissions = observeStates(viewModel)
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS, emissions.last().status)
@@ -57,7 +63,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     @Test
     fun initially_error() = runTest {
         every { giveawaysRepository.observeGiveaways() } returns flow { throw Exception() }
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         val emissions = observeStates(viewModel)
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
@@ -69,7 +75,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val refreshGate = CompletableDeferred<Unit>()
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshGate.await() }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         // Subscribe before triggering reload so LOADING is observable under SharingStarted.WhileSubscribed semantics.
         val emissions = observeStates(viewModel)
@@ -86,7 +92,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val refreshGate = CompletableDeferred<Unit>()
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshGate.await() }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         // Subscribe before triggering reload so LOADING is observable under SharingStarted.WhileSubscribed semantics.
         val emissions = observeStates(viewModel)
@@ -111,7 +117,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(resultOne, resultTwo, resultThree))
         every { giveawaysRepository.observeGiveaways(any()) } returns flowOf(listOf(resultThree, resultOne))
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         viewModel.loadGiveaway(para)
 
         val emissions = observeStates(viewModel)
@@ -127,7 +133,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw Exception() }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
 
         viewModel.reloadGiveaways()
@@ -144,7 +150,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         // propagate, not be swallowed into a RefreshOutcome.Error.
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw CancellationException("scope cleared") }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
 
         viewModel.reloadGiveaways()
@@ -162,7 +168,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { throw Exception() }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
 
         viewModel.reloadGiveaways()
@@ -185,7 +191,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
             if (refreshCallCount == 1) throw Exception()
         }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
 
         viewModel.reloadGiveaways()
@@ -211,7 +217,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns flow { throw Exception() }
         every { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         val emissions = observeStates(viewModel)
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
@@ -246,7 +252,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         every { giveawaysRepository.observeGiveaways() } returns unfilteredRoom
         every { giveawaysRepository.observeGiveaways(any()) } returns filteredRoom
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         unfilteredRoom.emit(listOf(unfilteredOne, unfilteredTwo))
 
@@ -269,7 +275,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         var refreshCount = 0
         everySuspend { giveawaysRepository.refreshGiveaways() } calls { refreshCount++ }
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
         observeStates(viewModel)
 
@@ -297,7 +303,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
             sortBy = GiveawaySortBy.DATE
         )
 
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository)
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         viewModel.loadGiveaway(para)
         filteredRoom.emit(listOf(filteredResult))
 
@@ -310,6 +316,55 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         assertEquals(GiveawaysViewModel.GiveawaysScreenStatus.ERROR, emissions.last().status)
         assertEquals(1, emissions.last().giveaways.size)
         assertEquals(filteredResult, emissions.last().giveaways.first())
+    }
+
+    @Test
+    fun status_tab_defaults_to_live_and_hides_expired_giveaways() = runTest {
+        val live = giveaway(id = 1, status = "Active", endDate = null)
+        val expired = giveaway(id = 2, status = "Expired", endDate = null)
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(live, expired))
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
+
+        val emissions = observeStates(viewModel)
+        assertEquals(GiveawayStatusTab.LIVE, emissions.last().selectedTab)
+        assertEquals(1, emissions.last().giveaways.size)
+        assertEquals(live, emissions.last().giveaways.first())
+    }
+
+    @Test
+    fun selecting_the_expired_tab_shows_only_expired_giveaways() = runTest {
+        val live = giveaway(id = 1, status = "Active", endDate = null)
+        val expired = giveaway(id = 2, status = "Expired", endDate = null)
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(live, expired))
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
+
+        val emissions = observeStates(viewModel)
+        viewModel.selectStatusTab(GiveawayStatusTab.EXPIRED)
+        runCurrent()
+
+        assertEquals(GiveawayStatusTab.EXPIRED, emissions.last().selectedTab)
+        assertEquals(1, emissions.last().giveaways.size)
+        assertEquals(expired, emissions.last().giveaways.first())
+    }
+
+    @Test
+    fun an_active_giveaway_past_its_end_date_is_treated_as_expired() = runTest {
+        // now = year 2100, so the 2020 end date is in the past and the item is no longer "Live".
+        now = 4_102_444_800_000L
+        val pastEnd = giveaway(id = 1, status = "Active", endDate = "2020-01-01 00:00:00")
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(pastEnd))
+
+        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
+
+        val emissions = observeStates(viewModel)
+        assertTrue(emissions.last().giveaways.isEmpty())
+
+        viewModel.selectStatusTab(GiveawayStatusTab.EXPIRED)
+        runCurrent()
+        assertEquals(1, emissions.last().giveaways.size)
+        assertEquals(pastEnd, emissions.last().giveaways.first())
     }
 
     private fun TestScope.observeStates(viewModel: GiveawaysViewModel) =
