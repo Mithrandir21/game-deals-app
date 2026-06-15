@@ -48,6 +48,7 @@ class HomeScreenTest {
 
     private fun setupCompose(
         goToGame: (String) -> Unit = { _ -> },
+        goToGameByTitle: (String) -> Unit = { _ -> },
         onViewGiveaways: () -> Unit = {},
         onViewBundles: () -> Unit = {},
         onViewBundle: (Int) -> Unit = {},
@@ -57,6 +58,7 @@ class HomeScreenTest {
             screenSemantics = ScreenSemantics.load()
             HomeScreen(
                 goToGame = goToGame,
+                goToGameByTitle = goToGameByTitle,
                 onViewGiveaways = onViewGiveaways,
                 onViewBundles = onViewBundles,
                 onViewBundle = onViewBundle,

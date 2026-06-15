@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 @Composable
 fun HomeRoute(
     goToGame: (gameId: String) -> Unit,
+    goToGameByTitle: (title: String) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
@@ -17,6 +18,7 @@ fun HomeRoute(
 ) {
     HomeScreen(
         goToGame = goToGame,
+        goToGameByTitle = goToGameByTitle,
         onViewGiveaways = onViewGiveaways,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,

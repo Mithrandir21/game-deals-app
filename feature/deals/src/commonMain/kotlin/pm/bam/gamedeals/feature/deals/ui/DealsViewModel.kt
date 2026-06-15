@@ -38,8 +38,12 @@ import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.deal.DealDetailsController
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DealFlag
+import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.ProductType
+import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
@@ -47,6 +51,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
@@ -80,6 +85,7 @@ internal class DealsViewModel(
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
@@ -102,15 +108,26 @@ internal class DealsViewModel(
 
     private val sort = MutableStateFlow(DealsSort.TopDiscount)
     private val selectedShopIds = MutableStateFlow<Set<Int>>(emptySet())
-    private val matureFlow = MutableStateFlow(false)
 
     /** The currently selected shop ids (empty = all stores). */
     val selectedShops: StateFlow<ImmutableSet<Int>> = selectedShopIds
         .map { it.toImmutableSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
-    /** Whether adult titles are included (`mature=true` on `/deals/v2`); default off. */
-    val mature: StateFlow<Boolean> = matureFlow.asStateFlow()
+    /**
+     * Whether adult titles are included (`mature=true` on `/deals/v2`); default off. Backed by the
+     * persisted, cross-app [SettingsRepository] so the choice is remembered and shared with the Bundles tab.
+     */
+    val mature: StateFlow<Boolean> = settingsRepository.observeMatureOptIn()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * The active server-side deal filters (discount, price, type, DRM-free, deal flag, Steam %, release
+     * recency) applied to `/deals/v2`; default empty. Persisted via [SettingsRepository] so it survives
+     * relaunches (Deals-only — not shared with Bundles). Changing it reloads the list from offset 0.
+     */
+    val filter: StateFlow<DealsFilter> = settingsRepository.observeDealsFilter()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DealsFilter())
 
     val uiState: StateFlow<DealsScreenData>
         field = MutableStateFlow(DealsScreenData())
@@ -138,16 +155,18 @@ internal class DealsViewModel(
     private var appendJob: Job? = null
 
     init {
-        // First load + reload whenever the sort, the shop filter, the mature toggle or the region
-        // changes. The region flow emits its seeded value immediately, so this also performs the initial
-        // load. `collectLatest` cancels an in-flight first-page load if a filter changes again first.
+        // First load + reload whenever the sort, the shop filter, the mature toggle, the region, or the
+        // server-side deal filter changes. The region flow emits its seeded value immediately, so this
+        // also performs the initial load. `collectLatest` cancels an in-flight first-page load if a
+        // filter changes again first.
         viewModelScope.launch {
             combine(
                 sort,
                 selectedShopIds,
-                matureFlow,
+                settingsRepository.observeMatureOptIn(),
                 regionRepository.observeSelectedCountry().map { it.code }.distinctUntilChanged(),
-            ) { selectedSort, shops, mature, _ -> BrowseParams(selectedSort, shops, mature) }
+                settingsRepository.observeDealsFilter(),
+            ) { selectedSort, shops, mature, _, dealsFilter -> BrowseParams(selectedSort, shops, mature, dealsFilter) }
                 .collectLatest { loadFirstPage(it) }
         }
 
@@ -185,8 +204,44 @@ internal class DealsViewModel(
 
     fun clearShopFilter() = selectedShopIds.update { emptySet() }
 
-    /** Toggle whether adult titles are included in the browse list. */
-    fun setMature(enabled: Boolean) = matureFlow.update { enabled }
+    /** Toggle whether adult titles are included in the browse list (persisted, shared with Bundles). */
+    fun setMature(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
+    }
+
+    // --- Server-side deal filters (persisted; each change reloads the list from offset 0) ---
+
+    /** Minimum discount percent, or null for no discount floor. */
+    fun setMinCut(percent: Int?) = updateFilter { it.copy(minCutPercent = percent) }
+
+    /** Maximum sale price in the region's currency (0.0 = Free), or null for no price cap. */
+    fun setMaxPrice(maxPrice: Double?) = updateFilter { it.copy(maxPrice = maxPrice) }
+
+    /** Toggle a product type in/out of the filter; an empty selection means "all types". */
+    fun toggleType(type: ProductType) = updateFilter { current ->
+        current.copy(types = if (type in current.types) current.types - type else current.types + type)
+    }
+
+    /** Toggle the DRM-free-only constraint. */
+    fun setDrmFree(enabled: Boolean) = updateFilter { it.copy(drmFree = enabled) }
+
+    /** Restrict to a deal flag (new/historical/shop low), or null for any. */
+    fun setFlag(flag: DealFlag?) = updateFilter { it.copy(flag = flag) }
+
+    /** Minimum Steam review percent, or null for no review floor. */
+    fun setMinSteam(percent: Int?) = updateFilter { it.copy(minSteamPercent = percent) }
+
+    /** Restrict to a release-recency window, or null for any. */
+    fun setRelease(window: ReleaseWindow?) = updateFilter { it.copy(release = window) }
+
+    /** Clear every server-side deal filter (does not touch sort/shops/mature). */
+    fun clearFilters() = updateFilter { DealsFilter() }
+
+    // Reads the authoritative current filter from the repository, applies [transform], and persists it.
+    // Persisting flips the reactive `observeDealsFilter` flow → the init combine reloads from offset 0.
+    private fun updateFilter(transform: (DealsFilter) -> DealsFilter) {
+        viewModelScope.launch { settingsRepository.setDealsFilter(transform(settingsRepository.getDealsFilter())) }
+    }
 
     /** Update the title-search text; blank returns to browse mode. */
     fun setSearchQuery(query: String) = searchQueryState.update { query }
@@ -194,7 +249,7 @@ internal class DealsViewModel(
     fun clearSearch() = searchQueryState.update { "" }
 
     fun retry() {
-        viewModelScope.launch { loadFirstPage(BrowseParams(sort.value, selectedShopIds.value, matureFlow.value)) }
+        viewModelScope.launch { loadFirstPage(BrowseParams(sort.value, selectedShopIds.value, mature.value, filter.value)) }
     }
 
     private suspend fun loadFirstPage(params: BrowseParams) {
@@ -205,16 +260,18 @@ internal class DealsViewModel(
                 sort = params.sort,
                 shopIds = params.shopIds.toImmutableSet(),
                 mature = params.mature,
+                filter = params.filter,
             )
         }
         try {
-            val page = dealsRepository.getDeals(DealsQuery(sort = params.sort, shopIds = params.shopIds.toList(), mature = params.mature, offset = 0))
+            val page = dealsRepository.getDeals(DealsQuery(sort = params.sort, shopIds = params.shopIds.toList(), mature = params.mature, filter = params.filter, offset = 0))
             uiState.update {
                 DealsScreenData(
                     status = DealsScreenData.Status.DATA,
                     sort = params.sort,
                     shopIds = params.shopIds.toImmutableSet(),
                     mature = params.mature,
+                    filter = params.filter,
                     deals = page.toImmutableList(),
                     endReached = page.size < DealsQuery.DEALS_PAGE_SIZE,
                 )
@@ -222,9 +279,9 @@ internal class DealsViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
-            fatal(logger, t) { "Failed to load deals (sort=${params.sort}, shops=${params.shopIds}, mature=${params.mature})" }
+            fatal(logger, t) { "Failed to load deals (sort=${params.sort}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
             uiState.update {
-                DealsScreenData(status = DealsScreenData.Status.ERROR, sort = params.sort, shopIds = params.shopIds.toImmutableSet(), mature = params.mature)
+                DealsScreenData(status = DealsScreenData.Status.ERROR, sort = params.sort, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
             }
         }
     }
@@ -236,7 +293,7 @@ internal class DealsViewModel(
         appendJob = viewModelScope.launch {
             uiState.update { it.copy(appending = true) }
             try {
-                val page = dealsRepository.getDeals(DealsQuery(sort = current.sort, shopIds = current.shopIds.toList(), mature = current.mature, offset = current.deals.size))
+                val page = dealsRepository.getDeals(DealsQuery(sort = current.sort, shopIds = current.shopIds.toList(), mature = current.mature, filter = current.filter, offset = current.deals.size))
                 uiState.update { state ->
                     state.copy(
                         deals = (state.deals + page).toImmutableList(),
@@ -295,7 +352,7 @@ internal class DealsViewModel(
         events.tryEmit(DealsUiEvent.ShareDeal(text))
     }
 
-    private data class BrowseParams(val sort: DealsSort, val shopIds: Set<Int>, val mature: Boolean)
+    private data class BrowseParams(val sort: DealsSort, val shopIds: Set<Int>, val mature: Boolean, val filter: DealsFilter)
 
     internal sealed interface DealsUiEvent {
         data class ShareDeal(val text: String) : DealsUiEvent
@@ -319,6 +376,7 @@ internal class DealsViewModel(
         val sort: DealsSort = DealsSort.TopDiscount,
         val shopIds: ImmutableSet<Int> = persistentSetOf(),
         val mature: Boolean = false,
+        val filter: DealsFilter = DealsFilter(),
         val deals: ImmutableList<Deal> = persistentListOf(),
         val appending: Boolean = false,
         val endReached: Boolean = false,

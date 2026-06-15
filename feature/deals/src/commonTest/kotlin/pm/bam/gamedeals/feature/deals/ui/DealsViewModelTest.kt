@@ -3,6 +3,7 @@
 package pm.bam.gamedeals.feature.deals.ui
 
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.every
@@ -15,6 +16,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -24,13 +26,16 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -64,6 +69,18 @@ class DealsViewModelTest : MainDispatcherTest() {
     }
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
 
+    // Real backing flows so setMature / setDealsFilter persist and the browse list re-derives, like
+    // SettingsRepositoryImpl (get*/set* read & write the same flow the init combine collects).
+    private val matureFlow = MutableStateFlow(false)
+    private val dealsFilterFlow = MutableStateFlow(DealsFilter())
+    private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit) {
+        every { observeMatureOptIn() } returns matureFlow
+        everySuspend { setMatureOptIn(any()) } calls { (enabled: Boolean) -> matureFlow.value = enabled }
+        every { observeDealsFilter() } returns dealsFilterFlow
+        everySuspend { getDealsFilter() } calls { dealsFilterFlow.value }
+        everySuspend { setDealsFilter(any()) } calls { (filter: DealsFilter) -> dealsFilterFlow.value = filter }
+    }
+
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
@@ -76,6 +93,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
+        settingsRepository = settingsRepository,
     )
 
     @Test
@@ -187,6 +205,47 @@ class DealsViewModelTest : MainDispatcherTest() {
 
         assertTrue(vm.uiState.value.mature)
         verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, mature = true, offset = 0)) }
+    }
+
+    @Test
+    fun setMinCut_reloads_page_zero_with_filter_and_persists() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.setMinCut(50)
+        advanceUntilIdle()
+
+        val expectedFilter = DealsFilter(minCutPercent = 50)
+        assertEquals(expectedFilter, dealsFilterFlow.value) // persisted via SettingsRepository
+        assertEquals(expectedFilter, vm.uiState.value.filter) // reload carried the new filter
+        verifySuspend(exactly(1)) {
+            dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, filter = expectedFilter, offset = 0))
+        }
+    }
+
+    @Test
+    fun toggleType_accumulates_then_clearFilters_resets() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.toggleType(ProductType.Game)
+        advanceUntilIdle()
+        vm.toggleType(ProductType.Dlc)
+        advanceUntilIdle()
+        assertEquals(setOf(ProductType.Game, ProductType.Dlc), dealsFilterFlow.value.types)
+
+        vm.toggleType(ProductType.Game) // toggles Game back off
+        advanceUntilIdle()
+        assertEquals(setOf(ProductType.Dlc), dealsFilterFlow.value.types)
+
+        vm.clearFilters()
+        advanceUntilIdle()
+        assertEquals(DealsFilter(), dealsFilterFlow.value)
+        assertTrue(vm.uiState.value.filter.isEmpty())
     }
 
     @Test

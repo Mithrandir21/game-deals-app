@@ -22,11 +22,13 @@ fun NavGraphBuilder.bundlesScreen(
 fun NavGraphBuilder.bundleDetailScreen(
     navController: NavController,
     goToWeb: (url: String, title: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
 ) {
     composable<Destination.BundleDetail> {
         BundleDetailScreen(
             onBack = { navController.popBackStack() },
             goToWeb = goToWeb,
+            onGameClick = goToGame,
         )
     }
 }

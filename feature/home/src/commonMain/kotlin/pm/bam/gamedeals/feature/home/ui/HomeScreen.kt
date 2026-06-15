@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -80,6 +81,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_acti
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -124,6 +126,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 // Stable contentType tokens for the Home LazyColumn — let Compose recycle scrolled-off items of the same
 // type during a fling instead of re-composing from scratch (fix for fling jank on this mixed list).
 private const val CONTENT_TYPE_SECTION_HEADER = "section_header"
+private const val CONTENT_TYPE_SECTION_DIVIDER = "section_divider"
 private const val CONTENT_TYPE_STAT_ROW = "stat_row"
 private const val CONTENT_TYPE_HERO_ROW = "hero_row"
 private const val CONTENT_TYPE_DEAL = "deal"
@@ -135,6 +138,7 @@ private const val CONTENT_TYPE_BUNDLE = "bundle"
 @Composable
 internal fun HomeScreen(
     goToGame: (gameId: String) -> Unit,
+    goToGameByTitle: (title: String) -> Unit,
     onViewGiveaways: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
@@ -149,10 +153,9 @@ internal fun HomeScreen(
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
-    val releaseUnavailable = stringResource(Res.string.home_screen_data_loading_error_msg)
 
     HomeScreenContent(
-        onReleaseTitle = { title -> viewModel.onReleaseGame(title) },
+        onReleaseTitle = goToGameByTitle,
         data = data.value,
         waitlistIds = waitlistIds.value,
         ignoredIds = ignoredIds.value,
@@ -180,7 +183,6 @@ internal fun HomeScreen(
         when (event) {
             is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
             HomeViewModel.HomeUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
-            HomeViewModel.HomeUiEvent.ReleaseUnavailable -> snackbarHostState.showSnackbar(releaseUnavailable)
         }
     }
 }
@@ -286,6 +288,10 @@ private fun HomeFeed(
     val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
     val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        // Track whether we've already emitted a section so each subsequent section is preceded by a
+        // separator + spacing, while the first one stays flush to the top (no stray divider).
+        var renderedSection = false
+
         // 1. Account stat cards (logged-in only).
         data.accountStats?.let { stats ->
             item(contentType = CONTENT_TYPE_STAT_ROW) {
@@ -307,10 +313,13 @@ private fun HomeFeed(
                     )
                 }
             }
+            renderedSection = true
         }
 
         // 2. Featured hero grid (top-discount deals), two tiles per row.
         if (data.featuredHero.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_featured_label)) }
 
             val heroRows = data.featuredHero.chunked(2)
@@ -348,6 +357,8 @@ private fun HomeFeed(
 
         // 3. Trending deals.
         if (data.trending.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_trending_label)) }
             items(
                 count = data.trending.size,
@@ -383,23 +394,33 @@ private fun HomeFeed(
         }
 
         // 4. Most Waitlisted.
-        rankedSection(
-            titleRes = Res.string.home_screen_most_waitlisted_label,
-            games = data.mostWaitlisted,
-            keyPrefix = "waitlisted",
-            goToGame = goToGame,
-        )
+        if (data.mostWaitlisted.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
+            rankedSection(
+                titleRes = Res.string.home_screen_most_waitlisted_label,
+                games = data.mostWaitlisted,
+                keyPrefix = "waitlisted",
+                goToGame = goToGame,
+            )
+        }
 
         // 5. Most Collected.
-        rankedSection(
-            titleRes = Res.string.home_screen_most_collected_label,
-            games = data.mostCollected,
-            keyPrefix = "collected",
-            goToGame = goToGame,
-        )
+        if (data.mostCollected.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
+            rankedSection(
+                titleRes = Res.string.home_screen_most_collected_label,
+                games = data.mostCollected,
+                keyPrefix = "collected",
+                goToGame = goToGame,
+            )
+        }
 
         // 6. New Releases (IGDB).
         if (data.releases.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
             items(
                 count = data.releases.size,
@@ -412,6 +433,8 @@ private fun HomeFeed(
 
         // 7. Bundles.
         if (data.bundles.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) {
                 SectionHeader(
                     text = stringResource(Res.string.home_screen_bundles_label),
@@ -430,6 +453,8 @@ private fun HomeFeed(
 
         // 8. Giveaways.
         if (data.giveaways.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) {
                 SectionHeader(
                     text = stringResource(Res.string.home_screen_giveaways_label),
@@ -445,6 +470,22 @@ private fun HomeFeed(
                 GiveawayRow(data.giveaways[index]) { url -> goToWeb(url, data.giveaways[index].title) }
             }
         }
+    }
+}
+
+/**
+ * A separator emitted between two consecutive Home sections: a hairline [HorizontalDivider] with
+ * vertical breathing room so the distinct feed sections read as clearly separated blocks. Inset
+ * horizontally to align with the section content rather than running fully edge-to-edge.
+ */
+private fun LazyListScope.sectionDivider() {
+    item(contentType = CONTENT_TYPE_SECTION_DIVIDER) {
+        HorizontalDivider(
+            modifier = Modifier.padding(
+                horizontal = GameDealsCustomTheme.spacing.medium,
+                vertical = GameDealsCustomTheme.spacing.medium,
+            ),
+        )
     }
 }
 
@@ -555,36 +596,16 @@ private fun HomeBundleRow(
     bundle: Bundle,
     onClick: () -> Unit,
 ) {
-    val rowCd = stringResource(Res.string.home_screen_bundle_row_description, bundle.title, bundle.storeName)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onClick() }
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
-            .semantics(mergeDescendants = true) { contentDescription = rowCd },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = bundle.title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = bundle.storeName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        bundle.priceDenominated?.let { price ->
-            Text(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.extraSmall)
-                    .padding(GameDealsCustomTheme.spacing.medium),
-                text = price,
-            )
-        }
-    }
+    // The Home bundle section reuses the same Card row as the Bundles tab (art strip + metadata), with
+    // section padding so it isn't edge-to-edge in the Home LazyColumn.
+    BundleListRow(
+        bundle = bundle,
+        onClick = onClick,
+        modifier = Modifier.padding(
+            horizontal = GameDealsCustomTheme.spacing.medium,
+            vertical = GameDealsCustomTheme.spacing.small,
+        ),
+    )
 }
 
 @Composable

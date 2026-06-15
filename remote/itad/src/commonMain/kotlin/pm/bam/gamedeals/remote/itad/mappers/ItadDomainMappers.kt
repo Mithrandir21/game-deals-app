@@ -1,15 +1,16 @@
 package pm.bam.gamedeals.remote.itad.mappers
 
 import kotlinx.collections.immutable.toImmutableList
-import kotlin.math.round
 import kotlin.time.Instant
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
@@ -37,25 +38,7 @@ internal fun gameIdFromDealId(dealId: String): String = dealId.substringBeforeLa
  * regional picker exposes (USD → "$9.99", EUR → "€9.99", GBP → "£9.99", …); other currencies fall back
  * to a trailing code ("9.99 PLN") so we never render a wrong/misplaced symbol (#212, regional pricing).
  */
-internal fun ItadMoney.denominated(): String {
-    val cents = round(amount * 100).toLong()
-    val number = "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
-    val symbol = CURRENCY_SYMBOLS[currency.uppercase()]
-    return if (symbol != null) "$symbol$number" else "$number $currency"
-}
-
-/** Prefix-style currency symbols only (currencies whose symbol conventionally trails are left as a code). */
-private val CURRENCY_SYMBOLS: Map<String, String> = mapOf(
-    "USD" to "$",
-    "CAD" to "CA$",
-    "AUD" to "A$",
-    "NZD" to "NZ$",
-    "EUR" to "€",
-    "GBP" to "£",
-    "JPY" to "¥",
-    "BRL" to "R$",
-    "MXN" to "MX$",
-)
+internal fun ItadMoney.denominated(): String = formatMoney(amount, currency)
 
 internal fun ItadDeal.toDeal(): Deal {
     val normal = regular ?: price
@@ -104,14 +87,25 @@ private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
 }
 
 /**
- * ITAD `/bundles/v1` bundle → domain [Bundle] (#205 Phase 3c). The headline price is the cheapest tier;
- * the games are the union across all tiers (deduped by id). Expiry is parsed from ISO-8601 (with offset)
- * via [Instant]; an unparseable value becomes null.
+ * ITAD `/bundles/v1` bundle → domain [Bundle] (#205 Phase 3c; expanded in the Bundles redesign). The tier
+ * structure is preserved one-to-one (each [Bundle.Tier] keeps its denominated + raw price and its games);
+ * [Bundle.games] is the deduped union across all tiers, kept for the compact list row's cover-art strip.
+ * The headline [Bundle.priceDenominated]/[Bundle.priceValue] is the cheapest tier. Expiry/publish are
+ * parsed from ISO-8601 (with offset) via [Instant]; an unparseable value becomes null.
  */
 internal fun RemoteItadBundle.toBundle(): Bundle {
-    val games = tiers.flatMap { it.games }
+    val mappedTiers = tiers.map { tier ->
+        val money = tier.price?.toItadMoney()
+        Bundle.Tier(
+            priceDenominated = money?.denominated(),
+            priceValue = tier.price?.amount,
+            games = tier.games
+                .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets.bestArt().orEmpty()) }
+                .toImmutableList(),
+        )
+    }.toImmutableList()
+    val games = mappedTiers.flatMap { it.games }
         .distinctBy { it.id }
-        .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets.bestArt().orEmpty()) }
         .toImmutableList()
     val cheapest = tiers.mapNotNull { it.price }.minByOrNull { it.amount }
     return Bundle(
@@ -123,6 +117,31 @@ internal fun RemoteItadBundle.toBundle(): Bundle {
         gameCount = counts?.games ?: games.size,
         priceDenominated = cheapest?.toItadMoney()?.denominated(),
         games = games,
+        publishEpochMs = publish?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() },
+        isMature = isMature,
+        details = details?.takeIf { it.isNotBlank() },
+        priceValue = cheapest?.amount,
+        tiers = mappedTiers,
+    )
+}
+
+/**
+ * ITAD `/games/prices/v3` prices → domain [BundleGamePrice] (Bundles redesign). The "best" deal is the
+ * cheapest current deal (by raw amount); its shop name comes directly off the deal entry (no
+ * StoresRepository round-trip). The all-time low is `historyLowAll`. A game with no current deal yields
+ * null `best*` fields (the detail row shows "No current deal").
+ */
+internal fun ItadGamePrices.toBundleGamePrice(): BundleGamePrice {
+    val best = deals.minByOrNull { it.price.amount }
+    return BundleGamePrice(
+        gameId = gameId,
+        bestShopName = best?.shop?.name,
+        bestPriceValue = best?.price?.amount,
+        bestPriceDenominated = best?.price?.denominated(),
+        bestCutPercent = best?.cutPercent,
+        historicalLowValue = historyLowAll?.amount,
+        historicalLowDenominated = historyLowAll?.denominated(),
+        currency = best?.price?.currency ?: historyLowAll?.currency,
     )
 }
 

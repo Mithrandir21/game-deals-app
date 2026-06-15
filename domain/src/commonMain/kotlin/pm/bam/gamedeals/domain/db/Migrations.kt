@@ -212,6 +212,22 @@ private val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+/**
+ * v19 → v20 — bundle detail redesign (Bundles redesign work). The `BundlesCache` table DDL is unchanged
+ * (still a region-keyed JSON blob), but the serialized `Bundle` shape gained tier structure + per-game
+ * pricing inputs (`tiers`, `details`, `publishEpochMs`, `isMature`, `priceValue`). New fields are
+ * nullable/defaulted so a stale blob still decodes, but an old blob would render with no tiers until its
+ * 12h TTL lapses — so the network-backed cache is dropped and recreated (a cache clear; the feed re-fetches
+ * on next open), matching the recreate rationale used by MIGRATION_5_6/6_7. The `CREATE TABLE` DDL is
+ * copied verbatim from `domain/schemas/.../20.json` so the post-migration identity matches the v20 database.
+ */
+private val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `BundlesCache`")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `BundlesCache` (`country` TEXT NOT NULL, `json` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, `expires` INTEGER NOT NULL, PRIMARY KEY(`country`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

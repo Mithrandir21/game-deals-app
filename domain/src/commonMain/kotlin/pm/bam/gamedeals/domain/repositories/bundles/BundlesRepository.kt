@@ -6,6 +6,7 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.BundlesCacheEntry
 import pm.bam.gamedeals.domain.db.dao.BundlesCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
@@ -22,6 +23,13 @@ internal const val BUNDLES_TTL_MILLIS = millisInHour * 12
 interface BundlesRepository {
     suspend fun getBundles(): List<Bundle>
     suspend fun getBundle(id: Int): Bundle?
+
+    /**
+     * Current best price + all-time low for each of [gameIds] (the games in a bundle), in the user's
+     * region — one batched query enriching the bundle detail screen. Best-effort and uncached (like
+     * regional prices): a game with no current deal is omitted or carries null `best*` fields.
+     */
+    suspend fun getBundleGamePrices(gameIds: List<String>): List<BundleGamePrice>
 }
 
 internal class BundlesRepositoryImpl(
@@ -67,4 +75,7 @@ internal class BundlesRepositoryImpl(
     }
 
     override suspend fun getBundle(id: Int): Bundle? = getBundles().firstOrNull { it.id == id }
+
+    override suspend fun getBundleGamePrices(gameIds: List<String>): List<BundleGamePrice> =
+        dealsSource.fetchBundleGamePrices(gameIds)
 }

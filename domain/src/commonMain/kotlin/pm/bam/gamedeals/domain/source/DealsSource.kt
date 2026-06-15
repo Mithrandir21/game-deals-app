@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.source
 
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -85,6 +86,14 @@ interface DealsSource {
      * data return an empty list.
      */
     suspend fun fetchBundlesForGame(gameId: String): List<Bundle>
+
+    /**
+     * Current best price + all-time low for each of [gameIds], in the user's selected region (Bundles
+     * redesign) — one batched `/games/prices/v3` call enriching the games on the bundle detail screen.
+     * Best-effort: games with no current deal are omitted or carry null `best*` fields. Providers without
+     * pricing return an empty list.
+     */
+    suspend fun fetchBundleGamePrices(gameIds: List<String>): List<BundleGamePrice>
 
     /**
      * The game's cheapest current price in each of [countries] (epic #291, Phase 7 — the Game Page's

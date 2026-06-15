@@ -26,6 +26,39 @@
     <string name="deals_filter_mature_label">Show adult titles</string>
     <string name="deals_filter_mature_switch_description">Show adult titles toggle</string>
 
+    <!-- Server-side deal filters -->
+    <string name="deals_filter_reset">Reset all</string>
+    <string name="deals_filter_chip_any">Any</string>
+
+    <string name="deals_filter_section_discount">Minimum discount</string>
+    <string name="deals_filter_discount_tier">%1$d%%+</string>
+
+    <string name="deals_filter_section_price">Maximum price</string>
+    <string name="deals_filter_price_free">Free</string>
+    <string name="deals_filter_price_under">Under %1$s</string>
+
+    <string name="deals_filter_section_type">Type</string>
+    <string name="deals_filter_type_game">Games</string>
+    <string name="deals_filter_type_dlc">DLC</string>
+    <string name="deals_filter_type_bundle">Bundles</string>
+
+    <string name="deals_filter_section_drm">DRM</string>
+    <string name="deals_filter_drm_free_label">DRM-free only</string>
+    <string name="deals_filter_drm_free_switch_description">DRM-free only toggle</string>
+
+    <string name="deals_filter_section_flag">Deal type</string>
+    <string name="deals_filter_flag_new_low">New low</string>
+    <string name="deals_filter_flag_historical_low">Historical low</string>
+    <string name="deals_filter_flag_shop_low">Shop low</string>
+
+    <string name="deals_filter_section_reviews">Minimum Steam rating</string>
+    <string name="deals_filter_reviews_tier">%1$d%%+</string>
+
+    <string name="deals_filter_section_release">Release</string>
+    <string name="deals_filter_release_new">New</string>
+    <string name="deals_filter_release_this_year">This year</string>
+    <string name="deals_filter_release_older">2+ years old</string>
+
     <!-- Title search (merged from the former Search screen) -->
     <string name="deals_search_field_label">Search game title</string>
     <string name="deals_search_icon">Search icon</string>

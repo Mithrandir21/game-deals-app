@@ -73,9 +73,6 @@ interface GamesRepository {
     @ExperimentalSerializationApi
     suspend fun searchGames(searchParameters: SearchParameters): List<Deal>
 
-    @ExperimentalSerializationApi
-    suspend fun getReleaseDeal(gameTitle: String): Deal?
-
     suspend fun getGameDetails(dealId: String): GameDetails
 
     /** The game's historical low-price time series for the price-history chart (#208). */
@@ -129,11 +126,6 @@ internal class GamesRepositoryImpl(
     @ExperimentalSerializationApi
     override suspend fun searchGames(searchParameters: SearchParameters): List<Deal> =
         dealsSource.fetchDealsForStore(searchParameters)
-
-    @ExperimentalSerializationApi
-    override suspend fun getReleaseDeal(gameTitle: String): Deal? =
-        dealsSource.fetchDealsForStore(SearchParameters(title = gameTitle, exact = true))
-            .firstOrNull()
 
     /**
      * Game details for the transact surface. Cached per `(gameId, country)` at a short 2h TTL and read

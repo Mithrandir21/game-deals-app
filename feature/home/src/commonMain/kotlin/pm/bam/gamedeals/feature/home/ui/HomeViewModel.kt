@@ -45,7 +45,6 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -77,7 +76,6 @@ internal const val EXPIRED_STATUS = "Expired"
 internal class HomeViewModel(
     private val storesRepository: StoresRepository,
     private val dealsRepository: DealsRepository,
-    private val gamesRepository: GamesRepository,
     private val releasesRepository: ReleasesRepository,
     private val giveawaysRepository: GiveawaysRepository,
     private val bundlesRepository: BundlesRepository,
@@ -169,19 +167,6 @@ internal class HomeViewModel(
 
     fun retry() = load()
 
-    fun onReleaseGame(releaseTitle: String) {
-        viewModelScope.launch {
-            val deal = runCatching { gamesRepository.getReleaseDeal(releaseTitle) }
-                .onFailure { fatal(logger, it) { "Failed to resolve release deal for '$releaseTitle'" } }
-                .getOrNull()
-            if (deal == null) {
-                events.tryEmit(HomeUiEvent.ReleaseUnavailable)
-            } else {
-                loadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url)
-            }
-        }
-    }
-
     fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
         dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
     }
@@ -255,7 +240,6 @@ internal class HomeViewModel(
     internal sealed interface HomeUiEvent {
         data class ShareDeal(val text: String) : HomeUiEvent
         data object SignInRequired : HomeUiEvent
-        data object ReleaseUnavailable : HomeUiEvent
     }
 
     @Immutable

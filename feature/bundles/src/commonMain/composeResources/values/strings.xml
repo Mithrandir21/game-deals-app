@@ -9,12 +9,34 @@
     <string name="bundles_screen_empty">No active bundles right now.</string>
 
     <string name="bundles_row_game_count">%1$d games</string>
-    <string name="bundles_row_expiry">Ends %1$s</string>
-    <string name="bundles_row_from_price">From %1$s</string>
-    <string name="bundles_row_description">%1$s from %2$s</string>
+
+    <string name="bundles_sort_label">Sort</string>
+    <string name="bundles_sort_newest">Newest</string>
+    <string name="bundles_sort_expiring">Expiring</string>
+    <string name="bundles_sort_price">Price</string>
+    <string name="bundles_mature_toggle">Show mature</string>
 
     <string name="bundle_detail_get_bundle">Get bundle</string>
     <string name="bundle_detail_included_games">Included games</string>
     <string name="bundle_detail_game_image">%1$s</string>
+
+    <string name="bundle_detail_countdown_label">Time left</string>
+    <string name="bundle_detail_countdown_ended">Bundle ended</string>
+    <string name="bundle_detail_tier">Tier %1$d</string>
+    <string name="bundle_detail_tier_price">Pay %1$s</string>
+    <string name="bundle_detail_price_at">%1$s at %2$s</string>
+    <string name="bundle_detail_discount">-%1$d%%</string>
+    <string name="bundle_detail_historical_low">All-time low %1$s</string>
+    <string name="bundle_detail_no_deal">No current deal</string>
+
+    <string name="bundle_detail_value_title">Overall value</string>
+    <string name="bundle_detail_value_current">Current value</string>
+    <string name="bundle_detail_value_low">All-time-low value</string>
+    <string name="bundle_detail_value_bundle_price">Bundle price</string>
+    <string name="bundle_detail_value_savings">Save %1$d%%</string>
+    <string name="bundle_detail_value_partial">Based on %1$d of %2$d games with a current price</string>
+
+    <string name="bundle_detail_published">Published %1$s</string>
+    <string name="bundle_detail_expiry">Expires %1$s</string>
 
 </resources>

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -85,7 +88,11 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.DealFlag
+import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.ProductType
+import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
@@ -96,6 +103,30 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_mature_sw
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_sort
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_sheet_title
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_reset
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_chip_any
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_discount
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_discount_tier
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_price
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_price_free
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_price_under
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_type
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_type_game
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_type_dlc
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_type_bundle
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_drm
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_drm_free_label
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_drm_free_switch_description
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_flag
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_flag_new_low
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_flag_historical_low
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_flag_shop_low
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_reviews
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_reviews_tier
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_section_release
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_release_new
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_release_this_year
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_release_older
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_deal_row_description_waitlisted
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_empty_label
@@ -125,6 +156,11 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_requ
 // Trigger a load-more when the user scrolls within this many rows of the end of the loaded page.
 private const val LOAD_MORE_THRESHOLD = 5
 
+// Preset thresholds for the single-select filter chip rows (see DealsFilterSheet).
+private val CUT_TIERS = listOf(25, 50, 75, 90)
+private val PRICE_TIERS = listOf(5, 10, 20, 50)
+private val STEAM_TIERS = listOf(70, 80, 90)
+
 @Composable
 internal fun DealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
@@ -138,6 +174,7 @@ internal fun DealsScreen(
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
     val mature by viewModel.mature.collectAsStateWithLifecycle()
+    val filter by viewModel.filter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
@@ -172,6 +209,7 @@ internal fun DealsScreen(
         stores = stores,
         selectedShops = selectedShops,
         mature = mature,
+        filter = filter,
         searchRevealed = searchRevealed,
         searchQuery = searchQuery,
         searchResults = searchResults,
@@ -182,6 +220,14 @@ internal fun DealsScreen(
         onToggleShop = { viewModel.toggleShop(it) },
         onClearShops = { viewModel.clearShopFilter() },
         onSetMature = { viewModel.setMature(it) },
+        onSetMinCut = { viewModel.setMinCut(it) },
+        onSetMaxPrice = { viewModel.setMaxPrice(it) },
+        onToggleType = { viewModel.toggleType(it) },
+        onSetDrmFree = { viewModel.setDrmFree(it) },
+        onSetFlag = { viewModel.setFlag(it) },
+        onSetMinSteam = { viewModel.setMinSteam(it) },
+        onSetRelease = { viewModel.setRelease(it) },
+        onClearFilters = { viewModel.clearFilters() },
         onShowFiltersChange = { showFilters = it },
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
         onCloseSearch = {
@@ -212,6 +258,7 @@ private fun DealsContent(
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
     mature: Boolean = false,
+    filter: DealsFilter = DealsFilter(),
     searchRevealed: Boolean = false,
     searchQuery: String = "",
     searchResults: SearchResultsState = SearchResultsState.Idle,
@@ -222,6 +269,14 @@ private fun DealsContent(
     onToggleShop: (Int) -> Unit = {},
     onClearShops: () -> Unit = {},
     onSetMature: (Boolean) -> Unit = {},
+    onSetMinCut: (Int?) -> Unit = {},
+    onSetMaxPrice: (Double?) -> Unit = {},
+    onToggleType: (ProductType) -> Unit = {},
+    onSetDrmFree: (Boolean) -> Unit = {},
+    onSetFlag: (DealFlag?) -> Unit = {},
+    onSetMinSteam: (Int?) -> Unit = {},
+    onSetRelease: (ReleaseWindow?) -> Unit = {},
+    onClearFilters: () -> Unit = {},
     onShowFiltersChange: (Boolean) -> Unit = {},
     onSearchQueryChange: (String) -> Unit = {},
     onCloseSearch: () -> Unit = {},
@@ -290,7 +345,7 @@ private fun DealsContent(
                     )
                 } else {
                     FilterBar(
-                        activeCount = selectedShops.size + if (mature) 1 else 0,
+                        activeCount = selectedShops.size + (if (mature) 1 else 0) + filter.activeCount,
                         onClick = { onShowFiltersChange(true) },
                     )
                 }
@@ -385,6 +440,18 @@ private fun DealsContent(
                 onClearShops = onClearShops,
                 mature = mature,
                 onSetMature = onSetMature,
+                filter = filter,
+                // The currency symbol/affix for price-bucket labels is read from a loaded deal's
+                // pre-formatted price (ITAD denominates per region); null until the first page loads.
+                currencySample = visibleDeals.firstOrNull()?.salePriceDenominated,
+                onSetMinCut = onSetMinCut,
+                onSetMaxPrice = onSetMaxPrice,
+                onToggleType = onToggleType,
+                onSetDrmFree = onSetDrmFree,
+                onSetFlag = onSetFlag,
+                onSetMinSteam = onSetMinSteam,
+                onSetRelease = onSetRelease,
+                onClearFilters = onClearFilters,
             )
         }
     }
@@ -592,10 +659,22 @@ private fun DealsFilterSheet(
     onClearShops: () -> Unit,
     mature: Boolean,
     onSetMature: (Boolean) -> Unit,
+    filter: DealsFilter,
+    currencySample: String?,
+    onSetMinCut: (Int?) -> Unit,
+    onSetMaxPrice: (Double?) -> Unit,
+    onToggleType: (ProductType) -> Unit,
+    onSetDrmFree: (Boolean) -> Unit,
+    onSetFlag: (DealFlag?) -> Unit,
+    onSetMinSteam: (Int?) -> Unit,
+    onSetRelease: (ReleaseWindow?) -> Unit,
+    onClearFilters: () -> Unit,
 ) {
     if (!show) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val matureCd = stringResource(Res.string.deals_filter_mature_switch_description)
+    val drmFreeCd = stringResource(Res.string.deals_filter_drm_free_switch_description)
+    val anyLabel = stringResource(Res.string.deals_filter_chip_any)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -605,19 +684,29 @@ private fun DealsFilterSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = GameDealsCustomTheme.spacing.large)
                 .padding(bottom = GameDealsCustomTheme.spacing.large)
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
-            Text(
-                text = stringResource(Res.string.deals_filter_sheet_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
+            // Title + "Reset all" (clears the server-side filters only; sort/shops/mature are untouched).
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(Res.string.deals_filter_sheet_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!filter.isEmpty()) {
+                    TextButton(onClick = onClearFilters) {
+                        Text(stringResource(Res.string.deals_filter_reset))
+                    }
+                }
+            }
 
             // Sort (single-select)
-            Text(text = stringResource(Res.string.deals_filter_section_sort), style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_sort))
+            FilterChipRow {
                 DealsSort.entries.forEach { sort ->
                     FilterChip(
                         selected = sort == selectedSort,
@@ -630,8 +719,8 @@ private fun DealsFilterSheet(
             HorizontalDivider()
 
             // Stores (multi-select; empty == all)
-            Text(text = stringResource(Res.string.deals_filter_section_stores), style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_stores))
+            FilterChipRow {
                 FilterChip(
                     selected = selectedShops.isEmpty(),
                     onClick = onClearShops,
@@ -648,20 +737,163 @@ private fun DealsFilterSheet(
 
             HorizontalDivider()
 
-            // Mature toggle
-            Row(
-                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(text = stringResource(Res.string.deals_filter_mature_label), modifier = Modifier.weight(1f))
-                Switch(
-                    modifier = Modifier.semantics { contentDescription = matureCd },
-                    checked = mature,
-                    onCheckedChange = onSetMature,
-                )
+            // Minimum discount (single-select; "Any" clears)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_discount))
+            FilterChipRow {
+                FilterChip(selected = filter.minCutPercent == null, onClick = { onSetMinCut(null) }, label = { Text(anyLabel) })
+                CUT_TIERS.forEach { tier ->
+                    FilterChip(
+                        selected = filter.minCutPercent == tier,
+                        onClick = { onSetMinCut(tier) },
+                        label = { Text(stringResource(Res.string.deals_filter_discount_tier, tier)) },
+                    )
+                }
             }
+
+            HorizontalDivider()
+
+            // Maximum price (single-select; "Any" clears, "Free" == max 0)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_price))
+            FilterChipRow {
+                FilterChip(selected = filter.maxPrice == null, onClick = { onSetMaxPrice(null) }, label = { Text(anyLabel) })
+                FilterChip(
+                    selected = filter.maxPrice == 0.0,
+                    onClick = { onSetMaxPrice(0.0) },
+                    label = { Text(stringResource(Res.string.deals_filter_price_free)) },
+                )
+                PRICE_TIERS.forEach { tier ->
+                    FilterChip(
+                        selected = filter.maxPrice == tier.toDouble(),
+                        onClick = { onSetMaxPrice(tier.toDouble()) },
+                        label = { Text(stringResource(Res.string.deals_filter_price_under, priceLabel(tier, currencySample))) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Type (multi-select; empty == all)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_type))
+            FilterChipRow {
+                ProductType.entries.forEach { type ->
+                    FilterChip(
+                        selected = type in filter.types,
+                        onClick = { onToggleType(type) },
+                        label = { Text(stringResource(type.labelRes())) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Deal type / flag (single-select)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_flag))
+            FilterChipRow {
+                FilterChip(selected = filter.flag == null, onClick = { onSetFlag(null) }, label = { Text(anyLabel) })
+                DealFlag.entries.forEach { flag ->
+                    FilterChip(
+                        selected = filter.flag == flag,
+                        onClick = { onSetFlag(flag) },
+                        label = { Text(stringResource(flag.labelRes())) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Minimum Steam rating (single-select)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_reviews))
+            FilterChipRow {
+                FilterChip(selected = filter.minSteamPercent == null, onClick = { onSetMinSteam(null) }, label = { Text(anyLabel) })
+                STEAM_TIERS.forEach { tier ->
+                    FilterChip(
+                        selected = filter.minSteamPercent == tier,
+                        onClick = { onSetMinSteam(tier) },
+                        label = { Text(stringResource(Res.string.deals_filter_reviews_tier, tier)) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // Release recency (single-select)
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_release))
+            FilterChipRow {
+                FilterChip(selected = filter.release == null, onClick = { onSetRelease(null) }, label = { Text(anyLabel) })
+                ReleaseWindow.entries.forEach { window ->
+                    FilterChip(
+                        selected = filter.release == window,
+                        onClick = { onSetRelease(window) },
+                        label = { Text(stringResource(window.labelRes())) },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            // DRM-free toggle
+            FilterSectionTitle(stringResource(Res.string.deals_filter_section_drm))
+            FilterToggleRow(
+                label = stringResource(Res.string.deals_filter_drm_free_label),
+                description = drmFreeCd,
+                checked = filter.drmFree,
+                onCheckedChange = onSetDrmFree,
+            )
+
+            HorizontalDivider()
+
+            // Mature toggle
+            FilterToggleRow(
+                label = stringResource(Res.string.deals_filter_mature_label),
+                description = matureCd,
+                checked = mature,
+                onCheckedChange = onSetMature,
+            )
         }
     }
+}
+
+@Composable
+private fun FilterSectionTitle(text: String) {
+    Text(text = text, style = MaterialTheme.typography.titleSmall)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterChipRow(content: @Composable FlowRowScope.() -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        content = content,
+    )
+}
+
+@Composable
+private fun FilterToggleRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = label, modifier = Modifier.weight(1f))
+        Switch(
+            modifier = Modifier.semantics { contentDescription = description },
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
+// Formats a price-bucket threshold with the region currency affix derived from a sample denominated
+// price ("$7.49" -> "$5"; "7.49 PLN" -> "5 PLN"); falls back to the bare number before any deal loads.
+private fun priceLabel(threshold: Int, sample: String?): String {
+    if (sample.isNullOrBlank()) return threshold.toString()
+    val prefix = sample.takeWhile { !it.isDigit() }
+    val suffix = sample.takeLastWhile { !it.isDigit() }
+    return "$prefix$threshold$suffix"
 }
 
 private fun DealsSort.labelRes(): StringResource = when (this) {
@@ -670,6 +902,24 @@ private fun DealsSort.labelRes(): StringResource = when (this) {
     DealsSort.RecentlyAdded -> Res.string.deals_sort_recently_added
     DealsSort.PriceLowToHigh -> Res.string.deals_sort_price_low_high
     DealsSort.ExpiringSoon -> Res.string.deals_sort_expiring_soon
+}
+
+private fun ProductType.labelRes(): StringResource = when (this) {
+    ProductType.Game -> Res.string.deals_filter_type_game
+    ProductType.Dlc -> Res.string.deals_filter_type_dlc
+    ProductType.Bundle -> Res.string.deals_filter_type_bundle
+}
+
+private fun DealFlag.labelRes(): StringResource = when (this) {
+    DealFlag.NewLow -> Res.string.deals_filter_flag_new_low
+    DealFlag.HistoricalLow -> Res.string.deals_filter_flag_historical_low
+    DealFlag.ShopLow -> Res.string.deals_filter_flag_shop_low
+}
+
+private fun ReleaseWindow.labelRes(): StringResource = when (this) {
+    ReleaseWindow.NewLast90 -> Res.string.deals_filter_release_new
+    ReleaseWindow.ThisYear -> Res.string.deals_filter_release_this_year
+    ReleaseWindow.TwoPlusYears -> Res.string.deals_filter_release_older
 }
 
 private val previewDeals = persistentListOf(

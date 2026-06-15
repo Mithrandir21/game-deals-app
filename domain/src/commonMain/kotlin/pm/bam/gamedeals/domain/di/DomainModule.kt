@@ -43,6 +43,8 @@ import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
@@ -88,6 +90,7 @@ val domainModule = module {
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // ITAD account (epic #219). AuthTokenStore is Storage-backed (like RegionRepository). Waitlist/

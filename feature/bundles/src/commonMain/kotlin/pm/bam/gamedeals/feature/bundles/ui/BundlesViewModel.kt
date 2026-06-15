@@ -7,24 +7,54 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
+/** Client-side sort orders for the bundles list (the raw region feed is fetched once and re-sorted). */
+enum class BundleSort { Newest, ExpiringSoon, Price }
+
 /**
- * Loads the active bundles list (epic #205, Phase 3c). Bundles are fetched fresh (not cached), so this
- * is a one-shot load with explicit loading/error/success states and a [load] retry.
+ * Loads the active bundles list (epic #205, Phase 3c; redesigned in the Bundles redesign). The region's
+ * bundles are fetched once (cached read-through), then re-derived client-side as the [BundleSort] or the
+ * persisted mature opt-in changes — no refetch. Mature bundles are hidden unless the user has opted in
+ * (the same [SettingsRepository] flag the Deals tab uses).
  */
 internal class BundlesViewModel(
     private val logger: Logger,
     private val bundlesRepository: BundlesRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
-    val uiState: StateFlow<BundlesScreenData>
-        field = MutableStateFlow<BundlesScreenData>(BundlesScreenData.Loading)
+    // null = not yet loaded (Loading); a value (possibly empty) = loaded.
+    private val rawBundles = MutableStateFlow<List<Bundle>?>(null)
+    private val loadError = MutableStateFlow(false)
+    private val sort = MutableStateFlow(BundleSort.Newest)
+
+    val uiState: StateFlow<BundlesScreenData> = combine(
+        rawBundles,
+        loadError,
+        sort,
+        settingsRepository.observeMatureOptIn(),
+    ) { raw, error, sortOrder, matureOptIn ->
+        when {
+            error -> BundlesScreenData.Error
+            raw == null -> BundlesScreenData.Loading
+            else -> BundlesScreenData.Data(
+                bundles = raw.filter { matureOptIn || !it.isMature }.sorted(sortOrder).toImmutableList(),
+                sort = sortOrder,
+                matureOptIn = matureOptIn,
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, BundlesScreenData.Loading)
 
     init {
         load()
@@ -32,16 +62,33 @@ internal class BundlesViewModel(
 
     fun load() {
         viewModelScope.launch {
-            uiState.value = BundlesScreenData.Loading
+            loadError.value = false
+            rawBundles.value = null
             try {
-                uiState.value = BundlesScreenData.Data(bundlesRepository.getBundles().toImmutableList())
+                rawBundles.value = bundlesRepository.getBundles()
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
                 fatal(logger, t)
-                uiState.value = BundlesScreenData.Error
+                loadError.value = true
             }
         }
+    }
+
+    fun setSort(newSort: BundleSort) = sort.update { newSort }
+
+    /** Toggle whether mature bundles are shown (persisted, shared with the Deals tab). */
+    fun setMatureOptIn(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
+    }
+
+    /** Sentinels keep null publish/expiry/price at the end of each order without comparator nullability. */
+    private fun List<Bundle>.sorted(order: BundleSort): List<Bundle> = when (order) {
+        BundleSort.Newest -> sortedWith(
+            compareByDescending<Bundle> { it.publishEpochMs ?: Long.MIN_VALUE }.thenByDescending { it.id },
+        )
+        BundleSort.ExpiringSoon -> sortedBy { it.expiryEpochMs ?: Long.MAX_VALUE }
+        BundleSort.Price -> sortedBy { it.priceValue ?: Double.MAX_VALUE }
     }
 
     sealed class BundlesScreenData {
@@ -49,6 +96,10 @@ internal class BundlesViewModel(
         data object Error : BundlesScreenData()
 
         @Immutable
-        data class Data(val bundles: ImmutableList<Bundle>) : BundlesScreenData()
+        data class Data(
+            val bundles: ImmutableList<Bundle>,
+            val sort: BundleSort = BundleSort.Newest,
+            val matureOptIn: Boolean = false,
+        ) : BundlesScreenData()
     }
 }

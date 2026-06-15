@@ -7,6 +7,7 @@ import pm.bam.gamedeals.feature.home.ui.HomeScreen
 
 fun NavGraphBuilder.homeScreen(
     goToGame: (gameId: String) -> Unit,
+    goToGameByTitle: (title: String) -> Unit,
     goToGiveaway: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToBundles: () -> Unit,
@@ -17,6 +18,7 @@ fun NavGraphBuilder.homeScreen(
     composable<Destination.Home> {
         HomeScreen(
             goToGame = goToGame,
+            goToGameByTitle = goToGameByTitle,
             onViewGiveaways = goToGiveaway,
             onViewBundles = goToBundles,
             onViewBundle = goToBundle,

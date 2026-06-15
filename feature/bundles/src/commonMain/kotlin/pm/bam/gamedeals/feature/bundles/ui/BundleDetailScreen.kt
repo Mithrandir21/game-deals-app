@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,8 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +43,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -47,18 +54,32 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_discount
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_expiry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_game_image
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_get_bundle
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_historical_low
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_included_games
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_expiry
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_from_price
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_no_deal
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_price_at
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_published
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_tier
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_tier_price
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_bundle_price
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_current
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_low
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_partial
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_savings
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_value_title
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_game_count
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_loading_indicator
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_navigation_back_button
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleDetailScreenData
+import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleValueSummary
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -66,6 +87,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 internal fun BundleDetailScreen(
     onBack: () -> Unit,
     goToWeb: (url: String, title: String) -> Unit,
+    onGameClick: (gameId: String) -> Unit,
     viewModel: BundleDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,6 +95,7 @@ internal fun BundleDetailScreen(
         state = state,
         onBack = onBack,
         goToWeb = goToWeb,
+        onGameClick = onGameClick,
         onRetry = viewModel::load,
     )
 }
@@ -83,6 +106,7 @@ private fun BundleDetailScreenContent(
     state: BundleDetailScreenData,
     onBack: () -> Unit,
     goToWeb: (url: String, title: String) -> Unit,
+    onGameClick: (gameId: String) -> Unit,
     onRetry: () -> Unit,
 ) {
     val title = (state as? BundleDetailScreenData.Data)?.bundle?.title.orEmpty()
@@ -139,8 +163,9 @@ private fun BundleDetailScreenContent(
                 }
 
                 is BundleDetailScreenData.Data -> BundleDetailBody(
-                    bundle = state.bundle,
+                    data = state,
                     goToWeb = goToWeb,
+                    onGameClick = onGameClick,
                     modifier = Modifier.padding(innerPadding),
                 )
             }
@@ -150,10 +175,12 @@ private fun BundleDetailScreenContent(
 
 @Composable
 private fun BundleDetailBody(
-    bundle: Bundle,
+    data: BundleDetailScreenData.Data,
     goToWeb: (url: String, title: String) -> Unit,
+    onGameClick: (gameId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val bundle = data.bundle
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
@@ -167,19 +194,6 @@ private fun BundleDetailBody(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                bundle.expiryEpochMs?.let { expiry ->
-                    Text(
-                        text = stringResource(Res.string.bundles_row_expiry, formatBundleExpiry(expiry)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                bundle.priceDenominated?.let { price ->
-                    Text(
-                        text = stringResource(Res.string.bundles_row_from_price, price),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
             }
         }
 
@@ -192,73 +206,256 @@ private fun BundleDetailBody(
             }
         }
 
-        if (bundle.games.isNotEmpty()) {
+        bundle.expiryEpochMs?.let { expiry ->
+            item { BundleCountdown(expiryEpochMs = expiry, modifier = Modifier.fillMaxWidth()) }
+        }
+
+        bundle.details?.let { details ->
             item {
                 Text(
-                    modifier = Modifier
-                        .padding(top = GameDealsCustomTheme.spacing.small)
-                        .semantics { heading() },
+                    text = details,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        // Surfaced near the top so the savings are visible before scrolling through the tiers.
+        data.valueSummary?.let { summary ->
+            item { OverallValueCard(summary) }
+        }
+
+        if (bundle.tiers.isNotEmpty()) {
+            bundle.tiers.forEachIndexed { index, tier ->
+                item(key = "tier_$index") { TierHeader(tierNumber = index + 1, priceDenominated = tier.priceDenominated) }
+                items(tier.games, key = { "tier_${index}_${it.id}" }) { game ->
+                    BundleGameRow(game = game, price = data.prices[game.id], onClick = { onGameClick(game.id) })
+                }
+            }
+        } else if (bundle.games.isNotEmpty()) {
+            item {
+                Text(
+                    modifier = Modifier.semantics { heading() },
                     text = stringResource(Res.string.bundle_detail_included_games),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
             items(bundle.games, key = { it.id }) { game ->
-                BundleGameRow(game)
+                BundleGameRow(game = game, price = data.prices[game.id], onClick = { onGameClick(game.id) })
+            }
+        }
+
+        item { BundleFooter(bundle) }
+    }
+}
+
+@Composable
+private fun TierHeader(tierNumber: Int, priceDenominated: String?) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = GameDealsCustomTheme.spacing.small),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            modifier = Modifier.semantics { heading() },
+            text = stringResource(Res.string.bundle_detail_tier, tierNumber),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.weight(1f))
+        priceDenominated?.let {
+            Text(
+                text = stringResource(Res.string.bundle_detail_tier_price, it),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BundleGameRow(
+    game: Bundle.BundleGame,
+    price: BundleGamePrice?,
+    onClick: () -> Unit,
+) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(GameDealsCustomTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = game.boxart,
+                contentDescription = stringResource(Res.string.bundle_detail_game_image, game.title),
+                error = painterResource(CommonRes.drawable.videogame_thumb),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 96.dp, height = 54.dp)
+                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = GameDealsCustomTheme.spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+            ) {
+                Text(
+                    text = game.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                BundleGamePriceLines(price)
             }
         }
     }
 }
 
 @Composable
-private fun BundleGameRow(game: Bundle.BundleGame) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = game.boxart,
-            contentDescription = stringResource(Res.string.bundle_detail_game_image, game.title),
-            error = painterResource(CommonRes.drawable.videogame_thumb),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .size(width = 64.dp, height = 48.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
-        )
+private fun BundleGamePriceLines(price: BundleGamePrice?) {
+    val bestPrice = price?.bestPriceDenominated
+    if (bestPrice == null) {
         Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = GameDealsCustomTheme.spacing.medium),
-            text = game.title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            text = stringResource(Res.string.bundle_detail_no_deal),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        return
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+    ) {
+        Text(
+            text = price.bestShopName?.let { stringResource(Res.string.bundle_detail_price_at, bestPrice, it) } ?: bestPrice,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        price.bestCutPercent?.takeIf { it > 0 }?.let { cut ->
+            Text(
+                text = stringResource(Res.string.bundle_detail_discount, cut),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
+    }
+    price.historicalLowDenominated?.let { low ->
+        Text(
+            text = stringResource(Res.string.bundle_detail_historical_low, low),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun OverallValueCard(summary: BundleValueSummary) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+        ) {
+            Text(
+                modifier = Modifier.semantics { heading() },
+                text = stringResource(Res.string.bundle_detail_value_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            summary.currentValueDenominated?.let { ValueLine(stringResource(Res.string.bundle_detail_value_current), it) }
+            summary.historicalLowDenominated?.let { ValueLine(stringResource(Res.string.bundle_detail_value_low), it) }
+            summary.bundlePriceDenominated?.let { ValueLine(stringResource(Res.string.bundle_detail_value_bundle_price), it) }
+            summary.savingsPercent?.let { savings ->
+                Text(
+                    text = stringResource(Res.string.bundle_detail_value_savings, savings),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+            if (summary.pricedGames < summary.totalGames) {
+                Text(
+                    text = stringResource(Res.string.bundle_detail_value_partial, summary.pricedGames, summary.totalGames),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ValueLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.weight(1f))
+        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun BundleFooter(bundle: Bundle) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+        HorizontalDivider(modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.small))
+        bundle.publishEpochMs?.let { published ->
+            Text(
+                text = stringResource(Res.string.bundle_detail_published, formatBundlePublished(published)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        bundle.expiryEpochMs?.let { expiry ->
+            Text(
+                text = stringResource(Res.string.bundle_detail_expiry, formatBundleExpiry(expiry)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Preview
 @Composable
 private fun BundleDetailScreenPreview() {
+    val games = persistentListOf(
+        Bundle.BundleGame("a", "Descenders", ""),
+        Bundle.BundleGame("b", "MudRunner", ""),
+        Bundle.BundleGame("c", "DRIFT CE", ""),
+    )
+    val prices: ImmutableMap<String, BundleGamePrice> = listOf(
+        BundleGamePrice("a", "Steam", 4.59, "€4.59", 80, 4.59, "€4.59", "EUR"),
+        BundleGamePrice("c", "GamesPlanet", 4.49, "€4.49", 76, 3.99, "€3.99", "EUR"),
+    ).associateBy { it.gameId }.toImmutableMap()
     GameDealsTheme {
         BundleDetailScreenContent(
             state = BundleDetailScreenData.Data(
-                Bundle(
+                bundle = Bundle(
                     id = 1,
-                    title = "Humble Choice (June 2026)",
-                    storeName = "Humble Bundle",
+                    title = "Redline Racing Bundle",
+                    storeName = "Humble Store",
                     url = "https://example.com/1",
-                    expiryEpochMs = 1_751_911_200_000L,
+                    expiryEpochMs = 1_999_999_999_000L,
                     gameCount = 3,
-                    priceDenominated = "$14.99",
-                    games = persistentListOf(
-                        Bundle.BundleGame("a", "Construction Simulator", ""),
-                        Bundle.BundleGame("b", "Another Great Game", ""),
-                        Bundle.BundleGame("c", "Third Title", ""),
+                    priceDenominated = "€5.38",
+                    games = games,
+                    publishEpochMs = 1_749_400_000_000L,
+                    isMature = false,
+                    details = "Some proceeds go to support charity. Keys expire — please redeem before the date shown.",
+                    priceValue = 5.38,
+                    tiers = persistentListOf(
+                        Bundle.Tier(priceDenominated = "€5.38", priceValue = 5.38, games = games),
                     ),
+                ),
+                prices = prices,
+                valueSummary = BundleValueSummary(
+                    currentValueDenominated = "€132.01",
+                    historicalLowDenominated = "€29.55",
+                    bundlePriceDenominated = "€5.38",
+                    savingsPercent = 92,
+                    pricedGames = 2,
+                    totalGames = 3,
                 ),
             ),
             onBack = {},
             goToWeb = { _, _ -> },
+            onGameClick = {},
             onRetry = {},
         )
     }

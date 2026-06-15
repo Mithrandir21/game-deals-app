@@ -78,6 +78,7 @@ internal fun NavGraph(
         ) {
             homeScreen(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToGameByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
                 goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundles = { navActions.navigateToBundles() },
@@ -124,6 +125,7 @@ internal fun NavGraph(
             bundleDetailScreen(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
             )
         }
     }

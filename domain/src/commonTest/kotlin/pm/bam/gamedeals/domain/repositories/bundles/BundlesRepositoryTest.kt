@@ -16,6 +16,7 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.BundlesCacheEntry
 import pm.bam.gamedeals.domain.db.dao.BundlesCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import kotlin.test.Test
@@ -86,6 +87,26 @@ class BundlesRepositoryTest {
         everySuspend { dealsSource.fetchBundles() } returns listOf(bundle(1))
 
         assertNull(repository.getBundle(99))
+    }
+
+    @Test
+    fun get_bundle_game_prices_delegates_to_source() = runTest {
+        val prices = listOf(
+            BundleGamePrice(
+                gameId = "g1",
+                bestShopName = "Steam",
+                bestPriceValue = 1.0,
+                bestPriceDenominated = "$1.00",
+                bestCutPercent = 50,
+                historicalLowValue = 0.5,
+                historicalLowDenominated = "$0.50",
+                currency = "USD",
+            ),
+        )
+        everySuspend { dealsSource.fetchBundleGamePrices(listOf("g1")) } returns prices
+
+        assertEquals(prices, repository.getBundleGamePrices(listOf("g1")))
+        verifySuspend(exactly(1)) { dealsSource.fetchBundleGamePrices(listOf("g1")) }
     }
 
     private fun entryFor(bundles: List<Bundle>, expires: Long) = BundlesCacheEntry(

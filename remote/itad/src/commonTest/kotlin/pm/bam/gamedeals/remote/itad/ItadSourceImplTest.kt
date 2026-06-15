@@ -6,6 +6,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -17,8 +18,12 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.DealFlag
+import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.ProductType
+import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -28,6 +33,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadBundlesApi
 import pm.bam.gamedeals.remote.itad.api.ItadDealsApi
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
+import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsRequest
 import pm.bam.gamedeals.remote.itad.logic.ITAD_HOST
 import pm.bam.gamedeals.remote.itad.logic.itadHttpClient
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
@@ -63,6 +69,15 @@ class ItadSourceImplTest {
         override fun observeSelectedCountry(): Flow<Country> = flowOf(DEFAULT_COUNTRY)
         override suspend fun getSelectedCountryCode(): String = "US"
         override suspend fun setSelectedCountry(country: Country) = Unit
+    }
+
+    private val decodeJson = Json { ignoreUnknownKeys = true }
+
+    // `/deals/v2` is now a POST whose params/filter live in the JSON body (not the URL); decode the last
+    // recorded deals request's body so tests can assert what was actually sent server-side.
+    private fun dealsRequestBody(): RemoteItadDealsRequest {
+        val request = recordedRequests.last { it.url.encodedPath == "/deals/v2" }
+        return decodeJson.decodeFromString((request.body as TextContent).text)
     }
 
     @BeforeTest
@@ -134,7 +149,7 @@ class ItadSourceImplTest {
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
-        assertEquals("US", recorded.parameters["country"])
+        assertEquals("US", dealsRequestBody().country)
     }
 
     @Test
@@ -152,33 +167,78 @@ class ItadSourceImplTest {
         assertTrue(deal.isNewHistoricalLow)
         assertTrue(deal.hasVoucher)
 
-        val recorded = recordedRequests.single().url
-        assertEquals("/deals/v2", recorded.encodedPath)
-        assertEquals("US", recorded.parameters["country"]) // applied from RegionRepository
-        assertEquals("-cut", recorded.parameters["sort"])
-        assertEquals("61,16", recorded.parameters["shops"])
-        assertEquals("30", recorded.parameters["offset"])
-        assertEquals("30", recorded.parameters["limit"])
-        assertNull(recorded.parameters["mature"]) // mature omitted unless opted in
+        assertEquals("/deals/v2", recordedRequests.single().url.encodedPath)
+        val request = dealsRequestBody()
+        assertEquals("US", request.country) // applied from RegionRepository
+        assertEquals("-cut", request.sort)
+        assertEquals(listOf(61, 16), request.shops)
+        assertEquals(30, request.offset)
+        assertEquals(30, request.limit)
+        assertNull(request.mature) // mature omitted unless opted in
+        assertNull(request.filter) // no filter set
     }
 
     @Test
     fun fetchDeals_query_omits_shops_when_no_shop_filter() = runTest {
         impl.fetchDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, shopIds = emptyList()))
 
-        val recorded = recordedRequests.single().url
-        assertEquals("/deals/v2", recorded.encodedPath)
-        assertEquals("price", recorded.parameters["sort"])
-        assertNull(recorded.parameters["shops"])
+        assertEquals("/deals/v2", recordedRequests.single().url.encodedPath)
+        val request = dealsRequestBody()
+        assertEquals("price", request.sort)
+        assertNull(request.shops)
     }
 
     @Test
     fun fetchDeals_query_sends_mature_only_when_opted_in() = runTest {
         impl.fetchDeals(DealsQuery(sort = DealsSort.Trending, mature = true))
 
-        val recorded = recordedRequests.single().url
-        assertEquals("trending", recorded.parameters["sort"])
-        assertEquals("true", recorded.parameters["mature"])
+        val request = dealsRequestBody()
+        assertEquals("trending", request.sort)
+        assertEquals(true, request.mature)
+    }
+
+    @Test
+    fun fetchDeals_maps_the_filter_into_the_post_body() = runTest {
+        impl.fetchDeals(
+            DealsQuery(
+                sort = DealsSort.TopDiscount,
+                filter = DealsFilter(
+                    minCutPercent = 75,
+                    maxPrice = 10.0,
+                    types = setOf(ProductType.Game, ProductType.Dlc),
+                    drmFree = true,
+                    flag = DealFlag.NewLow,
+                    minSteamPercent = 80,
+                    release = ReleaseWindow.NewLast90,
+                ),
+            )
+        )
+
+        val filter = assertNotNull(dealsRequestBody().filter)
+        assertEquals(75, filter.cut?.min)
+        assertEquals(100, filter.cut?.max)
+        assertEquals(10.0, filter.price?.max)
+        assertNull(filter.price?.min)
+        assertEquals(listOf(1, 2), filter.type) // Game=1, Dlc=2 (sorted)
+        assertEquals(listOf(1000), filter.drm) // DRM-free sentinel
+        assertEquals("N", filter.flag)
+        assertEquals(80, filter.steamPerc?.min)
+        assertEquals(90, filter.releaseDays) // NewLast90 -> releaseDays
+        assertNull(filter.releaseYear)
+    }
+
+    @Test
+    fun fetchDeals_release_windows_map_to_bounded_releaseYear() = runTest {
+        impl.fetchDeals(DealsQuery(filter = DealsFilter(release = ReleaseWindow.ThisYear)))
+        val thisYear = assertNotNull(dealsRequestBody().filter?.releaseYear)
+        assertNotNull(thisYear.min)
+        assertEquals(thisYear.min, thisYear.max) // "this year": min == max == current year
+
+        recordedRequests.clear()
+        impl.fetchDeals(DealsQuery(filter = DealsFilter(release = ReleaseWindow.TwoPlusYears)))
+        val older = assertNotNull(dealsRequestBody().filter?.releaseYear)
+        assertNull(older.min) // open lower bound
+        assertNotNull(older.max) // bounded above (current year - 2)
     }
 
     @Test
@@ -241,6 +301,49 @@ class ItadSourceImplTest {
     }
 
     @Test
+    fun fetchBundles_preserves_tier_structure_and_metadata() = runTest {
+        val bundle = impl.fetchBundles().first()
+
+        assertEquals(2, bundle.tiers.size)
+        assertEquals("$14.99", bundle.tiers[0].priceDenominated)
+        assertEquals(14.99, bundle.tiers[0].priceValue)
+        assertEquals(listOf("g1"), bundle.tiers[0].games.map { it.id })
+        assertEquals("Construction Simulator", bundle.tiers[0].games.first().title)
+        assertEquals("$24.99", bundle.tiers[1].priceDenominated)
+        assertEquals(listOf("g2"), bundle.tiers[1].games.map { it.id })
+        // Headline price + raw value = cheapest tier; metadata carried through.
+        assertEquals(14.99, bundle.priceValue)
+        assertEquals("https://isthereanydeal.com/bundles/16232", bundle.details)
+        assertFalse(bundle.isMature)
+        assertNotNull(bundle.publishEpochMs) // "2026-06-02T20:57:58+02:00" parsed
+    }
+
+    @Test
+    fun fetchBundleGamePrices_maps_best_deal_and_all_time_low() = runTest {
+        val prices = impl.fetchBundleGamePrices(listOf("uuid-1"))
+
+        assertEquals(1, prices.size)
+        val price = prices.first()
+        assertEquals("uuid-1", price.gameId)
+        assertEquals("GOG", price.bestShopName)
+        assertEquals(7.49, price.bestPriceValue)
+        assertEquals("$7.49", price.bestPriceDenominated)
+        assertEquals(63, price.bestCutPercent)
+        assertEquals(4.99, price.historicalLowValue)
+        assertEquals("$4.99", price.historicalLowDenominated)
+        assertEquals("USD", price.currency)
+        assertEquals("/games/prices/v3", recordedRequests.single().url.encodedPath)
+    }
+
+    @Test
+    fun fetchBundleGamePrices_short_circuits_on_empty_ids() = runTest {
+        val prices = impl.fetchBundleGamePrices(emptyList())
+
+        assertTrue(prices.isEmpty())
+        assertTrue(recordedRequests.isEmpty()) // no HTTP call for an empty id list
+    }
+
+    @Test
     fun searchGames_maps_results() = runTest {
         val results = impl.searchGames("halo")
 
@@ -291,7 +394,7 @@ class ItadSourceImplTest {
 
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
-        assertEquals("61", recorded.parameters["shops"])
+        assertEquals(listOf(61), dealsRequestBody().shops)
     }
 
     @Test

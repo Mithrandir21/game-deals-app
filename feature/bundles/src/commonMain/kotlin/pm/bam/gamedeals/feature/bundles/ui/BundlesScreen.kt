@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.bundles.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,12 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,26 +33,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_description
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_expiry
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_from_price
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_row_game_count
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_mature_toggle
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_empty
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_loading_indicator
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_navigation_back_button
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_title
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_sort_expiring
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_sort_newest
+import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_sort_price
 import pm.bam.gamedeals.feature.bundles.ui.BundlesViewModel.BundlesScreenData
 
 @Composable
@@ -64,6 +66,8 @@ internal fun BundlesScreen(
         state = state,
         onBack = onBack,
         onBundleClick = onBundleClick,
+        onSetSort = viewModel::setSort,
+        onSetMature = viewModel::setMatureOptIn,
         onRetry = viewModel::load,
     )
 }
@@ -74,6 +78,8 @@ private fun BundlesScreenContent(
     state: BundlesScreenData,
     onBack: () -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
+    onSetSort: (BundleSort) -> Unit,
+    onSetMature: (Boolean) -> Unit,
     onRetry: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -120,84 +126,68 @@ private fun BundlesScreenContent(
                     onAction = onRetry,
                 )
 
-                is BundlesScreenData.Data ->
+                is BundlesScreenData.Data -> Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                    BundlesControls(
+                        sort = state.sort,
+                        matureOptIn = state.matureOptIn,
+                        onSetSort = onSetSort,
+                        onSetMature = onSetMature,
+                    )
                     if (state.bundles.isEmpty()) {
-                        CenteredMessage(
-                            modifier = Modifier.padding(innerPadding),
-                            message = stringResource(Res.string.bundles_screen_empty),
-                        )
+                        CenteredMessage(message = stringResource(Res.string.bundles_screen_empty))
                     } else {
                         LazyColumn(
-                            modifier = Modifier
-                                .padding(innerPadding)
-                                .fillMaxSize(),
+                            modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
                             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                         ) {
                             items(state.bundles, key = { it.id }) { bundle ->
-                                BundleRow(bundle = bundle, onClick = { onBundleClick(bundle.id) })
+                                BundleListRow(bundle = bundle, onClick = { onBundleClick(bundle.id) })
                             }
                         }
                     }
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun BundleRow(
-    bundle: Bundle,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun BundlesControls(
+    sort: BundleSort,
+    matureOptIn: Boolean,
+    onSetSort: (BundleSort) -> Unit,
+    onSetMature: (Boolean) -> Unit,
 ) {
-    val rowCd = stringResource(Res.string.bundles_row_description, bundle.title, bundle.storeName)
-    Card(
-        onClick = onClick,
-        modifier = modifier
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) { contentDescription = rowCd },
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium)) {
-            Text(
-                text = bundle.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.extraSmall),
-                text = bundle.storeName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = GameDealsCustomTheme.spacing.small),
-                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(Res.string.bundles_row_game_count, bundle.gameCount),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                bundle.expiryEpochMs?.let { expiry ->
-                    Text(
-                        text = stringResource(Res.string.bundles_row_expiry, formatBundleExpiry(expiry)),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                bundle.priceDenominated?.let { price ->
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(Res.string.bundles_row_from_price, price),
-                        style = MaterialTheme.typography.labelLarge,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    )
-                }
-            }
-        }
+        FilterChip(
+            selected = sort == BundleSort.Newest,
+            onClick = { onSetSort(BundleSort.Newest) },
+            label = { Text(stringResource(Res.string.bundles_sort_newest)) },
+        )
+        FilterChip(
+            selected = sort == BundleSort.ExpiringSoon,
+            onClick = { onSetSort(BundleSort.ExpiringSoon) },
+            label = { Text(stringResource(Res.string.bundles_sort_expiring)) },
+        )
+        FilterChip(
+            selected = sort == BundleSort.Price,
+            onClick = { onSetSort(BundleSort.Price) },
+            label = { Text(stringResource(Res.string.bundles_sort_price)) },
+        )
+        FilterChip(
+            selected = matureOptIn,
+            onClick = { onSetMature(!matureOptIn) },
+            label = { Text(stringResource(Res.string.bundles_mature_toggle)) },
+        )
     }
 }
 
@@ -232,7 +222,16 @@ private val previewBundles = persistentListOf(
         expiryEpochMs = 1_751_911_200_000L,
         gameCount = 8,
         priceDenominated = "$14.99",
-        games = persistentListOf(),
+        games = persistentListOf(
+            Bundle.BundleGame("a", "Game A", ""),
+            Bundle.BundleGame("b", "Game B", ""),
+            Bundle.BundleGame("c", "Game C", ""),
+            Bundle.BundleGame("d", "Game D", ""),
+            Bundle.BundleGame("e", "Game E", ""),
+            Bundle.BundleGame("f", "Game F", ""),
+            Bundle.BundleGame("g", "Game G", ""),
+            Bundle.BundleGame("h", "Game H", ""),
+        ),
     ),
     Bundle(
         id = 2,
@@ -242,7 +241,12 @@ private val previewBundles = persistentListOf(
         expiryEpochMs = 1_752_000_000_000L,
         gameCount = 4,
         priceDenominated = "$87.96",
-        games = persistentListOf(),
+        games = persistentListOf(
+            Bundle.BundleGame("i", "Game I", ""),
+            Bundle.BundleGame("j", "Game J", ""),
+            Bundle.BundleGame("k", "Game K", ""),
+            Bundle.BundleGame("l", "Game L", ""),
+        ),
     ),
 )
 
@@ -251,9 +255,11 @@ private val previewBundles = persistentListOf(
 private fun BundlesScreenPreview() {
     GameDealsTheme {
         BundlesScreenContent(
-            state = BundlesScreenData.Data(previewBundles),
+            state = BundlesScreenData.Data(previewBundles, sort = BundleSort.Newest, matureOptIn = false),
             onBack = {},
             onBundleClick = {},
+            onSetSort = {},
+            onSetMature = {},
             onRetry = {},
         )
     }

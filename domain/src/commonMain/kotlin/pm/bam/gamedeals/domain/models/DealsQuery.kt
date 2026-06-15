@@ -15,6 +15,7 @@ data class DealsQuery(
     val sort: DealsSort = DealsSort.TopDiscount,
     val shopIds: List<Int> = emptyList(),
     val mature: Boolean = false,
+    val filter: DealsFilter = DealsFilter(),
     val offset: Int = 0,
     val limit: Int = DEALS_PAGE_SIZE,
 ) {

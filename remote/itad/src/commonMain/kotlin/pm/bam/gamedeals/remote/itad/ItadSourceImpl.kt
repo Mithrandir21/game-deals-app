@@ -1,12 +1,19 @@
 package pm.bam.gamedeals.remote.itad
 
 import com.skydoves.sandwich.getOrThrow
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
+import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -34,10 +41,13 @@ import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.mappers.toBundle
+import pm.bam.gamedeals.remote.itad.mappers.toBundleGamePrice
 import pm.bam.gamedeals.remote.itad.mappers.toItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.mappers.toPriceHistory
 import pm.bam.gamedeals.remote.itad.mappers.toStore
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
+import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsRequest
+import pm.bam.gamedeals.remote.itad.models.toRemoteFilter
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
@@ -56,6 +66,7 @@ import pm.bam.gamedeals.remote.logic.mapAnyFailure
  * parameter is read from [RegionRepository] per call (regional pricing — Phase 3b, #212); ITAD has no
  * releases endpoint (releases moved to IGDB in 2c).
  */
+@OptIn(ExperimentalSerializationApi::class) // RemoteItadDealsRequest's filter uses @EncodeDefault
 internal class ItadSourceImpl(
     private val logger: Logger,
     private val shopsApi: ItadShopsApi,
@@ -83,8 +94,8 @@ internal class ItadSourceImpl(
         val limit = query?.pageSize
         val country = regionRepository.getSelectedCountryCode()
         return when {
-            // Store deals: `/deals/v2?shops=<id>` returns each game's best deal at that shop.
-            storeId != null -> fetchItadDeals(country = country, limit = limit, shops = storeId.toString()).map { it.toDeal() }
+            // Store deals: `/deals/v2` with shops=[id] returns each game's best deal at that shop.
+            storeId != null -> fetchItadDeals(country = country, limit = limit, shops = listOf(storeId)).map { it.toDeal() }
             // Title search (release lookup + Search screen): ITAD has no title filter on /deals/v2, so
             // resolve via game search → current prices → cheapest deal per game. Price/Steam-rating/
             // Metacritic filters in [query] aren't supported by ITAD and are ignored (epic #205 ADR trade-off).
@@ -99,9 +110,10 @@ internal class ItadSourceImpl(
             offset = query.offset,
             limit = query.limit,
             sort = query.sort.apiValue,
-            shops = query.shopIds.takeIf { it.isNotEmpty() }?.joinToString(separator = ","),
+            shops = query.shopIds,
             // Only send `mature=true` to opt in; the default (param omitted) excludes adult titles.
             mature = query.mature.takeIf { it },
+            filter = query.filter,
         ).map { it.toDeal() }
 
     override suspend fun fetchDealDetails(id: String): DealDetails {
@@ -158,6 +170,12 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .map { it.toBundle() }
 
+    override suspend fun fetchBundleGamePrices(gameIds: List<String>): List<BundleGamePrice> {
+        if (gameIds.isEmpty()) return emptyList()
+        return fetchGamePrices(gameIds, country = regionRepository.getSelectedCountryCode())
+            .map { it.toBundleGamePrice() }
+    }
+
     override suspend fun fetchRegionalPrices(gameId: String, countries: List<Country>): List<RegionalPrice> =
         countries.mapNotNull { country ->
             val cheapest = fetchGamePrices(listOf(gameId), country = country.code)
@@ -191,15 +209,31 @@ internal class ItadSourceImpl(
         offset: Int? = null,
         limit: Int? = null,
         sort: String? = null,
-        shops: String? = null,
+        shops: List<Int>? = null,
         mature: Boolean? = null,
+        filter: DealsFilter? = null,
     ): List<ItadDeal> =
-        dealsApi.getDeals(country = country, offset = offset, limit = limit, sort = sort, shops = shops, mature = mature)
+        dealsApi.getDeals(
+            RemoteItadDealsRequest(
+                country = country,
+                offset = offset,
+                limit = limit,
+                sort = sort,
+                mature = mature,
+                shops = shops?.takeIf { it.isNotEmpty() },
+                filter = filter?.takeIf { !it.isEmpty() }?.toRemoteFilter(currentYear()),
+            )
+        )
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .list
             .map { it.toItadDeal() }
+
+    /** Current calendar year in the device timezone — resolves the Deals filter's release-recency windows. */
+    @OptIn(ExperimentalTime::class)
+    private fun currentYear(): Int =
+        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
 
     suspend fun fetchGamePrices(gameIds: List<String>, country: String? = null): List<ItadGamePrices> =
         gamesApi.getPrices(gameIds = gameIds, country = country)

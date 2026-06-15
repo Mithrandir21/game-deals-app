@@ -64,4 +64,12 @@
     <string name="app_shell_tab_account">Account</string>
     <string name="app_shell_account_unread">%1$d unread notifications</string>
 
+    <!-- Shared bundle list row (Bundles tab + Home bundle section) -->
+    <string name="bundle_row_description">%1$s from %2$s</string>
+    <string name="bundle_row_game_count">%1$d games</string>
+    <string name="bundle_row_expiry">Ends %1$s</string>
+    <string name="bundle_row_from_price">From %1$s</string>
+    <string name="bundle_row_overflow">+%1$d</string>
+    <string name="bundle_row_art_strip">Games in this bundle</string>
+
 </resources>

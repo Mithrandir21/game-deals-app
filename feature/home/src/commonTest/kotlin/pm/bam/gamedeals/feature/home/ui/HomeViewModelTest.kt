@@ -29,7 +29,6 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -57,7 +56,6 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
         every { observeStores() } returns flowOf(emptyList())
     }
-    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit) {
         everySuspend { getDeals(any()) } returns emptyList()
     }
@@ -96,7 +94,6 @@ class HomeViewModelTest : MainDispatcherTest() {
     private fun createViewModel() = HomeViewModel(
         storesRepository = storesRepository,
         dealsRepository = dealsRepository,
-        gamesRepository = gamesRepository,
         releasesRepository = releasesRepository,
         giveawaysRepository = giveawaysRepository,
         bundlesRepository = bundlesRepository,
@@ -214,21 +211,6 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         assertEquals(1, events.size)
         assertEquals(HomeViewModel.HomeUiEvent.ShareDeal("Built share text"), events.first())
-    }
-
-    @Test
-    fun onReleaseGame_emits_ReleaseUnavailable_when_no_deal_resolves() = runTest {
-        everySuspend { gamesRepository.getReleaseDeal(any()) } returns null
-
-        val vm = createViewModel()
-        advanceUntilIdle()
-        val events = vm.events.observeEmissions(this.backgroundScope, testDispatcher)
-
-        vm.onReleaseGame("Some Release")
-        advanceUntilIdle()
-
-        assertEquals(1, events.size)
-        assertEquals(HomeViewModel.HomeUiEvent.ReleaseUnavailable, events.first())
     }
 
     private fun dealDetailsData(gameId: String) = DealBottomSheetData.DealDetailsData(
