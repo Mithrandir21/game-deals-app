@@ -28,15 +28,15 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
-import pm.bam.gamedeals.common.ui.deal.DealDetailsController
+import pm.bam.gamedeals.common.ui.deal.GamePeekController
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSort
-import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -45,7 +45,8 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -59,25 +60,24 @@ import pm.bam.gamedeals.logging.info
 internal const val LIMIT_HERO = 6
 internal const val LIMIT_TRENDING = 10
 internal const val LIMIT_STATS = 10
-internal const val LIMIT_GIVEAWAYS = 5
 internal const val LIMIT_BUNDLES = 5
 internal const val LIMIT_RELEASES = 5
-internal const val EXPIRED_STATUS = "Expired"
 
 /**
  * Drives the curated Home feed (epic #219, Phase 5). The feed is a fixed set of independent sections
  * (account stat cards → Featured hero → Trending → Most Waitlisted → Most Collected → New Releases →
- * Bundles → Giveaways), each loaded **best-effort in parallel**: a section that fails is logged and
- * left empty (hidden) rather than sinking the whole feed. The whole feed reloads on region change.
+ * Bundles), each loaded **best-effort in parallel**: a section that fails is logged and left empty
+ * (hidden) rather than sinking the whole feed. The whole feed reloads on region change.
  *
- * The account stat cards are gated on auth state (null when logged out). Row taps funnel into the
- * shared [DealDetailsController] → `DealBottomSheet`; the heart is login-gated via [WaitlistRepository].
+ * The account stat cards are gated on auth state (null when logged out) and tap through to the Waitlist
+ * / Collection lists. Every game/deal row opens the game-centric quick-peek sheet via [GamePeekController]
+ * (row-consolidation work); the heart is login-gated via [WaitlistRepository]. Giveaways moved off Home
+ * to their own tab, so Home is now 100% in-app.
  */
 internal class HomeViewModel(
     private val storesRepository: StoresRepository,
     private val dealsRepository: DealsRepository,
     private val releasesRepository: ReleasesRepository,
-    private val giveawaysRepository: GiveawaysRepository,
     private val bundlesRepository: BundlesRepository,
     private val statsRepository: StatsRepository,
     private val accountRepository: AccountRepository,
@@ -86,6 +86,8 @@ internal class HomeViewModel(
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
+    private val gamesRepository: GamesRepository,
+    private val igdbRepository: IgdbRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -110,8 +112,8 @@ internal class HomeViewModel(
         .catch { emit(persistentMapOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentMapOf())
 
-    private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
-    val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
+    private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger, igdbRepository)
+    val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
 
     val events: SharedFlow<HomeUiEvent>
         field = MutableSharedFlow<HomeUiEvent>(
@@ -145,18 +147,22 @@ internal class HomeViewModel(
                 val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
                 val releases = async { section { loadReleases() } }
                 val bundles = async { section { bundlesRepository.getBundles().take(LIMIT_BUNDLES) } }
-                val giveaways = async { section { loadGiveaways() } }
+
+                // Enrich the ranked rows with a current price + discount (one batched lookup over both
+                // lists' game ids) so they read with the same anatomy as the Trending deal rows.
+                val mostWaitlistedRaw = mostWaitlisted.await()
+                val mostCollectedRaw = mostCollected.await()
+                val prices = loadGamePrices(mostWaitlistedRaw + mostCollectedRaw)
 
                 HomeScreenData(
                     status = HomeScreenStatus.DATA,
                     accountStats = accountStats.await(),
                     featuredHero = featuredHero.await(),
                     trending = trending.await(),
-                    mostWaitlisted = mostWaitlisted.await(),
-                    mostCollected = mostCollected.await(),
+                    mostWaitlisted = enrichRanked(mostWaitlistedRaw, prices),
+                    mostCollected = enrichRanked(mostCollectedRaw, prices),
                     releases = releases.await(),
                     bundles = bundles.await(),
-                    giveaways = giveaways.await(),
                 )
             }
             // Best-effort sections hide on failure; if the whole feed came back empty (e.g. fully
@@ -167,13 +173,15 @@ internal class HomeViewModel(
 
     fun retry() = load()
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
-    }
+    /** Open the game-centric peek sheet for a game/deal row (hero, trending, ranked). */
+    fun peekGame(gameId: String, gameName: String, thumb: String?) =
+        gamePeekController.load(viewModelScope, gameId, gameName, thumb)
 
-    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleWaitlist(data.gameId)
+    /** Open the peek sheet for a "New release" row, which carries only a title (resolved on open). */
+    fun peekRelease(title: String, thumb: String?) =
+        gamePeekController.loadByTitle(viewModelScope, title, thumb)
 
-    /** Toggle a game on/off the waitlist from an inline heart; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from an inline heart or the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -182,9 +190,7 @@ internal class HomeViewModel(
         }
     }
 
-    fun toggleIgnoreFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleIgnore(data.gameId)
-
-    /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
         viewModelScope.launch {
             if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -193,18 +199,19 @@ internal class HomeViewModel(
         }
     }
 
-    fun dismissDealDetails() {
-        dealDetailsController.dismiss(viewModelScope)
+    fun dismissPeek() {
+        gamePeekController.dismiss(viewModelScope)
     }
 
-    fun onShareDealClicked(data: DealBottomSheetData) {
+    fun onShareClicked(data: GamePeekSheetData.Data) {
+        val best = data.bestDeal ?: return
         val text = dealShareTextBuilder.build(
             gameTitle = data.gameName,
-            salePriceDenominated = data.gameSalesPriceDenominated,
-            storeName = data.store.storeName,
-            dealUrl = data.dealUrl,
+            salePriceDenominated = best.deal.priceDenominated,
+            storeName = best.store.storeName,
+            dealUrl = best.deal.url,
         )
-        info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
+        info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
         events.tryEmit(HomeUiEvent.ShareDeal(text))
     }
 
@@ -223,12 +230,21 @@ internal class HomeViewModel(
         return releasesRepository.observeReleases().first().take(LIMIT_RELEASES)
     }
 
-    private suspend fun loadGiveaways(): List<Giveaway> {
-        giveawaysRepository.refreshGiveaways()
-        return giveawaysRepository.observeGiveaways().first()
-            .filter { !it.status.equals(EXPIRED_STATUS, ignoreCase = true) }
-            .take(LIMIT_GIVEAWAYS)
-    }
+    /** One batched best-price lookup over the ranked games' ids; best-effort (empty on failure). */
+    private suspend fun loadGamePrices(games: List<RankedGame>): Map<String, BundleGamePrice> = runCatching {
+        val ids = games.map { it.gameId }.distinct()
+        if (ids.isEmpty()) emptyMap() else gamesRepository.getGamePrices(ids).associateBy { it.gameId }
+    }.getOrElse { emptyMap() }
+
+    /** Overlay each ranked game's current best price + discount; rows without a price keep their snapshot. */
+    private fun enrichRanked(games: List<RankedGame>, prices: Map<String, BundleGamePrice>): ImmutableList<RankedGame> =
+        games.map { game ->
+            val price = prices[game.gameId] ?: return@map game
+            game.copy(
+                priceDenominated = price.bestPriceDenominated ?: game.priceDenominated,
+                cutPercent = price.bestCutPercent,
+            )
+        }.toImmutableList()
 
     /** Runs a section's fetch best-effort: failures are logged and yield an empty (hidden) section. */
     private suspend fun <T> section(block: suspend () -> List<T>): ImmutableList<T> =
@@ -252,12 +268,11 @@ internal class HomeViewModel(
         val mostCollected: ImmutableList<RankedGame> = persistentListOf(),
         val releases: ImmutableList<Release> = persistentListOf(),
         val bundles: ImmutableList<Bundle> = persistentListOf(),
-        val giveaways: ImmutableList<Giveaway> = persistentListOf(),
     ) {
         val hasContent: Boolean
             get() = accountStats != null || featuredHero.isNotEmpty() || trending.isNotEmpty() ||
                 mostWaitlisted.isNotEmpty() || mostCollected.isNotEmpty() || releases.isNotEmpty() ||
-                bundles.isNotEmpty() || giveaways.isNotEmpty()
+                bundles.isNotEmpty()
     }
 
     @Immutable

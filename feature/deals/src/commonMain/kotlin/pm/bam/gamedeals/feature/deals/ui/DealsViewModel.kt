@@ -34,8 +34,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
-import pm.bam.gamedeals.common.ui.deal.DealDetailsController
+import pm.bam.gamedeals.common.ui.deal.GamePeekController
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealFlag
@@ -135,8 +135,8 @@ internal class DealsViewModel(
     val searchResults: StateFlow<SearchResultsState>
         field = MutableStateFlow<SearchResultsState>(SearchResultsState.Idle)
 
-    private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
-    val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
+    private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger)
+    val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
 
     val events: SharedFlow<DealsUiEvent>
         field = MutableSharedFlow<DealsUiEvent>(
@@ -301,17 +301,16 @@ internal class DealsViewModel(
         }
     }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
+    /** Open the game-centric peek sheet for a deal/search row. */
+    fun peekGame(gameId: String, gameName: String, thumb: String?) {
+        gamePeekController.load(viewModelScope, gameId, gameName, thumb)
     }
 
-    fun dismissDealDetails() {
-        dealDetailsController.dismiss(viewModelScope)
+    fun dismissPeek() {
+        gamePeekController.dismiss(viewModelScope)
     }
 
-    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleWaitlist(data.gameId)
-
-    /** Toggle a game on/off the waitlist from an inline row heart; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from an inline row heart or the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -320,9 +319,7 @@ internal class DealsViewModel(
         }
     }
 
-    fun toggleIgnoreFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleIgnore(data.gameId)
-
-    /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
         viewModelScope.launch {
             if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -331,14 +328,15 @@ internal class DealsViewModel(
         }
     }
 
-    fun onShareDealClicked(data: DealBottomSheetData) {
+    fun onShareClicked(data: GamePeekSheetData.Data) {
+        val best = data.bestDeal ?: return
         val text = dealShareTextBuilder.build(
             gameTitle = data.gameName,
-            salePriceDenominated = data.gameSalesPriceDenominated,
-            storeName = data.store.storeName,
-            dealUrl = data.dealUrl,
+            salePriceDenominated = best.deal.priceDenominated,
+            storeName = best.store.storeName,
+            dealUrl = best.deal.url,
         )
-        info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
+        info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
         events.tryEmit(DealsUiEvent.ShareDeal(text))
     }
 

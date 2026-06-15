@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.common.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -20,14 +22,21 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
  * ITAD-style UI Improvements work (board project #3); this file now hosts the account [StatCard].
  */
 
-/** A compact metric card (e.g. "Waitlisted: 12") for the account stats strip. */
+/**
+ * A compact metric card (e.g. "Waitlisted: 12") for the account stats strip. When [onClick] is
+ * provided the whole card is a button (e.g. tapping "Waitlisted" opens the Waitlist list).
+ */
 @Composable
 fun StatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
-    Card(modifier = modifier.semantics(mergeDescendants = true) { contentDescription = "$value $label" }) {
+    val cardModifier = modifier
+        .let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
+        .semantics(mergeDescendants = true) { contentDescription = "$value $label" }
+    Card(modifier = cardModifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

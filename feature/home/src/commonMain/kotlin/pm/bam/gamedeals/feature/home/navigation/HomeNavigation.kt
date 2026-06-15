@@ -8,18 +8,20 @@ import pm.bam.gamedeals.feature.home.ui.HomeScreen
 fun NavGraphBuilder.homeScreen(
     goToGame: (gameId: String) -> Unit,
     goToGameByTitle: (title: String) -> Unit,
-    goToGiveaway: () -> Unit,
+    goToWaitlist: () -> Unit,
+    goToCollection: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToBundles: () -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
 ) {
-    // Search + Settings live on the app-shell top bar / overflow (epic #219, Phase 1). The per-store
-    // strips moved to the Deals tab in Phase 4, so Home no longer navigates to the Store screen.
+    // Search + Settings live on the app-shell top bar / overflow (epic #219, Phase 1). Giveaways moved
+    // off Home to their own tab (row-consolidation work), so Home is now 100% in-app content.
     composable<Destination.Home> {
         HomeScreen(
             goToGame = goToGame,
             goToGameByTitle = goToGameByTitle,
-            onViewGiveaways = goToGiveaway,
+            onViewWaitlist = goToWaitlist,
+            onViewCollection = goToCollection,
             onViewBundles = goToBundles,
             onViewBundle = goToBundle,
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) },

@@ -15,6 +15,7 @@ import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Game
@@ -90,6 +91,14 @@ interface GamesRepository {
 
     /** The game's cheapest price across [REGIONAL_COMPARISON_COUNTRIES] for the Game Page's "Regions" tab (#291). */
     suspend fun getRegionalPrices(gameId: String): List<RegionalPrice>
+
+    /**
+     * Current best price + all-time low for each of [gameIds] in the user's region — one batched
+     * `/games/prices/v3` query. Used to enrich the Home ranked/release rows with a price + discount
+     * so every content row reads identically. Best-effort and uncached: a game with no current deal
+     * is omitted or carries null `best*` fields.
+     */
+    suspend fun getGamePrices(gameIds: List<String>): List<BundleGamePrice>
 }
 
 internal class GamesRepositoryImpl(
@@ -266,4 +275,7 @@ internal class GamesRepositoryImpl(
 
     override suspend fun getRegionalPrices(gameId: String): List<RegionalPrice> =
         dealsSource.fetchRegionalPrices(gameId, REGIONAL_COMPARISON_COUNTRIES)
+
+    override suspend fun getGamePrices(gameIds: List<String>): List<BundleGamePrice> =
+        dealsSource.fetchBundleGamePrices(gameIds)
 }

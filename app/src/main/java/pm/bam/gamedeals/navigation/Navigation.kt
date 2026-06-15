@@ -52,6 +52,16 @@ internal class NavigationActions(private val navController: NavHostController) {
         navController.navigate(Destination.Notifications)
     }
 
+    /** Open the Waitlist list (from the Home account stat card). Registered under the shared NavHost. */
+    fun navigateToWaitlist() {
+        navController.navigate(Destination.WaitlistList)
+    }
+
+    /** Open the Collection list (from the Home account stat card). Registered under the shared NavHost. */
+    fun navigateToCollection() {
+        navController.navigate(Destination.CollectionList)
+    }
+
     fun navigateToGameDetails(steamAppId: Int, title: String? = null) {
         navController.navigate(Destination.GameDetails(steamAppId, title))
     }

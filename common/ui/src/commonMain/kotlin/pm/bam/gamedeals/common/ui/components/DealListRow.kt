@@ -45,6 +45,9 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * whole price block ([salePrice] null), each ITAD flag badge ([hasVoucher] / [isNewHistoricalLow] /
  * [isStoreLow] false), and the heart ([onToggleWaitlist] null).
  *
+ * When there is no [salePrice] but a [neutralChip] is given (e.g. an unreleased "New release" with no
+ * deal yet), the chip stands in for the price column so every content row keeps the same anatomy.
+ *
  * Accessibility mirrors [DealHeroTile]: the thumbnail + text + price form a single clickable node
  * carrying the caller's [contentDescription], while the heart is a separate, independently
  * actionable sibling node.
@@ -58,6 +61,7 @@ fun DealListRow(
     imageUrl: String? = null,
     salePrice: String? = null,
     regularPrice: String? = null,
+    neutralChip: String? = null,
     discountPercent: Int = 0,
     hasVoucher: Boolean = false,
     isNewHistoricalLow: Boolean = false,
@@ -148,6 +152,22 @@ fun DealListRow(
                         regularPrice = regularPrice,
                         salePriceStyle = MaterialTheme.typography.titleSmall,
                     )
+                } else if (neutralChip != null) {
+                    // No deal to show (e.g. an unreleased release): a neutral chip keeps the price column's anatomy.
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ) {
+                        Text(
+                            text = neutralChip,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(
+                                horizontal = GameDealsCustomTheme.spacing.small,
+                                vertical = GameDealsCustomTheme.spacing.extraSmall,
+                            ),
+                        )
+                    }
                 }
             }
         }

@@ -17,11 +17,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
+import pm.bam.gamedeals.common.ui.deal.StoreDealPair
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
@@ -29,7 +32,8 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
-import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -40,7 +44,6 @@ import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
-import pm.bam.gamedeals.testing.fixtures.gameInfo
 import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
@@ -61,9 +64,6 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
     private val releasesRepository: ReleasesRepository = mock(MockMode.autoUnit) {
         every { observeReleases() } returns flowOf(emptyList())
-    }
-    private val giveawaysRepository: GiveawaysRepository = mock(MockMode.autoUnit) {
-        every { observeGiveaways() } returns flowOf(emptyList())
     }
     private val bundlesRepository: BundlesRepository = mock(MockMode.autoUnit) {
         everySuspend { getBundles() } returns emptyList()
@@ -86,6 +86,10 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf())
     }
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit) {
+        everySuspend { getGamePrices(any()) } returns emptyList()
+    }
+    private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -95,7 +99,6 @@ class HomeViewModelTest : MainDispatcherTest() {
         storesRepository = storesRepository,
         dealsRepository = dealsRepository,
         releasesRepository = releasesRepository,
-        giveawaysRepository = giveawaysRepository,
         bundlesRepository = bundlesRepository,
         statsRepository = statsRepository,
         accountRepository = accountRepository,
@@ -104,6 +107,8 @@ class HomeViewModelTest : MainDispatcherTest() {
         dealShareTextBuilder = dealShareTextBuilder,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
+        gamesRepository = gamesRepository,
+        igdbRepository = igdbRepository,
         logger = logger,
     )
 
@@ -121,6 +126,29 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertTrue(state.trending.isNotEmpty())
         assertEquals(1, state.mostWaitlisted.size)
         assertNull(state.accountStats) // logged out
+    }
+
+    @Test
+    fun ranked_rows_are_enriched_with_best_price_and_discount() = runTest {
+        everySuspend { statsRepository.getMostWaitlisted(any()) } returns listOf(RankedGame("w1", "Waited"))
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(
+            BundleGamePrice(
+                gameId = "w1",
+                bestShopName = "Steam",
+                bestPriceValue = 9.99,
+                bestPriceDenominated = "$9.99",
+                bestCutPercent = 50,
+                historicalLowValue = null,
+                historicalLowDenominated = null,
+            )
+        )
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val ranked = vm.uiState.value.mostWaitlisted.first()
+        assertEquals("$9.99", ranked.priceDenominated)
+        assertEquals(50, ranked.cutPercent)
     }
 
     @Test
@@ -162,27 +190,27 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun toggleWaitlistFromDeal_delegates_to_repository() = runTest {
+    fun toggleWaitlist_delegates_to_repository() = runTest {
         everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.UPDATED
 
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.toggleWaitlistFromDeal(dealDetailsData(gameId = "42"))
+        vm.toggleWaitlist("42")
         advanceUntilIdle()
 
         verifySuspend(exactly(1)) { waitlistRepository.toggleWaitlist("42") }
     }
 
     @Test
-    fun toggleWaitlistFromDeal_when_logged_out_emits_SignInRequired() = runTest {
+    fun toggleWaitlist_when_logged_out_emits_SignInRequired() = runTest {
         everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.NOT_LOGGED_IN
 
         val vm = createViewModel()
         advanceUntilIdle()
         val events = vm.events.observeEmissions(this.backgroundScope, testDispatcher)
 
-        vm.toggleWaitlistFromDeal(dealDetailsData(gameId = "42"))
+        vm.toggleWaitlist("42")
         advanceUntilIdle()
 
         assertEquals(1, events.size)
@@ -190,37 +218,36 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun onShareDealClicked_emits_ShareDeal_event() = runTest {
+    fun onShareClicked_emits_ShareDeal_event() = runTest {
         every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
 
         val vm = createViewModel()
         advanceUntilIdle()
         val events = vm.events.observeEmissions(this.backgroundScope, testDispatcher)
 
-        vm.onShareDealClicked(
-            DealBottomSheetData.DealDetailsLoading(
-                store = store(storeName = "Steam"),
-                gameId = "42",
-                gameName = "Halo",
-                dealId = "deal-1",
-                dealUrl = "https://deal",
-                gameSalesPriceDenominated = "$9.99",
-            )
-        )
+        vm.onShareClicked(peekData(gameId = "42"))
         advanceUntilIdle()
 
         assertEquals(1, events.size)
         assertEquals(HomeViewModel.HomeUiEvent.ShareDeal("Built share text"), events.first())
     }
 
-    private fun dealDetailsData(gameId: String) = DealBottomSheetData.DealDetailsData(
-        store = store(),
+    private fun peekData(gameId: String) = GamePeekSheetData.Data(
         gameId = gameId,
         gameName = "Halo",
-        dealId = "deal-1",
-        gameSalesPriceDenominated = "$9.99",
-        gameInfo = gameInfo(gameID = gameId, thumb = "thumb"),
-        cheaperStores = persistentListOf(),
-        cheapestPrice = null,
+        thumb = "thumb",
+        bestDeal = StoreDealPair(
+            store = store(storeName = "Steam"),
+            deal = GameDetails.GameDeal(
+                storeID = 1,
+                dealID = "deal-1",
+                priceValue = 9.99,
+                priceDenominated = "$9.99",
+                retailPriceValue = 19.99,
+                retailPriceDenominated = "$19.99",
+                savings = 50,
+                url = "https://deal",
+            ),
+        ),
     )
 }

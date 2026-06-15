@@ -82,8 +82,8 @@ import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.components.WaitlistHeartButton
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -174,7 +174,7 @@ internal fun DealsScreen(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
-    val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
+    val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
@@ -210,7 +210,7 @@ internal fun DealsScreen(
         searchQuery = searchQuery,
         searchResults = searchResults,
         showFilters = showFilters,
-        dealDetails = dealDetails,
+        gamePeek = gamePeek,
         snackbarHostState = snackbarHostState,
         onSelectSort = { viewModel.setSort(it) },
         onToggleShop = { viewModel.toggleShop(it) },
@@ -231,14 +231,14 @@ internal fun DealsScreen(
         },
         onLoadMore = { viewModel.loadNextPage() },
         onRetry = { viewModel.retry() },
-        onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
-            viewModel.loadDealDetails(dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
-        },
-        onDismissDealDetails = { viewModel.dismissDealDetails() },
-        onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
-        onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
+        onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
+        onDismissPeek = { viewModel.dismissPeek() },
+        onShare = { peekData -> viewModel.onShareClicked(peekData) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
-        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
+        onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
+        onRetryPeek = {
+            viewModel.gamePeek.value?.let { peek -> viewModel.peekGame(peek.gameId, peek.gameName, peek.thumb) }
+        },
         goToWeb = goToWeb,
         goToGame = goToGame,
     )
@@ -257,7 +257,7 @@ private fun DealsContent(
     searchQuery: String = "",
     searchResults: SearchResultsState = SearchResultsState.Idle,
     showFilters: Boolean = false,
-    dealDetails: DealBottomSheetData? = null,
+    gamePeek: GamePeekSheetData? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSelectSort: (DealsSort) -> Unit,
     onToggleShop: (Int) -> Unit = {},
@@ -275,12 +275,12 @@ private fun DealsContent(
     onCloseSearch: () -> Unit = {},
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
-    onDismissDealDetails: () -> Unit,
-    onShareDealDetails: (data: DealBottomSheetData) -> Unit,
-    onToggleDealWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    onDismissPeek: () -> Unit,
+    onShare: (data: GamePeekSheetData.Data) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit = {},
-    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
+    onToggleIgnore: (gameId: String) -> Unit = {},
+    onRetryPeek: () -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
 ) {
@@ -353,7 +353,7 @@ private fun DealsContent(
                             addToWaitlistCd = addToWaitlistCd,
                             removeFromWaitlistCd = removeFromWaitlistCd,
                             errorMessage = errorMessage,
-                            onGame = goToGame,
+                            onPeekGame = onPeekGame,
                             onToggleWaitlist = onToggleWaitlist,
                         )
 
@@ -381,7 +381,7 @@ private fun DealsContent(
                                         else Res.string.deals_screen_deal_row_description,
                                         deal.title, deal.salePriceDenominated,
                                     ),
-                                    onClick = { onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
                                     imageUrl = deal.thumb,
                                     salePrice = deal.salePriceDenominated,
                                     regularPrice = deal.normalPriceDenominated,
@@ -409,17 +409,18 @@ private fun DealsContent(
                 }
             }
 
-            DealBottomSheet(
-                data = dealDetails,
-                isWaitlisted = dealDetails?.gameId?.let { it in waitlistIds } == true,
-                isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
+            val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
+            GamePeekSheet(
+                data = gamePeek,
+                isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                isIgnored = peekGameId?.let { it in ignoredIds } == true,
                 goToWeb = goToWeb,
-                goToGame = goToGame,
-                onDismiss = { onDismissDealDetails() },
-                onShare = { sheetData -> onShareDealDetails(sheetData) },
-                onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },
-                onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
-                onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } },
+                onViewGamePage = { peekData -> goToGame(peekData.gameId) },
+                onDismiss = { onDismissPeek() },
+                onShare = { peekData -> onShare(peekData) },
+                onToggleWaitlist = onToggleWaitlist,
+                onToggleIgnore = onToggleIgnore,
+                onRetry = onRetryPeek,
             )
 
             DealsFilterSheet(
@@ -457,7 +458,7 @@ private fun SearchResultsBody(
     addToWaitlistCd: String,
     removeFromWaitlistCd: String,
     errorMessage: String,
-    onGame: (gameId: String) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
 ) {
     when (state) {
@@ -496,7 +497,7 @@ private fun SearchResultsBody(
                         store = storesById[group.cheapestDeal.storeID],
                         addToWaitlistCd = addToWaitlistCd,
                         removeFromWaitlistCd = removeFromWaitlistCd,
-                        onGame = { onGame(group.gameID) },
+                        onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.thumb) },
                         onToggleWaitlist = { onToggleWaitlist(group.gameID) },
                     )
                 }
@@ -924,10 +925,9 @@ private fun DealsContent_Success_Preview() {
             onSelectSort = {},
             onLoadMore = {},
             onRetry = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            onPeekGame = { _, _, _ -> },
+            onDismissPeek = {},
+            onShare = {},
             goToWeb = { _, _ -> },
         )
     }
@@ -943,10 +943,9 @@ private fun DealsContent_Loading_Preview() {
             onSelectSort = {},
             onLoadMore = {},
             onRetry = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            onPeekGame = { _, _, _ -> },
+            onDismissPeek = {},
+            onShare = {},
             goToWeb = { _, _ -> },
         )
     }
@@ -962,10 +961,9 @@ private fun DealsContent_Empty_Preview() {
             onSelectSort = {},
             onLoadMore = {},
             onRetry = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            onPeekGame = { _, _, _ -> },
+            onDismissPeek = {},
+            onShare = {},
             goToWeb = { _, _ -> },
         )
     }

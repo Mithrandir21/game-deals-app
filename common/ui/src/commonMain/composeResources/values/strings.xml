@@ -3,6 +3,14 @@
 
     <string name="deal_details_go_to_deal_label">Go to Deal</string>
     <string name="deal_details_view_game_page_label">Game page</string>
+
+    <!-- Game-centric peek sheet (row-consolidation work): one quick-peek sheet keyed by game id,
+         opened from every game/deal row across Home and Deals. -->
+    <string name="game_peek_best_price_at_store">%1$s at %2$s</string>
+    <string name="game_peek_other_stores_label">Other stores</string>
+    <string name="game_peek_no_deals_label">No deals yet</string>
+    <string name="game_peek_upcoming_label">Upcoming</string>
+    <string name="game_peek_store_row_description">%1$s at %2$s</string>
     <string name="deal_details_view_game_details_label">Game details</string>
     <string name="deal_share_label">Share</string>
     <string name="deal_share_content_description">Share this deal</string>

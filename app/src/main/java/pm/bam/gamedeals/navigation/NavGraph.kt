@@ -80,7 +80,8 @@ internal fun NavGraph(
             homeScreen(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToGameByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
-                goToGiveaway = { navActions.navigateTopLevel(Destination.Giveaways) },
+                goToWaitlist = { navActions.navigateToWaitlist() },
+                goToCollection = { navActions.navigateToCollection() },
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },

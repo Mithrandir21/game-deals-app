@@ -2,28 +2,20 @@
 
 package pm.bam.gamedeals.feature.home.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,21 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -63,51 +45,34 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewDeal
-import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.PreviewRelease
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.components.DealHeroTile
 import pm.bam.gamedeals.common.ui.components.DealListRow
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
-import pm.bam.gamedeals.common.ui.generated.resources.open_in_new
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
-import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
-import pm.bam.gamedeals.domain.models.Deal
-import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.RankedGame
-import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_giveaways_label
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundle_row_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_featured_label
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_game_image
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_free_label
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_opens_externally
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_platforms
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_worth
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaway_row_description_no_worth_no_platforms
-import pm.bam.gamedeals.feature.home.generated.resources.home_screen_giveaways_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_hero_deal_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_loading_indicator
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_most_collected_label
@@ -115,6 +80,8 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_most_waitli
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_new_releases_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_ranked_game_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_ranked_game_description_no_price
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_release_row_description
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_release_upcoming
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_stat_collected
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_stat_waitlisted
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_deal_row_description
@@ -132,21 +99,21 @@ private const val CONTENT_TYPE_HERO_ROW = "hero_row"
 private const val CONTENT_TYPE_DEAL = "deal"
 private const val CONTENT_TYPE_RANKED = "ranked"
 private const val CONTENT_TYPE_RELEASE = "release"
-private const val CONTENT_TYPE_GIVEAWAY = "giveaway"
 private const val CONTENT_TYPE_BUNDLE = "bundle"
 
 @Composable
 internal fun HomeScreen(
     goToGame: (gameId: String) -> Unit,
     goToGameByTitle: (title: String) -> Unit,
-    onViewGiveaways: () -> Unit,
+    onViewWaitlist: () -> Unit,
+    onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
-    val dealDetails = viewModel.dealDetails.collectAsStateWithLifecycle()
+    val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = viewModel.stores.collectAsStateWithLifecycle()
@@ -155,25 +122,30 @@ internal fun HomeScreen(
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     HomeScreenContent(
-        onReleaseTitle = goToGameByTitle,
         data = data.value,
         waitlistIds = waitlistIds.value,
         ignoredIds = ignoredIds.value,
         stores = stores.value,
         snackbarHostState = snackbarHostState,
-        dealDetails = dealDetails.value,
-        onViewDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
-            viewModel.loadDealDetails(dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
-        },
+        gamePeek = gamePeek.value,
+        onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
+        onPeekRelease = { title, thumb -> viewModel.peekRelease(title, thumb) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
-        goToGame = goToGame,
-        onViewGiveaways = onViewGiveaways,
+        onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
+        onViewWaitlist = onViewWaitlist,
+        onViewCollection = onViewCollection,
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
-        onDismissDealDetails = { viewModel.dismissDealDetails() },
-        onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
-        onToggleDealWaitlist = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
-        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
+        goToGame = goToGame,
+        goToGameByTitle = goToGameByTitle,
+        onDismissPeek = { viewModel.dismissPeek() },
+        onShare = { peekData -> viewModel.onShareClicked(peekData) },
+        onRetryPeek = {
+            viewModel.gamePeek.value?.let { peek ->
+                if (peek.gameId.isNotEmpty()) viewModel.peekGame(peek.gameId, peek.gameName, peek.thumb)
+                else viewModel.peekRelease(peek.gameName, peek.thumb)
+            }
+        },
         goToWeb = goToWeb,
         onRetry = { viewModel.retry() },
     )
@@ -189,22 +161,24 @@ internal fun HomeScreen(
 
 @Composable
 private fun HomeScreenContent(
-    onReleaseTitle: (title: String) -> Unit,
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
-    dealDetails: DealBottomSheetData?,
-    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    gamePeek: GamePeekSheetData?,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    onPeekRelease: (title: String, thumb: String?) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
-    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
-    goToGame: (gameId: String) -> Unit,
-    onViewGiveaways: () -> Unit,
+    onToggleIgnore: (gameId: String) -> Unit = {},
+    onViewWaitlist: () -> Unit,
+    onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
-    onDismissDealDetails: () -> Unit,
-    onShareDealDetails: (data: DealBottomSheetData) -> Unit,
-    onToggleDealWaitlist: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    goToGame: (gameId: String) -> Unit,
+    goToGameByTitle: (title: String) -> Unit,
+    onDismissPeek: () -> Unit,
+    onShare: (data: GamePeekSheetData.Data) -> Unit,
+    onRetryPeek: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -213,6 +187,7 @@ private fun HomeScreenContent(
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.home_screen_data_loading_error_retry)
     val loadingIndicator = stringResource(Res.string.home_screen_loading_indicator)
+    val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -234,30 +209,30 @@ private fun HomeScreenContent(
                         data = data,
                         waitlistIds = waitlistIds,
                         stores = stores,
-                        onReleaseTitle = onReleaseTitle,
-                        onViewDealDetails = onViewDealDetails,
+                        onPeekGame = onPeekGame,
+                        onPeekRelease = onPeekRelease,
                         onToggleWaitlist = onToggleWaitlist,
-                        goToGame = goToGame,
-                        onViewGiveaways = onViewGiveaways,
+                        onViewWaitlist = onViewWaitlist,
+                        onViewCollection = onViewCollection,
                         onViewBundles = onViewBundles,
                         onViewBundle = onViewBundle,
-                        goToWeb = goToWeb,
                     )
                 }
 
-                DealBottomSheet(
-                    data = dealDetails,
-                    isWaitlisted = dealDetails?.gameId?.let { it in waitlistIds } == true,
-                    isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
-                    onDismiss = { onDismissDealDetails() },
-                    onShare = { sheetData -> onShareDealDetails(sheetData) },
-                    onToggleWaitlist = { sheetData -> onToggleDealWaitlist(sheetData) },
-                    onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
+                GamePeekSheet(
+                    data = gamePeek,
+                    isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                    isIgnored = peekGameId?.let { it in ignoredIds } == true,
+                    onDismiss = onDismissPeek,
+                    onShare = onShare,
+                    onToggleWaitlist = onToggleWaitlist,
+                    onToggleIgnore = onToggleIgnore,
                     goToWeb = goToWeb,
-                    goToGame = goToGame,
-                    onRetryDealDetails = {
-                        dealDetails?.let { onViewDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) }
+                    onViewGamePage = { peekData ->
+                        if (peekData.gameId.isNotEmpty()) goToGame(peekData.gameId)
+                        else goToGameByTitle(peekData.gameName)
                     },
+                    onRetry = onRetryPeek,
                 )
             }
         }
@@ -276,23 +251,23 @@ private fun HomeFeed(
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
-    onReleaseTitle: (title: String) -> Unit,
-    onViewDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    onPeekRelease: (title: String, thumb: String?) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
-    goToGame: (gameId: String) -> Unit,
-    onViewGiveaways: () -> Unit,
+    onViewWaitlist: () -> Unit,
+    onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
-    goToWeb: (url: String, gameTitle: String) -> Unit,
 ) {
     val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
     val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
+    val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         // Track whether we've already emitted a section so each subsequent section is preceded by a
         // separator + spacing, while the first one stays flush to the top (no stray divider).
         var renderedSection = false
 
-        // 1. Account stat cards (logged-in only).
+        // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
         data.accountStats?.let { stats ->
             item(contentType = CONTENT_TYPE_STAT_ROW) {
                 Row(
@@ -304,11 +279,13 @@ private fun HomeFeed(
                     StatCard(
                         label = stringResource(Res.string.home_screen_stat_waitlisted),
                         value = stats.waitlistedCount.toString(),
+                        onClick = onViewWaitlist,
                         modifier = Modifier.weight(1f),
                     )
                     StatCard(
                         label = stringResource(Res.string.home_screen_stat_collected),
                         value = stats.collectedCount.toString(),
+                        onClick = onViewCollection,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -341,7 +318,7 @@ private fun HomeFeed(
                             storeName = store?.storeName,
                             storeIconUrl = store?.iconUrl,
                             contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
-                            onClick = { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                            onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
                             isWaitlisted = deal.gameID in waitlistIds,
                             onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
                             addToWaitlistContentDescription = addToWaitlistCd,
@@ -375,7 +352,7 @@ private fun HomeFeed(
                         else Res.string.home_screen_store_deal_row_description,
                         deal.title, deal.normalPriceDenominated, deal.salePriceDenominated,
                     ),
-                    onClick = { onViewDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
                     imageUrl = deal.thumb,
                     salePrice = deal.salePriceDenominated,
                     regularPrice = deal.normalPriceDenominated,
@@ -401,7 +378,7 @@ private fun HomeFeed(
                 titleRes = Res.string.home_screen_most_waitlisted_label,
                 games = data.mostWaitlisted,
                 keyPrefix = "waitlisted",
-                goToGame = goToGame,
+                onPeekGame = onPeekGame,
             )
         }
 
@@ -413,11 +390,12 @@ private fun HomeFeed(
                 titleRes = Res.string.home_screen_most_collected_label,
                 games = data.mostCollected,
                 keyPrefix = "collected",
-                goToGame = goToGame,
+                onPeekGame = onPeekGame,
             )
         }
 
-        // 6. New Releases (IGDB).
+        // 6. New Releases (IGDB) — title-only rows; the price column is a neutral "Upcoming" chip and the
+        // tap resolves the title → game on open (peek with a no-deals state when nothing is sold yet).
         if (data.releases.isNotEmpty()) {
             if (renderedSection) sectionDivider()
             renderedSection = true
@@ -427,7 +405,14 @@ private fun HomeFeed(
                 key = { index -> "release-${data.releases[index].title}" },
                 contentType = { CONTENT_TYPE_RELEASE },
             ) { index ->
-                ReleaseRow(data.releases[index], onReleaseTitle)
+                val release = data.releases[index]
+                DealListRow(
+                    title = release.title,
+                    contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
+                    onClick = { onPeekRelease(release.title, release.image) },
+                    imageUrl = release.image,
+                    neutralChip = upcomingChip,
+                )
             }
         }
 
@@ -448,26 +433,6 @@ private fun HomeFeed(
                 contentType = { CONTENT_TYPE_BUNDLE },
             ) { index ->
                 HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
-            }
-        }
-
-        // 8. Giveaways.
-        if (data.giveaways.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) {
-                SectionHeader(
-                    text = stringResource(Res.string.home_screen_giveaways_label),
-                    actionText = stringResource(Res.string.home_screen_all_giveaways_label),
-                    onActionClick = onViewGiveaways,
-                )
-            }
-            items(
-                count = data.giveaways.size,
-                key = { index -> "giveaway-${data.giveaways[index].id}" },
-                contentType = { CONTENT_TYPE_GIVEAWAY },
-            ) { index ->
-                GiveawayRow(data.giveaways[index]) { url -> goToWeb(url, data.giveaways[index].title) }
             }
         }
     }
@@ -493,7 +458,7 @@ private fun LazyListScope.rankedSection(
     titleRes: StringResource,
     games: ImmutableList<RankedGame>,
     keyPrefix: String,
-    goToGame: (gameId: String) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
 ) {
     if (games.isEmpty()) return
     item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(titleRes)) }
@@ -508,9 +473,10 @@ private fun LazyListScope.rankedSection(
         DealListRow(
             title = game.title,
             contentDescription = cd,
-            onClick = { goToGame(game.gameId) },
+            onClick = { onPeekGame(game.gameId, game.title, game.boxart) },
             imageUrl = game.boxart,
             salePrice = game.priceDenominated,
+            discountPercent = game.cutPercent ?: 0,
         )
     }
 }
@@ -556,42 +522,6 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun ReleaseRow(
-    release: Release,
-    onReleaseTitle: (title: String) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onReleaseTitle(release.title) }
-            .padding(bottom = GameDealsCustomTheme.spacing.small),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = release.image,
-            contentDescription = stringResource(Res.string.home_screen_game_image, release.title),
-            contentScale = ContentScale.Fit,
-            error = painterResource(CommonRes.drawable.videogame_thumb),
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                .height(60.dp)
-                .width(100.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-        )
-        Text(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = GameDealsCustomTheme.spacing.small),
-            textAlign = TextAlign.Start,
-            text = release.title,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
 private fun HomeBundleRow(
     bundle: Bundle,
     onClick: () -> Unit,
@@ -608,100 +538,6 @@ private fun HomeBundleRow(
     )
 }
 
-@Composable
-private fun GiveawayRow(
-    giveaway: Giveaway,
-    onGiveawayTitle: (url: String) -> Unit,
-) {
-    val typeLabel = giveaway.type.displayLabel()
-    val freeLabel = stringResource(Res.string.home_screen_giveaway_free_label)
-    val worth = giveaway.worthDenominated
-    val platformsLabel = remember(giveaway.platforms) {
-        giveaway.platforms.joinToString(", ") { it.platformValue }
-    }
-    val rowCd = when {
-        worth != null && platformsLabel.isNotEmpty() -> stringResource(
-            Res.string.home_screen_giveaway_row_description,
-            giveaway.title, worth, typeLabel, platformsLabel,
-        )
-        worth != null -> stringResource(
-            Res.string.home_screen_giveaway_row_description_no_platforms,
-            giveaway.title, worth, typeLabel,
-        )
-        platformsLabel.isNotEmpty() -> stringResource(
-            Res.string.home_screen_giveaway_row_description_no_worth,
-            giveaway.title, typeLabel, platformsLabel,
-        )
-        else -> stringResource(
-            Res.string.home_screen_giveaway_row_description_no_worth_no_platforms,
-            giveaway.title, typeLabel,
-        )
-    }
-    val opensExternallyCd = stringResource(Res.string.home_screen_giveaway_opens_externally)
-    val giveawaySubtitle = remember(worth, typeLabel, platformsLabel, freeLabel) {
-        buildAnnotatedString {
-            append(freeLabel)
-            worth?.let {
-                append(" ")
-                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(it) }
-            }
-            append(" - ")
-            append(typeLabel)
-            if (platformsLabel.isNotEmpty()) {
-                append(" · ")
-                append(platformsLabel)
-            }
-        }
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onGiveawayTitle(giveaway.gamerpowerUrl) }
-            .padding(vertical = GameDealsCustomTheme.spacing.medium)
-            .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensExternallyCd" },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = giveaway.thumbnail,
-            contentDescription = stringResource(Res.string.home_screen_game_image, giveaway.title),
-            contentScale = ContentScale.Fit,
-            error = painterResource(CommonRes.drawable.videogame_thumb),
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                .height(60.dp)
-                .width(100.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = GameDealsCustomTheme.spacing.small),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        ) {
-            Text(
-                textAlign = TextAlign.Start,
-                text = giveaway.title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = giveawaySubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Icon(
-            painter = painterResource(CommonRes.drawable.open_in_new),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.medium)
-                .size(20.dp),
-        )
-    }
-}
-
 private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.HomeScreenData(
     status = HomeScreenStatus.DATA,
     accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
@@ -714,19 +550,15 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.H
         PreviewDeal.copy(dealID = "trend-1", title = "Celeste", salePriceDenominated = "$4.99", normalPriceDenominated = "$19.99", gameID = "44444"),
     ).toImmutableList(),
     mostWaitlisted = listOf(
-        RankedGame(gameId = "w1", title = "Baldur's Gate 3", priceDenominated = "$59.99"),
-        RankedGame(gameId = "w2", title = "Cyberpunk 2077", priceDenominated = "$29.99"),
+        RankedGame(gameId = "w1", title = "Baldur's Gate 3", priceDenominated = "$59.99", cutPercent = 0),
+        RankedGame(gameId = "w2", title = "Cyberpunk 2077", priceDenominated = "$29.99", cutPercent = 50),
     ).toImmutableList(),
     mostCollected = listOf(
-        RankedGame(gameId = "c1", title = "Skyrim Special Edition", priceDenominated = "$19.99"),
+        RankedGame(gameId = "c1", title = "Skyrim Special Edition", priceDenominated = "$19.99", cutPercent = 50),
     ).toImmutableList(),
     releases = listOf(
         PreviewRelease,
         PreviewRelease.copy(title = "Silksong"),
-    ).toImmutableList(),
-    giveaways = listOf(
-        PreviewGiveaway,
-        PreviewGiveaway.copy(id = 2, title = "Tomb Raider Trilogy", worthDenominated = "$49.99"),
     ).toImmutableList(),
 )
 
@@ -735,20 +567,22 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.H
 private fun HomeScreenContent_Success_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onReleaseTitle = {},
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
-            dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _, _ -> },
+            gamePeek = null,
+            onPeekGame = { _, _, _ -> },
+            onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
-            goToGame = {},
-            onViewGiveaways = {},
+            onViewWaitlist = {},
+            onViewCollection = {},
             onViewBundles = {},
             onViewBundle = {},
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            goToGame = {},
+            goToGameByTitle = {},
+            onDismissPeek = {},
+            onShare = {},
+            onRetryPeek = {},
             goToWeb = { _, _ -> },
             onRetry = {},
         )
@@ -760,20 +594,22 @@ private fun HomeScreenContent_Success_Preview() {
 private fun HomeScreenContent_Success_Dark_Preview() {
     GameDealsTheme(darkTheme = true) {
         HomeScreenContent(
-            onReleaseTitle = {},
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
-            dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _, _ -> },
+            gamePeek = null,
+            onPeekGame = { _, _, _ -> },
+            onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
-            goToGame = {},
-            onViewGiveaways = {},
+            onViewWaitlist = {},
+            onViewCollection = {},
             onViewBundles = {},
             onViewBundle = {},
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            goToGame = {},
+            goToGameByTitle = {},
+            onDismissPeek = {},
+            onShare = {},
+            onRetryPeek = {},
             goToWeb = { _, _ -> },
             onRetry = {},
         )
@@ -785,20 +621,22 @@ private fun HomeScreenContent_Success_Dark_Preview() {
 private fun HomeScreenContent_Loading_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.LOADING),
             waitlistIds = persistentSetOf(),
             stores = persistentMapOf(),
-            dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _, _ -> },
+            gamePeek = null,
+            onPeekGame = { _, _, _ -> },
+            onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
-            goToGame = {},
-            onViewGiveaways = {},
+            onViewWaitlist = {},
+            onViewCollection = {},
             onViewBundles = {},
             onViewBundle = {},
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            goToGame = {},
+            goToGameByTitle = {},
+            onDismissPeek = {},
+            onShare = {},
+            onRetryPeek = {},
             goToWeb = { _, _ -> },
             onRetry = {},
         )
@@ -810,20 +648,22 @@ private fun HomeScreenContent_Loading_Preview() {
 private fun HomeScreenContent_Error_Preview() {
     GameDealsTheme {
         HomeScreenContent(
-            onReleaseTitle = {},
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.ERROR),
             waitlistIds = persistentSetOf(),
             stores = persistentMapOf(),
-            dealDetails = null,
-            onViewDealDetails = { _, _, _, _, _, _ -> },
+            gamePeek = null,
+            onPeekGame = { _, _, _ -> },
+            onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
-            goToGame = {},
-            onViewGiveaways = {},
+            onViewWaitlist = {},
+            onViewCollection = {},
             onViewBundles = {},
             onViewBundle = {},
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealWaitlist = {},
+            goToGame = {},
+            goToGameByTitle = {},
+            onDismissPeek = {},
+            onShare = {},
+            onRetryPeek = {},
             goToWeb = { _, _ -> },
             onRetry = {},
         )

@@ -16,6 +16,10 @@
     <string name="home_screen_ranked_game_description">%1$s, %2$s</string>
     <string name="home_screen_ranked_game_description_no_price">%1$s</string>
 
+    <!-- New-release rows carry only a title (no current deal); the neutral chip stands in for a price. -->
+    <string name="home_screen_release_upcoming">Upcoming</string>
+    <string name="home_screen_release_row_description">%1$s, upcoming</string>
+
     <string name="home_screen_giveaways_label">Giveaways</string>
     <string name="home_screen_all_giveaways_label">View All Giveaways</string>
     <string name="home_screen_bundles_label">Bundles</string>
