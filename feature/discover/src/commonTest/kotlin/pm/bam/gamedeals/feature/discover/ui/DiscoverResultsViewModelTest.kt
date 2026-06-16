@@ -7,19 +7,24 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -33,12 +38,18 @@ import kotlin.test.assertTrue
 class DiscoverResultsViewModelTest : MainDispatcherTest() {
 
     private val tagDiscoveryRepository: TagDiscoveryRepository = mock(MockMode.autoUnit)
+    private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
+        every { observeStores() } returns flowOf(emptyList())
+    }
+    private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
+        every { observeWaitlistIds() } returns flowOf(persistentSetOf())
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun createViewModel(args: Map<String, Any?> = mapOf("genreIds" to "12")) =
-        DiscoverResultsViewModel(TestingLoggingListener(), tagDiscoveryRepository, SavedStateHandle(args))
+        DiscoverResultsViewModel(TestingLoggingListener(), tagDiscoveryRepository, storesRepository, waitlistRepository, SavedStateHandle(args))
 
     @Test
     fun first_page_loads_into_data_with_endReached_on_short_page() = runTest {

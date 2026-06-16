@@ -1,21 +1,16 @@
 package pm.bam.gamedeals.feature.discover.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,19 +33,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
-import org.jetbrains.compose.resources.painterResource
+import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -63,10 +54,13 @@ import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_lo
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_no_price
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_open_steam
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_retry
+import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_row_description
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_title
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 
 // Fire a load-more once the user scrolls within this many rows of the end of the loaded page.
 private const val LOAD_MORE_THRESHOLD = 5
@@ -80,20 +74,27 @@ internal fun DiscoverResultsScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val storeIconsByName by viewModel.storeIconsByName.collectAsStateWithLifecycle()
     val loadMoreError = stringResource(Res.string.discover_results_load_more_error)
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             DiscoverResultsViewModel.DiscoverResultsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
+            DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
         }
     }
 
     DiscoverResultsContent(
         state = state,
+        waitlistIds = waitlistIds,
+        storeIconsByName = storeIconsByName,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onLoadMore = { viewModel.loadNextPage() },
         onRetry = { viewModel.retry() },
+        onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
         onResultClick = { result ->
             when (val pricing = result.pricing) {
                 is TagDiscoveryResult.Pricing.Priced -> goToGame(pricing.gameId)
@@ -108,10 +109,13 @@ internal fun DiscoverResultsScreen(
 @Composable
 private fun DiscoverResultsContent(
     state: ResultsScreenData,
+    waitlistIds: ImmutableSet<String> = persistentSetOf(),
+    storeIconsByName: Map<String, String?> = emptyMap(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit = {},
     onResultClick: (TagDiscoveryResult) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -124,6 +128,11 @@ private fun DiscoverResultsContent(
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) onLoadMore()
     }
+
+    val noPriceLabel = stringResource(Res.string.discover_results_no_price)
+    val steamLabel = stringResource(Res.string.discover_results_open_steam)
+    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
+    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -168,11 +177,40 @@ private fun DiscoverResultsContent(
                     ResultsScreenData.Status.DATA -> LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
-                        contentPadding = PaddingValues(GameDealsCustomTheme.spacing.medium),
+                        contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                     ) {
                         items(items = state.results, key = { it.igdbId }) { result ->
-                            DiscoverResultRow(result = result, onClick = { onResultClick(result) })
+                            val pricing = result.pricing
+                            val price = (pricing as? TagDiscoveryResult.Pricing.Priced)?.price
+                            val gameId = (pricing as? TagDiscoveryResult.Pricing.Priced)?.gameId
+                            val salePrice = price?.bestPriceDenominated
+                            DealListRow(
+                                title = result.title,
+                                contentDescription = stringResource(Res.string.discover_results_row_description, result.title),
+                                onClick = { onResultClick(result) },
+                                imageUrl = result.coverImageUrl,
+                                salePrice = salePrice,
+                                regularPrice = price?.bestRegularDenominated,
+                                // No current deal → neutral chip; Steam-only → "Open on Steam"; unpriced → bare row.
+                                neutralChip = when {
+                                    salePrice != null -> null
+                                    pricing is TagDiscoveryResult.Pricing.SteamLinkOut -> steamLabel
+                                    pricing is TagDiscoveryResult.Pricing.Priced -> noPriceLabel
+                                    else -> null
+                                },
+                                discountPercent = price?.bestCutPercent ?: 0,
+                                hasVoucher = price?.bestHasVoucher ?: false,
+                                isNewHistoricalLow = price?.bestIsNewHistoricalLow ?: false,
+                                isStoreLow = price?.bestIsStoreLow ?: false,
+                                storeName = price?.bestShopName,
+                                storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
+                                isWaitlisted = gameId != null && gameId in waitlistIds,
+                                // Only ITAD-tracked (Priced) games can be waitlisted — others have no game id.
+                                onToggleWaitlist = gameId?.let { id -> { onToggleWaitlist(id) } },
+                                addToWaitlistContentDescription = addToWaitlistCd,
+                                removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                            )
                         }
                         if (state.appending) {
                             item(key = "discover-load-more-spinner") {
@@ -183,77 +221,6 @@ private fun DiscoverResultsContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DiscoverResultRow(
-    result: TagDiscoveryResult,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = GameDealsCustomTheme.spacing.small),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = result.coverImageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            error = painterResource(CommonRes.drawable.videogame_thumb),
-            modifier = Modifier
-                .height(80.dp)
-                .width(60.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = GameDealsCustomTheme.spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        ) {
-            Text(
-                text = result.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            PricingLabel(result.pricing)
-        }
-    }
-}
-
-@Composable
-private fun PricingLabel(pricing: TagDiscoveryResult.Pricing) {
-    when (pricing) {
-        is TagDiscoveryResult.Pricing.Priced -> {
-            val price = pricing.price
-            val denominated = price?.bestPriceDenominated
-            if (denominated != null) {
-                val cut = price?.bestCutPercent
-                Text(
-                    text = if (cut != null && cut > 0) "$denominated · -$cut%" else denominated,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            } else {
-                Text(
-                    text = stringResource(Res.string.discover_results_no_price),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        is TagDiscoveryResult.Pricing.SteamLinkOut -> Text(
-            text = stringResource(Res.string.discover_results_open_steam),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
-        TagDiscoveryResult.Pricing.Unpriced -> Unit
     }
 }
 
@@ -272,6 +239,7 @@ private fun DiscoverResultsContent_Data_Preview() {
                             BundleGamePrice(
                                 gameId = "itad-1", bestShopName = "Steam", bestPriceValue = 12.49,
                                 bestPriceDenominated = "$12.49", bestCutPercent = 50,
+                                bestRegularDenominated = "$24.99",
                                 historicalLowValue = 9.99, historicalLowDenominated = "$9.99",
                             ),
                         ),
