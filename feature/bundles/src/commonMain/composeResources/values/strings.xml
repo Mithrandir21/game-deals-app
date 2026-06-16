@@ -24,7 +24,6 @@
     <string name="bundle_detail_tier">Tier %1$d</string>
     <string name="bundle_detail_tier_price">Pay %1$s</string>
     <string name="bundle_detail_price_at">%1$s at %2$s</string>
-    <string name="bundle_detail_discount">-%1$d%%</string>
     <string name="bundle_detail_historical_low">All-time low %1$s</string>
     <string name="bundle_detail_no_deal">No current deal</string>
 

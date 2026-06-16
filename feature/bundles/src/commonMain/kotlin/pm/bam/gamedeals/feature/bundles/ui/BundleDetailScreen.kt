@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.feature.bundles.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,12 +27,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,24 +43,34 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableMap
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DiscountBadge
+import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
+import pm.bam.gamedeals.common.ui.components.StoreLowBadge
+import pm.bam.gamedeals.common.ui.components.VoucherBadge
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
-import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_discount
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_expiry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_game_image
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_get_bundle
@@ -81,6 +95,7 @@ import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_navig
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleDetailScreenData
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleValueSummary
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
@@ -91,25 +106,65 @@ internal fun BundleDetailScreen(
     viewModel: BundleDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
+    val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
+    val platformActions = LocalPlatformActions.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
+
     BundleDetailScreenContent(
         state = state,
+        gamePeek = gamePeek,
+        waitlistIds = waitlistIds,
+        ignoredIds = ignoredIds,
+        snackbarHostState = snackbarHostState,
         onBack = onBack,
         goToWeb = goToWeb,
         onGameClick = onGameClick,
+        onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
+        onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
+        onDismissPeek = { viewModel.dismissPeek() },
+        onShare = { peekData -> viewModel.onShareClicked(peekData) },
+        onRetryPeek = {
+            viewModel.gamePeek.value?.let { peek ->
+                if (peek.gameId.isNotEmpty()) viewModel.peekGame(peek.gameId, peek.gameName, peek.thumb)
+            }
+        },
         onRetry = viewModel::load,
     )
+
+    // Collect one-shot UI events and dispatch them (share sheet / sign-in snackbar).
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is BundleDetailViewModel.BundleDetailUiEvent.ShareDeal -> platformActions.share(event.text)
+            BundleDetailViewModel.BundleDetailUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BundleDetailScreenContent(
     state: BundleDetailScreenData,
+    gamePeek: GamePeekSheetData?,
+    waitlistIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String>,
+    snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     goToWeb: (url: String, title: String) -> Unit,
     onGameClick: (gameId: String) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
+    onToggleIgnore: (gameId: String) -> Unit,
+    onDismissPeek: () -> Unit,
+    onShare: (data: GamePeekSheetData.Data) -> Unit,
+    onRetryPeek: () -> Unit,
     onRetry: () -> Unit,
 ) {
     val title = (state as? BundleDetailScreenData.Data)?.bundle?.title.orEmpty()
+    val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
@@ -136,37 +191,54 @@ private fun BundleDetailScreenContent(
                     },
                 )
             },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { innerPadding: PaddingValues ->
-            when (state) {
-                BundleDetailScreenData.Loading -> {
-                    val loadingCd = stringResource(Res.string.bundles_screen_loading_indicator)
-                    CircularProgressIndicator(
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (state) {
+                    BundleDetailScreenData.Loading -> {
+                        val loadingCd = stringResource(Res.string.bundles_screen_loading_indicator)
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .fillMaxSize()
+                                .wrapContentSize(Alignment.Center)
+                                .semantics { contentDescription = loadingCd },
+                        )
+                    }
+
+                    BundleDetailScreenData.Error -> Column(
                         modifier = Modifier
                             .padding(innerPadding)
                             .fillMaxSize()
-                            .wrapContentSize(Alignment.Center)
-                            .semantics { contentDescription = loadingCd },
+                            .padding(GameDealsCustomTheme.spacing.large)
+                            .wrapContentSize(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                    ) {
+                        Text(stringResource(Res.string.bundles_screen_data_loading_error_msg))
+                        Button(onClick = onRetry) { Text(stringResource(Res.string.bundles_screen_data_loading_error_retry)) }
+                    }
+
+                    is BundleDetailScreenData.Data -> BundleDetailBody(
+                        data = state,
+                        goToWeb = goToWeb,
+                        onPeekGame = onPeekGame,
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
 
-                BundleDetailScreenData.Error -> Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
-                        .padding(GameDealsCustomTheme.spacing.large)
-                        .wrapContentSize(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                ) {
-                    Text(stringResource(Res.string.bundles_screen_data_loading_error_msg))
-                    Button(onClick = onRetry) { Text(stringResource(Res.string.bundles_screen_data_loading_error_retry)) }
-                }
-
-                is BundleDetailScreenData.Data -> BundleDetailBody(
-                    data = state,
+                // The shared game-centric peek sheet — opened by tapping a bundle game row, same as Home/Deals.
+                GamePeekSheet(
+                    data = gamePeek,
+                    isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                    isIgnored = peekGameId?.let { it in ignoredIds } == true,
+                    onDismiss = onDismissPeek,
+                    onShare = onShare,
+                    onToggleWaitlist = onToggleWaitlist,
+                    onToggleIgnore = onToggleIgnore,
                     goToWeb = goToWeb,
-                    onGameClick = onGameClick,
-                    modifier = Modifier.padding(innerPadding),
+                    onViewGamePage = { peekData -> onGameClick(peekData.gameId) },
+                    onRetry = onRetryPeek,
                 )
             }
         }
@@ -177,7 +249,7 @@ private fun BundleDetailScreenContent(
 private fun BundleDetailBody(
     data: BundleDetailScreenData.Data,
     goToWeb: (url: String, title: String) -> Unit,
-    onGameClick: (gameId: String) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val bundle = data.bundle
@@ -229,7 +301,7 @@ private fun BundleDetailBody(
             bundle.tiers.forEachIndexed { index, tier ->
                 item(key = "tier_$index") { TierHeader(tierNumber = index + 1, priceDenominated = tier.priceDenominated) }
                 items(tier.games, key = { "tier_${index}_${it.id}" }) { game ->
-                    BundleGameRow(game = game, price = data.prices[game.id], onClick = { onGameClick(game.id) })
+                    BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.boxart) })
                 }
             }
         } else if (bundle.games.isNotEmpty()) {
@@ -241,7 +313,7 @@ private fun BundleDetailBody(
                 )
             }
             items(bundle.games, key = { it.id }) { game ->
-                BundleGameRow(game = game, price = data.prices[game.id], onClick = { onGameClick(game.id) })
+                BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.boxart) })
             }
         }
 
@@ -323,6 +395,7 @@ private fun BundleGamePriceLines(price: BundleGamePrice?) {
         )
         return
     }
+    // Price + shop, with the regular (pre-discount) price struck through beside it when discounted.
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
@@ -331,12 +404,26 @@ private fun BundleGamePriceLines(price: BundleGamePrice?) {
             text = price.bestShopName?.let { stringResource(Res.string.bundle_detail_price_at, bestPrice, it) } ?: bestPrice,
             style = MaterialTheme.typography.bodyMedium,
         )
-        price.bestCutPercent?.takeIf { it > 0 }?.let { cut ->
+        price.bestRegularDenominated?.takeIf { it != bestPrice }?.let { regular ->
             Text(
-                text = stringResource(Res.string.bundle_detail_discount, cut),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.tertiary,
+                text = regular,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textDecoration = TextDecoration.LineThrough,
             )
+        }
+    }
+    // ITAD flag cluster, same anatomy as the deal rows: [voucher] [-XX%] [N] [S]. Hidden when none apply.
+    val cut = price.bestCutPercent ?: 0
+    if (price.bestHasVoucher || cut > 0 || price.bestIsNewHistoricalLow || price.bestIsStoreLow) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+        ) {
+            if (price.bestHasVoucher) VoucherBadge()
+            DiscountBadge(discountPercent = cut)
+            if (price.bestIsNewHistoricalLow) NewHistoricalLowBadge()
+            if (price.bestIsStoreLow) StoreLowBadge()
         }
     }
     price.historicalLowDenominated?.let { low ->
@@ -427,6 +514,7 @@ private fun BundleDetailScreenPreview() {
             bestPriceDenominated = "€4.59",
             bestCutPercent = 80,
             bestRegularDenominated = "€22.99",
+            bestIsNewHistoricalLow = true,
             historicalLowValue = 4.59,
             historicalLowDenominated = "€4.59",
             currency = "EUR",
@@ -438,6 +526,7 @@ private fun BundleDetailScreenPreview() {
             bestPriceDenominated = "€4.49",
             bestCutPercent = 76,
             bestRegularDenominated = "€18.99",
+            bestHasVoucher = true,
             historicalLowValue = 3.99,
             historicalLowDenominated = "€3.99",
             currency = "EUR",
@@ -473,9 +562,19 @@ private fun BundleDetailScreenPreview() {
                     totalGames = 3,
                 ),
             ),
+            gamePeek = null,
+            waitlistIds = persistentSetOf(),
+            ignoredIds = persistentSetOf(),
+            snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
             goToWeb = { _, _ -> },
             onGameClick = {},
+            onPeekGame = { _, _, _ -> },
+            onToggleWaitlist = {},
+            onToggleIgnore = {},
+            onDismissPeek = {},
+            onShare = {},
+            onRetryPeek = {},
             onRetry = {},
         )
     }

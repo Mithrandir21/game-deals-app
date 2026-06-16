@@ -5,19 +5,37 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import pm.bam.gamedeals.common.ui.deal.GamePeekController
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
+import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.info
 
 /**
  * Resolves a single [Bundle] by id for the detail screen (epic #205, Phase 3c; enriched in the Bundles
@@ -30,6 +48,11 @@ internal class BundleDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val logger: Logger,
     private val bundlesRepository: BundlesRepository,
+    private val gamesRepository: GamesRepository,
+    private val storesRepository: StoresRepository,
+    private val waitlistRepository: WaitlistRepository,
+    private val ignoredRepository: IgnoredRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
 ) : ViewModel() {
 
     private val bundleId: Int? = savedStateHandle.get<Int>("bundleId")
@@ -37,8 +60,67 @@ internal class BundleDetailViewModel(
     val uiState: StateFlow<BundleDetailScreenData>
         field = MutableStateFlow<BundleDetailScreenData>(BundleDetailScreenData.Loading)
 
+    /** Games on the user's waitlist / ignore list — drive the peek sheet's heart and ignore toggles. */
+    val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    val ignoredIds: StateFlow<ImmutableSet<String>> = ignoredRepository.observeIgnoredIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    // The game-centric quick-peek sheet, shared with Home/Deals. Bundle games carry an ITAD id, so no
+    // IgdbRepository (title resolution) is needed here.
+    private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger)
+    val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
+
+    val events: SharedFlow<BundleDetailUiEvent>
+        field = MutableSharedFlow(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
     init {
         load()
+    }
+
+    /** Open the quick-peek sheet for a bundle game (it always carries an ITAD id). */
+    fun peekGame(gameId: String, gameName: String, thumb: String?) =
+        gamePeekController.load(viewModelScope, gameId, gameName, thumb)
+
+    fun dismissPeek() = gamePeekController.dismiss(viewModelScope)
+
+    /** Toggle a game on/off the waitlist from the peek sheet's heart; prompts sign-in when logged out. */
+    fun toggleWaitlist(gameId: String) {
+        viewModelScope.launch {
+            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(BundleDetailUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
+    fun toggleIgnore(gameId: String) {
+        viewModelScope.launch {
+            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(BundleDetailUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun onShareClicked(data: GamePeekSheetData.Data) {
+        val best = data.bestDeal ?: return
+        val text = dealShareTextBuilder.build(
+            gameTitle = data.gameName,
+            salePriceDenominated = best.deal.priceDenominated,
+            storeName = best.store.storeName,
+            dealUrl = best.deal.url,
+        )
+        info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
+        events.tryEmit(BundleDetailUiEvent.ShareDeal(text))
     }
 
     fun load() {
@@ -114,6 +196,11 @@ internal class BundleDetailViewModel(
             pricedGames = priced.count { it.bestPriceValue != null },
             totalGames = bundle.games.size,
         )
+    }
+
+    internal sealed interface BundleDetailUiEvent {
+        data class ShareDeal(val text: String) : BundleDetailUiEvent
+        data object SignInRequired : BundleDetailUiEvent
     }
 
     sealed class BundleDetailScreenData {

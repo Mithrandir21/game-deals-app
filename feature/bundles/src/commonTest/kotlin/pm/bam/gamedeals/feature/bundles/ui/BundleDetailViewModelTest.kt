@@ -6,15 +6,23 @@ import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.AfterTest
@@ -28,6 +36,15 @@ import kotlin.test.assertTrue
 class BundleDetailViewModelTest : MainDispatcherTest() {
 
     private val bundlesRepository: BundlesRepository = mock(MockMode.autoUnit)
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
+    private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
+    private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
+        every { observeWaitlistIds() } returns flowOf(persistentSetOf())
+    }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIgnoredIds() } returns flowOf(persistentSetOf())
+    }
+    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -36,7 +53,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
     fun loads_bundle_by_id() = runTest {
         everySuspend { bundlesRepository.getBundle(7) } returns bundle(7)
 
-        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository)
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, ignoredRepository, dealShareTextBuilder)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -48,7 +65,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
     fun error_when_bundle_missing() = runTest {
         everySuspend { bundlesRepository.getBundle(7) } returns null
 
-        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository)
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, ignoredRepository, dealShareTextBuilder)
         advanceUntilIdle()
 
         assertIs<BundleDetailViewModel.BundleDetailScreenData.Error>(viewModel.uiState.value)
@@ -56,7 +73,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
 
     @Test
     fun error_when_no_id_argument() = runTest {
-        val viewModel = BundleDetailViewModel(SavedStateHandle(), TestingLoggingListener(), bundlesRepository)
+        val viewModel = BundleDetailViewModel(SavedStateHandle(), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, ignoredRepository, dealShareTextBuilder)
         advanceUntilIdle()
 
         assertIs<BundleDetailViewModel.BundleDetailScreenData.Error>(viewModel.uiState.value)
@@ -70,7 +87,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
             price("g2", best = 6.0, bestDenominated = "$6.00", cut = 50, low = 5.0, lowDenominated = "$5.00"),
         )
 
-        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository)
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, ignoredRepository, dealShareTextBuilder)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -91,7 +108,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
         everySuspend { bundlesRepository.getBundle(7) } returns bundleWithGames(7)
         everySuspend { bundlesRepository.getBundleGamePrices(listOf("g1", "g2")) } throws RuntimeException("boom")
 
-        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository)
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, ignoredRepository, dealShareTextBuilder)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
