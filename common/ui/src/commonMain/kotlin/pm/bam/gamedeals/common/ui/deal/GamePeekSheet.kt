@@ -133,7 +133,7 @@ private fun PeekContent(
         // Waitlist / ignore act on a real ITAD id; disabled for the "upcoming" state that never resolved one.
         val canAct = asData != null && data.gameId.isNotEmpty()
         Row(
-            modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small),
+            modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -147,7 +147,7 @@ private fun PeekContent(
                     .height(45.dp)
                     .clip(MaterialTheme.shapes.small),
             )
-            Column(modifier = Modifier.weight(1f).padding(horizontal = GameDealsCustomTheme.spacing.small)) {
+            Column(modifier = Modifier.weight(1f).padding(horizontal = GameDealsCustomTheme.spacing.medium)) {
                 Text(text = data.gameName, style = MaterialTheme.typography.titleMedium)
                 if (subtitle.isNotEmpty()) {
                     Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -202,18 +202,9 @@ private fun PeekBody(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
-        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        data.bestDeal?.let { best ->
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { goToWeb(best.deal.url, data.gameName) },
-            ) {
-                Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
-            }
-        }
-
         if (data.otherStores.isNotEmpty()) {
             Text(text = stringResource(Res.string.game_peek_other_stores_label), style = MaterialTheme.typography.titleSmall)
             data.otherStores.forEach { pair ->
@@ -222,9 +213,10 @@ private fun PeekBody(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(role = Role.Button) { goToWeb(pair.deal.url, data.gameName) }
+                        .padding(vertical = GameDealsCustomTheme.spacing.extraSmall)
                         .semantics(mergeDescendants = true) { contentDescription = rowCd },
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
                     StoreIcon(
                         storeName = pair.store.storeName,
@@ -246,11 +238,27 @@ private fun PeekBody(
             )
         }
 
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { onViewGamePage(data) },
+        // Primary "Go to deal" + secondary "View game page" actions, side by side at the bottom of the sheet.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = GameDealsCustomTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
-            Text(text = stringResource(Res.string.deal_details_view_game_page_label))
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = { onViewGamePage(data) },
+            ) {
+                Text(text = stringResource(Res.string.deal_details_view_game_page_label))
+            }
+            data.bestDeal?.let { best ->
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = { goToWeb(best.deal.url, data.gameName) },
+                ) {
+                    Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
+                }
+            }
         }
     }
 }
