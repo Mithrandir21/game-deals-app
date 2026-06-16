@@ -10,6 +10,7 @@ import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.cache.DealDetailsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.GameDetailsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.GameIdMappingEntry
+import pm.bam.gamedeals.domain.db.cache.IgdbTagEntry
 import pm.bam.gamedeals.domain.db.cache.IgnoredGameIdEntry
 import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
 import pm.bam.gamedeals.domain.db.cache.StatsRankingsCacheEntry
@@ -21,6 +22,7 @@ import pm.bam.gamedeals.domain.db.dao.DealsDao
 import pm.bam.gamedeals.domain.db.dao.GameDetailsCacheDao
 import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.db.dao.GamesDao
+import pm.bam.gamedeals.domain.db.dao.IgdbTagDao
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.db.dao.IgnoredDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
@@ -37,7 +39,7 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-internal const val DOMAIN_DB_VERSION = 20
+internal const val DOMAIN_DB_VERSION = 21
 
 @Database(
     version = DOMAIN_DB_VERSION,
@@ -46,6 +48,7 @@ internal const val DOMAIN_DB_VERSION = 20
         DealDetailsCacheEntry::class, GameDetailsCacheEntry::class, PriceHistoryCacheEntry::class,
         BundlesCacheEntry::class, StatsRankingsCacheEntry::class, GameIdMappingEntry::class,
         WaitlistGameIdEntry::class, CollectionGameIdEntry::class, IgnoredGameIdEntry::class,
+        IgdbTagEntry::class,
     ],
     exportSchema = true,
 )
@@ -80,6 +83,8 @@ abstract class DomainDatabase : RoomDatabase() {
     internal abstract fun getCollectionDao(): CollectionDao
 
     internal abstract fun getIgnoredDao(): IgnoredDao
+
+    internal abstract fun getIgdbTagDao(): IgdbTagDao
 
 }
 

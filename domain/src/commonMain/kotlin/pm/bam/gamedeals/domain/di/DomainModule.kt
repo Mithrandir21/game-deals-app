@@ -84,6 +84,7 @@ val domainModule = module {
     single { get<DomainDatabase>().getWaitlistDao() }
     single { get<DomainDatabase>().getCollectionDao() }
     single { get<DomainDatabase>().getIgnoredDao() }
+    single { get<DomainDatabase>().getIgdbTagDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
@@ -91,8 +92,9 @@ val domainModule = module {
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
-    // Tag discovery (epic #307): composes IGDB tag search + the ITAD pricing bridge.
-    single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get()) }
+    // Tag discovery (epic #307): composes IGDB tag search + the ITAD pricing bridge, with a Room-cached
+    // picker vocabulary (logger, igdbRepository, gamesRepository, igdbTagDao, clock).
+    single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }

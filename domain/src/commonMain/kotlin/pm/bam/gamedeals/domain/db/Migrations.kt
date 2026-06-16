@@ -228,6 +228,19 @@ private val MIGRATION_19_20 = object : Migration(19, 20) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+/**
+ * v20 → v21 — tag-discovery vocabulary cache (epic #307, Phase 3, #310). Creates the `IgdbTag` table,
+ * caching the IGDB genre/theme/game-mode/player-perspective enums + the curated keyword allow-list
+ * (keyed by `dimension` + `igdbId`, with a long `expires` TTL) so the tag picker opens instantly. New
+ * table only — nothing existing is touched. The `CREATE TABLE` DDL is copied verbatim from the generated
+ * schema `domain/schemas/.../21.json` so the post-migration identity matches the compiled v21 database.
+ */
+private val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `IgdbTag` (`dimension` TEXT NOT NULL, `igdbId` INTEGER NOT NULL, `name` TEXT NOT NULL, `slug` TEXT, `expires` INTEGER NOT NULL, PRIMARY KEY(`dimension`, `igdbId`))")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

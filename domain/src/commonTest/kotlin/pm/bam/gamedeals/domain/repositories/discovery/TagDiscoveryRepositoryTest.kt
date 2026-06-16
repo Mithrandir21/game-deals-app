@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.discovery
 
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
+import dev.mokkery.answering.throws
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
@@ -9,6 +10,9 @@ import dev.mokkery.verifySuspend
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.db.cache.IgdbTagEntry
+import pm.bam.gamedeals.domain.db.dao.IgdbTagDao
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbTag
@@ -28,8 +32,12 @@ class TagDiscoveryRepositoryTest {
     private val logger: Logger = TestingLoggingListener()
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
+    private val igdbTagDao: IgdbTagDao = mock(MockMode.autoUnit)
 
-    private val impl = TagDiscoveryRepositoryImpl(logger, igdbRepository, gamesRepository)
+    private val now = 1_000_000L
+    private val clock = Clock { now }
+
+    private val impl = TagDiscoveryRepositoryImpl(logger, igdbRepository, gamesRepository, igdbTagDao, clock)
 
     private val filter = IgdbTagFilter(genreIds = persistentListOf(12L))
 
@@ -91,15 +99,43 @@ class TagDiscoveryRepositoryTest {
     }
 
     @Test
-    fun getTagVocabulary_concatenates_dimension_vocabulary_with_curated_keywords() = runTest {
+    fun getTagVocabulary_cold_cache_fetches_concatenates_and_replaces_the_cache() = runTest {
         val vocab = listOf(IgdbTag(IgdbTagDimension.Genre, 12L, "Role-playing (RPG)", "role-playing-rpg"))
         val keywords = listOf(IgdbTag(IgdbTagDimension.Keyword, 270L, "roguelike", "roguelike"))
+        everySuspend { igdbTagDao.getAll() } returns emptyList()
         everySuspend { igdbRepository.fetchTagVocabulary() } returns vocab
         everySuspend { igdbRepository.fetchCuratedKeywords(CURATED_KEYWORD_SLUGS) } returns keywords
 
         val result = impl.getTagVocabulary()
 
         assertEquals(vocab + keywords, result)
+        verifySuspend(exactly(1)) { igdbTagDao.clear() }
+        verifySuspend(exactly(1)) { igdbTagDao.upsertAll(any()) }
+    }
+
+    @Test
+    fun getTagVocabulary_warm_cache_serves_from_room_without_querying_igdb() = runTest {
+        everySuspend { igdbTagDao.getAll() } returns listOf(
+            IgdbTagEntry("Genre", 12L, "Role-playing (RPG)", "role-playing-rpg", expires = now + 1),
+        )
+
+        val result = impl.getTagVocabulary()
+
+        assertEquals(1, result.size)
+        assertEquals(IgdbTagDimension.Genre, result.single().dimension)
+        verifySuspend(exactly(0)) { igdbRepository.fetchTagVocabulary() }
+    }
+
+    @Test
+    fun getTagVocabulary_serves_stale_cache_when_refetch_fails() = runTest {
+        everySuspend { igdbTagDao.getAll() } returns listOf(
+            IgdbTagEntry("Theme", 17L, "Fantasy", "fantasy", expires = now - 1), // expired → triggers refetch
+        )
+        everySuspend { igdbRepository.fetchTagVocabulary() } throws RuntimeException("IGDB down")
+
+        val result = impl.getTagVocabulary()
+
+        assertEquals(IgdbTagDimension.Theme, result.single().dimension)
     }
 
     private fun igdbGame(id: Long, name: String, steamAppId: Int?, coverImageId: String? = null): IgdbGame =

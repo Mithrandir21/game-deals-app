@@ -3,19 +3,27 @@ package pm.bam.gamedeals.domain.repositories.discovery
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.db.cache.IgdbTagEntry
+import pm.bam.gamedeals.domain.db.dao.IgdbTagDao
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.IgdbTag
+import pm.bam.gamedeals.domain.models.IgdbTagDimension
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.utils.millisInDay
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 
 /** One discovery result page (mirrors the deals feed page size). */
 const val DISCOVERY_PAGE_SIZE = 30
+
+/** Tag vocabulary is near-static, so a long TTL is plenty — a monthly self-heal picks up IGDB changes. */
+internal const val IGDB_TAG_VOCABULARY_TTL_MILLIS = millisInDay * 30
 
 interface TagDiscoveryRepository {
 
@@ -37,10 +45,33 @@ internal class TagDiscoveryRepositoryImpl(
     private val logger: Logger,
     private val igdbRepository: IgdbRepository,
     private val gamesRepository: GamesRepository,
+    private val igdbTagDao: IgdbTagDao,
+    private val clock: Clock,
 ) : TagDiscoveryRepository {
 
-    override suspend fun getTagVocabulary(): List<IgdbTag> =
-        igdbRepository.fetchTagVocabulary() + igdbRepository.fetchCuratedKeywords(CURATED_KEYWORD_SLUGS)
+    /**
+     * Reads the cached vocabulary; on a cold/expired cache it refetches from IGDB and replaces the
+     * table. If the refetch fails but a (stale) cache exists, the stale vocabulary is served rather
+     * than failing the picker — the vocabulary is near-static, so stale is fine.
+     */
+    override suspend fun getTagVocabulary(): List<IgdbTag> {
+        val now = clock.nowMillis()
+        val cached = igdbTagDao.getAll()
+        if (cached.isNotEmpty() && cached.all { it.expires > now }) {
+            return cached.mapNotNull { it.toIgdbTagOrNull() }
+        }
+        return runCatching {
+            val fetched = igdbRepository.fetchTagVocabulary() + igdbRepository.fetchCuratedKeywords(CURATED_KEYWORD_SLUGS)
+            if (fetched.isNotEmpty()) {
+                val expires = now + IGDB_TAG_VOCABULARY_TTL_MILLIS
+                igdbTagDao.clear()
+                igdbTagDao.upsertAll(fetched.map { it.toEntry(expires) })
+            }
+            fetched
+        }.getOrElse { error ->
+            if (cached.isNotEmpty()) cached.mapNotNull { it.toIgdbTagOrNull() } else throw error
+        }
+    }
 
     override suspend fun discover(filter: IgdbTagFilter, offset: Int, pageSize: Int): List<TagDiscoveryResult> = coroutineScope {
         if (filter.isEmpty()) return@coroutineScope emptyList()
@@ -88,4 +119,14 @@ internal class TagDiscoveryRepositoryImpl(
     }
 
     private fun steamStoreUrl(steamAppId: Int): String = "https://store.steampowered.com/app/$steamAppId"
+
+    private fun IgdbTag.toEntry(expires: Long): IgdbTagEntry =
+        IgdbTagEntry(dimension = dimension.name, igdbId = igdbId, name = name, slug = slug, expires = expires)
+
+    // Drops a row whose persisted dimension no longer maps to a known enum value (defensive — survives
+    // an enum rename without crashing the picker; the row is simply re-fetched on the next refresh).
+    private fun IgdbTagEntry.toIgdbTagOrNull(): IgdbTag? {
+        val dim = IgdbTagDimension.entries.firstOrNull { it.name == dimension } ?: return null
+        return IgdbTag(dimension = dim, igdbId = igdbId, name = name, slug = slug)
+    }
 }
