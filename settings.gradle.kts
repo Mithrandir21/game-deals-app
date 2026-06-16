@@ -40,6 +40,7 @@ include(":feature:giveaways")
 include(":feature:bundles")
 include(":feature:account")
 include(":feature:deals")
+include(":feature:discover")
 
 // Macrobenchmark + Baseline Profile producer (com.android.test). Targets :app, generates the app's
 // baseline profile, and holds the Home-scroll FrameTimingMetric benchmark. Not shipped in the APK.

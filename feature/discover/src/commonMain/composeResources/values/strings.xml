@@ -1,0 +1,25 @@
+<resources>
+    <string name="discover_picker_title">Discover by tag</string>
+    <string name="discover_navigation_back">Back</string>
+    <string name="discover_picker_loading">Loading tags</string>
+    <string name="discover_picker_error">Couldn\'t load tags.</string>
+    <string name="discover_picker_retry">Retry</string>
+    <string name="discover_picker_show_results">Show results</string>
+    <string name="discover_picker_clear">Clear</string>
+    <string name="discover_picker_selected_count">%1$d selected</string>
+
+    <string name="discover_dimension_genre">Genres</string>
+    <string name="discover_dimension_theme">Themes</string>
+    <string name="discover_dimension_game_mode">Game modes</string>
+    <string name="discover_dimension_perspective">Perspectives</string>
+    <string name="discover_dimension_keyword">Keywords</string>
+
+    <string name="discover_results_title">Tagged games</string>
+    <string name="discover_results_empty">No games match all of those tags.</string>
+    <string name="discover_results_error">Couldn\'t load results.</string>
+    <string name="discover_results_retry">Retry</string>
+    <string name="discover_results_load_more_error">Couldn\'t load more.</string>
+    <string name="discover_results_open_steam">Open on Steam</string>
+    <string name="discover_results_no_price">No current deal</string>
+    <string name="discover_results_row_description">%1$s</string>
+</resources>
