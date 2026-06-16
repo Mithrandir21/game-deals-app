@@ -22,6 +22,8 @@ import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
+import pm.bam.gamedeals.feature.discover.navigation.discoverResultsScreen
+import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
@@ -90,6 +92,18 @@ internal fun NavGraph(
             dealsScreen(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToDiscover = { navActions.navigateToDiscover() },
+            )
+
+            discoverScreen(
+                navController = navController,
+                goToResults = { filter -> navActions.navigateToDiscoverResults(filter) },
+            )
+
+            discoverResultsScreen(
+                navController = navController,
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToWeb = { url -> platformActions.openInApp(url) },
             )
             accountScreen(
                 navController = navController,

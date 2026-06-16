@@ -13,11 +13,13 @@ import pm.bam.gamedeals.feature.deals.ui.DealsScreen
 fun NavGraphBuilder.dealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
+    goToDiscover: () -> Unit = {},
 ) {
     composable<Destination.Deals> {
         DealsScreen(
             goToWeb = goToWeb,
             goToGame = goToGame,
+            goToDiscover = goToDiscover,
         )
     }
 }

@@ -4,6 +4,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.SearchRequestBus
+import pm.bam.gamedeals.domain.models.IgdbTagFilter
 
 
 /**
@@ -98,6 +99,24 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     fun navigateToBundleDetail(bundleId: Int) {
         navController.navigate(Destination.BundleDetail(bundleId))
+    }
+
+    /** Open the tag-discovery picker (epic #307), from the Deals tab affordance. */
+    fun navigateToDiscover() {
+        navController.navigate(Destination.Discover)
+    }
+
+    /** Open the tag-discovery results for [filter] — encodes each dimension's ids as a comma-joined arg. */
+    fun navigateToDiscoverResults(filter: IgdbTagFilter) {
+        navController.navigate(
+            Destination.DiscoverResults(
+                genreIds = filter.genreIds.joinToString(","),
+                themeIds = filter.themeIds.joinToString(","),
+                gameModeIds = filter.gameModeIds.joinToString(","),
+                perspectiveIds = filter.perspectiveIds.joinToString(","),
+                keywordIds = filter.keywordIds.joinToString(","),
+            )
+        )
     }
 
 }

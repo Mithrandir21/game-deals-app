@@ -96,6 +96,7 @@ import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_discover_by_tag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button_count
@@ -177,6 +178,7 @@ private val STEAM_TIERS = listOf(70, 80, 90)
 internal fun DealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
+    goToDiscover: () -> Unit = {},
     viewModel: DealsViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -254,6 +256,7 @@ internal fun DealsScreen(
         onRetryPeek = {
             viewModel.gamePeek.value?.let { peek -> viewModel.peekGame(peek.gameId, peek.gameName, peek.thumb) }
         },
+        onDiscover = goToDiscover,
         goToWeb = goToWeb,
         goToGame = goToGame,
     )
@@ -297,6 +300,7 @@ private fun DealsContent(
     onToggleWaitlist: (gameId: String) -> Unit = {},
     onToggleIgnore: (gameId: String) -> Unit = {},
     onRetryPeek: () -> Unit = {},
+    onDiscover: () -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
 ) {
@@ -356,6 +360,7 @@ private fun DealsContent(
                     FilterBar(
                         activeCount = selectedShops.size + filter.activeCount,
                         onClick = { onShowFiltersChange(true) },
+                        onDiscover = onDiscover,
                     )
                 }
 
@@ -596,6 +601,7 @@ private fun DealCountBadge(count: Int) {
 private fun FilterBar(
     activeCount: Int,
     onClick: () -> Unit,
+    onDiscover: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -612,6 +618,10 @@ private fun FilterBar(
                 text = if (activeCount > 0) stringResource(Res.string.deals_filter_button_count, activeCount)
                 else stringResource(Res.string.deals_filter_button),
             )
+        }
+        // Catalogue-wide tag discovery (epic #307) — distinct from the deal-feed filters above.
+        OutlinedButton(onClick = onDiscover) {
+            Text(stringResource(Res.string.deals_discover_by_tag))
         }
     }
 }

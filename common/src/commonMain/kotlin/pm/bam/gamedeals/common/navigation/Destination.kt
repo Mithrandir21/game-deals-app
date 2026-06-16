@@ -73,4 +73,23 @@ sealed interface Destination {
 
     @Serializable
     data class BundleDetail(val bundleId: Int) : Destination
+
+    /** Tag-discovery picker (epic #307). Owns its Scaffold/TopAppBar + back arrow. */
+    @Serializable
+    data object Discover : Destination
+
+    /**
+     * Tag-discovery results for an AND-combined [pm.bam.gamedeals.domain.models.IgdbTagFilter]
+     * (epic #307). The filter's per-dimension id lists are encoded as comma-joined strings (empty =
+     * none) so the route stays on nav-compose's natively-supported primitive arg types; the
+     * `DiscoverResultsViewModel` decodes them back into a filter. Owns its Scaffold/TopAppBar.
+     */
+    @Serializable
+    data class DiscoverResults(
+        val genreIds: String = "",
+        val themeIds: String = "",
+        val gameModeIds: String = "",
+        val perspectiveIds: String = "",
+        val keywordIds: String = "",
+    ) : Destination
 }

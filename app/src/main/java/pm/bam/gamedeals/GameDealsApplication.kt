@@ -29,6 +29,7 @@ import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.deals.di.dealsModule
+import pm.bam.gamedeals.feature.discover.di.discoverModule
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.home.di.homeModule
@@ -96,6 +97,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 bundlesModule,
                 accountModule,
                 dealsModule,
+                discoverModule,
             )
         }
         warmDomainDatabase()

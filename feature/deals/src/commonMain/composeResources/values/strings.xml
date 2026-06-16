@@ -30,6 +30,9 @@
 
     <string name="deals_filter_all_stores">All stores</string>
 
+    <!-- Tag discovery entry (epic #307) -->
+    <string name="deals_discover_by_tag">Discover by tag</string>
+
     <!-- Filter bottom sheet -->
     <string name="deals_filter_button">Filter</string>
     <string name="deals_filter_button_count">Filter (%1$d)</string>
