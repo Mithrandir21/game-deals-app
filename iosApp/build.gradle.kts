@@ -55,6 +55,7 @@ kotlin {
             implementation(project(":feature:bundles"))
             implementation(project(":feature:account"))
             implementation(project(":feature:deals"))
+            implementation(project(":feature:discover"))
         }
     }
 }

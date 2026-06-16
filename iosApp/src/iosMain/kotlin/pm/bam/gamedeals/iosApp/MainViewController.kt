@@ -47,6 +47,9 @@ import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
 import pm.bam.gamedeals.feature.deals.di.dealsModule
 import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
+import pm.bam.gamedeals.feature.discover.di.discoverModule
+import pm.bam.gamedeals.feature.discover.navigation.discoverResultsScreen
+import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
@@ -120,6 +123,7 @@ private fun bootstrapKoin() {
             bundlesModule,
             accountModule,
             dealsModule,
+            discoverModule,
             iosAppModule,
         )
     }
@@ -188,6 +192,26 @@ private fun AppNavHost() {
         dealsScreen(
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+            goToDiscover = { navController.navigate(Destination.Discover) },
+        )
+        discoverScreen(
+            navController = navController,
+            goToResults = { filter ->
+                navController.navigate(
+                    Destination.DiscoverResults(
+                        genreIds = filter.genreIds.joinToString(","),
+                        themeIds = filter.themeIds.joinToString(","),
+                        gameModeIds = filter.gameModeIds.joinToString(","),
+                        perspectiveIds = filter.perspectiveIds.joinToString(","),
+                        keywordIds = filter.keywordIds.joinToString(","),
+                    )
+                )
+            },
+        )
+        discoverResultsScreen(
+            navController = navController,
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+            goToWeb = { url -> uriHandler.openUri(url) },
         )
         accountScreen(
             navController = navController,
