@@ -74,6 +74,25 @@ internal fun String?.isStoreLowFlag(): Boolean = this == "S"
 /** A deal carries a voucher when ITAD returns a non-blank `voucher` code (drives the scissors badge). */
 internal fun String?.isVoucherPresent(): Boolean = !this.isNullOrBlank()
 
+/**
+ * ITAD `type` strings for the game-like products this game-deals app surfaces — `"game"`, `"dlc"`,
+ * `"package"` (ITAD int ids 1/2/3). Used as an **allow-list** on the string-typed endpoints
+ * (`/games/search/v1`, `/games/info/v2`, bundle tier games): ITAD reports these names for real games but
+ * leaves **software/hardware (and soundtracks/drivers) as `null`** there — so keeping only these known
+ * types is the only reliable way to drop non-games on those surfaces. (The `/deals/v2` chokepoint instead
+ * uses the reliable server-side int `type` filter, since its response carries no per-item type.)
+ */
+internal val GAME_LIKE_PRODUCT_TYPES: Set<String> = setOf("game", "dlc", "package")
+
+/**
+ * Whether an ITAD `type` string names a game-like product (Game/DLC/Package) the app keeps on the
+ * string-typed surfaces. **Fail-closed:** a null/blank/unrecognised type returns `false` (dropped) —
+ * software/hardware report a null type here, so they would otherwise slip through. Callers that read the
+ * type from a *best-effort* fetch must guard the failed-fetch case separately (keep) before applying this.
+ */
+internal fun String?.isGameLikeProductType(): Boolean =
+    this?.lowercase()?.let { it in GAME_LIKE_PRODUCT_TYPES } ?: false
+
 /** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
 internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =
     deal.toItadDeal(gameId = id, gameTitle = title, boxart = assets.bestArt())

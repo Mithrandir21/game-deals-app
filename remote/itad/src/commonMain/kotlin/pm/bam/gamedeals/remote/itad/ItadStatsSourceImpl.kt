@@ -13,8 +13,10 @@ import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadStatsApi
 import pm.bam.gamedeals.remote.itad.mappers.denominated
+import pm.bam.gamedeals.remote.itad.mappers.isGameLikeProductType
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toRankedGame
+import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadRankedGame
 import pm.bam.gamedeals.remote.itad.models.bestArt
 import pm.bam.gamedeals.remote.logic.log
@@ -54,18 +56,25 @@ internal class ItadStatsSourceImpl(
         if (ranked.isEmpty()) return@coroutineScope ranked
 
         val gameIds = ranked.map { it.gameId }
-        val priceByGameId = async { pricesByGameId(gameIds) }
-        val boxartByGameId = async { boxartsByGameId(gameIds) }
+        val pricesDeferred = async { pricesByGameId(gameIds) }
+        val infosDeferred = async { infoByGameId(gameIds) }
 
-        val prices = priceByGameId.await()
-        val boxarts = boxartByGameId.await()
+        val prices = pricesDeferred.await()
+        val infos = infosDeferred.await()
 
-        ranked.map { game ->
-            game.copy(
-                priceDenominated = prices[game.gameId],
-                boxart = boxarts[game.gameId]
-            )
-        }
+        ranked
+            // The ranking endpoints carry no `type`, but the per-game info (already fetched for boxart) does
+            // — and ITAD leaves software/hardware with a null type, so keep only game-like products. Guard
+            // the best-effort fetch: a game whose info call *failed* (no map entry) is kept rather than risk
+            // hiding a real game on a transient error; only a *successful* non-game-like info drops it. The
+            // row may then show slightly fewer than `limit`.
+            .filter { ranked -> infos[ranked.gameId]?.let { it.type.isGameLikeProductType() } ?: true }
+            .map { game ->
+                game.copy(
+                    priceDenominated = prices[game.gameId],
+                    boxart = infos[game.gameId]?.assets.bestArt(),
+                )
+            }
     }
 
     /** Cheapest current price per game (best-effort: a failure yields an empty map, so prices are omitted). */
@@ -79,16 +88,19 @@ internal class ItadStatsSourceImpl(
             .toMap()
     }.getOrElse { emptyMap() }
 
-    /** Game boxart assets per game (best-effort: a failure yields an empty map, so assets are omitted). */
-    private suspend fun boxartsByGameId(gameIds: List<String>): Map<String, String> = coroutineScope {
+    /**
+     * Full game info per game (best-effort: a failure yields no entry, so its type/boxart are unknown).
+     * One `/games/info/v2` call per ranked game backs both the boxart enrichment and the software/hardware
+     * type filter, so the filter adds no extra network cost.
+     */
+    private suspend fun infoByGameId(gameIds: List<String>): Map<String, RemoteItadGameInfo> = coroutineScope {
         gameIds.map { id ->
             async {
                 runCatching {
-                    gamesApi.getInfo(id)
+                    id to gamesApi.getInfo(id)
                         .log(logger, tag = TAG)
                         .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
                         .getOrThrow()
-                        .assets.bestArt()?.let { art -> id to art }
                 }.getOrNull()
             }
         }.awaitAll().filterNotNull().toMap()

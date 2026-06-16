@@ -56,8 +56,10 @@ class ItadStatsSourceImplTest {
                 "/stats/most-collected/v1" -> COLLECTED_BODY
                 "/stats/most-popular/v1" -> POPULAR_BODY
                 "/games/prices/v3" -> PRICES_BODY
-                "/games/info/v2" -> {
-                    if (request.url.parameters["id"] == "g1") INFO_BODY_G1 else ""
+                "/games/info/v2" -> when (request.url.parameters["id"]) {
+                    "g1" -> INFO_BODY_G1
+                    "g3" -> INFO_BODY_G3 // null type (software) → the ranked game must be filtered out
+                    else -> ""
                 }
                 else -> ""
             }
@@ -80,8 +82,8 @@ class ItadStatsSourceImplTest {
     fun fetchMostWaitlisted_maps_rankings_and_enriches_cheapest_price_and_boxart() = runTest {
         val ranked = impl.fetchMostWaitlisted(limit = 2)
 
-        assertEquals(2, ranked.size)
-        assertEquals("g1", ranked.first().gameId)
+        // g3's info is software → dropped, leaving g1 + g2 (see the dedicated filter test).
+        assertEquals(listOf("g1", "g2"), ranked.map { it.gameId })
         assertEquals("Game One", ranked.first().title)
         assertEquals("https://assets/g1_banner400.jpg", ranked.first().boxart) // prioritized banner400 over boxart
         assertEquals("$5.99", ranked.first().priceDenominated) // cheapest of g1's two deals
@@ -111,21 +113,36 @@ class ItadStatsSourceImplTest {
         assertEquals("/stats/most-popular/v1", recordedRequests.first().url.encodedPath)
     }
 
+    @Test
+    fun fetchMostWaitlisted_drops_non_game_rankings() = runTest {
+        // g3 ranks third but its (successful) info has a null type → software → dropped. g1 is game-typed
+        // and g2's info fetch fails (no body) → kept fail-open, so a transient error never hides a real game.
+        val ranked = impl.fetchMostWaitlisted()
+
+        assertEquals(listOf("g1", "g2"), ranked.map { it.gameId })
+    }
+
     private companion object {
+        // g3 ranks here, but its /games/info/v2 type is "software" → the source filters it out.
         private const val WAITLISTED_BODY = """[
-            { "position": 1, "id": "g1", "slug": "game-one", "title": "Game One", "type": "game", "mature": false, "count": 100 },
-            { "position": 2, "id": "g2", "slug": "game-two", "title": "Game Two", "type": "game", "mature": false, "count": 90 }
+            { "position": 1, "id": "g1", "slug": "game-one", "title": "Game One", "count": 100 },
+            { "position": 2, "id": "g2", "slug": "game-two", "title": "Game Two", "count": 90 },
+            { "position": 3, "id": "g3", "slug": "photo-editor", "title": "Photo Editor", "count": 80 }
         ]"""
         private const val COLLECTED_BODY = """[ { "position": 1, "id": "g1", "title": "Game One", "count": 50 } ]"""
         private const val POPULAR_BODY = """[ { "position": 1, "id": "g1", "title": "Game One", "count": 50 } ]"""
         private const val INFO_BODY_G1 = """{
             "id": "g1",
             "title": "Game One",
+            "type": "game",
             "assets": {
                 "boxart": "https://assets/g1_box.jpg",
                 "banner400": "https://assets/g1_banner400.jpg"
             }
         }"""
+        // Software as ITAD really reports it: a successful info response with a *null* type → filtered out.
+        // (g2, by contrast, has no info body at all → fetch fails → kept, fail-open.)
+        private const val INFO_BODY_G3 = """{ "id": "g3", "title": "Photo Editor", "tags": [ "Utilities" ] }"""
         private const val PRICES_BODY = """[
             {
               "id": "g1",

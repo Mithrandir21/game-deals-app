@@ -150,6 +150,7 @@ class ItadSourceImplTest {
         val recorded = recordedRequests.single().url
         assertEquals("/deals/v2", recorded.encodedPath)
         assertEquals("US", dealsRequestBody().country)
+        assertEquals(listOf(1, 2, 3), dealsRequestBody().filter?.type) // game-like baseline always applied
     }
 
     @Test
@@ -175,7 +176,17 @@ class ItadSourceImplTest {
         assertEquals(30, request.offset)
         assertEquals(30, request.limit)
         assertNull(request.mature) // mature omitted unless opted in
-        assertNull(request.filter) // no filter set
+        // Even with no user filter, every /deals/v2 request constrains type to the game-like products
+        // (Game/DLC/Bundle = 1/2/3) so software/hardware never appear; no other dimension is set.
+        val filter = assertNotNull(request.filter)
+        assertEquals(listOf(1, 2, 3), filter.type)
+        assertNull(filter.cut)
+        assertNull(filter.price)
+        assertNull(filter.drm)
+        assertNull(filter.flag)
+        assertNull(filter.steamPerc)
+        assertNull(filter.releaseDays)
+        assertNull(filter.releaseYear)
     }
 
     @Test
@@ -319,6 +330,34 @@ class ItadSourceImplTest {
     }
 
     @Test
+    fun fetchBundles_drops_bundles_left_with_no_games_after_stripping_software() = runTest {
+        val json = Json { ignoreUnknownKeys = true }
+        val client = mockHttpClient(json) { request ->
+            recordedRequests += request
+            respond(
+                content = if (request.url.encodedPath == "/bundles/v1") MIXED_BUNDLES_BODY else "",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val localImpl = ItadSourceImpl(
+            logger = logger,
+            shopsApi = ItadShopsApi(client),
+            dealsApi = ItadDealsApi(client),
+            gamesApi = ItadGamesApi(client),
+            bundlesApi = ItadBundlesApi(client),
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            regionRepository = regionRepository,
+        )
+
+        val bundles = localImpl.fetchBundles()
+
+        // Bundle 100 keeps its one real game; bundle 101 is software-only → stripped to empty → dropped.
+        assertEquals(listOf(100), bundles.map { it.id })
+        assertEquals(listOf("g1"), bundles.single().games.map { it.id })
+    }
+
+    @Test
     fun fetchBundleGamePrices_maps_best_deal_and_all_time_low() = runTest {
         val prices = impl.fetchBundleGamePrices(listOf("uuid-1"))
 
@@ -351,6 +390,16 @@ class ItadSourceImplTest {
         assertEquals("uuid-1", results.first().id)
         assertEquals("Halo", results.first().title)
         assertEquals("banner400.png", results.first().boxart) // prioritized banner400 over boxart
+        assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
+    }
+
+    @Test
+    fun searchGames_keeps_only_game_like_results() = runTest {
+        // SEARCH_BODY carries a game-typed entry + a null-typed (software) + an unknown-typed entry; the
+        // allow-list keeps only the game-like one.
+        val results = impl.searchGames("editor")
+
+        assertEquals(listOf("uuid-1"), results.map { it.id })
         assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
     }
 
@@ -722,9 +771,14 @@ class ItadSourceImplTest {
             }
           ]"""
 
-        // language=JSON
+        // language=JSON — a game-typed entry plus a null-typed (software, as ITAD reports it) and an
+        // unknown-typed entry that the allow-list must drop. uuid-1 stays first so order assertions hold.
         private const val SEARCH_BODY =
-            """[ { "id": "uuid-1", "slug": "halo", "title": "Halo", "assets": { "boxart": "box.png", "banner400": "banner400.png" } } ]"""
+            """[
+              { "id": "uuid-1", "slug": "halo", "title": "Halo", "type": "game", "assets": { "boxart": "box.png", "banner400": "banner400.png" } },
+              { "id": "uuid-sw", "slug": "photo-editor", "title": "Photo Editor", "assets": { "boxart": "ps.png" } },
+              { "id": "uuid-hw", "slug": "gamepad", "title": "Gamepad", "type": "hardware", "assets": { "boxart": "gp.png" } }
+            ]"""
 
         // language=JSON
         private const val LOOKUP_BODY = """{ "found": true, "game": { "id": "uuid-1", "slug": "halo", "title": "Halo" } }"""
@@ -746,13 +800,36 @@ class ItadSourceImplTest {
               {
                 "price": { "amount": 14.99, "amountInt": 1499, "currency": "USD" },
                 "addon": false,
-                "games": [ { "id": "g1", "slug": "construction-simulator", "title": "Construction Simulator", "assets": { "boxart": "cs-box.png" } } ]
+                "games": [ { "id": "g1", "slug": "construction-simulator", "title": "Construction Simulator", "type": "game", "assets": { "boxart": "cs-box.png" } } ]
               },
               {
                 "price": { "amount": 24.99, "amountInt": 2499, "currency": "USD" },
                 "addon": true,
-                "games": [ { "id": "g2", "slug": "another-game", "title": "Another Game", "assets": { "boxart": "ag-box.png" } } ]
+                "games": [ { "id": "g2", "slug": "another-game", "title": "Another Game", "type": "game", "assets": { "boxart": "ag-box.png" } } ]
               }
+            ]
+          }
+        ]"""
+
+        // Two bundles: 100 has a real game tier; 101 has only software → must be dropped by fetchBundles.
+        // language=JSON
+        private const val MIXED_BUNDLES_BODY = """[
+          {
+            "id": 100,
+            "title": "Game Bundle",
+            "url": "https://b/100",
+            "tiers": [
+              { "price": { "amount": 9.99, "amountInt": 999, "currency": "USD" }, "addon": false,
+                "games": [ { "id": "g1", "title": "Real Game", "type": "game", "assets": { "boxart": "g1.png" } } ] }
+            ]
+          },
+          {
+            "id": 101,
+            "title": "Software Bundle",
+            "url": "https://b/101",
+            "tiers": [
+              { "price": { "amount": 4.99, "amountInt": 499, "currency": "USD" }, "addon": false,
+                "games": [ { "id": "s1", "title": "Photo Editor", "assets": { "boxart": "s1.png" } } ] }
             ]
           }
         ]"""

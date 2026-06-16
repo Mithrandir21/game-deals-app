@@ -100,6 +100,8 @@ internal fun RemoteItadBundle.toBundle(): Bundle {
             priceDenominated = money?.denominated(),
             priceValue = tier.price?.amount,
             games = tier.games
+                // Keep only game-like tier entries; software/hardware come through with a null type.
+                .filter { it.type.isGameLikeProductType() }
                 .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets.bestArt().orEmpty()) }
                 .toImmutableList(),
         )

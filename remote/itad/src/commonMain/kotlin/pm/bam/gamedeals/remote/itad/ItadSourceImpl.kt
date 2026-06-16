@@ -19,6 +19,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.models.Store
@@ -32,6 +33,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
 import pm.bam.gamedeals.remote.itad.mappers.denominated
 import pm.bam.gamedeals.remote.itad.mappers.gameIdFromDealId
+import pm.bam.gamedeals.remote.itad.mappers.isGameLikeProductType
 import pm.bam.gamedeals.remote.itad.mappers.toDeal
 import pm.bam.gamedeals.remote.itad.mappers.toDealDetails
 import pm.bam.gamedeals.remote.itad.mappers.toGame
@@ -46,6 +48,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.mappers.toPriceHistory
 import pm.bam.gamedeals.remote.itad.mappers.toStore
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
+import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsFilter
 import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsRequest
 import pm.bam.gamedeals.remote.itad.models.toRemoteFilter
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
@@ -155,6 +158,9 @@ internal class ItadSourceImpl(
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
             .map { it.toBundle() }
+            // After stripping software/hardware tier games, a bundle left with no games is a non-game
+            // bundle (e.g. a Fanatical software bundle) — drop it from the games-only Bundles surfaces.
+            .filter { it.games.isNotEmpty() }
 
     override suspend fun fetchGameMeta(gameId: String): GameMeta =
         gamesApi.getInfo(gameId)
@@ -221,7 +227,7 @@ internal class ItadSourceImpl(
                 sort = sort,
                 mature = mature,
                 shops = shops?.takeIf { it.isNotEmpty() },
-                filter = filter?.takeIf { !it.isEmpty() }?.toRemoteFilter(currentYear()),
+                filter = dealsFilterWithExclusion(filter),
             )
         )
             .log(logger, tag = TAG)
@@ -229,6 +235,19 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .list
             .map { it.toItadDeal() }
+
+    /**
+     * The wire `filter` for **every** `/deals/v2` request. ITAD's deals response carries no per-item type,
+     * so software/hardware can only be excluded server-side: each request constrains `type` to the
+     * game-like products ([ProductType] Game/DLC/Bundle = ids 1/2/3), keeping non-games out of Home, the
+     * Store screen and Deals browse alike — silently, without a user-visible filter. The user's own type
+     * narrowing (when set) already lives within that set, so it is honoured verbatim; otherwise the full
+     * game-like set is the baseline.
+     */
+    private fun dealsFilterWithExclusion(filter: DealsFilter?): RemoteItadDealsFilter {
+        val wire = filter?.takeIf { !it.isEmpty() }?.toRemoteFilter(currentYear()) ?: RemoteItadDealsFilter()
+        return if (wire.type.isNullOrEmpty()) wire.copy(type = GAME_LIKE_TYPE_IDS) else wire
+    }
 
     /** Current calendar year in the device timezone — resolves the Deals filter's release-recency windows. */
     @OptIn(ExperimentalTime::class)
@@ -254,6 +273,10 @@ internal class ItadSourceImpl(
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
+            // ITAD search mixes in software/hardware, which it leaves with a null `type` (only games/DLC/
+            // packages are typed). Keep just the game-like types so the Deals search overlay and the
+            // title/release lookups stay game-only. Covers `dealsByTitle`.
+            .filter { it.type.isGameLikeProductType() }
             .map { it.toItadGameSearchResult() }
 
     /** Steam-appID → ITAD game bridge; the returned result carries the queried [appid]. */
@@ -276,5 +299,8 @@ internal class ItadSourceImpl(
 
     private companion object {
         private val TAG: String = ItadSourceImpl::class.simpleName.orEmpty()
+
+        /** ITAD `type` ids the app surfaces — Game/DLC/Bundle ([ProductType]); excludes Software(7)/Hardware(9). */
+        private val GAME_LIKE_TYPE_IDS: List<Int> = ProductType.entries.map { it.apiValue }.sorted()
     }
 }
