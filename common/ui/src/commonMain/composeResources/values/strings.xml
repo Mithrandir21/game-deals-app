@@ -48,7 +48,7 @@
     <string name="deal_details_cheapest_on_label">%1$s on %2$s</string>
 
     <string name="deal_details_metacritic_score_label">Metacritic Score: %1$s</string>
-    <string name="deal_details_steam_reviews_label">Steam Reviews: %1$s\%%</string>
+    <string name="deal_details_steam_reviews_label">Steam Reviews: %1$s%</string>
     <string name="deal_details_release_label">Release: %1$s</string>
     <string name="deal_details_wiki_label">PCGamingWiki: %1$s</string>
     <string name="deal_details_steamworks_label_yes">Steamworks: Yes</string>

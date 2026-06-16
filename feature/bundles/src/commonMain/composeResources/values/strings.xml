@@ -31,7 +31,7 @@
     <string name="bundle_detail_value_current">Current value</string>
     <string name="bundle_detail_value_low">All-time-low value</string>
     <string name="bundle_detail_value_bundle_price">Bundle price</string>
-    <string name="bundle_detail_value_savings">Save %1$d%%</string>
+    <string name="bundle_detail_value_savings">Save %1$d%</string>
     <string name="bundle_detail_value_partial">Based on %1$d of %2$d games with a current price</string>
 
     <string name="bundle_detail_published">Published %1$s</string>
