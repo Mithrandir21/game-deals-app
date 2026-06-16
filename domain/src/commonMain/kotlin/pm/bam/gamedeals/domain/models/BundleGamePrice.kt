@@ -19,6 +19,12 @@ data class BundleGamePrice(
     val bestPriceValue: Double?,
     val bestPriceDenominated: String?,
     val bestCutPercent: Int?,
+    /** Regular (pre-discount) price on the best deal — strike-through fodder; null when undiscounted. */
+    val bestRegularDenominated: String? = null,
+    /** ITAD deal flags on the best deal, so callers can render the same voucher / N / S badges as a [Deal]. */
+    val bestHasVoucher: Boolean = false,
+    val bestIsNewHistoricalLow: Boolean = false,
+    val bestIsStoreLow: Boolean = false,
     val historicalLowValue: Double?,
     val historicalLowDenominated: String?,
     /** ITAD currency code (e.g. "EUR") of this region's prices — lets the VM format summed totals. */

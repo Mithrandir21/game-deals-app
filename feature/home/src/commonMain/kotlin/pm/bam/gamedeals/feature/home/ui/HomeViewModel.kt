@@ -243,6 +243,11 @@ internal class HomeViewModel(
             game.copy(
                 priceDenominated = price.bestPriceDenominated ?: game.priceDenominated,
                 cutPercent = price.bestCutPercent,
+                regularPriceDenominated = price.bestRegularDenominated,
+                storeName = price.bestShopName,
+                hasVoucher = price.bestHasVoucher,
+                isNewHistoricalLow = price.bestIsNewHistoricalLow,
+                isStoreLow = price.bestIsStoreLow,
             )
         }.toImmutableList()
 

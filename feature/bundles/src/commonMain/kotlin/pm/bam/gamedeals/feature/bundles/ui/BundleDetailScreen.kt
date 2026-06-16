@@ -420,8 +420,28 @@ private fun BundleDetailScreenPreview() {
         Bundle.BundleGame("c", "DRIFT CE", ""),
     )
     val prices: ImmutableMap<String, BundleGamePrice> = listOf(
-        BundleGamePrice("a", "Steam", 4.59, "€4.59", 80, 4.59, "€4.59", "EUR"),
-        BundleGamePrice("c", "GamesPlanet", 4.49, "€4.49", 76, 3.99, "€3.99", "EUR"),
+        BundleGamePrice(
+            gameId = "a",
+            bestShopName = "Steam",
+            bestPriceValue = 4.59,
+            bestPriceDenominated = "€4.59",
+            bestCutPercent = 80,
+            bestRegularDenominated = "€22.99",
+            historicalLowValue = 4.59,
+            historicalLowDenominated = "€4.59",
+            currency = "EUR",
+        ),
+        BundleGamePrice(
+            gameId = "c",
+            bestShopName = "GamesPlanet",
+            bestPriceValue = 4.49,
+            bestPriceDenominated = "€4.49",
+            bestCutPercent = 76,
+            bestRegularDenominated = "€18.99",
+            historicalLowValue = 3.99,
+            historicalLowDenominated = "€3.99",
+            currency = "EUR",
+        ),
     ).associateBy { it.gameId }.toImmutableMap()
     GameDealsTheme {
         BundleDetailScreenContent(

@@ -378,7 +378,11 @@ private fun HomeFeed(
                 titleRes = Res.string.home_screen_most_waitlisted_label,
                 games = data.mostWaitlisted,
                 keyPrefix = "waitlisted",
+                waitlistIds = waitlistIds,
                 onPeekGame = onPeekGame,
+                onToggleWaitlist = onToggleWaitlist,
+                addToWaitlistContentDescription = addToWaitlistCd,
+                removeFromWaitlistContentDescription = removeFromWaitlistCd,
             )
         }
 
@@ -390,7 +394,11 @@ private fun HomeFeed(
                 titleRes = Res.string.home_screen_most_collected_label,
                 games = data.mostCollected,
                 keyPrefix = "collected",
+                waitlistIds = waitlistIds,
                 onPeekGame = onPeekGame,
+                onToggleWaitlist = onToggleWaitlist,
+                addToWaitlistContentDescription = addToWaitlistCd,
+                removeFromWaitlistContentDescription = removeFromWaitlistCd,
             )
         }
 
@@ -458,7 +466,11 @@ private fun LazyListScope.rankedSection(
     titleRes: StringResource,
     games: ImmutableList<RankedGame>,
     keyPrefix: String,
+    waitlistIds: ImmutableSet<String>,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
+    addToWaitlistContentDescription: String,
+    removeFromWaitlistContentDescription: String,
 ) {
     if (games.isEmpty()) return
     item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(titleRes)) }
@@ -468,15 +480,27 @@ private fun LazyListScope.rankedSection(
         contentType = { CONTENT_TYPE_RANKED },
     ) { index ->
         val game = games[index]
+        val isWaitlisted = game.gameId in waitlistIds
         val cd = game.priceDenominated?.let { stringResource(Res.string.home_screen_ranked_game_description, game.title, it) }
             ?: stringResource(Res.string.home_screen_ranked_game_description_no_price, game.title)
+        // Same anatomy as the Trending rows: store label, struck regular price, discount + flag badges,
+        // and the waitlist heart — all enriched off the best current deal in the HomeViewModel.
         DealListRow(
             title = game.title,
             contentDescription = cd,
             onClick = { onPeekGame(game.gameId, game.title, game.boxart) },
             imageUrl = game.boxart,
             salePrice = game.priceDenominated,
+            regularPrice = game.regularPriceDenominated,
             discountPercent = game.cutPercent ?: 0,
+            hasVoucher = game.hasVoucher,
+            isNewHistoricalLow = game.isNewHistoricalLow,
+            isStoreLow = game.isStoreLow,
+            storeName = game.storeName,
+            isWaitlisted = isWaitlisted,
+            onToggleWaitlist = { onToggleWaitlist(game.gameId) },
+            addToWaitlistContentDescription = addToWaitlistContentDescription,
+            removeFromWaitlistContentDescription = removeFromWaitlistContentDescription,
         )
     }
 }
@@ -550,11 +574,17 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.H
         PreviewDeal.copy(dealID = "trend-1", title = "Celeste", salePriceDenominated = "$4.99", normalPriceDenominated = "$19.99", gameID = "44444"),
     ).toImmutableList(),
     mostWaitlisted = listOf(
-        RankedGame(gameId = "w1", title = "Baldur's Gate 3", priceDenominated = "$59.99", cutPercent = 0),
-        RankedGame(gameId = "w2", title = "Cyberpunk 2077", priceDenominated = "$29.99", cutPercent = 50),
+        RankedGame(gameId = "w1", title = "Baldur's Gate 3", priceDenominated = "$59.99", cutPercent = 0, storeName = "Steam"),
+        RankedGame(
+            gameId = "w2", title = "Cyberpunk 2077", priceDenominated = "$29.99", regularPriceDenominated = "$59.99",
+            cutPercent = 50, storeName = "GOG", isNewHistoricalLow = true,
+        ),
     ).toImmutableList(),
     mostCollected = listOf(
-        RankedGame(gameId = "c1", title = "Skyrim Special Edition", priceDenominated = "$19.99", cutPercent = 50),
+        RankedGame(
+            gameId = "c1", title = "Skyrim Special Edition", priceDenominated = "$19.99", regularPriceDenominated = "$39.99",
+            cutPercent = 50, storeName = "GreenManGaming", hasVoucher = true,
+        ),
     ).toImmutableList(),
     releases = listOf(
         PreviewRelease,
