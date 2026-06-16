@@ -16,6 +16,7 @@ data class RemoteIgdbGame(
     @SerialName("rating_count") val ratingCount: Long? = null,
     @SerialName("aggregated_rating") val aggregatedRating: Double? = null,
     @SerialName("aggregated_rating_count") val aggregatedRatingCount: Long? = null,
+    @SerialName("total_rating_count") val totalRatingCount: Long? = null,
     val genres: List<RemoteIgdbGenre> = emptyList(),
     val themes: List<RemoteIgdbTheme> = emptyList(),
     @SerialName("involved_companies") val involvedCompanies: List<RemoteIgdbInvolvedCompany> = emptyList(),

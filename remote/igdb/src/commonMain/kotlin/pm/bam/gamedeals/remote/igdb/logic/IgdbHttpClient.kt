@@ -3,6 +3,8 @@ package pm.bam.gamedeals.remote.igdb.logic
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.api.Send
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -12,6 +14,8 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.remote.igdb.auth.IgdbCredentials
 import pm.bam.gamedeals.remote.igdb.auth.IgdbTokenProvider
@@ -44,6 +48,11 @@ internal fun igdbHttpClient(
         expectSuccess = true
 
         install(ContentNegotiation) { json(json) }
+
+        // IGDB allows 4 req/s and up to 8 open connections. A Semaphore bounds simultaneous in-flight
+        // calls so the tag-discovery vocabulary fan-out (epic #307) and any future paging bursts can't
+        // spike past the connection cap. Mirrors the ITAD concurrency limiter (#266).
+        install(IgdbConcurrencyLimiter) { permits = IGDB_MAX_CONCURRENCY }
 
         install(HttpTimeout) {
             connectTimeoutMillis = 10_000
@@ -78,3 +87,25 @@ internal fun igdbHttpClient(
 internal const val IGDB_HOST = "api.igdb.com"
 internal const val IGDB_BASE_URL = "https://api.igdb.com"
 internal const val TWITCH_TOKEN_BASE_URL = "https://id.twitch.tv"
+
+/** Default cap on simultaneous in-flight IGDB requests (IGDB allows up to 8 open connections). */
+private const val IGDB_MAX_CONCURRENCY = 8
+
+/** Config for [IgdbConcurrencyLimiter]. */
+internal class IgdbConcurrencyLimiterConfig {
+    /** Maximum IGDB requests allowed in flight at once. */
+    var permits: Int = IGDB_MAX_CONCURRENCY
+}
+
+/**
+ * Ktor client plugin that bounds simultaneous in-flight IGDB requests through a [Semaphore]
+ * (epic #307). A request acquires a permit before being sent (via the [Send] hook) and releases it
+ * once the call completes, so callers past the limit suspend until a permit frees. Mirrors the ITAD
+ * `ItadConcurrencyLimiter` — a throughput (concurrency) cap, not a per-interval rate limit.
+ */
+internal val IgdbConcurrencyLimiter = createClientPlugin("IgdbConcurrencyLimiter", ::IgdbConcurrencyLimiterConfig) {
+    val semaphore = Semaphore(permits = pluginConfig.permits)
+    on(Send) { request ->
+        semaphore.withPermit { proceed(request) }
+    }
+}

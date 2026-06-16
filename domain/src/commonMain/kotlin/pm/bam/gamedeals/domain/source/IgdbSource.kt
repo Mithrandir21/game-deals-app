@@ -2,6 +2,8 @@ package pm.bam.gamedeals.domain.source
 
 import kotlinx.collections.immutable.ImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbTag
+import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.Release
 
 interface IgdbSource {
@@ -54,4 +56,21 @@ interface IgdbSource {
      * [IgdbGame.timeToBeat] by the consumer. Returns null when IGDB has no completion data for the game.
      */
     suspend fun fetchTimeToBeat(igdbGameId: Long): IgdbGame.IgdbTimeToBeat?
+
+    /**
+     * Discover games matching an AND-combined [filter] of IGDB tags (epic #307), newest-popularity
+     * first, paginated via [limit]/[offset]. Each game carries its Steam app id (when known) for
+     * downstream ITAD pricing. Returns an empty list for an empty filter — no query is fired.
+     */
+    suspend fun fetchGamesByTags(filter: IgdbTagFilter, limit: Int, offset: Int): List<IgdbGame>
+
+    /**
+     * The curated tag-picker vocabulary (epic #307): all genres, themes, game-modes and player
+     * perspectives, each tagged with its dimension. Keywords are fetched separately via
+     * [fetchCuratedKeywords] because they come from a hand-picked slug allow-list.
+     */
+    suspend fun fetchTagVocabulary(): List<IgdbTag>
+
+    /** Resolve a curated keyword [slugs] allow-list to domain [IgdbTag]s (epic #307). */
+    suspend fun fetchCuratedKeywords(slugs: List<String>): List<IgdbTag>
 }

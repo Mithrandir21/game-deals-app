@@ -10,6 +10,7 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTag
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTimeToBeat
 
 /**
@@ -166,6 +167,72 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
         ApiResponse.exception(t)
     }
 
+    /**
+     * Discover games matching an AND-combined set of tags across IGDB dimensions (epic #307).
+     * Each non-empty id list becomes one `<dimension> = [ids]` clause ("contains ALL" — AND within
+     * a dimension); the clauses are joined with `&` (AND across dimensions). Sorted by
+     * `total_rating_count desc` as a popularity proxy, paginated via [limit]/[offset]. Each row
+     * carries `name`, `cover.image_id` and the Steam app id (`external_games`) so the result can be
+     * priced through the ITAD bridge without a second IGDB round-trip.
+     */
+    suspend fun fetchGamesByTags(
+        genreIds: List<Long>,
+        themeIds: List<Long>,
+        gameModeIds: List<Long>,
+        perspectiveIds: List<Long>,
+        keywordIds: List<Long>,
+        limit: Int,
+        offset: Int,
+    ): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildTagsDiscoveryQuery(genreIds, themeIds, gameModeIds, perspectiveIds, keywordIds, limit, offset))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /**
+     * Enumerate one of IGDB's small vocabulary endpoints — `/v4/genres`, `/v4/themes`,
+     * `/v4/game_modes`, `/v4/player_perspectives` — for the tag picker (epic #307). All share the
+     * `{ id, name, slug }` shape, so the dimension is supplied by the caller, not the wire.
+     */
+    suspend fun fetchTagVocabulary(endpoint: String): ApiResponse<List<RemoteIgdbTag>> = try {
+        ApiResponse.Success(
+            httpClient.post(endpoint) {
+                contentType(ContentType.Text.Plain)
+                setBody(buildVocabularyQuery())
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /**
+     * Resolve a curated set of keyword slugs to IGDB keyword ids (epic #307). The full `/v4/keywords`
+     * table is far too large/noisy for a fixed picker, so we hand-pick a small allow-list of slugs
+     * and look them up. `where slug = (…)` is OR over the set (we want ANY of the curated slugs) —
+     * contrast the AND `[]` used in [buildTagsDiscoveryQuery]. Unknown slugs simply return no row.
+     */
+    suspend fun fetchKeywordsBySlugs(slugs: List<String>): ApiResponse<List<RemoteIgdbTag>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/keywords") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildKeywordSlugLookupQuery(slugs))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
     internal companion object {
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
@@ -282,5 +349,53 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             sort first_release_date desc;
             limit $limit;
             """.trimIndent()
+
+        // Tag discovery (epic #307). AND semantics: `<dim> = [a,b]` means "contains ALL of a and b"
+        // (NOT `(a,b)`, which is OR); clauses across dimensions are joined with `&` (also AND). Empty
+        // dimensions are omitted entirely. `cover != null` drops the long tail of cover-less stubs and
+        // also guarantees a non-empty `where` even if (defensively) every dimension list is empty —
+        // though the source layer short-circuits an empty filter before reaching here.
+        internal fun buildTagsDiscoveryQuery(
+            genreIds: List<Long>,
+            themeIds: List<Long>,
+            gameModeIds: List<Long>,
+            perspectiveIds: List<Long>,
+            keywordIds: List<Long>,
+            limit: Int,
+            offset: Int,
+        ): String {
+            val tagClauses = listOfNotNull(
+                andClause("genres", genreIds),
+                andClause("themes", themeIds),
+                andClause("game_modes", gameModeIds),
+                andClause("player_perspectives", perspectiveIds),
+                andClause("keywords", keywordIds),
+            )
+            val whereClause = (tagClauses + "cover != null").joinToString(" & ")
+            return """
+                fields id,name,cover.image_id,total_rating_count,external_games.uid,external_games.external_game_source;
+                where $whereClause;
+                sort total_rating_count desc;
+                limit $limit; offset $offset;
+            """.trimIndent()
+        }
+
+        // `field = [a,b]` is APICalypse's "array contains ALL of these" (AND). Returns null for an
+        // empty list so the caller can omit the dimension instead of emitting `field = []`.
+        private fun andClause(field: String, ids: List<Long>): String? =
+            if (ids.isEmpty()) null else "$field = [${ids.joinToString(",")}]"
+
+        // Shared by the four small vocabulary endpoints (genres/themes/game_modes/player_perspectives).
+        // Each is well under 500 rows, so a single page enumerates the whole table.
+        internal fun buildVocabularyQuery(): String =
+            "fields id,name,slug; sort name asc; limit 500;"
+
+        // `where slug = (…)` is OR over the curated slug set (we want games matching ANY of them) —
+        // the deliberate opposite of the AND `[]` used for discovery filtering. Slugs are quoted and
+        // escaped like any other APICalypse string literal.
+        internal fun buildKeywordSlugLookupQuery(slugs: List<String>): String {
+            val quoted = slugs.joinToString(",") { "\"${escapeApicalypseString(it)}\"" }
+            return "fields id,name,slug; where slug = ($quoted); limit 50;"
+        }
     }
 }

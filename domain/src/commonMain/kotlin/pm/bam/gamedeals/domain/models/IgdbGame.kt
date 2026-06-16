@@ -32,6 +32,12 @@ data class IgdbGame(
      */
     val timeToBeat: IgdbTimeToBeat? = null,
     val steamAppId: Int? = null,
+    /**
+     * IGDB `total_rating_count` — combined count of user + critic ratings. Used purely as a
+     * popularity proxy to sort tag-discovery results (epic #307); null on lookups that don't
+     * request it.
+     */
+    val totalRatingCount: Long? = null,
 ) {
 
     @Immutable

@@ -5,13 +5,18 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbTag
+import pm.bam.gamedeals.domain.models.IgdbTagDimension
+import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.source.IgdbSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
 import pm.bam.gamedeals.remote.igdb.mappers.toIgdbCandidateList
+import pm.bam.gamedeals.remote.igdb.mappers.toIgdbGame
 import pm.bam.gamedeals.remote.igdb.mappers.toIgdbGameOrNull
+import pm.bam.gamedeals.remote.igdb.mappers.toIgdbTagOrNull
 import pm.bam.gamedeals.remote.igdb.mappers.toIgdbTimeToBeatOrNull
 import pm.bam.gamedeals.remote.igdb.mappers.toReleaseOrNull
 import pm.bam.gamedeals.remote.logic.log
@@ -105,8 +110,53 @@ internal class IgdbSourceImpl(
             .getOrThrow()
             .toIgdbTimeToBeatOrNull()
 
+    override suspend fun fetchGamesByTags(filter: IgdbTagFilter, limit: Int, offset: Int): List<IgdbGame> {
+        // Defensive: an empty filter has no `where` constraint and would page the whole catalogue.
+        if (filter.isEmpty()) return emptyList()
+        return igdbGamesApi.fetchGamesByTags(
+            genreIds = filter.genreIds,
+            themeIds = filter.themeIds,
+            gameModeIds = filter.gameModeIds,
+            perspectiveIds = filter.perspectiveIds,
+            keywordIds = filter.keywordIds,
+            limit = limit,
+            offset = offset,
+        )
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .map { it.toIgdbGame() }
+    }
+
+    override suspend fun fetchTagVocabulary(): List<IgdbTag> =
+        TAG_VOCABULARY_ENDPOINTS.flatMap { (endpoint, dimension) ->
+            igdbGamesApi.fetchTagVocabulary(endpoint)
+                .log(logger, tag = TAG)
+                .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+                .getOrThrow()
+                .mapNotNull { it.toIgdbTagOrNull(dimension) }
+        }
+
+    override suspend fun fetchCuratedKeywords(slugs: List<String>): List<IgdbTag> {
+        if (slugs.isEmpty()) return emptyList()
+        return igdbGamesApi.fetchKeywordsBySlugs(slugs)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .mapNotNull { it.toIgdbTagOrNull(IgdbTagDimension.Keyword) }
+    }
+
     internal companion object {
         internal const val NEW_RELEASES_LIMIT = 20
         private val TAG: String = IgdbSourceImpl::class.simpleName.orEmpty()
+
+        // The four small IGDB vocabulary endpoints and the dimension each one represents. Keywords are
+        // intentionally excluded — they come from a curated slug allow-list via fetchCuratedKeywords.
+        internal val TAG_VOCABULARY_ENDPOINTS: List<Pair<String, IgdbTagDimension>> = listOf(
+            "/v4/genres" to IgdbTagDimension.Genre,
+            "/v4/themes" to IgdbTagDimension.Theme,
+            "/v4/game_modes" to IgdbTagDimension.GameMode,
+            "/v4/player_perspectives" to IgdbTagDimension.PlayerPerspective,
+        )
     }
 }

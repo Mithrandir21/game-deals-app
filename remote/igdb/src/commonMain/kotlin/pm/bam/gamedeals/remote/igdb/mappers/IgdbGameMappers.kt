@@ -36,6 +36,7 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
         ?.uid
         ?.toIntOrNull(),
+    totalRatingCount = totalRatingCount,
 )
 
 /**
