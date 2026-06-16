@@ -9,11 +9,24 @@
     <string name="deals_screen_deal_row_description_waitlisted">Deal: %1$s, waitlisted, %2$s</string>
 
     <string name="deals_sort_label">Sort</string>
-    <string name="deals_sort_trending">Trending</string>
-    <string name="deals_sort_top_discount">Top discount</string>
-    <string name="deals_sort_recently_added">Recently added</string>
-    <string name="deals_sort_price_low_high">Cheapest</string>
-    <string name="deals_sort_expiring_soon">Expiring soon</string>
+    <string name="deals_sort_hottest">Hottest games</string>
+    <string name="deals_sort_newest">Newest deals</string>
+    <string name="deals_sort_price_cut">Highest price cut</string>
+    <string name="deals_sort_lowest_price">Lowest price</string>
+    <string name="deals_sort_expiring">Expiring soon</string>
+    <string name="deals_sort_release_date">Release date</string>
+    <string name="deals_sort_popular">Most popular</string>
+    <string name="deals_sort_waitlisted">Most waitlisted</string>
+    <string name="deals_sort_collected">Most collected</string>
+    <string name="deals_sort_steam_players">Players on Steam</string>
+    <string name="deals_sort_steam_reviews">Steam reviews</string>
+    <string name="deals_sort_steam_reviews_count">Steam reviews count</string>
+    <string name="deals_sort_opencritic">Opencritic score</string>
+    <string name="deals_sort_metacritic">Metacritic score</string>
+    <string name="deals_sort_metacritic_user">Metacritic user score</string>
+    <string name="deals_sort_direction">Direction</string>
+    <string name="deals_sort_direction_desc">Descending</string>
+    <string name="deals_sort_direction_asc">Ascending</string>
 
     <string name="deals_filter_all_stores">All stores</string>
 

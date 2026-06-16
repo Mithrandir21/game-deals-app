@@ -41,7 +41,8 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealFlag
 import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
-import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.DealsSortDirection
+import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -106,7 +107,8 @@ internal class DealsViewModel(
         .catch { emit(persistentListOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
-    private val sort = MutableStateFlow(DealsSort.TopDiscount)
+    // Field + direction held in a single flow so the init `combine` below stays within its 5-source arity.
+    private val sortSelection = MutableStateFlow(SortSelection(DealsSortField.Hottest, DealsSortField.Hottest.defaultDirection))
     private val selectedShopIds = MutableStateFlow<Set<Int>>(emptySet())
 
     /** The currently selected shop ids (empty = all stores). */
@@ -154,12 +156,14 @@ internal class DealsViewModel(
         // filter changes again first.
         viewModelScope.launch {
             combine(
-                sort,
+                sortSelection,
                 selectedShopIds,
                 settingsRepository.observeMatureOptIn(),
                 regionRepository.observeSelectedCountry().map { it.code }.distinctUntilChanged(),
                 settingsRepository.observeDealsFilter(),
-            ) { selectedSort, shops, mature, _, dealsFilter -> BrowseParams(selectedSort, shops, mature, dealsFilter) }
+            ) { selectedSort, shops, mature, _, dealsFilter ->
+                BrowseParams(selectedSort.field, selectedSort.direction, shops, mature, dealsFilter)
+            }
                 .collectLatest { loadFirstPage(it) }
         }
 
@@ -190,7 +194,11 @@ internal class DealsViewModel(
         }
     }
 
-    fun setSort(newSort: DealsSort) = sort.update { newSort }
+    /** Select the sort field; resets the direction to that field's default (matching the website). */
+    fun setSortField(field: DealsSortField) = sortSelection.update { SortSelection(field, field.defaultDirection) }
+
+    /** Flip the direction (asc/desc) for the currently selected field. */
+    fun setSortDirection(direction: DealsSortDirection) = sortSelection.update { it.copy(direction = direction) }
 
     /** Toggle a shop in/out of the filter; an empty selection means "all stores". */
     fun toggleShop(storeId: Int) = selectedShopIds.update { if (storeId in it) it - storeId else it + storeId }
@@ -238,7 +246,7 @@ internal class DealsViewModel(
 
     fun retry() {
         viewModelScope.launch {
-            loadFirstPage(BrowseParams(sort.value, selectedShopIds.value, settingsRepository.getMatureOptIn(), filter.value))
+            loadFirstPage(BrowseParams(sortSelection.value.field, sortSelection.value.direction, selectedShopIds.value, settingsRepository.getMatureOptIn(), filter.value))
         }
     }
 
@@ -247,18 +255,20 @@ internal class DealsViewModel(
         uiState.update {
             DealsScreenData(
                 status = DealsScreenData.Status.LOADING,
-                sort = params.sort,
+                sortField = params.sortField,
+                sortDirection = params.sortDirection,
                 shopIds = params.shopIds.toImmutableSet(),
                 mature = params.mature,
                 filter = params.filter,
             )
         }
         try {
-            val page = dealsRepository.getDeals(DealsQuery(sort = params.sort, shopIds = params.shopIds.toList(), mature = params.mature, filter = params.filter, offset = 0))
+            val page = dealsRepository.getDeals(DealsQuery(sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toList(), mature = params.mature, filter = params.filter, offset = 0))
             uiState.update {
                 DealsScreenData(
                     status = DealsScreenData.Status.DATA,
-                    sort = params.sort,
+                    sortField = params.sortField,
+                    sortDirection = params.sortDirection,
                     shopIds = params.shopIds.toImmutableSet(),
                     mature = params.mature,
                     filter = params.filter,
@@ -269,9 +279,9 @@ internal class DealsViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
-            fatal(logger, t) { "Failed to load deals (sort=${params.sort}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
+            fatal(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
             uiState.update {
-                DealsScreenData(status = DealsScreenData.Status.ERROR, sort = params.sort, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
+                DealsScreenData(status = DealsScreenData.Status.ERROR, sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
             }
         }
     }
@@ -283,7 +293,7 @@ internal class DealsViewModel(
         appendJob = viewModelScope.launch {
             uiState.update { it.copy(appending = true) }
             try {
-                val page = dealsRepository.getDeals(DealsQuery(sort = current.sort, shopIds = current.shopIds.toList(), mature = current.mature, filter = current.filter, offset = current.deals.size))
+                val page = dealsRepository.getDeals(DealsQuery(sortField = current.sortField, sortDirection = current.sortDirection, shopIds = current.shopIds.toList(), mature = current.mature, filter = current.filter, offset = current.deals.size))
                 uiState.update { state ->
                     state.copy(
                         deals = (state.deals + page).toImmutableList(),
@@ -340,7 +350,9 @@ internal class DealsViewModel(
         events.tryEmit(DealsUiEvent.ShareDeal(text))
     }
 
-    private data class BrowseParams(val sort: DealsSort, val shopIds: Set<Int>, val mature: Boolean, val filter: DealsFilter)
+    private data class SortSelection(val field: DealsSortField, val direction: DealsSortDirection)
+
+    private data class BrowseParams(val sortField: DealsSortField, val sortDirection: DealsSortDirection, val shopIds: Set<Int>, val mature: Boolean, val filter: DealsFilter)
 
     internal sealed interface DealsUiEvent {
         data class ShareDeal(val text: String) : DealsUiEvent
@@ -361,7 +373,8 @@ internal class DealsViewModel(
 
     data class DealsScreenData(
         val status: Status = Status.LOADING,
-        val sort: DealsSort = DealsSort.TopDiscount,
+        val sortField: DealsSortField = DealsSortField.Hottest,
+        val sortDirection: DealsSortDirection = DealsSortField.Hottest.defaultDirection,
         val shopIds: ImmutableSet<Int> = persistentSetOf(),
         val mature: Boolean = false,
         val filter: DealsFilter = DealsFilter(),

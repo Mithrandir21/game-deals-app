@@ -90,7 +90,8 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealFlag
 import pm.bam.gamedeals.domain.models.DealsFilter
-import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.DealsSortDirection
+import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.Store
@@ -139,11 +140,24 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_no_result
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_count
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_row_description
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_row_description_waitlisted
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_expiring_soon
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_price_low_high
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_recently_added
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_top_discount
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_trending
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_collected
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_direction
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_direction_asc
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_direction_desc
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_expiring
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_hottest
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_lowest_price
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_metacritic
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_metacritic_user
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_newest
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_opencritic
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_popular
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_price_cut
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_release_date
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_steam_players
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_steam_reviews
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_steam_reviews_count
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_waitlisted
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.SearchResultsState
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -212,7 +226,8 @@ internal fun DealsScreen(
         showFilters = showFilters,
         gamePeek = gamePeek,
         snackbarHostState = snackbarHostState,
-        onSelectSort = { viewModel.setSort(it) },
+        onSelectSortField = { viewModel.setSortField(it) },
+        onSelectSortDirection = { viewModel.setSortDirection(it) },
         onToggleShop = { viewModel.toggleShop(it) },
         onClearShops = { viewModel.clearShopFilter() },
         onSetMinCut = { viewModel.setMinCut(it) },
@@ -259,7 +274,8 @@ private fun DealsContent(
     showFilters: Boolean = false,
     gamePeek: GamePeekSheetData? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onSelectSort: (DealsSort) -> Unit,
+    onSelectSortField: (DealsSortField) -> Unit,
+    onSelectSortDirection: (DealsSortDirection) -> Unit = {},
     onToggleShop: (Int) -> Unit = {},
     onClearShops: () -> Unit = {},
     onSetMinCut: (Int?) -> Unit = {},
@@ -426,8 +442,10 @@ private fun DealsContent(
             DealsFilterSheet(
                 show = showFilters,
                 onDismiss = { onShowFiltersChange(false) },
-                selectedSort = data.sort,
-                onSelectSort = onSelectSort,
+                selectedSortField = data.sortField,
+                selectedSortDirection = data.sortDirection,
+                onSelectSortField = onSelectSortField,
+                onSelectSortDirection = onSelectSortDirection,
                 stores = stores,
                 selectedShops = selectedShops,
                 onToggleShop = onToggleShop,
@@ -643,8 +661,10 @@ private fun DealsSearchField(
 private fun DealsFilterSheet(
     show: Boolean,
     onDismiss: () -> Unit,
-    selectedSort: DealsSort,
-    onSelectSort: (DealsSort) -> Unit,
+    selectedSortField: DealsSortField,
+    selectedSortDirection: DealsSortDirection,
+    onSelectSortField: (DealsSortField) -> Unit,
+    onSelectSortDirection: (DealsSortDirection) -> Unit,
     stores: ImmutableList<Store>,
     selectedShops: ImmutableSet<Int>,
     onToggleShop: (Int) -> Unit,
@@ -693,14 +713,26 @@ private fun DealsFilterSheet(
                 }
             }
 
-            // Sort (single-select)
+            // Sort field (single-select)
             FilterSectionTitle(stringResource(Res.string.deals_filter_section_sort))
             FilterChipRow {
-                DealsSort.entries.forEach { sort ->
+                DealsSortField.entries.forEach { field ->
                     FilterChip(
-                        selected = sort == selectedSort,
-                        onClick = { onSelectSort(sort) },
-                        label = { Text(stringResource(sort.labelRes())) },
+                        selected = field == selectedSortField,
+                        onClick = { onSelectSortField(field) },
+                        label = { Text(stringResource(field.labelRes())) },
+                    )
+                }
+            }
+
+            // Sort direction (single-select); selecting a field above resets this to the field's default.
+            FilterSectionTitle(stringResource(Res.string.deals_sort_direction))
+            FilterChipRow {
+                DealsSortDirection.entries.forEach { direction ->
+                    FilterChip(
+                        selected = direction == selectedSortDirection,
+                        onClick = { onSelectSortDirection(direction) },
+                        label = { Text(stringResource(direction.labelRes())) },
                     )
                 }
             }
@@ -875,12 +907,27 @@ private fun priceLabel(threshold: Int, sample: String?): String {
     return "$prefix$threshold$suffix"
 }
 
-private fun DealsSort.labelRes(): StringResource = when (this) {
-    DealsSort.Trending -> Res.string.deals_sort_trending
-    DealsSort.TopDiscount -> Res.string.deals_sort_top_discount
-    DealsSort.RecentlyAdded -> Res.string.deals_sort_recently_added
-    DealsSort.PriceLowToHigh -> Res.string.deals_sort_price_low_high
-    DealsSort.ExpiringSoon -> Res.string.deals_sort_expiring_soon
+private fun DealsSortField.labelRes(): StringResource = when (this) {
+    DealsSortField.Hottest -> Res.string.deals_sort_hottest
+    DealsSortField.Newest -> Res.string.deals_sort_newest
+    DealsSortField.PriceCut -> Res.string.deals_sort_price_cut
+    DealsSortField.Price -> Res.string.deals_sort_lowest_price
+    DealsSortField.Expiry -> Res.string.deals_sort_expiring
+    DealsSortField.ReleaseDate -> Res.string.deals_sort_release_date
+    DealsSortField.Popular -> Res.string.deals_sort_popular
+    DealsSortField.Waitlisted -> Res.string.deals_sort_waitlisted
+    DealsSortField.Collected -> Res.string.deals_sort_collected
+    DealsSortField.SteamPlayers -> Res.string.deals_sort_steam_players
+    DealsSortField.SteamReviews -> Res.string.deals_sort_steam_reviews
+    DealsSortField.SteamReviewsCount -> Res.string.deals_sort_steam_reviews_count
+    DealsSortField.OpenCritic -> Res.string.deals_sort_opencritic
+    DealsSortField.Metacritic -> Res.string.deals_sort_metacritic
+    DealsSortField.MetacriticUser -> Res.string.deals_sort_metacritic_user
+}
+
+private fun DealsSortDirection.labelRes(): StringResource = when (this) {
+    DealsSortDirection.Descending -> Res.string.deals_sort_direction_desc
+    DealsSortDirection.Ascending -> Res.string.deals_sort_direction_asc
 }
 
 private fun ProductType.labelRes(): StringResource = when (this) {
@@ -922,7 +969,7 @@ private fun DealsContent_Success_Preview() {
             waitlistIds = persistentSetOf("222"),
             stores = previewStores,
             selectedShops = persistentSetOf(16),
-            onSelectSort = {},
+            onSelectSortField = {},
             onLoadMore = {},
             onRetry = {},
             onPeekGame = { _, _, _ -> },
@@ -940,7 +987,7 @@ private fun DealsContent_Loading_Preview() {
         DealsContent(
             data = DealsScreenData(status = DealsScreenData.Status.LOADING),
             waitlistIds = persistentSetOf(),
-            onSelectSort = {},
+            onSelectSortField = {},
             onLoadMore = {},
             onRetry = {},
             onPeekGame = { _, _, _ -> },
@@ -958,7 +1005,7 @@ private fun DealsContent_Empty_Preview() {
         DealsContent(
             data = DealsScreenData(status = DealsScreenData.Status.DATA, deals = persistentListOf()),
             waitlistIds = persistentSetOf(),
-            onSelectSort = {},
+            onSelectSortField = {},
             onLoadMore = {},
             onRetry = {},
             onPeekGame = { _, _, _ -> },

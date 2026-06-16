@@ -21,7 +21,8 @@ import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealFlag
 import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
-import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.DealsSortDirection
+import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
@@ -156,7 +157,7 @@ class ItadSourceImplTest {
     @Test
     fun fetchDeals_query_passes_sort_shops_offset_and_maps_to_domain() = runTest {
         val deals = impl.fetchDeals(
-            DealsQuery(sort = DealsSort.TopDiscount, shopIds = listOf(61, 16), offset = 30, limit = 30)
+            DealsQuery(sortField = DealsSortField.PriceCut, sortDirection = DealsSortDirection.Descending, shopIds = listOf(61, 16), offset = 30, limit = 30)
         )
 
         assertEquals(1, deals.size)
@@ -191,28 +192,38 @@ class ItadSourceImplTest {
 
     @Test
     fun fetchDeals_query_omits_shops_when_no_shop_filter() = runTest {
-        impl.fetchDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, shopIds = emptyList()))
+        impl.fetchDeals(DealsQuery(sortField = DealsSortField.Price, sortDirection = DealsSortDirection.Ascending, shopIds = emptyList()))
 
         assertEquals("/deals/v2", recordedRequests.single().url.encodedPath)
         val request = dealsRequestBody()
-        assertEquals("price", request.sort)
+        assertEquals("price", request.sort) // ascending = bare token
         assertNull(request.shops)
     }
 
     @Test
     fun fetchDeals_query_sends_mature_only_when_opted_in() = runTest {
-        impl.fetchDeals(DealsQuery(sort = DealsSort.Trending, mature = true))
+        impl.fetchDeals(DealsQuery(sortField = DealsSortField.Hottest, sortDirection = DealsSortDirection.Descending, mature = true))
 
         val request = dealsRequestBody()
-        assertEquals("trending", request.sort)
+        assertEquals("-hot", request.sort)
         assertEquals(true, request.mature)
+    }
+
+    @Test
+    fun fetchDeals_composes_descending_and_ascending_tokens_for_hyphenated_fields() = runTest {
+        impl.fetchDeals(DealsQuery(sortField = DealsSortField.MetacriticUser, sortDirection = DealsSortDirection.Descending))
+        assertEquals("-metacritic-user", dealsRequestBody().sort) // descending prefixes a single '-'
+
+        impl.fetchDeals(DealsQuery(sortField = DealsSortField.MetacriticUser, sortDirection = DealsSortDirection.Ascending))
+        assertEquals("metacritic-user", dealsRequestBody().sort) // ascending = bare hyphenated token
     }
 
     @Test
     fun fetchDeals_maps_the_filter_into_the_post_body() = runTest {
         impl.fetchDeals(
             DealsQuery(
-                sort = DealsSort.TopDiscount,
+                sortField = DealsSortField.PriceCut,
+                sortDirection = DealsSortDirection.Descending,
                 filter = DealsFilter(
                     minCutPercent = 75,
                     maxPrice = 10.0,

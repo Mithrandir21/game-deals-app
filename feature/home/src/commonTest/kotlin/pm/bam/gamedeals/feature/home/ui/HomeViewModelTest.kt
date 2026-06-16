@@ -114,7 +114,9 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun composes_sections_into_data_state() = runTest {
-        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+        // Hero + Trending are disjoint slices of one hottest-deals fetch (hero = top LIMIT_HERO,
+        // trending = the rest), so the stub must return more than LIMIT_HERO deals for both to populate.
+        everySuspend { dealsRepository.getDeals(any()) } returns (1..LIMIT_HERO + 3).map { deal("d$it", gameID = "g$it") }
         everySuspend { statsRepository.getMostWaitlisted(any()) } returns listOf(RankedGame("w1", "Waited"))
 
         val vm = createViewModel()
@@ -122,8 +124,9 @@ class HomeViewModelTest : MainDispatcherTest() {
 
         val state = vm.uiState.value
         assertEquals(HomeScreenStatus.DATA, state.status)
-        assertTrue(state.featuredHero.isNotEmpty())
-        assertTrue(state.trending.isNotEmpty())
+        assertEquals(LIMIT_HERO, state.featuredHero.size) // top of the hot list
+        assertEquals(3, state.trending.size) // the remainder
+        assertTrue(state.featuredHero.none { hero -> hero in state.trending }) // disjoint slices
         assertEquals(1, state.mostWaitlisted.size)
         assertNull(state.accountStats) // logged out
     }

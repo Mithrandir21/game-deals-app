@@ -112,7 +112,7 @@ internal class ItadSourceImpl(
             country = regionRepository.getSelectedCountryCode(),
             offset = query.offset,
             limit = query.limit,
-            sort = query.sort.apiValue,
+            sort = query.sortApiValue,
             shops = query.shopIds,
             // Only send `mature=true` to opt in; the default (param omitted) excludes adult titles.
             mature = query.mature.takeIf { it },

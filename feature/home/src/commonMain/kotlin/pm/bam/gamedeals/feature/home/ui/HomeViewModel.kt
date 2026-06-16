@@ -36,7 +36,8 @@ import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsQuery
-import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.DealsSortDirection
+import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -64,10 +65,14 @@ internal const val LIMIT_BUNDLES = 5
 internal const val LIMIT_RELEASES = 5
 
 /**
- * Drives the curated Home feed (epic #219, Phase 5). The feed is a fixed set of independent sections
- * (account stat cards → Featured hero → Trending → Most Waitlisted → Most Collected → New Releases →
+ * Drives the curated Home feed (epic #219, Phase 5). The feed is a fixed set of sections
+ * (account stat cards → Featured hero + Trending → Most Waitlisted → Most Collected → New Releases →
  * Bundles), each loaded **best-effort in parallel**: a section that fails is logged and left empty
  * (hidden) rather than sinking the whole feed. The whole feed reloads on region change.
+ *
+ * The Featured hero and Trending grid are two visual slices of a **single** hottest-deals fetch
+ * (`/deals/v2?sort=-hot`) — the hero takes the top [LIMIT_HERO], Trending the remainder — mirroring how
+ * ITAD's own home promotes the top of one hot list rather than running two differently-sorted queries.
  *
  * The account stat cards are gated on auth state (null when logged out) and tap through to the Waitlist
  * / Collection lists. Every game/deal row opens the game-centric quick-peek sheet via [GamePeekController]
@@ -141,8 +146,7 @@ internal class HomeViewModel(
             uiState.update { it.copy(status = HomeScreenStatus.LOADING) }
             val data = coroutineScope {
                 val accountStats = async { runCatching { loadAccountStats() }.getOrNull() }
-                val featuredHero = async { section { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, limit = LIMIT_HERO)) } }
-                val trending = async { section { dealsRepository.getDeals(DealsQuery(sort = DealsSort.RecentlyAdded, limit = LIMIT_TRENDING)) } }
+                val hotDeals = async { section { dealsRepository.getDeals(DealsQuery(sortField = DealsSortField.Hottest, sortDirection = DealsSortDirection.Descending, limit = LIMIT_HERO + LIMIT_TRENDING)) } }
                 val mostWaitlisted = async { section { statsRepository.getMostWaitlisted(LIMIT_STATS) } }
                 val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
                 val releases = async { section { loadReleases() } }
@@ -154,11 +158,12 @@ internal class HomeViewModel(
                 val mostCollectedRaw = mostCollected.await()
                 val prices = loadGamePrices(mostWaitlistedRaw + mostCollectedRaw)
 
+                val hot = hotDeals.await()
                 HomeScreenData(
                     status = HomeScreenStatus.DATA,
                     accountStats = accountStats.await(),
-                    featuredHero = featuredHero.await(),
-                    trending = trending.await(),
+                    featuredHero = hot.take(LIMIT_HERO).toImmutableList(),
+                    trending = hot.drop(LIMIT_HERO).toImmutableList(),
                     mostWaitlisted = enrichRanked(mostWaitlistedRaw, prices),
                     mostCollected = enrichRanked(mostCollectedRaw, prices),
                     releases = releases.await(),

@@ -27,7 +27,8 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
-import pm.bam.gamedeals.domain.models.DealsSort
+import pm.bam.gamedeals.domain.models.DealsSortDirection
+import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -120,8 +121,8 @@ class DealsViewModelTest : MainDispatcherTest() {
     fun load_next_page_appends_until_short_page() = runTest {
         val fullPage = List(DealsQuery.DEALS_PAGE_SIZE) { deal("a$it", gameID = "a$it") }
         val secondPage = listOf(deal("b1", gameID = "b1"))
-        everySuspend { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, offset = 0)) } returns fullPage
-        everySuspend { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, offset = DealsQuery.DEALS_PAGE_SIZE)) } returns secondPage
+        everySuspend { dealsRepository.getDeals(DealsQuery(offset = 0)) } returns fullPage // default sort = Hottest/Descending
+        everySuspend { dealsRepository.getDeals(DealsQuery(offset = DealsQuery.DEALS_PAGE_SIZE)) } returns secondPage
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -136,17 +137,40 @@ class DealsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun setSort_reloads_from_offset_zero_with_new_sort() = runTest {
+    fun setSortField_reloads_from_offset_zero_and_resets_direction_to_field_default() = runTest {
         everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
 
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.setSort(DealsSort.PriceLowToHigh)
+        // Price's default direction is Ascending, so selecting it also flips the direction from the
+        // initial Hottest/Descending — mirroring the website's behaviour when a field is picked.
+        vm.setSortField(DealsSortField.Price)
         advanceUntilIdle()
 
-        assertEquals(DealsSort.PriceLowToHigh, vm.uiState.value.sort)
-        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.PriceLowToHigh, offset = 0)) }
+        assertEquals(DealsSortField.Price, vm.uiState.value.sortField)
+        assertEquals(DealsSortDirection.Ascending, vm.uiState.value.sortDirection)
+        verifySuspend(exactly(1)) {
+            dealsRepository.getDeals(DealsQuery(sortField = DealsSortField.Price, sortDirection = DealsSortDirection.Ascending, offset = 0))
+        }
+    }
+
+    @Test
+    fun setSortDirection_reloads_from_offset_zero_keeping_the_current_field() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Flip the initial Hottest/Descending to ascending without changing the field.
+        vm.setSortDirection(DealsSortDirection.Ascending)
+        advanceUntilIdle()
+
+        assertEquals(DealsSortField.Hottest, vm.uiState.value.sortField)
+        assertEquals(DealsSortDirection.Ascending, vm.uiState.value.sortDirection)
+        verifySuspend(exactly(1)) {
+            dealsRepository.getDeals(DealsQuery(sortField = DealsSortField.Hottest, sortDirection = DealsSortDirection.Ascending, offset = 0))
+        }
     }
 
     @Test
@@ -160,7 +184,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(setOf(61), vm.uiState.value.shopIds)
-        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, shopIds = listOf(61), offset = 0)) }
+        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(shopIds = listOf(61), offset = 0)) }
     }
 
     @Test
@@ -191,7 +215,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.mature)
-        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, mature = true, offset = 0)) }
+        verifySuspend(exactly(1)) { dealsRepository.getDeals(DealsQuery(mature = true, offset = 0)) }
     }
 
     @Test
@@ -208,7 +232,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         assertEquals(expectedFilter, dealsFilterFlow.value) // persisted via SettingsRepository
         assertEquals(expectedFilter, vm.uiState.value.filter) // reload carried the new filter
         verifySuspend(exactly(1)) {
-            dealsRepository.getDeals(DealsQuery(sort = DealsSort.TopDiscount, filter = expectedFilter, offset = 0))
+            dealsRepository.getDeals(DealsQuery(filter = expectedFilter, offset = 0))
         }
     }
 
