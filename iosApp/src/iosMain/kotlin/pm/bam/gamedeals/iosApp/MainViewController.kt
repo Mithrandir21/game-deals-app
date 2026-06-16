@@ -11,7 +11,6 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
@@ -51,6 +50,7 @@ import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
+import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
@@ -178,13 +178,16 @@ private fun AppNavHost() {
         ) {
         homeScreen(
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
-            goToGiveaway = { navigateTopLevel(Destination.Giveaways) },
+            goToGameByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
+            goToWaitlist = { navController.navigate(Destination.WaitlistList) },
+            goToCollection = { navController.navigate(Destination.CollectionList) },
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
         dealsScreen(
             goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         accountScreen(
             navController = navController,
@@ -203,6 +206,11 @@ private fun AppNavHost() {
         giveawaysScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToGiveawayDetail = { giveawayId -> navController.navigate(Destination.GiveawayDetail(giveawayId)) },
+        )
+        giveawayDetailScreen(
+            navController = navController,
+            goToWeb = { url, _ -> uriHandler.openUri(url) },
         )
         bundlesScreen(
             navController = navController,
@@ -211,10 +219,12 @@ private fun AppNavHost() {
         bundleDetailScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         storeScreen(
             navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         webViewScreen(
             onBack = { navController.popBackStack() },
