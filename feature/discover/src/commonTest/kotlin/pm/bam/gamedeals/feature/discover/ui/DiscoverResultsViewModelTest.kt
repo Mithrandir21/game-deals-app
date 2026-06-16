@@ -23,6 +23,7 @@ import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
+import pm.bam.gamedeals.domain.repositories.discovery.DiscoveryPage
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -63,9 +64,9 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
         )
 
     @Test
-    fun first_page_loads_into_data_with_endReached_on_short_page() = runTest {
+    fun first_page_loads_into_data_with_endReached_from_the_page() = runTest {
         everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } returns
-            listOf(result(1L), result(2L))
+            DiscoveryPage(results = listOf(result(1L), result(2L)), nextOffset = 2, endReached = true)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -73,12 +74,13 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
         val state = vm.uiState.value
         assertEquals(ResultsScreenData.Status.DATA, state.status)
         assertEquals(2, state.results.size)
-        assertTrue(state.endReached, "A page shorter than DISCOVERY_PAGE_SIZE is the final page")
+        assertTrue(state.endReached)
     }
 
     @Test
     fun empty_first_page_surfaces_empty_status() = runTest {
-        everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } returns emptyList()
+        everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } returns
+            DiscoveryPage(results = emptyList(), nextOffset = 30, endReached = true)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -87,11 +89,12 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun load_more_appends_next_page_using_running_offset() = runTest {
+    fun load_more_appends_next_page_resuming_from_the_pages_igdb_cursor() = runTest {
         val full = List(DISCOVERY_PAGE_SIZE) { result(it.toLong()) }
-        // The short second page is only returned at offset == size of the first page, proving the offset.
+        // Page 1 reports nextOffset = 30 (not endReached); the VM must resume the next page from 30.
         everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } calls { (_: IgdbTagFilter, offset: Int, _: Int) ->
-            if (offset == 0) full else listOf(result(999L))
+            if (offset == 0) DiscoveryPage(full, nextOffset = 30, endReached = false)
+            else DiscoveryPage(listOf(result(999L)), nextOffset = 31, endReached = true)
         }
 
         val vm = createViewModel()
@@ -103,11 +106,15 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
 
         assertEquals(DISCOVERY_PAGE_SIZE + 1, vm.uiState.value.results.size)
         assertTrue(vm.uiState.value.endReached)
+        verifySuspend(exactly(1)) {
+            tagDiscoveryRepository.discover(IgdbTagFilter(genreIds = persistentListOf(12L)), 30, DISCOVERY_PAGE_SIZE)
+        }
     }
 
     @Test
     fun decodes_filter_from_route_args_and_queries_with_it() = runTest {
-        everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } returns emptyList()
+        everySuspend { tagDiscoveryRepository.discover(any(), any(), any()) } returns
+            DiscoveryPage(results = emptyList(), nextOffset = 0, endReached = true)
 
         createViewModel(mapOf("genreIds" to "12,5", "keywordIds" to "270"))
         advanceUntilIdle()
@@ -134,9 +141,9 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     private fun result(id: Long): TagDiscoveryResult =
         TagDiscoveryResult(
             igdbId = id,
+            gameId = "itad-$id",
             title = "Game $id",
             coverImageUrl = null,
-            steamAppId = null,
-            pricing = TagDiscoveryResult.Pricing.Unpriced,
+            price = null,
         )
 }

@@ -28,7 +28,6 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
-import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -95,6 +94,10 @@ internal class DiscoverResultsViewModel(
 
     private var appendJob: Job? = null
 
+    // IGDB-space cursor for the next page. Tracked here (not derived from results.size) because
+    // untracked / Steam-only games are filtered out, so results.size != IGDB games scanned.
+    private var nextOffset: Int = 0
+
     init {
         loadFirstPage()
     }
@@ -105,11 +108,12 @@ internal class DiscoverResultsViewModel(
             uiState.update { ResultsScreenData(status = ResultsScreenData.Status.LOADING) }
             try {
                 val page = tagDiscoveryRepository.discover(filter, offset = 0)
+                nextOffset = page.nextOffset
                 uiState.update {
                     ResultsScreenData(
-                        status = if (page.isEmpty()) ResultsScreenData.Status.EMPTY else ResultsScreenData.Status.DATA,
-                        results = page.toImmutableList(),
-                        endReached = page.size < DISCOVERY_PAGE_SIZE,
+                        status = if (page.results.isEmpty()) ResultsScreenData.Status.EMPTY else ResultsScreenData.Status.DATA,
+                        results = page.results.toImmutableList(),
+                        endReached = page.endReached,
                     )
                 }
             } catch (c: CancellationException) {
@@ -128,12 +132,13 @@ internal class DiscoverResultsViewModel(
         appendJob = viewModelScope.launch {
             uiState.update { it.copy(appending = true) }
             try {
-                val page = tagDiscoveryRepository.discover(filter, offset = current.results.size)
+                val page = tagDiscoveryRepository.discover(filter, offset = nextOffset)
+                nextOffset = page.nextOffset
                 uiState.update { state ->
                     state.copy(
-                        results = (state.results + page).toImmutableList(),
+                        results = (state.results + page.results).toImmutableList(),
                         appending = false,
-                        endReached = page.size < DISCOVERY_PAGE_SIZE,
+                        endReached = page.endReached,
                     )
                 }
             } catch (c: CancellationException) {

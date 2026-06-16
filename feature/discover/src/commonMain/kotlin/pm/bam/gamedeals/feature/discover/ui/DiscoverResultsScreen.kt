@@ -54,7 +54,6 @@ import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_em
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_error
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_load_more_error
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_no_price
-import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_open_steam
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_retry
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_row_description
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_title
@@ -102,15 +101,8 @@ internal fun DiscoverResultsScreen(
             onLoadMore = { viewModel.loadNextPage() },
             onRetry = { viewModel.retry() },
             onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
-            onResultClick = { result ->
-                // A priced (ITAD-tracked) row opens the shared peek sheet, just like Home/Deals; a
-                // Steam-only row links out; an untracked row is inert.
-                when (val pricing = result.pricing) {
-                    is TagDiscoveryResult.Pricing.Priced -> viewModel.peekGame(pricing.gameId, result.title, result.coverImageUrl)
-                    is TagDiscoveryResult.Pricing.SteamLinkOut -> goToWeb(pricing.steamUrl)
-                    TagDiscoveryResult.Pricing.Unpriced -> Unit
-                }
-            },
+            // Every result is ITAD-tracked, so a tap opens the shared peek sheet (same as Home/Deals).
+            onResultClick = { result -> viewModel.peekGame(result.gameId, result.title, result.coverImageUrl) },
         )
 
         val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
@@ -154,7 +146,6 @@ private fun DiscoverResultsContent(
     }
 
     val noPriceLabel = stringResource(Res.string.discover_results_no_price)
-    val steamLabel = stringResource(Res.string.discover_results_open_steam)
     val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
     val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
@@ -205,9 +196,7 @@ private fun DiscoverResultsContent(
                         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                     ) {
                         items(items = state.results, key = { it.igdbId }) { result ->
-                            val pricing = result.pricing
-                            val price = (pricing as? TagDiscoveryResult.Pricing.Priced)?.price
-                            val gameId = (pricing as? TagDiscoveryResult.Pricing.Priced)?.gameId
+                            val price = result.price
                             val salePrice = price?.bestPriceDenominated
                             DealListRow(
                                 title = result.title,
@@ -216,22 +205,16 @@ private fun DiscoverResultsContent(
                                 imageUrl = result.coverImageUrl,
                                 salePrice = salePrice,
                                 regularPrice = price?.bestRegularDenominated,
-                                // No current deal → neutral chip; Steam-only → "Open on Steam"; unpriced → bare row.
-                                neutralChip = when {
-                                    salePrice != null -> null
-                                    pricing is TagDiscoveryResult.Pricing.SteamLinkOut -> steamLabel
-                                    pricing is TagDiscoveryResult.Pricing.Priced -> noPriceLabel
-                                    else -> null
-                                },
+                                // Tracked on ITAD but no current deal → a neutral "No current deal" chip.
+                                neutralChip = if (salePrice == null) noPriceLabel else null,
                                 discountPercent = price?.bestCutPercent ?: 0,
                                 hasVoucher = price?.bestHasVoucher ?: false,
                                 isNewHistoricalLow = price?.bestIsNewHistoricalLow ?: false,
                                 isStoreLow = price?.bestIsStoreLow ?: false,
                                 storeName = price?.bestShopName,
                                 storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
-                                isWaitlisted = gameId != null && gameId in waitlistIds,
-                                // Only ITAD-tracked (Priced) games can be waitlisted — others have no game id.
-                                onToggleWaitlist = gameId?.let { id -> { onToggleWaitlist(id) } },
+                                isWaitlisted = result.gameId in waitlistIds,
+                                onToggleWaitlist = { onToggleWaitlist(result.gameId) },
                                 addToWaitlistContentDescription = addToWaitlistCd,
                                 removeFromWaitlistContentDescription = removeFromWaitlistCd,
                             )
@@ -257,24 +240,17 @@ private fun DiscoverResultsContent_Data_Preview() {
                 status = ResultsScreenData.Status.DATA,
                 results = persistentListOf(
                     TagDiscoveryResult(
-                        igdbId = 1L, title = "Hades", coverImageUrl = null, steamAppId = 1145360,
-                        pricing = TagDiscoveryResult.Pricing.Priced(
-                            "itad-1",
-                            BundleGamePrice(
-                                gameId = "itad-1", bestShopName = "Steam", bestPriceValue = 12.49,
-                                bestPriceDenominated = "$12.49", bestCutPercent = 50,
-                                bestRegularDenominated = "$24.99",
-                                historicalLowValue = 9.99, historicalLowDenominated = "$9.99",
-                            ),
+                        igdbId = 1L, gameId = "itad-1", title = "Hades", coverImageUrl = null,
+                        price = BundleGamePrice(
+                            gameId = "itad-1", bestShopName = "Steam", bestPriceValue = 12.49,
+                            bestPriceDenominated = "$12.49", bestCutPercent = 50,
+                            bestRegularDenominated = "$24.99",
+                            historicalLowValue = 9.99, historicalLowDenominated = "$9.99",
                         ),
                     ),
+                    // Tracked on ITAD but no current deal → "No current deal" chip.
                     TagDiscoveryResult(
-                        igdbId = 2L, title = "Some Console Game", coverImageUrl = null, steamAppId = null,
-                        pricing = TagDiscoveryResult.Pricing.Unpriced,
-                    ),
-                    TagDiscoveryResult(
-                        igdbId = 3L, title = "Steam-only Game", coverImageUrl = null, steamAppId = 42,
-                        pricing = TagDiscoveryResult.Pricing.SteamLinkOut("https://store.steampowered.com/app/42"),
+                        igdbId = 2L, gameId = "itad-2", title = "Tracked, No Deal", coverImageUrl = null, price = null,
                     ),
                 ),
             ),

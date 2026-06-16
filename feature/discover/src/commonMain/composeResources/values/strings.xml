@@ -19,7 +19,6 @@
     <string name="discover_results_error">Couldn\'t load results.</string>
     <string name="discover_results_retry">Retry</string>
     <string name="discover_results_load_more_error">Couldn\'t load more.</string>
-    <string name="discover_results_open_steam">Open on Steam</string>
     <string name="discover_results_no_price">No current deal</string>
     <string name="discover_results_row_description">%1$s</string>
 </resources>

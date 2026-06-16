@@ -18,13 +18,13 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbTag
 import pm.bam.gamedeals.domain.models.IgdbTagDimension
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
-import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TagDiscoveryRepositoryTest {
@@ -42,17 +42,18 @@ class TagDiscoveryRepositoryTest {
     private val filter = IgdbTagFilter(genreIds = persistentListOf(12L))
 
     @Test
-    fun discover_empty_filter_returns_empty_and_never_queries_igdb() = runTest {
-        val result = impl.discover(IgdbTagFilter(), offset = 0)
+    fun discover_empty_filter_returns_empty_page_without_querying_igdb() = runTest {
+        val page = impl.discover(IgdbTagFilter(), offset = 0)
 
-        assertTrue(result.isEmpty())
+        assertTrue(page.results.isEmpty())
+        assertTrue(page.endReached)
         verifySuspend(exactly(0)) { igdbRepository.fetchGamesByTags(IgdbTagFilter(), 30, 0) }
     }
 
     @Test
-    fun discover_resolves_only_page_games_batches_one_price_call_and_classifies_each_row() = runTest {
-        // A: on ITAD + has a current deal → Priced(price). B: on ITAD, no current deal → Priced(null).
-        // C: has Steam id but not on ITAD → SteamLinkOut. D: no Steam id at all → Unpriced.
+    fun discover_drops_untracked_and_steam_only_keeping_only_tracked_games() = runTest {
+        // Alpha: tracked + current deal. Beta: tracked, no current deal. Gamma: Steam id but not on
+        // ITAD (Steam-only → dropped). Delta: no Steam id (untracked → dropped, never looked up).
         val games = listOf(
             igdbGame(1L, "Alpha", steamAppId = 10, coverImageId = "ac"),
             igdbGame(2L, "Beta", steamAppId = 20),
@@ -65,37 +66,70 @@ class TagDiscoveryRepositoryTest {
         everySuspend { gamesRepository.findGameIdBySteamAppId(30, "Gamma") } returns null
         everySuspend { gamesRepository.getGamePrices(listOf("itad-A", "itad-B")) } returns listOf(priceA)
 
-        val result = impl.discover(filter, offset = 0)
+        val page = impl.discover(filter, offset = 0)
 
-        assertEquals(4, result.size)
-        assertEquals(TagDiscoveryResult.Pricing.Priced("itad-A", priceA), result[0].pricing)
-        assertEquals("https://images.igdb.com/igdb/image/upload/t_cover_big/ac.jpg", result[0].coverImageUrl)
-        assertEquals(TagDiscoveryResult.Pricing.Priced("itad-B", null), result[1].pricing)
-        assertEquals(TagDiscoveryResult.Pricing.SteamLinkOut("https://store.steampowered.com/app/30"), result[2].pricing)
-        assertEquals(TagDiscoveryResult.Pricing.Unpriced, result[3].pricing)
-        // Delta has no Steam id, so it must never trigger a lookup; pricing is one batched call.
+        // Only the two tracked games survive; the page reports the IGDB cursor + endReached (4 < 30).
+        assertEquals(2, page.results.size)
+        assertEquals("itad-A", page.results[0].gameId)
+        assertEquals(priceA, page.results[0].price)
+        assertEquals("https://images.igdb.com/igdb/image/upload/t_cover_big/ac.jpg", page.results[0].coverImageUrl)
+        assertEquals("itad-B", page.results[1].gameId)
+        assertEquals(null, page.results[1].price, "Tracked but no current deal → null price")
+        assertEquals(4, page.nextOffset)
+        assertTrue(page.endReached)
+        // Untracked Delta must never trigger a lookup; only the tracked ids reach the single price call.
         verifySuspend(exactly(0)) { gamesRepository.findGameIdBySteamAppId(any(), "Delta") }
         verifySuspend(exactly(1)) { gamesRepository.getGamePrices(listOf("itad-A", "itad-B")) }
     }
 
     @Test
-    fun discover_passes_offset_and_page_size_through_to_igdb() = runTest {
-        everySuspend { igdbRepository.fetchGamesByTags(filter, 15, 60) } returns emptyList()
+    fun discover_refills_from_the_next_igdb_page_when_filtering_thins_a_page() = runTest {
+        // pageSize 2. Page 1 yields 1 tracked (the other is untracked); since the IGDB page was full,
+        // discover pulls page 2 (1 more tracked) to fill, and resumes the cursor at IGDB offset 4.
+        everySuspend { igdbRepository.fetchGamesByTags(filter, 2, 0) } returns
+            listOf(igdbGame(1L, "Alpha", steamAppId = 10), igdbGame(2L, "Delta", steamAppId = null))
+        everySuspend { igdbRepository.fetchGamesByTags(filter, 2, 2) } returns
+            listOf(igdbGame(3L, "Gamma", steamAppId = 30), igdbGame(4L, "Echo", steamAppId = 40))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(10, "Alpha") } returns "itad-A"
+        everySuspend { gamesRepository.findGameIdBySteamAppId(30, "Gamma") } returns "itad-C"
+        everySuspend { gamesRepository.findGameIdBySteamAppId(40, "Echo") } returns null
+        everySuspend { gamesRepository.getGamePrices(any()) } returns emptyList()
 
-        impl.discover(filter, offset = 60, pageSize = 15)
+        val page = impl.discover(filter, offset = 0, pageSize = 2)
 
-        verifySuspend(exactly(1)) { igdbRepository.fetchGamesByTags(filter, 15, 60) }
+        assertEquals(listOf("itad-A", "itad-C"), page.results.map { it.gameId })
+        assertEquals(4, page.nextOffset)
+        assertFalse(page.endReached)
+        verifySuspend(exactly(1)) { igdbRepository.fetchGamesByTags(filter, 2, 0) }
+        verifySuspend(exactly(1)) { igdbRepository.fetchGamesByTags(filter, 2, 2) }
     }
 
     @Test
-    fun discover_skips_pricing_entirely_when_no_page_game_has_a_steam_id() = runTest {
+    fun discover_skips_pricing_when_no_page_game_resolves_to_itad() = runTest {
+        // Single short page of untracked games → endReached, no lookups, no price call.
         everySuspend { igdbRepository.fetchGamesByTags(filter, 30, 0) } returns
             listOf(igdbGame(4L, "Delta", steamAppId = null))
 
-        val result = impl.discover(filter, offset = 0)
+        val page = impl.discover(filter, offset = 0)
 
-        assertEquals(TagDiscoveryResult.Pricing.Unpriced, result.single().pricing)
+        assertTrue(page.results.isEmpty())
+        assertTrue(page.endReached)
         verifySuspend(exactly(0)) { gamesRepository.getGamePrices(any()) }
+    }
+
+    @Test
+    fun discover_caps_the_number_of_igdb_pages_scanned_per_call() = runTest {
+        // Every page is full but yields zero tracked games → discover must stop at the scan cap (5)
+        // rather than looping forever, leaving endReached false so the user can keep paging.
+        everySuspend { igdbRepository.fetchGamesByTags(any(), any(), any()) } returns
+            listOf(igdbGame(1L, "U1", steamAppId = null), igdbGame(2L, "U2", steamAppId = null))
+
+        val page = impl.discover(filter, offset = 0, pageSize = 2)
+
+        assertTrue(page.results.isEmpty())
+        assertFalse(page.endReached)
+        assertEquals(10, page.nextOffset, "5 pages × 2 games")
+        verifySuspend(exactly(5)) { igdbRepository.fetchGamesByTags(any(), any(), any()) }
     }
 
     @Test

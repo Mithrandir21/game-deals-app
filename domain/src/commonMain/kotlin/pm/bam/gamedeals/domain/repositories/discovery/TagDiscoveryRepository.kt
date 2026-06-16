@@ -7,6 +7,7 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.IgdbTagEntry
 import pm.bam.gamedeals.domain.db.dao.IgdbTagDao
 import pm.bam.gamedeals.domain.models.BundleGamePrice
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.IgdbTag
 import pm.bam.gamedeals.domain.models.IgdbTagDimension
@@ -22,8 +23,26 @@ import pm.bam.gamedeals.logging.debug
 /** One discovery result page (mirrors the deals feed page size). */
 const val DISCOVERY_PAGE_SIZE = 30
 
+/**
+ * Safety cap on IGDB pages scanned per [TagDiscoveryRepository.discover] call. Since untracked /
+ * Steam-only games are filtered out, a page of IGDB games can yield fewer tracked results; we fetch
+ * further IGDB pages to refill — but bound it so a console-heavy tag query can't scan endlessly.
+ */
+private const val MAX_IGDB_PAGES_PER_DISCOVER = 5
+
 /** Tag vocabulary is near-static, so a long TTL is plenty — a monthly self-heal picks up IGDB changes. */
 internal const val IGDB_TAG_VOCABULARY_TTL_MILLIS = millisInDay * 30
+
+/**
+ * One page of discovery results plus the IGDB cursor to resume from. Because untracked / Steam-only
+ * games are filtered out, the number of [results] no longer matches the number of IGDB games scanned,
+ * so the next page must resume from [nextOffset] (an IGDB-space offset), not from `results.size`.
+ */
+data class DiscoveryPage(
+    val results: List<TagDiscoveryResult>,
+    val nextOffset: Int,
+    val endReached: Boolean,
+)
 
 interface TagDiscoveryRepository {
 
@@ -34,11 +53,12 @@ interface TagDiscoveryRepository {
     suspend fun getTagVocabulary(): List<IgdbTag>
 
     /**
-     * One offset page of priced discovery results for an AND-combined tag [filter]. Returns an empty
-     * list for an empty filter. Pricing is resolved for the visible page only (one ITAD lookup per
-     * game with a Steam app id, then a single batched price query).
+     * One page of **ITAD-tracked** discovery results for an AND-combined tag [filter], starting at
+     * IGDB [offset]. Untracked games (no Steam app id) are dropped before any ITAD lookup; Steam games
+     * ITAD doesn't track are dropped after the (unavoidable) lookup. Further IGDB pages are fetched to
+     * refill up to [pageSize] tracked results (bounded). Returns an empty page for an empty filter.
      */
-    suspend fun discover(filter: IgdbTagFilter, offset: Int, pageSize: Int = DISCOVERY_PAGE_SIZE): List<TagDiscoveryResult>
+    suspend fun discover(filter: IgdbTagFilter, offset: Int, pageSize: Int = DISCOVERY_PAGE_SIZE): DiscoveryPage
 }
 
 internal class TagDiscoveryRepositoryImpl(
@@ -73,52 +93,66 @@ internal class TagDiscoveryRepositoryImpl(
         }
     }
 
-    override suspend fun discover(filter: IgdbTagFilter, offset: Int, pageSize: Int): List<TagDiscoveryResult> = coroutineScope {
-        if (filter.isEmpty()) return@coroutineScope emptyList()
+    override suspend fun discover(filter: IgdbTagFilter, offset: Int, pageSize: Int): DiscoveryPage {
+        if (filter.isEmpty()) return DiscoveryPage(results = emptyList(), nextOffset = offset, endReached = true)
 
-        val games = igdbRepository.fetchGamesByTags(filter, limit = pageSize, offset = offset)
-        debug(logger) { "Tag discovery: ${games.size} IGDB games at offset $offset" }
-        if (games.isEmpty()) return@coroutineScope emptyList()
+        val collected = mutableListOf<TagDiscoveryResult>()
+        var igdbOffset = offset
+        var endReached = false
+        var igdbFetches = 0
 
-        // Resolve ITAD ids for THIS page only — one /games/lookup per game that has a Steam app id, run
-        // concurrently (the ITAD client's own concurrency limiter + 429 retry throttle the fan-out) and
-        // 30-day-cached. Games without a Steam app id skip the lookup entirely.
-        val itadIdByIgdbId: Map<Long, String?> = games
-            .map { game ->
-                async {
-                    game.id to game.steamAppId?.let { gamesRepository.findGameIdBySteamAppId(it, game.name) }
-                }
+        // Filtering can thin a page, so keep pulling IGDB pages until we've collected pageSize tracked
+        // results (or IGDB is exhausted, or we hit the scan cap). nextOffset is the IGDB cursor to resume.
+        while (collected.size < pageSize && !endReached && igdbFetches < MAX_IGDB_PAGES_PER_DISCOVER) {
+            val games = igdbRepository.fetchGamesByTags(filter, limit = pageSize, offset = igdbOffset)
+            igdbFetches++
+            debug(logger) { "Tag discovery: ${games.size} IGDB games at offset $igdbOffset" }
+            if (games.isEmpty()) {
+                endReached = true
+                break
             }
+            igdbOffset += games.size
+            if (games.size < pageSize) endReached = true
+            collected += trackedResults(games)
+        }
+
+        return DiscoveryPage(results = collected, nextOffset = igdbOffset, endReached = endReached)
+    }
+
+    /**
+     * Resolves a batch of IGDB games to ITAD-tracked results, dropping the two unwanted classes as
+     * early as possible:
+     *  - **Untracked** (no Steam app id): dropped *before* any ITAD lookup — they can never resolve.
+     *  - **Steam-only** (has a Steam app id but ITAD doesn't track it): the lookup is the only signal,
+     *    so it's unavoidable, but these are dropped right after it and never reach the price batch.
+     */
+    private suspend fun trackedResults(games: List<IgdbGame>): List<TagDiscoveryResult> = coroutineScope {
+        // Drop untracked games up front — no Steam app id means no possible ITAD lookup.
+        val withSteamId = games.filter { it.steamAppId != null }
+        if (withSteamId.isEmpty()) return@coroutineScope emptyList()
+
+        // Resolve ITAD ids concurrently (ITAD client's limiter + 429 retry throttle; 30-day cached),
+        // keeping only the games that resolve — that drops the Steam-only games before pricing.
+        val tracked: List<Pair<IgdbGame, String>> = withSteamId
+            .map { game -> async { game to gamesRepository.findGameIdBySteamAppId(game.steamAppId!!, game.name) } }
             .awaitAll()
-            .toMap()
+            .mapNotNull { (game, itadId) -> itadId?.let { game to it } }
+        if (tracked.isEmpty()) return@coroutineScope emptyList()
 
-        // Batch-price all resolved ITAD ids in a single /games/prices call.
-        val resolvedIds = itadIdByIgdbId.values.filterNotNull().distinct()
+        // One batched price query for the tracked ids only.
         val priceByItadId: Map<String, BundleGamePrice> =
-            if (resolvedIds.isEmpty()) emptyMap()
-            else gamesRepository.getGamePrices(resolvedIds).associateBy { it.gameId }
+            gamesRepository.getGamePrices(tracked.map { it.second }.distinct()).associateBy { it.gameId }
 
-        games.map { game ->
-            val itadId = itadIdByIgdbId[game.id]
-            val pricing = when {
-                // Tracked on ITAD → in-app Game Page (price may be null when there's no current deal).
-                itadId != null -> TagDiscoveryResult.Pricing.Priced(itadId, priceByItadId[itadId])
-                // Has a Steam app id but ITAD doesn't track it → link out to the Steam store.
-                game.steamAppId != null -> TagDiscoveryResult.Pricing.SteamLinkOut(steamStoreUrl(game.steamAppId))
-                // No Steam app id (console/mobile-only) → shown, nothing to open.
-                else -> TagDiscoveryResult.Pricing.Unpriced
-            }
+        tracked.map { (game, itadId) ->
             TagDiscoveryResult(
                 igdbId = game.id,
+                gameId = itadId,
                 title = game.name,
                 coverImageUrl = game.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) },
-                steamAppId = game.steamAppId,
-                pricing = pricing,
+                price = priceByItadId[itadId],
             )
         }
     }
-
-    private fun steamStoreUrl(steamAppId: Int): String = "https://store.steampowered.com/app/$steamAppId"
 
     private fun IgdbTag.toEntry(expires: Long): IgdbTagEntry =
         IgdbTagEntry(dimension = dimension.name, igdbId = igdbId, name = name, slug = slug, expires = expires)
