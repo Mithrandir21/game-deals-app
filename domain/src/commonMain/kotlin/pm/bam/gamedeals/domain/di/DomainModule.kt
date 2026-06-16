@@ -21,6 +21,8 @@ import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenanceImpl
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
@@ -89,6 +91,8 @@ val domainModule = module {
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
+    // Tag discovery (epic #307): composes IGDB tag search + the ITAD pricing bridge.
+    single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
