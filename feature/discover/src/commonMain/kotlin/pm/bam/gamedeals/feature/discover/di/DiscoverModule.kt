@@ -8,5 +8,5 @@ import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel
 val discoverModule = module {
     viewModel { DiscoverPickerViewModel(get(), get()) }
     // savedStateHandle is supplied by koin-compose-viewmodel.
-    viewModel { DiscoverResultsViewModel(get(), get(), get(), get(), get()) }
+    viewModel { DiscoverResultsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
 }

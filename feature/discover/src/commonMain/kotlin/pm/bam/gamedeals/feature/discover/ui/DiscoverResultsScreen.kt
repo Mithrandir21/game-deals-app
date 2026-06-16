@@ -42,6 +42,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -75,7 +77,10 @@ internal fun DiscoverResultsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val storeIconsByName by viewModel.storeIconsByName.collectAsStateWithLifecycle()
+    val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
+    val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.discover_results_load_more_error)
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
@@ -83,26 +88,45 @@ internal fun DiscoverResultsScreen(
         when (event) {
             DiscoverResultsViewModel.DiscoverResultsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            is DiscoverResultsViewModel.DiscoverResultsUiEvent.ShareDeal -> platformActions.share(event.text)
         }
     }
 
-    DiscoverResultsContent(
-        state = state,
-        waitlistIds = waitlistIds,
-        storeIconsByName = storeIconsByName,
-        snackbarHostState = snackbarHostState,
-        onBack = onBack,
-        onLoadMore = { viewModel.loadNextPage() },
-        onRetry = { viewModel.retry() },
-        onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
-        onResultClick = { result ->
-            when (val pricing = result.pricing) {
-                is TagDiscoveryResult.Pricing.Priced -> goToGame(pricing.gameId)
-                is TagDiscoveryResult.Pricing.SteamLinkOut -> goToWeb(pricing.steamUrl)
-                TagDiscoveryResult.Pricing.Unpriced -> Unit
-            }
-        },
-    )
+    Box(Modifier.fillMaxSize()) {
+        DiscoverResultsContent(
+            state = state,
+            waitlistIds = waitlistIds,
+            storeIconsByName = storeIconsByName,
+            snackbarHostState = snackbarHostState,
+            onBack = onBack,
+            onLoadMore = { viewModel.loadNextPage() },
+            onRetry = { viewModel.retry() },
+            onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+            onResultClick = { result ->
+                // A priced (ITAD-tracked) row opens the shared peek sheet, just like Home/Deals; a
+                // Steam-only row links out; an untracked row is inert.
+                when (val pricing = result.pricing) {
+                    is TagDiscoveryResult.Pricing.Priced -> viewModel.peekGame(pricing.gameId, result.title, result.coverImageUrl)
+                    is TagDiscoveryResult.Pricing.SteamLinkOut -> goToWeb(pricing.steamUrl)
+                    TagDiscoveryResult.Pricing.Unpriced -> Unit
+                }
+            },
+        )
+
+        val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
+        GamePeekSheet(
+            data = gamePeek,
+            isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+            isIgnored = peekGameId?.let { it in ignoredIds } == true,
+            onDismiss = { viewModel.dismissPeek() },
+            onShare = { peekData -> viewModel.onShareClicked(peekData) },
+            onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+            onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
+            goToWeb = { url, _ -> goToWeb(url) },
+            onViewGamePage = { peekData -> goToGame(peekData.gameId) },
+            onRetry = { viewModel.retryPeek() },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

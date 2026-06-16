@@ -21,8 +21,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
@@ -38,18 +41,26 @@ import kotlin.test.assertTrue
 class DiscoverResultsViewModelTest : MainDispatcherTest() {
 
     private val tagDiscoveryRepository: TagDiscoveryRepository = mock(MockMode.autoUnit)
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
         every { observeStores() } returns flowOf(emptyList())
     }
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
+    private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
+        every { observeIgnoredIds() } returns flowOf(persistentSetOf())
+    }
+    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun createViewModel(args: Map<String, Any?> = mapOf("genreIds" to "12")) =
-        DiscoverResultsViewModel(TestingLoggingListener(), tagDiscoveryRepository, storesRepository, waitlistRepository, SavedStateHandle(args))
+        DiscoverResultsViewModel(
+            TestingLoggingListener(), tagDiscoveryRepository, gamesRepository, storesRepository,
+            waitlistRepository, ignoredRepository, dealShareTextBuilder, SavedStateHandle(args),
+        )
 
     @Test
     fun first_page_loads_into_data_with_endReached_on_short_page() = runTest {

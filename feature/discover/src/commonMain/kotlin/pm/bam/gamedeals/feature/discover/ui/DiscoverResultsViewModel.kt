@@ -22,15 +22,21 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.common.ui.deal.GamePeekController
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
+import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.info
 
 /**
  * Drives the tag-discovery results screen (epic #307, Phase 5). Reconstructs the [IgdbTagFilter] from
@@ -43,8 +49,11 @@ import pm.bam.gamedeals.logging.fatal
 internal class DiscoverResultsViewModel(
     private val logger: Logger,
     private val tagDiscoveryRepository: TagDiscoveryRepository,
+    gamesRepository: GamesRepository,
     storesRepository: StoresRepository,
     private val waitlistRepository: WaitlistRepository,
+    private val ignoredRepository: IgnoredRepository,
+    private val dealShareTextBuilder: DealShareTextBuilder,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -56,12 +65,23 @@ internal class DiscoverResultsViewModel(
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
+    /** Games on the user's ignore list — drives the peek sheet's ignore state. */
+    val ignoredIds: StateFlow<ImmutableSet<String>> = ignoredRepository.observeIgnoredIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
     /** Shop name → icon URL, so a priced row can show the store logo like a deal row does. */
     val storeIconsByName: StateFlow<Map<String, String?>> = storesRepository.observeStores()
         .map { stores -> stores.associate { it.storeName to it.iconUrl } }
         .onStart { emit(emptyMap()) }
         .catch { emit(emptyMap()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    // The shared game-centric peek sheet (same as Home/Deals). A priced row carries the gameId +
+    // title + cover the controller needs; the controller fetches deals/stores itself.
+    private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger)
+    val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
 
     val uiState: StateFlow<ResultsScreenData>
         field = MutableStateFlow(ResultsScreenData())
@@ -128,13 +148,47 @@ internal class DiscoverResultsViewModel(
 
     fun retry() = loadFirstPage()
 
-    /** Toggle a game on/off the waitlist from the inline row heart; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the inline row heart or peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
             }
         }
+    }
+
+    /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
+    fun toggleIgnore(gameId: String) {
+        viewModelScope.launch {
+            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Open the game-centric peek sheet for a priced row (it carries the ITAD gameId + title + cover). */
+    fun peekGame(gameId: String, gameName: String, thumb: String?) {
+        gamePeekController.load(viewModelScope, gameId, gameName, thumb)
+    }
+
+    fun dismissPeek() {
+        gamePeekController.dismiss(viewModelScope)
+    }
+
+    fun retryPeek() {
+        gamePeek.value?.let { peek -> peekGame(peek.gameId, peek.gameName, peek.thumb) }
+    }
+
+    fun onShareClicked(data: GamePeekSheetData.Data) {
+        val best = data.bestDeal ?: return
+        val text = dealShareTextBuilder.build(
+            gameTitle = data.gameName,
+            salePriceDenominated = best.deal.priceDenominated,
+            storeName = best.store.storeName,
+            dealUrl = best.deal.url,
+        )
+        info(logger, tag = "discover_deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
+        events.tryEmit(DiscoverResultsUiEvent.ShareDeal(text))
     }
 
     data class ResultsScreenData(
@@ -149,6 +203,7 @@ internal class DiscoverResultsViewModel(
     sealed interface DiscoverResultsUiEvent {
         data object LoadMoreError : DiscoverResultsUiEvent
         data object SignInRequired : DiscoverResultsUiEvent
+        data class ShareDeal(val text: String) : DiscoverResultsUiEvent
     }
 }
 
