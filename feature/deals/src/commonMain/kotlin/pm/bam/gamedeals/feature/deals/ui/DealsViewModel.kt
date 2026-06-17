@@ -69,8 +69,9 @@ private const val SEARCH_MIN_LOADING_MILLIS = 1000L
  *
  * The list reloads from offset 0 whenever the [sort] filter, the shop filter, the [mature] toggle or
  * the user's selected region changes; [loadNextPage] appends the next page until the source returns a
- * short (final) page. The row heart writes to the ITAD waitlist ([WaitlistRepository]) and the row tap
- * opens the shared `DealBottomSheet` via [DealDetailsController] — mirroring the Store screen.
+ * short (final) page. Rows show passive waitlist/collection badges ([WaitlistRepository] /
+ * [CollectionRepository]); a row tap opens the shared game-centric peek sheet (`GamePeekController` /
+ * `GamePeekSheet`), where the waitlist / collection / ignore / share actions live — like Home.
  *
  * Title search (merged from the former Search screen — epic #291 follow-up) is overlaid on the same
  * screen: a non-blank [searchQuery] switches the list to grouped results from

@@ -18,8 +18,7 @@ import pm.bam.gamedeals.logging.fatal
 /**
  * Loads the game-centric peek sheet ([GamePeekSheetData]). Keyed by `gameId`, it reads the game's
  * current deals via [GamesRepository.getGameDetails] (the same source as the unified Game Page), builds
- * the best deal + the other stores, and emits the sheet state. The deal-centric `DealDetailsController`
- * it replaces was keyed by a single deal id + store.
+ * the best deal + the other stores, and emits the sheet state.
  *
  * Shared by Home and Deals. [igdbRepository] is optional and only needed by callers that peek a
  * **title** (Home's "New releases", which carry no game id) via [loadByTitle]; deal/ranked rows already

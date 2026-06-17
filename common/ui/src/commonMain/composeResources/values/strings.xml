@@ -9,11 +9,8 @@
     <string name="game_peek_best_price_at_store">%1$s at %2$s</string>
     <string name="game_peek_other_stores_label">Other stores</string>
     <string name="game_peek_no_deals_label">No deals yet</string>
-    <string name="game_peek_upcoming_label">Upcoming</string>
     <string name="game_peek_store_row_description">%1$s at %2$s</string>
-    <string name="deal_details_view_game_details_label">Game details</string>
     <string name="deal_share_label">Share</string>
-    <string name="deal_share_content_description">Share this deal</string>
 
     <string name="deal_favourite_add_action">Add to waitlist</string>
     <string name="deal_favourite_remove_action">Remove from waitlist</string>
@@ -43,39 +40,23 @@
     <string name="deal_waitlisted_content_suffix">, on your waitlist</string>
     <string name="deal_owned_content_suffix">, in your collection</string>
 
-    <!-- Shown when a logged-out user taps the waitlist heart (epic #219, Phase 3/4 follow-up). -->
+    <!-- Shown when a logged-out user taps a waitlist/collection action (epic #219, Phase 3/4 follow-up). -->
     <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>
 
     <string name="deal_details_game_image">%1$s Game image</string>
-    <string name="deal_details_store_thumbnail">%1$s Store thumbnail</string>
-    <string name="deal_details_cheaper_store_thumbnail">%1$s Cheaper store thumbnail</string>
 
-    <string name="deal_details_title_label">%1$s - %2$s</string>
-    <string name="deal_details_header_description">%1$s - %2$s, %3$s</string>
-    <string name="deal_details_cheapest_yes">Yes</string>
-    <string name="deal_details_cheapest_no">No</string>
-    <string name="deal_details_cheapest_store_label">Cheapest Store: </string>
     <string name="deal_details_cheapest_ever_label">Cheapest Ever: </string>
     <string name="deal_details_cheapest_on_label">%1$s on %2$s</string>
-
-    <string name="deal_details_metacritic_score_label">Metacritic Score: %1$s</string>
-    <string name="deal_details_steam_reviews_label">Steam Reviews: %1$s%</string>
-    <string name="deal_details_release_label">Release: %1$s</string>
-    <string name="deal_details_wiki_label">PCGamingWiki: %1$s</string>
-    <string name="deal_details_steamworks_label_yes">Steamworks: Yes</string>
-    <string name="deal_details_steamworks_label_no">Steamworks: No</string>
 
     <string name="deal_details_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="deal_details_data_loading_error_retry">Retry</string>
 
     <string name="deal_details_loading_indicator">Loading deal details</string>
-    <string name="deal_details_cheaper_store_row_description">Cheaper deal at %1$s: %2$s</string>
 
     <!-- App shell / bottom navigation (epic #219, Phase 0) -->
     <string name="app_shell_title">Game Deals</string>
     <string name="app_shell_search_action">Search</string>
     <string name="app_shell_more_action">More options</string>
-    <string name="app_shell_overflow_settings">Settings</string>
     <string name="app_shell_overflow_stores">Browse by store</string>
     <string name="app_shell_tab_home">Home</string>
     <string name="app_shell_tab_deals">Deals</string>

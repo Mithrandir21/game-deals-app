@@ -88,7 +88,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * The game-centric peek sheet (row-consolidation work): one quick-peek surface opened from every
  * game/deal row across Home and Deals. Shows the game's best current price + the other stores, with
  * waitlist / ignore / share actions and a "View game page" button into the full unified Game Page.
- * Replaces the deal-centric `DealBottomSheet`. Driven by [GamePeekController].
+ * Driven by [GamePeekController].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -49,22 +49,6 @@ kotlin {
                 implementation(libs.coroutines.testing)
             }
         }
-
-        val androidDeviceTest by getting {
-            dependencies {
-                implementation(libs.mockk.android)
-                implementation(libs.androidx.junit)
-                implementation(libs.androidx.runner)
-                implementation(libs.androidx.espresso.core)
-                implementation(libs.androidx.compose.junit4)
-                // ui-test-manifest declares ComponentActivity in the test APK
-                // manifest. Used to live in a `dependencies { debugImplementation(...) }`
-                // block; the new KMP-library plugin is single-variant so there is
-                // no `debug` configuration. Moved into androidDeviceTest where the
-                // manifest is actually needed.
-                implementation(libs.androidx.compose.test)
-            }
-        }
     }
 }
 
