@@ -78,7 +78,9 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
-    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
+    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
+        every { observeCollectionIds() } returns flowOf(persistentSetOf())
+    }
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)

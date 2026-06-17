@@ -37,6 +37,7 @@ import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -58,6 +59,9 @@ class DealsViewModelTest : MainDispatcherTest() {
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
+    }
+    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
+        every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
@@ -88,6 +92,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         storesRepository = storesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         waitlistRepository = waitlistRepository,
+        collectionRepository = collectionRepository,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,

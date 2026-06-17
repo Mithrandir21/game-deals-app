@@ -54,6 +54,7 @@ import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
@@ -83,6 +84,7 @@ internal class DealsViewModel(
     storesRepository: StoresRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
@@ -90,6 +92,11 @@ internal class DealsViewModel(
 ) : ViewModel() {
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    val collectionIds: StateFlow<ImmutableSet<String>> = collectionRepository.observeCollectionIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -320,10 +327,19 @@ internal class DealsViewModel(
         gamePeekController.dismiss(viewModelScope)
     }
 
-    /** Toggle a game on/off the waitlist from an inline row heart or the peek sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(DealsUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
+    fun toggleCollection(gameId: String) {
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(DealsUiEvent.SignInRequired)
             }
         }

@@ -28,6 +28,7 @@ import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
 import pm.bam.gamedeals.testing.MainDispatcherTest
@@ -49,6 +50,9 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
+    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
+        every { observeCollectionIds() } returns flowOf(persistentSetOf())
+    }
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf())
     }
@@ -60,7 +64,7 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     private fun createViewModel(args: Map<String, Any?> = mapOf("genreIds" to "12")) =
         DiscoverResultsViewModel(
             TestingLoggingListener(), tagDiscoveryRepository, gamesRepository, storesRepository,
-            waitlistRepository, ignoredRepository, dealShareTextBuilder, SavedStateHandle(args),
+            waitlistRepository, collectionRepository, ignoredRepository, dealShareTextBuilder, SavedStateHandle(args),
         )
 
     @Test

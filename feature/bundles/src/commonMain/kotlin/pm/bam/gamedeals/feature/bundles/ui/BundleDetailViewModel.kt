@@ -31,6 +31,7 @@ import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.logging.Logger
@@ -51,6 +52,7 @@ internal class BundleDetailViewModel(
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
 ) : ViewModel() {
@@ -60,8 +62,13 @@ internal class BundleDetailViewModel(
     val uiState: StateFlow<BundleDetailScreenData>
         field = MutableStateFlow<BundleDetailScreenData>(BundleDetailScreenData.Loading)
 
-    /** Games on the user's waitlist / ignore list — drive the peek sheet's heart and ignore toggles. */
+    /** Games on the user's waitlist / collection / ignore list — drive the peek sheet's toggles. */
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    val collectionIds: StateFlow<ImmutableSet<String>> = collectionRepository.observeCollectionIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -93,10 +100,19 @@ internal class BundleDetailViewModel(
 
     fun dismissPeek() = gamePeekController.dismiss(viewModelScope)
 
-    /** Toggle a game on/off the waitlist from the peek sheet's heart; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(BundleDetailUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
+    fun toggleCollection(gameId: String) {
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(BundleDetailUiEvent.SignInRequired)
             }
         }

@@ -23,20 +23,23 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
+import pm.bam.gamedeals.common.ui.deal.StoreDealPair
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
-import pm.bam.gamedeals.testing.fixtures.dealDetails
-import pm.bam.gamedeals.testing.fixtures.gameInfo
+import pm.bam.gamedeals.testing.fixtures.gameDetails
 import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
@@ -51,9 +54,13 @@ class StoreViewModelTest : MainDispatcherTest() {
 
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
+    private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
+    }
+    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
+        every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
@@ -70,8 +77,10 @@ class StoreViewModelTest : MainDispatcherTest() {
         logger = TestingLoggingListener(),
         dealsRepository = dealsRepository,
         storesRepository = storesRepository,
+        gamesRepository = gamesRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         waitlistRepository = waitlistRepository,
+        collectionRepository = collectionRepository,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
     )
@@ -133,21 +142,11 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun toggleWaitlistFromDeal_delegates_to_repository_with_game_id() = runTest {
+    fun toggleWaitlist_delegates_to_repository_with_game_id() = runTest {
         val viewModel = createViewModel(storeId = 1)
-        val data = DealBottomSheetData.DealDetailsData(
-            store = store(),
-            gameId = "42",
-            gameName = "Halo",
-            dealId = "deal-1",
-            gameSalesPriceDenominated = "$9.99",
-            gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
-            cheaperStores = persistentListOf(),
-            cheapestPrice = null,
-        )
         everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.UPDATED
 
-        viewModel.toggleWaitlistFromDeal(data)
+        viewModel.toggleWaitlist("42")
         runCurrent()
 
         verifySuspend(exactly(1)) {
@@ -156,23 +155,13 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun toggleWaitlistFromDeal_when_logged_out_emits_SignInRequired() = runTest {
+    fun toggleWaitlist_when_logged_out_emits_SignInRequired() = runTest {
         val viewModel = createViewModel(storeId = 1)
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
-        val data = DealBottomSheetData.DealDetailsData(
-            store = store(),
-            gameId = "42",
-            gameName = "Halo",
-            dealId = "deal-1",
-            gameSalesPriceDenominated = "$9.99",
-            gameInfo = gameInfo(gameID = "42", thumb = "thumb-42"),
-            cheaperStores = persistentListOf(),
-            cheapestPrice = null,
-        )
         everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.NOT_LOGGED_IN
 
-        viewModel.toggleWaitlistFromDeal(data)
+        viewModel.toggleWaitlist("42")
         runCurrent()
 
         assertEquals(1, events.size)
@@ -208,21 +197,31 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun onShareDealClicked_emits_ShareDeal_event_with_built_text() = runTest {
+    fun onShareClicked_emits_ShareDeal_event_with_built_text() = runTest {
         every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
 
         val viewModel = createViewModel(storeId = 1)
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
 
-        val data = DealBottomSheetData.DealDetailsLoading(
-            store = store(storeName = "Steam"),
+        val data = GamePeekSheetData.Data(
             gameId = "42",
             gameName = "Halo",
-            dealId = "deal-1",
-            dealUrl = "https://deal-url",
-            gameSalesPriceDenominated = "$9.99",
+            thumb = "thumb-42",
+            bestDeal = StoreDealPair(
+                store = store(storeName = "Steam"),
+                deal = GameDetails.GameDeal(
+                    storeID = 1,
+                    dealID = "deal-1",
+                    priceValue = 9.99,
+                    priceDenominated = "$9.99",
+                    retailPriceValue = 19.99,
+                    retailPriceDenominated = "$19.99",
+                    savings = 50,
+                    url = "https://deal-url",
+                ),
+            ),
         )
-        viewModel.onShareDealClicked(data)
+        viewModel.onShareClicked(data)
         runCurrent()
 
         assertEquals(1, events.size)
@@ -352,31 +351,23 @@ class StoreViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun loadDealDetails_then_dismiss_round_trip() = runTest {
+    fun peekGame_then_dismiss_round_trip() = runTest {
         everySuspend { storesRepository.getStore(any()) } returns store(storeID = 1)
-        everySuspend { dealsRepository.getDeal(any()) } returns dealDetails()
+        everySuspend { gamesRepository.getGameDetails(any()) } returns gameDetails()
 
         val viewModel = createViewModel(storeId = 1)
-        val emissions = viewModel.dealDetails.observeEmissions(this.backgroundScope, testDispatcher)
+        val emissions = viewModel.gamePeek.observeEmissions(this.backgroundScope, testDispatcher)
 
         assertNull(emissions.last())
 
-        viewModel.loadDealDetails(
-            dealId = "deal-1",
-            dealStoreId = 1,
-            dealGameId = "42",
-            dealTitle = "Halo",
-            dealPriceDenominated = "$9.99",
-            dealUrl = "https://deal-url",
-        )
+        viewModel.peekGame(gameId = "42", gameName = "Halo", thumb = "thumb-42")
         advanceUntilIdle()
 
         val loaded = assertNotNull(emissions.last())
-        assertIs<DealBottomSheetData.DealDetailsData>(loaded)
+        assertIs<GamePeekSheetData.Data>(loaded)
         assertEquals("42", loaded.gameId)
-        assertEquals("Halo", loaded.gameName)
 
-        viewModel.dismissDealDetails()
+        viewModel.dismissPeek()
         advanceUntilIdle()
 
         assertNull(emissions.last())

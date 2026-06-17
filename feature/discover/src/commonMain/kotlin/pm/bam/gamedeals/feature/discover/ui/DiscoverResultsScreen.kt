@@ -76,6 +76,7 @@ internal fun DiscoverResultsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val storeIconsByName by viewModel.storeIconsByName.collectAsStateWithLifecycle()
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
@@ -95,12 +96,12 @@ internal fun DiscoverResultsScreen(
         DiscoverResultsContent(
             state = state,
             waitlistIds = waitlistIds,
+            collectionIds = collectionIds,
             storeIconsByName = storeIconsByName,
             snackbarHostState = snackbarHostState,
             onBack = onBack,
             onLoadMore = { viewModel.loadNextPage() },
             onRetry = { viewModel.retry() },
-            onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
             // Every result is ITAD-tracked, so a tap opens the shared peek sheet (same as Home/Deals).
             onResultClick = { result -> viewModel.peekGame(result.gameId, result.title, result.coverImageUrl) },
         )
@@ -109,10 +110,12 @@ internal fun DiscoverResultsScreen(
         GamePeekSheet(
             data = gamePeek,
             isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+            isCollected = peekGameId?.let { it in collectionIds } == true,
             isIgnored = peekGameId?.let { it in ignoredIds } == true,
             onDismiss = { viewModel.dismissPeek() },
             onShare = { peekData -> viewModel.onShareClicked(peekData) },
             onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+            onToggleCollection = { gameId -> viewModel.toggleCollection(gameId) },
             onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
             goToWeb = { url, _ -> goToWeb(url) },
             onViewGamePage = { peekData -> goToGame(peekData.gameId) },
@@ -126,12 +129,12 @@ internal fun DiscoverResultsScreen(
 private fun DiscoverResultsContent(
     state: ResultsScreenData,
     waitlistIds: ImmutableSet<String> = persistentSetOf(),
+    collectionIds: ImmutableSet<String> = persistentSetOf(),
     storeIconsByName: Map<String, String?> = emptyMap(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onToggleWaitlist: (gameId: String) -> Unit = {},
     onResultClick: (TagDiscoveryResult) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -146,8 +149,6 @@ private fun DiscoverResultsContent(
     }
 
     val noPriceLabel = stringResource(Res.string.discover_results_no_price)
-    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
-    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -214,9 +215,7 @@ private fun DiscoverResultsContent(
                                 storeName = price?.bestShopName,
                                 storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
                                 isWaitlisted = result.gameId in waitlistIds,
-                                onToggleWaitlist = { onToggleWaitlist(result.gameId) },
-                                addToWaitlistContentDescription = addToWaitlistCd,
-                                removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                                isCollected = result.gameId in collectionIds,
                             )
                         }
                         if (state.appending) {

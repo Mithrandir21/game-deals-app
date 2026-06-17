@@ -34,6 +34,7 @@ import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -69,6 +70,9 @@ class GamePageViewModelTest : MainDispatcherTest() {
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeIsWaitlisted(any()) } returns flowOf(false)
     }
+    private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
+        every { observeIsCollected(any()) } returns flowOf(false)
+    }
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIsIgnored(any()) } returns flowOf(false)
     }
@@ -87,6 +91,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         igdbRepository = igdbRepository,
         dealShareTextBuilder = dealShareTextBuilder,
         waitlistRepository = waitlistRepository,
+        collectionRepository = collectionRepository,
         ignoredRepository = ignoredRepository,
         notesRepository = notesRepository,
         faviconResolver = FaviconResolverImpl(),

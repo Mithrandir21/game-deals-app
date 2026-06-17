@@ -28,15 +28,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
-import pm.bam.gamedeals.common.ui.deal.DealDetailsController
+import pm.bam.gamedeals.common.ui.deal.GamePeekController
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
@@ -47,13 +49,20 @@ internal class StoreViewModel(
     private val logger: Logger,
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository,
+    private val gamesRepository: GamesRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
 ) : ViewModel() {
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    val collectionIds: StateFlow<ImmutableSet<String>> = collectionRepository.observeCollectionIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -72,8 +81,10 @@ internal class StoreViewModel(
     // `flatMapLatest` cancels the in-flight inner flow before relaunching it.
     private val retryTrigger = MutableStateFlow(0)
 
-    private val dealDetailsController = DealDetailsController(dealsRepository, storesRepository, logger)
-    val dealDetails: StateFlow<DealBottomSheetData?> = dealDetailsController.dealDetails
+    // The shared game-centric peek sheet (same as Home/Deals/Discover). A deal row carries the
+    // ITAD gameId + title + thumb; the controller fetches the best deal + other stores itself.
+    private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger)
+    val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
 
     val events: SharedFlow<StoreUiEvent>
         field = MutableSharedFlow<StoreUiEvent>(
@@ -133,15 +144,12 @@ internal class StoreViewModel(
         retryTrigger.update { it + 1 }
     }
 
-    fun loadDealDetails(dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) {
-        dealDetailsController.load(viewModelScope, dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl)
+    /** Open the game-centric peek sheet for a deal row (it carries the ITAD gameId + title + thumb). */
+    fun peekGame(gameId: String, gameName: String, thumb: String?) {
+        gamePeekController.load(viewModelScope, gameId, gameName, thumb)
     }
 
-    fun toggleWaitlistFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleWaitlist(data.gameId)
-
-    fun toggleIgnoreFromDeal(data: DealBottomSheetData.DealDetailsData) = toggleIgnore(data.gameId)
-
-    /** Toggle a game on/off the ignore list from the deal sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
         viewModelScope.launch {
             if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -150,7 +158,7 @@ internal class StoreViewModel(
         }
     }
 
-    /** Toggle a game on/off the waitlist from an inline row heart; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
@@ -159,18 +167,32 @@ internal class StoreViewModel(
         }
     }
 
-    fun dismissDealDetails() {
-        dealDetailsController.dismiss(viewModelScope)
+    /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
+    fun toggleCollection(gameId: String) {
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(StoreUiEvent.SignInRequired)
+            }
+        }
     }
 
-    fun onShareDealClicked(data: DealBottomSheetData) {
+    fun dismissPeek() {
+        gamePeekController.dismiss(viewModelScope)
+    }
+
+    fun retryPeek() {
+        gamePeek.value?.let { peek -> peekGame(peek.gameId, peek.gameName, peek.thumb) }
+    }
+
+    fun onShareClicked(data: GamePeekSheetData.Data) {
+        val best = data.bestDeal ?: return
         val text = dealShareTextBuilder.build(
             gameTitle = data.gameName,
-            salePriceDenominated = data.gameSalesPriceDenominated,
-            storeName = data.store.storeName,
-            dealUrl = data.dealUrl,
+            salePriceDenominated = best.deal.priceDenominated,
+            storeName = best.store.storeName,
+            dealUrl = best.deal.url,
         )
-        info(logger, tag = "deal_shared") { "dealId=${data.dealId} store=${data.store.storeName}" }
+        info(logger, tag = "store_deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
         events.tryEmit(StoreUiEvent.ShareDeal(text))
     }
 

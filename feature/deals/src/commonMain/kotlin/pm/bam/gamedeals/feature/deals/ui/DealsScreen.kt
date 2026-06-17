@@ -81,7 +81,6 @@ import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
-import pm.bam.gamedeals.common.ui.components.WaitlistHeartButton
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -184,6 +183,7 @@ internal fun DealsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val data by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedShops by viewModel.selectedShops.collectAsStateWithLifecycle()
@@ -218,6 +218,7 @@ internal fun DealsScreen(
     DealsContent(
         data = data,
         waitlistIds = waitlistIds,
+        collectionIds = collectionIds,
         ignoredIds = ignoredIds,
         stores = stores,
         selectedShops = selectedShops,
@@ -252,6 +253,7 @@ internal fun DealsScreen(
         onDismissPeek = { viewModel.dismissPeek() },
         onShare = { peekData -> viewModel.onShareClicked(peekData) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleCollection = { gameId -> viewModel.toggleCollection(gameId) },
         onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
         onRetryPeek = {
             viewModel.gamePeek.value?.let { peek -> viewModel.peekGame(peek.gameId, peek.gameName, peek.thumb) }
@@ -267,6 +269,7 @@ internal fun DealsScreen(
 private fun DealsContent(
     data: DealsScreenData,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String> = persistentSetOf(),
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
@@ -298,6 +301,7 @@ private fun DealsContent(
     onDismissPeek: () -> Unit,
     onShare: (data: GamePeekSheetData.Data) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit = {},
+    onToggleCollection: (gameId: String) -> Unit = {},
     onToggleIgnore: (gameId: String) -> Unit = {},
     onRetryPeek: () -> Unit = {},
     onDiscover: () -> Unit = {},
@@ -312,8 +316,6 @@ private fun DealsContent(
     val errorMessage = stringResource(Res.string.deals_screen_loading_error_msg)
     val errorRetry = stringResource(Res.string.deals_screen_loading_error_retry)
     val storesById = remember(stores) { stores.associateBy(Store::storeID) }
-    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
-    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
     // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
@@ -370,12 +372,10 @@ private fun DealsContent(
                             state = searchResults,
                             ignoredIds = ignoredIds,
                             waitlistIds = waitlistIds,
+                            collectionIds = collectionIds,
                             storesById = storesById,
-                            addToWaitlistCd = addToWaitlistCd,
-                            removeFromWaitlistCd = removeFromWaitlistCd,
                             errorMessage = errorMessage,
                             onPeekGame = onPeekGame,
-                            onToggleWaitlist = onToggleWaitlist,
                         )
 
                         data.status == DealsScreenData.Status.LOADING -> CircularProgressIndicator(
@@ -395,6 +395,7 @@ private fun DealsContent(
                             items(items = visibleDeals, key = { it.dealID }) { deal ->
                                 val store = storesById[deal.storeID]
                                 val isWaitlisted = deal.gameID in waitlistIds
+                                val isCollected = deal.gameID in collectionIds
                                 DealListRow(
                                     title = deal.title,
                                     contentDescription = stringResource(
@@ -413,9 +414,7 @@ private fun DealsContent(
                                     storeName = store?.storeName,
                                     storeIconUrl = store?.iconUrl,
                                     isWaitlisted = isWaitlisted,
-                                    onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
-                                    addToWaitlistContentDescription = addToWaitlistCd,
-                                    removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                                    isCollected = isCollected,
                                 )
                             }
                             if (data.appending) {
@@ -434,12 +433,14 @@ private fun DealsContent(
             GamePeekSheet(
                 data = gamePeek,
                 isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                isCollected = peekGameId?.let { it in collectionIds } == true,
                 isIgnored = peekGameId?.let { it in ignoredIds } == true,
                 goToWeb = goToWeb,
                 onViewGamePage = { peekData -> goToGame(peekData.gameId) },
                 onDismiss = { onDismissPeek() },
                 onShare = { peekData -> onShare(peekData) },
                 onToggleWaitlist = onToggleWaitlist,
+                onToggleCollection = onToggleCollection,
                 onToggleIgnore = onToggleIgnore,
                 onRetry = onRetryPeek,
             )
@@ -477,12 +478,10 @@ private fun SearchResultsBody(
     state: SearchResultsState,
     ignoredIds: ImmutableSet<String>,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
     storesById: Map<Int, Store>,
-    addToWaitlistCd: String,
-    removeFromWaitlistCd: String,
     errorMessage: String,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
-    onToggleWaitlist: (gameId: String) -> Unit,
 ) {
     when (state) {
         SearchResultsState.Idle -> Unit
@@ -517,11 +516,9 @@ private fun SearchResultsBody(
                         deal = group.cheapestDeal,
                         dealCount = group.totalDealCount,
                         isWaitlisted = group.gameID in waitlistIds,
+                        isCollected = group.gameID in collectionIds,
                         store = storesById[group.cheapestDeal.storeID],
-                        addToWaitlistCd = addToWaitlistCd,
-                        removeFromWaitlistCd = removeFromWaitlistCd,
                         onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.thumb) },
-                        onToggleWaitlist = { onToggleWaitlist(group.gameID) },
                     )
                 }
             }
@@ -534,11 +531,9 @@ private fun SearchResultListItem(
     deal: Deal,
     dealCount: Int,
     isWaitlisted: Boolean,
+    isCollected: Boolean,
     store: Store?,
-    addToWaitlistCd: String,
-    removeFromWaitlistCd: String,
     onGame: () -> Unit,
-    onToggleWaitlist: () -> Unit,
 ) {
     val showBadge = dealCount > 1
     // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
@@ -566,16 +561,12 @@ private fun SearchResultListItem(
             isStoreLow = deal.isStoreLow,
             storeName = store?.storeName,
             storeIconUrl = store?.iconUrl,
+            isWaitlisted = isWaitlisted,
+            isCollected = isCollected,
         )
         if (showBadge) {
             DealCountBadge(count = dealCount)
         }
-        WaitlistHeartButton(
-            isWaitlisted = isWaitlisted,
-            onToggle = onToggleWaitlist,
-            addToWaitlistContentDescription = addToWaitlistCd,
-            removeFromWaitlistContentDescription = removeFromWaitlistCd,
-        )
     }
 }
 

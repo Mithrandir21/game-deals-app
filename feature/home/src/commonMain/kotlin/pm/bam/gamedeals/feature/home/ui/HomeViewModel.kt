@@ -104,6 +104,11 @@ internal class HomeViewModel(
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
+    val collectionIds: StateFlow<ImmutableSet<String>> = collectionRepository.observeCollectionIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
     /** Games on the user's ignore list — drives the deal sheet's ignore toggle (#280). */
     val ignoredIds: StateFlow<ImmutableSet<String>> = ignoredRepository.observeIgnoredIds()
         .onStart { emit(persistentSetOf()) }
@@ -186,10 +191,19 @@ internal class HomeViewModel(
     fun peekRelease(title: String, thumb: String?) =
         gamePeekController.loadByTitle(viewModelScope, title, thumb)
 
-    /** Toggle a game on/off the waitlist from an inline heart or the peek sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(HomeUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
+    fun toggleCollection(gameId: String) {
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(HomeUiEvent.SignInRequired)
             }
         }

@@ -23,6 +23,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
@@ -244,8 +247,20 @@ private fun LoggedInContent(
         item { SectionHeader(stringResource(Res.string.account_section_library)) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                StatCard(stringResource(Res.string.account_stat_waitlisted), data.waitlistCount, onOpenWaitlist, Modifier.weight(1f))
-                StatCard(stringResource(Res.string.account_stat_collected), data.collectionCount, onOpenCollection, Modifier.weight(1f))
+                StatCard(
+                    label = stringResource(Res.string.account_stat_waitlisted),
+                    value = data.waitlistCount.toString(),
+                    icon = Icons.Filled.Bookmark,
+                    onClick = onOpenWaitlist,
+                    modifier = Modifier.weight(1f),
+                )
+                StatCard(
+                    label = stringResource(Res.string.account_stat_collected),
+                    value = data.collectionCount.toString(),
+                    icon = Icons.Filled.LibraryAddCheck,
+                    onClick = onOpenCollection,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
 
@@ -336,21 +351,6 @@ private fun ReconnectBanner(loggingIn: Boolean, onReconnect: () -> Unit) {
                     Text(stringResource(Res.string.account_reconnect_action))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun StatCard(label: String, count: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(onClick = onClick, modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(GameDealsCustomTheme.spacing.large),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(text = count.toString(), style = MaterialTheme.typography.headlineSmall)
-            Text(text = label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

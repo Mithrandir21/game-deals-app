@@ -1,6 +1,5 @@
 package pm.bam.gamedeals.common.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,8 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,15 +44,16 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * The ITAD-style featured-deal tile (UI Improvements board, Phase B): wide-aspect banner art
  * on top, with the deal's identity stacked *below* it on the card surface — matching the ITAD
  * website's hero grid. It assembles the Phase-A building blocks ([StoreLabel], [DiscountBadge],
- * [PriceBlock], [WaitlistHeartButton]) over and under the art ([Deal.thumb] already prefers wide
- * banners via `bestArt()`). The only thing left over the art is the waitlist heart, backed by a
- * small top-only scrim so it keeps contrast over bright covers (#257).
+ * [PriceBlock]) over and under the art ([Deal.thumb] already prefers wide banners via `bestArt()`).
+ *
+ * The interactive waitlist heart (and the full-image scrim it needed for contrast) was retired —
+ * toggling now lives in the `GamePeekSheet`. The only thing over the art is now the small **passive**
+ * [GameStateBadges], shown at the top corner only when the game is [isWaitlisted] and/or [isCollected];
+ * the art is otherwise undimmed.
  *
  * Accessibility: the art + info form a single clickable node carrying the caller's localized
- * [contentDescription]; the optional waitlist heart is a *separate* sibling node on top (so it
- * stays independently actionable), mirroring the deal bottom sheet. The heart is only shown when
- * [onToggleWaitlist] is provided (e.g. omit it when logged out). The info below the art uses the
- * building blocks' themed colours (like [DealListRow]); only the heart over the scrim is forced light.
+ * [contentDescription], extended with the badge suffixes ([gameStateContentSuffix]). The info below
+ * the art uses the building blocks' themed colours (like [DealListRow]).
  */
 @Composable
 fun DealHeroTile(
@@ -66,9 +64,7 @@ fun DealHeroTile(
     modifier: Modifier = Modifier,
     storeIconUrl: String? = null,
     isWaitlisted: Boolean = false,
-    onToggleWaitlist: (() -> Unit)? = null,
-    addToWaitlistContentDescription: String = "",
-    removeFromWaitlistContentDescription: String = "",
+    isCollected: Boolean = false,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the tile's content description — keeping each badge and its TalkBack
@@ -86,7 +82,7 @@ fun DealHeroTile(
             DealBadgeSuffix.STORE_LOW -> storeLowSuffix
             DealBadgeSuffix.VOUCHER -> voucherSuffix
         }
-    }
+    } + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected)
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
@@ -111,19 +107,6 @@ fun DealHeroTile(
                         contentScale = ContentScale.Crop,
                         error = painterResource(CommonRes.drawable.videogame_thumb),
                         modifier = Modifier.fillMaxSize(),
-                    )
-                    // Top-only scrim, purely so the white heart keeps contrast over bright art (#257).
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        Color.Transparent,
-                                    ),
-                                ),
-                            ),
                     )
                 }
                 // Info on the card surface, left-aligned and stacked (title / discount+price / store).
@@ -162,16 +145,15 @@ fun DealHeroTile(
                     }
                 }
             }
-            if (onToggleWaitlist != null) {
-                WaitlistHeartButton(
-                    isWaitlisted = isWaitlisted,
-                    onToggle = onToggleWaitlist,
-                    addToWaitlistContentDescription = addToWaitlistContentDescription,
-                    removeFromWaitlistContentDescription = removeFromWaitlistContentDescription,
-                    tint = Color.White,
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
-            }
+            // Passive waitlist/collection status over the art's top corner (no interactive heart, so
+            // no full-image scrim needed); the compact pill keeps it legible over bright covers.
+            GameStateBadges(
+                isWaitlisted = isWaitlisted,
+                isCollected = isCollected,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(GameDealsCustomTheme.spacing.small),
+            )
         }
     }
 }
@@ -195,9 +177,7 @@ private fun DealHeroTile_Preview() {
                     contentDescription = "Resident Evil 4, on sale for 8,60 €, was 39,99 €",
                     onClick = {},
                     isWaitlisted = true,
-                    onToggleWaitlist = {},
-                    addToWaitlistContentDescription = "Add to waitlist",
-                    removeFromWaitlistContentDescription = "Remove from waitlist",
+                    isCollected = true,
                 )
             }
         }

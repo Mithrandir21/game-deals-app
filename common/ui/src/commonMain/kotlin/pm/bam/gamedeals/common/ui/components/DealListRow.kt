@@ -2,6 +2,7 @@ package pm.bam.gamedeals.common.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,23 +35,25 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /**
  * The ITAD-style deal list row (UI Improvements board, Phase B): a wide thumbnail, the title and
- * [StoreLabel] stacked on the left, and the [DiscountBadge] + [PriceBlock] on the right, with an
- * optional waitlist heart. It replaces the three near-duplicate rows — `HomeDealRow`, `DealRow`,
- * and `RankedGameRow` — so it deliberately takes **discrete, mostly-optional fields** rather than
- * a `Deal`: ranked games carry only a (nullable) boxart, title, and price, so they simply omit
- * the store/discount/regular-price/heart.
+ * [StoreLabel] stacked on the left, and the [DiscountBadge] + [PriceBlock] on the right. It replaces
+ * the three near-duplicate rows — `HomeDealRow`, `DealRow`, and `RankedGameRow` — so it deliberately
+ * takes **discrete, mostly-optional fields** rather than a `Deal`: ranked games carry only a
+ * (nullable) boxart, title, and price, so they simply omit the store/discount/regular-price.
  *
  * Hidden when absent: the store line (no [storeName]), the discount badge ([discountPercent] <= 0,
  * handled by [DiscountBadge]), the regular-price strike-through (handled by [PriceBlock]), the
- * whole price block ([salePrice] null), each ITAD flag badge ([hasVoucher] / [isNewHistoricalLow] /
- * [isStoreLow] false), and the heart ([onToggleWaitlist] null).
+ * whole price block ([salePrice] null), and each ITAD flag badge ([hasVoucher] / [isNewHistoricalLow]
+ * / [isStoreLow] false).
+ *
+ * The interactive waitlist heart was retired (toggling now lives in the `GamePeekSheet`); instead the
+ * row shows small **passive** [GameStateBadges] over the thumbnail corner when the game is
+ * [isWaitlisted] and/or [isCollected], so state is still visible at a glance.
  *
  * When there is no [salePrice] but a [neutralChip] is given (e.g. an unreleased "New release" with no
  * deal yet), the chip stands in for the price column so every content row keeps the same anatomy.
  *
  * Accessibility mirrors [DealHeroTile]: the thumbnail + text + price form a single clickable node
- * carrying the caller's [contentDescription], while the heart is a separate, independently
- * actionable sibling node.
+ * carrying the caller's [contentDescription], extended with the badge suffixes ([gameStateContentSuffix]).
  */
 @Composable
 fun DealListRow(
@@ -69,9 +72,7 @@ fun DealListRow(
     storeName: String? = null,
     storeIconUrl: String? = null,
     isWaitlisted: Boolean = false,
-    onToggleWaitlist: (() -> Unit)? = null,
-    addToWaitlistContentDescription: String = "",
-    removeFromWaitlistContentDescription: String = "",
+    isCollected: Boolean = false,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the row's content description — keeping each badge and its TalkBack
@@ -89,7 +90,7 @@ fun DealListRow(
             DealBadgeSuffix.STORE_LOW -> storeLowSuffix
             DealBadgeSuffix.VOUCHER -> voucherSuffix
         }
-    }
+    } + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -105,16 +106,26 @@ fun DealListRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null, // the row's contentDescription carries the spoken text
-                contentScale = ContentScale.Crop,
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                modifier = Modifier
-                    .width(GameDealsCustomTheme.spacing.rowThumbnailWidth)
-                    .height(GameDealsCustomTheme.spacing.rowThumbnailHeight)
-                    .clip(MaterialTheme.shapes.small),
-            )
+            Box {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null, // the row's contentDescription carries the spoken text
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                    modifier = Modifier
+                        .width(GameDealsCustomTheme.spacing.rowThumbnailWidth)
+                        .height(GameDealsCustomTheme.spacing.rowThumbnailHeight)
+                        .clip(MaterialTheme.shapes.small),
+                )
+                // Passive waitlist/collection status over the boxart corner (no interactive heart).
+                GameStateBadges(
+                    isWaitlisted = isWaitlisted,
+                    isCollected = isCollected,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(GameDealsCustomTheme.spacing.extraSmall),
+                )
+            }
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
@@ -171,14 +182,6 @@ fun DealListRow(
                 }
             }
         }
-        if (onToggleWaitlist != null) {
-            WaitlistHeartButton(
-                isWaitlisted = isWaitlisted,
-                onToggle = onToggleWaitlist,
-                addToWaitlistContentDescription = addToWaitlistContentDescription,
-                removeFromWaitlistContentDescription = removeFromWaitlistContentDescription,
-            )
-        }
     }
 }
 
@@ -188,7 +191,7 @@ private fun DealListRow_Preview() {
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.small)) {
-                // Deal-style row: voucher + discount + new-low badge, struck regular price, heart.
+                // Deal-style row: voucher + discount + new-low badge, struck regular price, waitlisted badge.
                 DealListRow(
                     title = "No Man's Sky",
                     contentDescription = "No Man's Sky, on sale for 18,86 €, was 58,99 €, at eTail.Market",
@@ -200,10 +203,7 @@ private fun DealListRow_Preview() {
                     hasVoucher = true,
                     isNewHistoricalLow = true,
                     storeName = "eTail.Market",
-                    isWaitlisted = false,
-                    onToggleWaitlist = {},
-                    addToWaitlistContentDescription = "Add to waitlist",
-                    removeFromWaitlistContentDescription = "Remove from waitlist",
+                    isWaitlisted = true,
                 )
                 // Store-low badge ("S").
                 DealListRow(
@@ -248,9 +248,7 @@ private fun DealListRow_Dark_Preview() {
                     isNewHistoricalLow = true,
                     storeName = "GamersGate",
                     isWaitlisted = true,
-                    onToggleWaitlist = {},
-                    addToWaitlistContentDescription = "Add to waitlist",
-                    removeFromWaitlistContentDescription = "Remove from waitlist",
+                    isCollected = true,
                 )
             }
         }

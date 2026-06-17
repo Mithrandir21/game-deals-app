@@ -34,20 +34,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.LibraryAddCheck
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -181,10 +186,13 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_actio
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_read_more
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_show_less
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_collection_add_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_collection_remove_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_add_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_favourite_remove_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_add_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_remove_action
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_more_actions
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -213,6 +221,7 @@ internal fun GamePageScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val isFavourite = viewModel.isWaitlisted.collectAsStateWithLifecycle()
+    val isCollected = viewModel.isCollected.collectAsStateWithLifecycle()
     val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
     val note = viewModel.note.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
@@ -229,6 +238,7 @@ internal fun GamePageScreen(
     GamePageContent(
         data = data.value,
         isFavourite = isFavourite.value,
+        isCollected = isCollected.value,
         isIgnored = isIgnored.value,
         note = note.value,
         onBack = onBack,
@@ -237,6 +247,7 @@ internal fun GamePageScreen(
         onSearchDealsByTitle = onSearchDealsByTitle,
         onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
         onToggleFavourite = viewModel::toggleWaitlist,
+        onToggleCollection = viewModel::toggleCollection,
         onToggleIgnore = viewModel::toggleIgnore,
         onSaveNote = viewModel::setNote,
         onDeleteNote = viewModel::deleteNote,
@@ -255,6 +266,7 @@ internal fun GamePageScreen(
 private fun GamePageContent(
     data: GamePageData,
     isFavourite: Boolean,
+    isCollected: Boolean,
     isIgnored: Boolean,
     note: String?,
     onBack: () -> Unit,
@@ -263,6 +275,7 @@ private fun GamePageContent(
     onSearchDealsByTitle: (title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onToggleFavourite: () -> Unit,
+    onToggleCollection: () -> Unit,
     onToggleIgnore: () -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
@@ -310,6 +323,7 @@ private fun GamePageContent(
                     },
                     actions = {
                         val resolvedByTitle = (data as? GamePageData.Data)?.resolvedByTitle == true
+                        val canAct = data is GamePageData.Data
                         if (resolvedByTitle) {
                             IconButton(onClick = onWarningTap) {
                                 Icon(
@@ -319,22 +333,58 @@ private fun GamePageContent(
                                 )
                             }
                         }
-                        IconButton(enabled = data is GamePageData.Data, onClick = onToggleFavourite) {
+                        // Waitlist (bookmark) + Collection (library-check) are the two primary actions;
+                        // Ignore folds into the overflow menu. The heart is retired (it implied "Like",
+                        // not the price-watch it actually is).
+                        IconButton(enabled = canAct, onClick = onToggleFavourite) {
                             Icon(
-                                imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                imageVector = if (isFavourite) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                tint = if (isFavourite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 contentDescription = stringResource(
                                     if (isFavourite) Res.string.game_screen_favourite_remove_action else Res.string.game_screen_favourite_add_action
                                 ),
                             )
                         }
-                        IconButton(enabled = data is GamePageData.Data, onClick = onToggleIgnore) {
+                        IconButton(enabled = canAct, onClick = onToggleCollection) {
                             Icon(
-                                imageVector = Icons.Filled.VisibilityOff,
-                                tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                imageVector = if (isCollected) Icons.Filled.LibraryAddCheck else Icons.Outlined.LibraryAddCheck,
+                                tint = if (isCollected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 contentDescription = stringResource(
-                                    if (isIgnored) Res.string.game_screen_ignore_remove_action else Res.string.game_screen_ignore_add_action
+                                    if (isCollected) Res.string.game_screen_collection_remove_action else Res.string.game_screen_collection_add_action
                                 ),
                             )
+                        }
+                        Box {
+                            var menuExpanded by remember { mutableStateOf(false) }
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = stringResource(Res.string.game_screen_more_actions),
+                                )
+                            }
+                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (isIgnored) Res.string.game_screen_ignore_remove_action else Res.string.game_screen_ignore_add_action
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Filled.VisibilityOff,
+                                            tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    enabled = canAct,
+                                    onClick = {
+                                        menuExpanded = false
+                                        onToggleIgnore()
+                                    },
+                                )
+                            }
                         }
                     },
                 )

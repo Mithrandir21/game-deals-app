@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -115,6 +118,7 @@ internal fun HomeScreen(
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val collectionIds = viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = viewModel.stores.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
@@ -124,6 +128,7 @@ internal fun HomeScreen(
     HomeScreenContent(
         data = data.value,
         waitlistIds = waitlistIds.value,
+        collectionIds = collectionIds.value,
         ignoredIds = ignoredIds.value,
         stores = stores.value,
         snackbarHostState = snackbarHostState,
@@ -131,6 +136,7 @@ internal fun HomeScreen(
         onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
         onPeekRelease = { title, thumb -> viewModel.peekRelease(title, thumb) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleCollection = { gameId -> viewModel.toggleCollection(gameId) },
         onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
         onViewWaitlist = onViewWaitlist,
         onViewCollection = onViewCollection,
@@ -163,11 +169,13 @@ internal fun HomeScreen(
 private fun HomeScreenContent(
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
     gamePeek: GamePeekSheetData?,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     onPeekRelease: (title: String, thumb: String?) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
+    onToggleCollection: (gameId: String) -> Unit,
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
     onToggleIgnore: (gameId: String) -> Unit = {},
     onViewWaitlist: () -> Unit,
@@ -208,10 +216,10 @@ private fun HomeScreenContent(
                     HomeFeed(
                         data = data,
                         waitlistIds = waitlistIds,
+                        collectionIds = collectionIds,
                         stores = stores,
                         onPeekGame = onPeekGame,
                         onPeekRelease = onPeekRelease,
-                        onToggleWaitlist = onToggleWaitlist,
                         onViewWaitlist = onViewWaitlist,
                         onViewCollection = onViewCollection,
                         onViewBundles = onViewBundles,
@@ -222,10 +230,12 @@ private fun HomeScreenContent(
                 GamePeekSheet(
                     data = gamePeek,
                     isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                    isCollected = peekGameId?.let { it in collectionIds } == true,
                     isIgnored = peekGameId?.let { it in ignoredIds } == true,
                     onDismiss = onDismissPeek,
                     onShare = onShare,
                     onToggleWaitlist = onToggleWaitlist,
+                    onToggleCollection = onToggleCollection,
                     onToggleIgnore = onToggleIgnore,
                     goToWeb = goToWeb,
                     onViewGamePage = { peekData ->
@@ -250,17 +260,15 @@ private fun HomeScreenContent(
 private fun HomeFeed(
     data: HomeViewModel.HomeScreenData,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     onPeekRelease: (title: String, thumb: String?) -> Unit,
-    onToggleWaitlist: (gameId: String) -> Unit,
     onViewWaitlist: () -> Unit,
     onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
 ) {
-    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
-    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         // Track whether we've already emitted a section so each subsequent section is preceded by a
@@ -279,12 +287,14 @@ private fun HomeFeed(
                     StatCard(
                         label = stringResource(Res.string.home_screen_stat_waitlisted),
                         value = stats.waitlistedCount.toString(),
+                        icon = Icons.Filled.Bookmark,
                         onClick = onViewWaitlist,
                         modifier = Modifier.weight(1f),
                     )
                     StatCard(
                         label = stringResource(Res.string.home_screen_stat_collected),
                         value = stats.collectedCount.toString(),
+                        icon = Icons.Filled.LibraryAddCheck,
                         onClick = onViewCollection,
                         modifier = Modifier.weight(1f),
                     )
@@ -320,9 +330,7 @@ private fun HomeFeed(
                             contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
                             onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
                             isWaitlisted = deal.gameID in waitlistIds,
-                            onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
-                            addToWaitlistContentDescription = addToWaitlistCd,
-                            removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                            isCollected = deal.gameID in collectionIds,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -345,6 +353,7 @@ private fun HomeFeed(
                 val deal = data.trending[index]
                 val store = stores[deal.storeID]
                 val isWaitlisted = deal.gameID in waitlistIds
+                val isCollected = deal.gameID in collectionIds
                 DealListRow(
                     title = deal.title,
                     contentDescription = stringResource(
@@ -363,9 +372,7 @@ private fun HomeFeed(
                     storeName = store?.storeName,
                     storeIconUrl = store?.iconUrl,
                     isWaitlisted = isWaitlisted,
-                    onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
-                    addToWaitlistContentDescription = addToWaitlistCd,
-                    removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                    isCollected = isCollected,
                 )
             }
         }
@@ -379,10 +386,8 @@ private fun HomeFeed(
                 games = data.mostWaitlisted,
                 keyPrefix = "waitlisted",
                 waitlistIds = waitlistIds,
+                collectionIds = collectionIds,
                 onPeekGame = onPeekGame,
-                onToggleWaitlist = onToggleWaitlist,
-                addToWaitlistContentDescription = addToWaitlistCd,
-                removeFromWaitlistContentDescription = removeFromWaitlistCd,
             )
         }
 
@@ -395,10 +400,8 @@ private fun HomeFeed(
                 games = data.mostCollected,
                 keyPrefix = "collected",
                 waitlistIds = waitlistIds,
+                collectionIds = collectionIds,
                 onPeekGame = onPeekGame,
-                onToggleWaitlist = onToggleWaitlist,
-                addToWaitlistContentDescription = addToWaitlistCd,
-                removeFromWaitlistContentDescription = removeFromWaitlistCd,
             )
         }
 
@@ -467,10 +470,8 @@ private fun LazyListScope.rankedSection(
     games: ImmutableList<RankedGame>,
     keyPrefix: String,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
-    onToggleWaitlist: (gameId: String) -> Unit,
-    addToWaitlistContentDescription: String,
-    removeFromWaitlistContentDescription: String,
 ) {
     if (games.isEmpty()) return
     item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(titleRes)) }
@@ -481,10 +482,11 @@ private fun LazyListScope.rankedSection(
     ) { index ->
         val game = games[index]
         val isWaitlisted = game.gameId in waitlistIds
+        val isCollected = game.gameId in collectionIds
         val cd = game.priceDenominated?.let { stringResource(Res.string.home_screen_ranked_game_description, game.title, it) }
             ?: stringResource(Res.string.home_screen_ranked_game_description_no_price, game.title)
         // Same anatomy as the Trending rows: store label, struck regular price, discount + flag badges,
-        // and the waitlist heart — all enriched off the best current deal in the HomeViewModel.
+        // and the passive waitlist/collection badges — all enriched off the best current deal in the HomeViewModel.
         DealListRow(
             title = game.title,
             contentDescription = cd,
@@ -498,9 +500,7 @@ private fun LazyListScope.rankedSection(
             isStoreLow = game.isStoreLow,
             storeName = game.storeName,
             isWaitlisted = isWaitlisted,
-            onToggleWaitlist = { onToggleWaitlist(game.gameId) },
-            addToWaitlistContentDescription = addToWaitlistContentDescription,
-            removeFromWaitlistContentDescription = removeFromWaitlistContentDescription,
+            isCollected = isCollected,
         )
     }
 }
@@ -599,11 +599,13 @@ private fun HomeScreenContent_Success_Preview() {
         HomeScreenContent(
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
+            collectionIds = persistentSetOf("33333"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             gamePeek = null,
             onPeekGame = { _, _, _ -> },
             onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
+            onToggleCollection = {},
             onViewWaitlist = {},
             onViewCollection = {},
             onViewBundles = {},
@@ -626,11 +628,13 @@ private fun HomeScreenContent_Success_Dark_Preview() {
         HomeScreenContent(
             data = previewSuccessData(),
             waitlistIds = persistentSetOf("22222"),
+            collectionIds = persistentSetOf("33333"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
             gamePeek = null,
             onPeekGame = { _, _, _ -> },
             onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
+            onToggleCollection = {},
             onViewWaitlist = {},
             onViewCollection = {},
             onViewBundles = {},
@@ -653,11 +657,13 @@ private fun HomeScreenContent_Loading_Preview() {
         HomeScreenContent(
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.LOADING),
             waitlistIds = persistentSetOf(),
+            collectionIds = persistentSetOf(),
             stores = persistentMapOf(),
             gamePeek = null,
             onPeekGame = { _, _, _ -> },
             onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
+            onToggleCollection = {},
             onViewWaitlist = {},
             onViewCollection = {},
             onViewBundles = {},
@@ -680,11 +686,13 @@ private fun HomeScreenContent_Error_Preview() {
         HomeScreenContent(
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.ERROR),
             waitlistIds = persistentSetOf(),
+            collectionIds = persistentSetOf(),
             stores = persistentMapOf(),
             gamePeek = null,
             onPeekGame = { _, _, _ -> },
             onPeekRelease = { _, _ -> },
             onToggleWaitlist = {},
+            onToggleCollection = {},
             onViewWaitlist = {},
             onViewCollection = {},
             onViewBundles = {},

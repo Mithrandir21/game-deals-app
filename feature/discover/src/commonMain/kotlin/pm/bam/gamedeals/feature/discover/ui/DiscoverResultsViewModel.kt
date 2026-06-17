@@ -32,6 +32,7 @@ import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
@@ -51,6 +52,7 @@ internal class DiscoverResultsViewModel(
     gamesRepository: GamesRepository,
     storesRepository: StoresRepository,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     savedStateHandle: SavedStateHandle,
@@ -58,8 +60,13 @@ internal class DiscoverResultsViewModel(
 
     private val filter: IgdbTagFilter = savedStateHandle.toFilter()
 
-    /** Games on the user's waitlist — drives the inline row heart (matches Deals/Home). */
+    /** Games on the user's waitlist / collection — drive the passive row badges (matches Deals/Home). */
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
+        .onStart { emit(persistentSetOf()) }
+        .catch { emit(persistentSetOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
+
+    val collectionIds: StateFlow<ImmutableSet<String>> = collectionRepository.observeCollectionIds()
         .onStart { emit(persistentSetOf()) }
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
@@ -153,10 +160,19 @@ internal class DiscoverResultsViewModel(
 
     fun retry() = loadFirstPage()
 
-    /** Toggle a game on/off the waitlist from the inline row heart or peek sheet; prompts sign-in when logged out. */
+    /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
+    fun toggleCollection(gameId: String) {
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
             }
         }

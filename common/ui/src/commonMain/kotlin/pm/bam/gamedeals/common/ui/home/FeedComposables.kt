@@ -3,17 +3,22 @@ package pm.bam.gamedeals.common.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 
 /**
@@ -23,33 +28,50 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
  */
 
 /**
- * A compact metric card (e.g. "Waitlisted: 12") for the account stats strip. When [onClick] is
- * provided the whole card is a button (e.g. tapping "Waitlisted" opens the Waitlist list).
+ * A compact metric card (e.g. "Waitlisted: 12") for the account stats strip — shown on both Home and
+ * the Account hub. When [onClick] is provided the whole card is a button (e.g. tapping "Waitlisted"
+ * opens the Waitlist list).
+ *
+ * The optional [icon] sits to the left of the value/label so the card visually echoes the icon that
+ * represents that same list elsewhere in the app (the bookmark for the waitlist, the library-check
+ * for the collection — the same icons used on the peek sheet and the passive row badges), making the
+ * association obvious. It is decorative: the merged node already speaks "$value $label".
  */
 @Composable
 fun StatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val cardModifier = modifier
         .let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
         .semantics(mergeDescendants = true) { contentDescription = "$value $label" }
     Card(modifier = cardModifier) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(GameDealsCustomTheme.spacing.medium),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = value, style = MaterialTheme.typography.headlineMedium)
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null, // decorative; the merged node carries the spoken text
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(GameDealsCustomTheme.spacing.rowThumbnailHeight),
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+                Text(text = value, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

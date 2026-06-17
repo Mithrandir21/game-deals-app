@@ -17,10 +17,13 @@
     <string name="game_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="game_screen_data_loading_error_retry">Retry</string>
 
-    <string name="game_screen_favourite_add_action">Add to favourites</string>
-    <string name="game_screen_favourite_remove_action">Remove from favourites</string>
+    <string name="game_screen_favourite_add_action">Add to waitlist</string>
+    <string name="game_screen_favourite_remove_action">Remove from waitlist</string>
+    <string name="game_screen_collection_add_action">Add to collection</string>
+    <string name="game_screen_collection_remove_action">Remove from collection</string>
     <string name="game_screen_ignore_add_action">Ignore game</string>
     <string name="game_screen_ignore_remove_action">Stop ignoring game</string>
+    <string name="game_screen_more_actions">More actions</string>
     <string name="game_screen_share_action">Share %1$s deal</string>
     <string name="game_screen_store_deal_row_description">%1$s, save %2$s%, %3$s</string>
 

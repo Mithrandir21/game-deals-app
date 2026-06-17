@@ -27,7 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
@@ -64,14 +64,16 @@ class StoreScreenTest {
         every { deal.salePriceDenominated } returns dealPrice
         every { deal.thumb } returns dealThumb
         val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
-        val dealDetails: StateFlow<DealBottomSheetData?> = MutableStateFlow(null)
+        val gamePeek: StateFlow<GamePeekSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)
-        val favouriteIds: StateFlow<ImmutableSet<String>> = MutableStateFlow(persistentSetOf())
+        val emptyIds: StateFlow<ImmutableSet<String>> = MutableStateFlow(persistentSetOf())
 
         every { viewModel.deals } returns deals
-        every { viewModel.dealDetails } returns dealDetails
+        every { viewModel.gamePeek } returns gamePeek
         every { viewModel.uiState } returns uiState
-        every { viewModel.waitlistIds } returns favouriteIds
+        every { viewModel.waitlistIds } returns emptyIds
+        every { viewModel.collectionIds } returns emptyIds
+        every { viewModel.ignoredIds } returns emptyIds
         every { viewModel.events } returns MutableSharedFlow<StoreViewModel.StoreUiEvent>().asSharedFlow()
     }
 
@@ -101,13 +103,13 @@ class StoreScreenTest {
             .assertIsDisplayed()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { viewModel.dealDetails }
+        verify(exactly = 1) { viewModel.gamePeek }
         verify(exactly = 1) { viewModel.uiState }
     }
 
     @Test
-    fun loadDealDetails() {
-        every { viewModel.loadDealDetails(any(), any(), any(), any(), any(), any()) } just runs
+    fun peekGame() {
+        every { viewModel.peekGame(any(), any(), any()) } just runs
 
         setupCompose()
 
@@ -115,9 +117,9 @@ class StoreScreenTest {
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { viewModel.dealDetails }
+        verify(exactly = 1) { viewModel.gamePeek }
         verify(exactly = 1) { viewModel.uiState }
-        verify(exactly = 1) { viewModel.loadDealDetails(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { viewModel.peekGame(any(), any(), any()) }
     }
 
     @Test
@@ -141,7 +143,7 @@ class StoreScreenTest {
 
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { viewModel.dealDetails }
+        verify(exactly = 1) { viewModel.gamePeek }
         verify(exactly = 1) { viewModel.uiState }
     }
 
@@ -157,7 +159,7 @@ class StoreScreenTest {
             .performClick()
 
         verify(exactly = 1) { viewModel.deals }
-        verify(exactly = 1) { viewModel.dealDetails }
+        verify(exactly = 1) { viewModel.gamePeek }
         verify(exactly = 1) { viewModel.uiState }
         verify(exactly = 1) { onBack.invoke() }
     }

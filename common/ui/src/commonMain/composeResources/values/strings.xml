@@ -2,7 +2,7 @@
 <resources>
 
     <string name="deal_details_go_to_deal_label">Go to Deal</string>
-    <string name="deal_details_view_game_page_label">Game page</string>
+    <string name="deal_details_view_game_page_label">Game Details</string>
 
     <!-- Game-centric peek sheet (row-consolidation work): one quick-peek sheet keyed by game id,
          opened from every game/deal row across Home and Deals. -->
@@ -18,8 +18,14 @@
     <string name="deal_favourite_add_action">Add to waitlist</string>
     <string name="deal_favourite_remove_action">Remove from waitlist</string>
 
+    <string name="deal_collection_add_action">Add to collection</string>
+    <string name="deal_collection_remove_action">Remove from collection</string>
+
     <string name="deal_ignore_add_action">Ignore game</string>
     <string name="deal_ignore_remove_action">Stop ignoring game</string>
+
+    <!-- Content description for the peek sheet's overflow menu that holds Share + Ignore. -->
+    <string name="game_peek_more_actions">More actions</string>
 
     <!-- ITAD-style deal flag badges shown around the discount on tiles/rows (deal-badge work). The
          single-letter labels mirror the ITAD website ("N" = new historical low, "S" = store low). -->
@@ -31,6 +37,11 @@
     <string name="deal_new_low_content_suffix">, new lowest price ever</string>
     <string name="deal_store_low_content_suffix">, lowest price at this store</string>
     <string name="deal_voucher_content_suffix">, voucher available</string>
+
+    <!-- Spoken-only suffixes for the passive waitlist/collection status badges (GameStateBadges) shown
+         over a game's cover art on rows/tiles, now that the interactive heart is gone. -->
+    <string name="deal_waitlisted_content_suffix">, on your waitlist</string>
+    <string name="deal_owned_content_suffix">, in your collection</string>
 
     <!-- Shown when a logged-out user taps the waitlist heart (epic #219, Phase 3/4 follow-up). -->
     <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>

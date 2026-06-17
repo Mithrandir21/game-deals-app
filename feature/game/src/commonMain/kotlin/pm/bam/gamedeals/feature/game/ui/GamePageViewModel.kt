@@ -34,6 +34,7 @@ import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -68,6 +69,7 @@ internal class GamePageViewModel(
     private val igdbRepository: IgdbRepository,
     private val dealShareTextBuilder: DealShareTextBuilder,
     private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val notesRepository: NotesRepository,
     private val faviconResolver: FaviconResolver,
@@ -79,6 +81,10 @@ internal class GamePageViewModel(
 
     val isWaitlisted: StateFlow<Boolean> = gameIdFlow
         .flatMapLatest { id -> if (id == null) flowOf(false) else waitlistRepository.observeIsWaitlisted(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val isCollected: StateFlow<Boolean> = gameIdFlow
+        .flatMapLatest { id -> if (id == null) flowOf(false) else collectionRepository.observeIsCollected(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val isIgnored: StateFlow<Boolean> = gameIdFlow
@@ -194,6 +200,16 @@ internal class GamePageViewModel(
         val id = gameIdFlow.value ?: return
         viewModelScope.launch {
             if (waitlistRepository.toggleWaitlist(id) == RepoUpdateResult.NOT_LOGGED_IN) {
+                events.tryEmit(GameUiEvent.SignInRequired)
+            }
+        }
+    }
+
+    fun toggleCollection() {
+        if (uiState.value !is GamePageData.Data) return
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch {
+            if (collectionRepository.toggleCollection(id) == RepoUpdateResult.NOT_LOGGED_IN) {
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }

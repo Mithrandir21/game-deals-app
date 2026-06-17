@@ -15,13 +15,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.LibraryAddCheck
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,6 +39,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,11 +70,14 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_details_game_image
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_collection_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_collection_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_remove_action
-import pm.bam.gamedeals.common.ui.generated.resources.deal_share_content_description
+import pm.bam.gamedeals.common.ui.generated.resources.deal_share_label
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_more_actions
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_best_price_at_store
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_no_deals_label
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_other_stores_label
@@ -83,10 +95,12 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 fun GamePeekSheet(
     data: GamePeekSheetData?,
     isWaitlisted: Boolean = false,
+    isCollected: Boolean = false,
     isIgnored: Boolean = false,
     onDismiss: () -> Unit,
     onShare: (data: GamePeekSheetData.Data) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit = {},
+    onToggleCollection: (gameId: String) -> Unit = {},
     onToggleIgnore: (gameId: String) -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewGamePage: (data: GamePeekSheetData.Data) -> Unit,
@@ -99,7 +113,7 @@ fun GamePeekSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
-            PeekContent(data, isWaitlisted, isIgnored, onShare, onToggleWaitlist, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
+            PeekContent(data, isWaitlisted, isCollected, isIgnored, onShare, onToggleWaitlist, onToggleCollection, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
         }
     }
 }
@@ -108,9 +122,11 @@ fun GamePeekSheet(
 private fun PeekContent(
     data: GamePeekSheetData,
     isWaitlisted: Boolean,
+    isCollected: Boolean,
     isIgnored: Boolean,
     onShare: (data: GamePeekSheetData.Data) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
+    onToggleCollection: (gameId: String) -> Unit,
     onToggleIgnore: (gameId: String) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewGamePage: (data: GamePeekSheetData.Data) -> Unit,
@@ -153,23 +169,57 @@ private fun PeekContent(
                     Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            // Waitlist (bookmark) + Collection (library-check) are the two primary, distinct actions;
+            // the less-used Share + Ignore fold into an overflow menu so four icons don't crowd the title.
             IconButton(enabled = canAct, onClick = { onToggleWaitlist(data.gameId) }) {
-                AnimatedContent(targetState = isWaitlisted, label = "favourite-icon") { fav ->
+                AnimatedContent(targetState = isWaitlisted, label = "waitlist-icon") { waitlisted ->
                     Icon(
-                        imageVector = if (fav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = stringResource(if (fav) Res.string.deal_favourite_remove_action else Res.string.deal_favourite_add_action),
+                        imageVector = if (waitlisted) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        tint = if (waitlisted) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        contentDescription = stringResource(if (waitlisted) Res.string.deal_favourite_remove_action else Res.string.deal_favourite_add_action),
                     )
                 }
             }
-            IconButton(enabled = canAct, onClick = { onToggleIgnore(data.gameId) }) {
-                Icon(
-                    imageVector = Icons.Filled.VisibilityOff,
-                    tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                    contentDescription = stringResource(if (isIgnored) Res.string.deal_ignore_remove_action else Res.string.deal_ignore_add_action),
-                )
+            IconButton(enabled = canAct, onClick = { onToggleCollection(data.gameId) }) {
+                AnimatedContent(targetState = isCollected, label = "collection-icon") { collected ->
+                    Icon(
+                        imageVector = if (collected) Icons.Filled.LibraryAddCheck else Icons.Outlined.LibraryAddCheck,
+                        tint = if (collected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        contentDescription = stringResource(if (collected) Res.string.deal_collection_remove_action else Res.string.deal_collection_add_action),
+                    )
+                }
             }
-            IconButton(enabled = bestDeal != null, onClick = { asData?.let(onShare) }) {
-                Icon(imageVector = Icons.Filled.Share, contentDescription = stringResource(Res.string.deal_share_content_description))
+            Box {
+                var menuExpanded by remember { mutableStateOf(false) }
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(imageVector = Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.game_peek_more_actions))
+                }
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.deal_share_label)) },
+                        leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                        enabled = bestDeal != null,
+                        onClick = {
+                            menuExpanded = false
+                            asData?.let(onShare)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (isIgnored) Res.string.deal_ignore_remove_action else Res.string.deal_ignore_add_action)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.VisibilityOff,
+                                tint = if (isIgnored) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                contentDescription = null,
+                            )
+                        },
+                        enabled = canAct,
+                        onClick = {
+                            menuExpanded = false
+                            onToggleIgnore(data.gameId)
+                        },
+                    )
+                }
             }
         }
         HorizontalDivider()
@@ -311,7 +361,7 @@ private val previewPeekData = GamePeekSheetData.Data(
 private fun GamePeekSheet_Data_Preview() {
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
-            PeekContent(previewPeekData, false, false, {}, {}, {}, { _, _ -> }, {}, {})
+            PeekContent(previewPeekData, false, false, false, {}, {}, {}, {}, { _, _ -> }, {}, {})
         }
     }
 }
@@ -323,7 +373,7 @@ private fun GamePeekSheet_Upcoming_Preview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             PeekContent(
                 previewPeekData.copy(bestDeal = null, otherStores = persistentListOf(), cheapestPriceEver = null, upcoming = true),
-                false, false, {}, {}, {}, { _, _ -> }, {}, {},
+                false, false, false, {}, {}, {}, {}, { _, _ -> }, {}, {},
             )
         }
     }

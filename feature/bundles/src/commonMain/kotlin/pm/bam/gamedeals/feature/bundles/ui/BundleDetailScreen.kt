@@ -108,6 +108,7 @@ internal fun BundleDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -117,6 +118,7 @@ internal fun BundleDetailScreen(
         state = state,
         gamePeek = gamePeek,
         waitlistIds = waitlistIds,
+        collectionIds = collectionIds,
         ignoredIds = ignoredIds,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
@@ -124,6 +126,7 @@ internal fun BundleDetailScreen(
         onGameClick = onGameClick,
         onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
+        onToggleCollection = { gameId -> viewModel.toggleCollection(gameId) },
         onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
         onDismissPeek = { viewModel.dismissPeek() },
         onShare = { peekData -> viewModel.onShareClicked(peekData) },
@@ -150,6 +153,7 @@ private fun BundleDetailScreenContent(
     state: BundleDetailScreenData,
     gamePeek: GamePeekSheetData?,
     waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
     ignoredIds: ImmutableSet<String>,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
@@ -157,6 +161,7 @@ private fun BundleDetailScreenContent(
     onGameClick: (gameId: String) -> Unit,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     onToggleWaitlist: (gameId: String) -> Unit,
+    onToggleCollection: (gameId: String) -> Unit,
     onToggleIgnore: (gameId: String) -> Unit,
     onDismissPeek: () -> Unit,
     onShare: (data: GamePeekSheetData.Data) -> Unit,
@@ -231,10 +236,12 @@ private fun BundleDetailScreenContent(
                 GamePeekSheet(
                     data = gamePeek,
                     isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                    isCollected = peekGameId?.let { it in collectionIds } == true,
                     isIgnored = peekGameId?.let { it in ignoredIds } == true,
                     onDismiss = onDismissPeek,
                     onShare = onShare,
                     onToggleWaitlist = onToggleWaitlist,
+                    onToggleCollection = onToggleCollection,
                     onToggleIgnore = onToggleIgnore,
                     goToWeb = goToWeb,
                     onViewGamePage = { peekData -> onGameClick(peekData.gameId) },
@@ -564,6 +571,7 @@ private fun BundleDetailScreenPreview() {
             ),
             gamePeek = null,
             waitlistIds = persistentSetOf(),
+            collectionIds = persistentSetOf(),
             ignoredIds = persistentSetOf(),
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
@@ -571,6 +579,7 @@ private fun BundleDetailScreenPreview() {
             onGameClick = {},
             onPeekGame = { _, _, _ -> },
             onToggleWaitlist = {},
+            onToggleCollection = {},
             onToggleIgnore = {},
             onDismissPeek = {},
             onShare = {},

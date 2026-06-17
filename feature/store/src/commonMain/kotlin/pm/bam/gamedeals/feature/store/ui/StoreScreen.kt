@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package pm.bam.gamedeals.feature.store.ui
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,12 +55,10 @@ import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheet
-import pm.bam.gamedeals.common.ui.deal.DealBottomSheetData
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
+import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
-import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -90,8 +86,9 @@ internal fun StoreScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: ImmutableList<Deal> by viewModel.deals.collectAsStateWithLifecycle()
     val favouriteIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
+    val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
-    val dealDetails by viewModel.dealDetails.collectAsStateWithLifecycle()
+    val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
@@ -109,26 +106,19 @@ internal fun StoreScreen(
     StoreDeals(
         deals = deals,
         favouriteIds = favouriteIds,
+        collectionIds = collectionIds,
         ignoredIds = ignoredIds,
-        dealDetails = dealDetails,
+        gamePeek = gamePeek,
         storeDetails = store,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onLoadDealDetails = { dealId, dealStoreId, dealGameId, dealTitle, dealPriceDenominated, dealUrl ->
-            viewModel.loadDealDetails(
-                dealId = dealId,
-                dealStoreId = dealStoreId,
-                dealGameId = dealGameId,
-                dealTitle = dealTitle,
-                dealPriceDenominated = dealPriceDenominated,
-                dealUrl = dealUrl,
-            )
-        },
-        onDismissDealDetails = { viewModel.dismissDealDetails() },
-        onShareDealDetails = { sheetData -> viewModel.onShareDealClicked(sheetData) },
-        onToggleDealFavourite = { sheetData -> viewModel.toggleWaitlistFromDeal(sheetData) },
+        onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
+        onDismissPeek = { viewModel.dismissPeek() },
+        onShare = { peekData -> viewModel.onShareClicked(peekData) },
         onToggleWaitlist = { gameId -> viewModel.toggleWaitlist(gameId) },
-        onToggleDealIgnore = { sheetData -> viewModel.toggleIgnoreFromDeal(sheetData) },
+        onToggleCollection = { gameId -> viewModel.toggleCollection(gameId) },
+        onToggleIgnore = { gameId -> viewModel.toggleIgnore(gameId) },
+        onRetryPeek = { viewModel.retryPeek() },
         goToWeb = goToWeb,
         goToGame = goToGame,
     )
@@ -158,23 +148,23 @@ internal fun StoreScreen(
 private fun StoreDeals(
     deals: ImmutableList<Deal>,
     favouriteIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String> = persistentSetOf(),
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
-    dealDetails: DealBottomSheetData? = null,
+    gamePeek: GamePeekSheetData? = null,
     storeDetails: Store? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
-    onLoadDealDetails: (dealId: String, dealStoreId: Int, dealGameId: String, dealTitle: String, dealPriceDenominated: String, dealUrl: String) -> Unit,
-    onDismissDealDetails: () -> Unit,
-    onShareDealDetails: (data: DealBottomSheetData) -> Unit,
-    onToggleDealFavourite: (data: DealBottomSheetData.DealDetailsData) -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit = { _, _, _ -> },
+    onDismissPeek: () -> Unit = {},
+    onShare: (data: GamePeekSheetData.Data) -> Unit = {},
     onToggleWaitlist: (gameId: String) -> Unit = {},
-    onToggleDealIgnore: (data: DealBottomSheetData.DealDetailsData) -> Unit = {},
+    onToggleCollection: (gameId: String) -> Unit = {},
+    onToggleIgnore: (gameId: String) -> Unit = {},
+    onRetryPeek: () -> Unit = {},
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
-    val addToWaitlistCd = stringResource(CommonRes.string.deal_favourite_add_action)
-    val removeFromWaitlistCd = stringResource(CommonRes.string.deal_favourite_remove_action)
 
     Scaffold(
         topBar = { StoreToolbar(onBack, storeDetails) },
@@ -192,6 +182,7 @@ private fun StoreDeals(
                 key = { it.dealID }
             ) { deal ->
                 val isFavourite = deal.gameID in favouriteIds
+                val isCollected = deal.gameID in collectionIds
                 DealListRow(
                     title = deal.title,
                     contentDescription = stringResource(
@@ -199,7 +190,7 @@ private fun StoreDeals(
                         else Res.string.store_screen_deal_row_description,
                         deal.title, deal.salePriceDenominated,
                     ),
-                    onClick = { onLoadDealDetails(deal.dealID, deal.storeID, deal.gameID, deal.title, deal.salePriceDenominated, deal.url) },
+                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
                     imageUrl = deal.thumb,
                     salePrice = deal.salePriceDenominated,
                     regularPrice = deal.normalPriceDenominated,
@@ -209,24 +200,25 @@ private fun StoreDeals(
                     isStoreLow = deal.isStoreLow,
                     // store label omitted: this screen is already scoped to a single store
                     isWaitlisted = isFavourite,
-                    onToggleWaitlist = { onToggleWaitlist(deal.gameID) },
-                    addToWaitlistContentDescription = addToWaitlistCd,
-                    removeFromWaitlistContentDescription = removeFromWaitlistCd,
+                    isCollected = isCollected,
                 )
             }
         }
 
-        DealBottomSheet(
-            data = dealDetails,
-            isWaitlisted = dealDetails?.gameId?.let { it in favouriteIds } == true,
-            isIgnored = dealDetails?.gameId?.let { it in ignoredIds } == true,
+        val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
+        GamePeekSheet(
+            data = gamePeek,
+            isWaitlisted = peekGameId?.let { it in favouriteIds } == true,
+            isCollected = peekGameId?.let { it in collectionIds } == true,
+            isIgnored = peekGameId?.let { it in ignoredIds } == true,
+            onDismiss = onDismissPeek,
+            onShare = onShare,
+            onToggleWaitlist = onToggleWaitlist,
+            onToggleCollection = onToggleCollection,
+            onToggleIgnore = onToggleIgnore,
             goToWeb = goToWeb,
-            goToGame = goToGame,
-            onDismiss = { onDismissDealDetails() },
-            onShare = { sheetData -> onShareDealDetails(sheetData) },
-            onToggleWaitlist = { sheetData -> onToggleDealFavourite(sheetData) },
-            onToggleIgnore = { sheetData -> onToggleDealIgnore(sheetData) },
-            onRetryDealDetails = { dealDetails?.let { onLoadDealDetails(it.dealId, it.store.storeID, it.gameId, it.gameName, it.gameSalesPriceDenominated, it.dealUrl) } }
+            onViewGamePage = { peekData -> goToGame(peekData.gameId) },
+            onRetry = onRetryPeek,
         )
     }
 }
@@ -313,10 +305,6 @@ private fun StoreDeals_Success_Preview() {
             favouriteIds = persistentSetOf("222"), // marks Hollow Knight as favourited
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
         )
     }
@@ -331,10 +319,6 @@ private fun StoreDeals_Success_Dark_Preview() {
             favouriteIds = persistentSetOf("222"),
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
         )
     }
@@ -349,10 +333,6 @@ private fun StoreDeals_Empty_Preview() {
             favouriteIds = persistentSetOf(),
             storeDetails = PreviewStore,
             onBack = {},
-            onLoadDealDetails = { _, _, _, _, _, _ -> },
-            onDismissDealDetails = {},
-            onShareDealDetails = {},
-            onToggleDealFavourite = {},
             goToWeb = { _, _ -> },
         )
     }
