@@ -15,6 +15,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.NotedGame
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
@@ -86,7 +87,7 @@ internal class NotesRepositoryImpl(
                     gameId = note.gameId,
                     note = note.note,
                     title = game?.title?.takeIf { it.isNotBlank() } ?: note.gameId,
-                    boxart = game?.thumb?.takeIf { it.isNotBlank() },
+                    boxart = game?.artwork?.thumbnail?.takeIf { it.isNotBlank() },
                 )
             }
         }.awaitAll()

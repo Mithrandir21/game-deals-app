@@ -133,7 +133,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
     )
 
     private fun bundleWithGames(id: Int): Bundle {
-        val games = persistentListOf(Bundle.BundleGame("g1", "Game 1", ""), Bundle.BundleGame("g2", "Game 2", ""))
+        val games = persistentListOf(Bundle.BundleGame("g1", "Game 1"), Bundle.BundleGame("g2", "Game 2"))
         return Bundle(
             id = id,
             title = "Bundle $id",

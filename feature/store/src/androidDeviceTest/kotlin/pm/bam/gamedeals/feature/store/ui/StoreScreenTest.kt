@@ -30,6 +30,7 @@ import org.junit.Test
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.feature.store.generated.resources.Res
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_deal_row_description
@@ -62,7 +63,7 @@ class StoreScreenTest {
         every { deal.gameID } returns "1"
         every { deal.title } returns dealTitle
         every { deal.salePriceDenominated } returns dealPrice
-        every { deal.thumb } returns dealThumb
+        every { deal.artwork } returns GameArtwork(banner300 = dealThumb)
         val deals: StateFlow<ImmutableList<Deal>> = MutableStateFlow(persistentListOf(deal))
         val gamePeek: StateFlow<GamePeekSheetData?> = MutableStateFlow(null)
         val uiState: StateFlow<StoreScreenData> = MutableStateFlow(StoreScreenData.Loading)

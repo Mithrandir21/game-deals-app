@@ -3,6 +3,7 @@ package pm.bam.gamedeals.remote.itad.mappers
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.time.Instant
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
@@ -18,7 +19,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadMoney
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
-import pm.bam.gamedeals.remote.itad.models.bestArt
+import pm.bam.gamedeals.remote.itad.models.toGameArtwork
 
 /**
  * ITAD-shaped models → the app's (CheapShark-shaped) domain models (epic #205, Phase 2b).
@@ -53,7 +54,7 @@ internal fun ItadDeal.toDeal(): Deal {
         normalPriceDenominated = normal.denominated(),
         isOnSale = cutPercent > 0,
         savings = cutPercent.toDouble(),
-        thumb = boxart.orEmpty(),
+        artwork = artwork,
         url = url,
         isLowestEver = isLowestEver,
         isNewHistoricalLow = isNewHistoricalLow,
@@ -102,7 +103,7 @@ internal fun RemoteItadBundle.toBundle(): Bundle {
             games = tier.games
                 // Keep only game-like tier entries; software/hardware come through with a null type.
                 .filter { it.type.isGameLikeProductType() }
-                .map { Bundle.BundleGame(id = it.id, title = it.title, boxart = it.assets.bestArt().orEmpty()) }
+                .map { Bundle.BundleGame(id = it.id, title = it.title, artwork = it.assets.toGameArtwork()) }
                 .toImmutableList(),
         )
     }.toImmutableList()
@@ -179,11 +180,11 @@ internal fun ItadGameSearchResult.toGame(): Game = Game(
     cheapestDealID = "",
     title = title,
     internalName = "",
-    thumb = boxart.orEmpty(),
+    artwork = artwork,
 )
 
-internal fun ItadGamePrices.toGameDetails(title: String, boxart: String?): GameDetails = GameDetails(
-    info = GameDetails.GameInfo(title = title, steamAppID = null, thumb = boxart.orEmpty()),
+internal fun ItadGamePrices.toGameDetails(title: String, artwork: GameArtwork): GameDetails = GameDetails(
+    info = GameDetails.GameInfo(title = title, steamAppID = null, artwork = artwork),
     cheapestPriceEver = GameDetails.GameCheapestPriceEver(
         priceValue = historyLowAll?.amount ?: 0.0,
         priceDenominated = historyLowAll?.denominated().orEmpty(),
@@ -196,7 +197,7 @@ internal fun ItadGamePrices.toGameDetails(title: String, boxart: String?): GameD
  * Build a [DealDetails] for the deal at [focusShopId] (parsed from the synthesized dealID). The focused
  * shop becomes the headline `gameInfo`; the remaining shops are the cheaper-store alternatives.
  */
-internal fun ItadGamePrices.toDealDetails(title: String, boxart: String?, focusShopId: Int): DealDetails {
+internal fun ItadGamePrices.toDealDetails(title: String, artwork: GameArtwork, focusShopId: Int): DealDetails {
     val focus = deals.firstOrNull { it.shop.id == focusShopId } ?: deals.firstOrNull()
     val focusNormal = focus?.let { it.regular ?: it.price }
     val others = deals.filter { it.shop.id != focus?.shop?.id }
@@ -209,7 +210,7 @@ internal fun ItadGamePrices.toDealDetails(title: String, boxart: String?, focusS
             salePriceDenominated = focus?.price?.denominated().orEmpty(),
             retailPriceValue = focusNormal?.amount ?: 0.0,
             retailPriceDenominated = focusNormal?.denominated().orEmpty(),
-            thumb = boxart.orEmpty(),
+            artwork = artwork,
         ),
         cheaperStores = others.map { it.toCheaperStore() }.toImmutableList(),
         cheapestPrice = historyLowAll?.let {

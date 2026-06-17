@@ -15,7 +15,12 @@ internal val extraLargeSpace: Dp = 40.dp
 // Shared deal-surface dimensions (UI Improvements #254). The recurring row thumbnail and the inline
 // store/badge icon sizes live in the theme so the dense ITAD-style rows and tiles reference tokens
 // instead of hardcoded dp — one rhythm across Home, Deals, Store, and Search, tunable in one place.
-internal val rowThumbnailWidthSize: Dp = 100.dp
+//
+// The thumbnail is sized to the **art's** aspect ratio so `ContentScale.Crop` stops slicing the
+// sides: the art used by list rows is ITAD's `banner300` (300×140 ≈ 2.14:1 Steam-header landscape),
+// so 128×60 (≈2.13:1) matches it almost exactly. Height stays 60 because it's also reused on its own
+// as a square section-icon size (see FeedComposables); only the width tracks the banner ratio.
+internal val rowThumbnailWidthSize: Dp = 128.dp
 internal val rowThumbnailHeightSize: Dp = 60.dp
 internal val storeIconSize: Dp = 16.dp
 internal val badgeIconSize: Dp = 12.dp

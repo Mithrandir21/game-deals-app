@@ -17,7 +17,8 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadPrice
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadShop
 import pm.bam.gamedeals.remote.itad.models.RemoteItadShopRef
-import pm.bam.gamedeals.remote.itad.models.bestArt
+import pm.bam.gamedeals.remote.itad.models.toGameArtwork
+import pm.bam.gamedeals.domain.models.GameArtwork
 
 internal fun RemoteItadPrice.toItadMoney(): ItadMoney =
     ItadMoney(amount = amount, currency = currency)
@@ -42,7 +43,7 @@ internal fun RemoteItadShop.toStore(): Store =
 internal fun RemoteItadShop.toItadShop(): ItadShop =
     ItadShop(id = id, name = title)
 
-internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, boxart: String? = null): ItadDeal =
+internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, artwork: GameArtwork = GameArtwork()): ItadDeal =
     ItadDeal(
         gameId = gameId,
         gameTitle = gameTitle,
@@ -52,7 +53,7 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, b
         cutPercent = cut,
         url = url,
         storeLow = storeLow?.toItadMoney(),
-        boxart = boxart,
+        artwork = artwork,
         isLowestEver = flag.isHistoryLowFlag(),
         isNewHistoricalLow = flag.isNewHistoryLowFlag(),
         isStoreLow = flag.isStoreLowFlag(),
@@ -95,7 +96,7 @@ internal fun String?.isGameLikeProductType(): Boolean =
 
 /** One game's best current deal from `/deals/v2` (singular `deal` + game-level `assets`). */
 internal fun RemoteItadDealsGame.toItadDeal(): ItadDeal =
-    deal.toItadDeal(gameId = id, gameTitle = title, boxart = assets.bestArt())
+    deal.toItadDeal(gameId = id, gameTitle = title, artwork = assets.toGameArtwork())
 
 internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null): ItadGameSearchResult =
     ItadGameSearchResult(
@@ -103,7 +104,7 @@ internal fun RemoteItadSearchGame.toItadGameSearchResult(steamAppId: Int? = null
         title = title,
         slug = slug,
         steamAppId = steamAppId,
-        boxart = assets.bestArt(),
+        artwork = assets.toGameArtwork(),
     )
 
 /** `/games/info/v2` carries the same header fields as a search game, so reduce it to the lightweight identity used for deal/game headers. */
@@ -113,7 +114,7 @@ internal fun RemoteItadGameInfo.toItadGameSearchResult(): ItadGameSearchResult =
         title = title,
         slug = slug,
         steamAppId = appid,
-        boxart = assets.bestArt(),
+        artwork = assets.toGameArtwork(),
     )
 
 internal fun RemoteItadGamePrices.toItadGamePrices(): ItadGamePrices =

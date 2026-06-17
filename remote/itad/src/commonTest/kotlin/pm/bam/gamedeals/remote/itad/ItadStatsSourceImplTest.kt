@@ -12,6 +12,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.logging.Logger
@@ -85,13 +86,13 @@ class ItadStatsSourceImplTest {
         // g3's info is software → dropped, leaving g1 + g2 (see the dedicated filter test).
         assertEquals(listOf("g1", "g2"), ranked.map { it.gameId })
         assertEquals("Game One", ranked.first().title)
-        assertEquals("https://assets/g1_banner400.jpg", ranked.first().boxart) // prioritized banner400 over boxart
+        assertEquals("https://assets/g1_banner400.jpg", ranked.first().artwork.thumbnail) // prioritized banner400 over boxart
         assertEquals("$5.99", ranked.first().priceDenominated) // cheapest of g1's two deals
 
         // g2 has no price entry and no info entry → left null (best-effort enrichment)
         assertEquals("g2", ranked[1].gameId)
         assertNull(ranked[1].priceDenominated)
-        assertNull(ranked[1].boxart)
+        assertNull(ranked[1].artwork.thumbnail)
 
         val stats = recordedRequests.first().url
         assertEquals("/stats/most-waitlisted/v1", stats.encodedPath)

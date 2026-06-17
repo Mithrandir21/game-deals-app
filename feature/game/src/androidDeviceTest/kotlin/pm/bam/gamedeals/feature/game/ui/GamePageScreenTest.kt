@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
 
 /**
@@ -47,7 +48,7 @@ class GamePageScreenTest {
             GamePageViewModel.GamePageData.Data(
                 title = title,
                 gameDetails = GameDetails(
-                    info = GameDetails.GameInfo(title = title, steamAppID = null, thumb = "t"),
+                    info = GameDetails.GameInfo(title = title, steamAppID = null, artwork = GameArtwork(banner300 = "t")),
                     cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = 0.0, priceDenominated = "$0", date = "2026-01-01"),
                     deals = persistentListOf(),
                 ),

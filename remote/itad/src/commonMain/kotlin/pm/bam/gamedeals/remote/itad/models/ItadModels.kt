@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad.models
 
 import kotlinx.collections.immutable.ImmutableList
+import pm.bam.gamedeals.domain.models.GameArtwork
 
 /**
  * Clean, ITAD-shaped domain models that the module's mappers produce from the transport DTOs.
@@ -27,7 +28,7 @@ data class ItadGameSearchResult(
     val slug: String? = null,
     /** Populated only when the game was resolved via a Steam appid lookup (the IGDB bridge). */
     val steamAppId: Int? = null,
-    val boxart: String? = null,
+    val artwork: GameArtwork = GameArtwork(),
 )
 
 data class ItadDeal(
@@ -39,8 +40,8 @@ data class ItadDeal(
     val cutPercent: Int,
     val url: String,
     val storeLow: ItadMoney? = null,
-    /** Game boxart from `/deals/v2` `assets`; absent on the `/games/prices/v3` deal entries. */
-    val boxart: String? = null,
+    /** Game art from `/deals/v2` `assets`; empty on the `/games/prices/v3` deal entries. */
+    val artwork: GameArtwork = GameArtwork(),
     /** `true` when ITAD's deal `flag` marks this price as at/at-a-new historical low (#255). */
     val isLowestEver: Boolean = false,
     /** `true` when ITAD's deal `flag == "N"` — the price *just* hit a new all-time low (new-low badge). */

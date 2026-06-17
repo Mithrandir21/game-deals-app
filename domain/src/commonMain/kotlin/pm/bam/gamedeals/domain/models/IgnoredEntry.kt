@@ -7,5 +7,5 @@ import androidx.compose.runtime.Immutable
 data class IgnoredEntry(
     val gameId: String,
     val title: String,
-    val boxart: String? = null,
+    val artwork: GameArtwork = GameArtwork(),
 )

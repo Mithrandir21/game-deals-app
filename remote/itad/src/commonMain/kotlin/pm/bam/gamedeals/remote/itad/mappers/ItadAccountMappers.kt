@@ -12,7 +12,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadNotification
 import pm.bam.gamedeals.remote.itad.models.RemoteItadNotificationGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadUser
-import pm.bam.gamedeals.remote.itad.models.bestArt
+import pm.bam.gamedeals.remote.itad.models.toGameArtwork
 
 internal fun RemoteItadUser.toItadUser(): ItadUser = ItadUser(username = username)
 
@@ -25,12 +25,10 @@ internal fun RemoteItadNotificationGame.toNotificationGame(): NotificationGame =
     NotificationGame(gameId = id, title = title)
 
 internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
-    WaitlistEntry(gameId = id, title = title, boxart = boxartUrl())
+    WaitlistEntry(gameId = id, title = title, artwork = assets.toGameArtwork())
 
 internal fun RemoteItadSearchGame.toCollectionEntry(): CollectionEntry =
-    CollectionEntry(gameId = id, title = title, boxart = boxartUrl())
+    CollectionEntry(gameId = id, title = title, artwork = assets.toGameArtwork())
 
 internal fun RemoteItadSearchGame.toIgnoredEntry(): IgnoredEntry =
-    IgnoredEntry(gameId = id, title = title, boxart = boxartUrl())
-
-private fun RemoteItadSearchGame.boxartUrl(): String? = assets.bestArt()
+    IgnoredEntry(gameId = id, title = title, artwork = assets.toGameArtwork())

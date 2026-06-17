@@ -125,7 +125,7 @@ internal class ItadSourceImpl(
         val info = fetchGameInfo(gameId)
         val prices = fetchGamePrices(listOf(gameId), country = regionRepository.getSelectedCountryCode()).firstOrNull()
             ?: ItadGamePrices(gameId = gameId, historyLowAll = null, deals = persistentListOf())
-        return prices.toDealDetails(title = info.title, boxart = info.boxart, focusShopId = focusShopId)
+        return prices.toDealDetails(title = info.title, artwork = info.artwork, focusShopId = focusShopId)
     }
 
     override suspend fun fetchGames(title: String, steamAppID: Int?, limit: Int?, pageNumber: Int?): List<Game> =
@@ -139,7 +139,7 @@ internal class ItadSourceImpl(
         val info = fetchGameInfo(id)
         val prices = fetchGamePrices(listOf(id), country = regionRepository.getSelectedCountryCode()).firstOrNull()
             ?: ItadGamePrices(gameId = id, historyLowAll = null, deals = persistentListOf())
-        return prices.toGameDetails(title = info.title, boxart = info.boxart)
+        return prices.toGameDetails(title = info.title, artwork = info.artwork)
     }
 
     override suspend fun fetchGame(gameId: String): Game = fetchGameInfo(gameId).toGame()
@@ -204,7 +204,7 @@ internal class ItadSourceImpl(
         val pricesByGameId = fetchGamePrices(games.map { it.id }, country = country).associateBy { it.gameId }
         return games.mapNotNull { game ->
             val cheapest = pricesByGameId[game.id]?.deals?.minByOrNull { it.price.amount } ?: return@mapNotNull null
-            cheapest.copy(gameTitle = game.title, boxart = game.boxart).toDeal()
+            cheapest.copy(gameTitle = game.title, artwork = game.artwork).toDeal()
         }
     }
 

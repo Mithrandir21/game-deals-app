@@ -57,6 +57,6 @@ data class Bundle(
     data class BundleGame(
         val id: String,
         val title: String,
-        val boxart: String,
+        val artwork: GameArtwork = GameArtwork(),
     )
 }

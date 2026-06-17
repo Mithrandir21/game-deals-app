@@ -2,6 +2,7 @@ package pm.bam.gamedeals.testing.fixtures
 
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.GameArtwork
 
 fun deal(
     dealID: String = "deal-1",
@@ -45,7 +46,7 @@ fun deal(
     releaseDate = releaseDate,
     lastChange = lastChange,
     dealRating = dealRating,
-    thumb = thumb,
+    artwork = GameArtwork(banner300 = thumb),
     isLowestEver = isLowestEver,
     isNewHistoricalLow = isNewHistoricalLow,
     isStoreLow = isStoreLow,

@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
 
 fun game(
@@ -16,10 +17,10 @@ fun game(
     internalName: String = "TEST_GAME",
     thumb: String = "thumb",
     expires: Long = 0L,
-) = Game(gameID, steamAppID, cheapestValue, cheapestDenominated, cheapestDealID, title, internalName, thumb, expires)
+) = Game(gameID, steamAppID, cheapestValue, cheapestDenominated, cheapestDealID, title, internalName, GameArtwork(banner300 = thumb), expires)
 
 fun gameDetails(
-    info: GameDetails.GameInfo = GameDetails.GameInfo(title = "Test Game", steamAppID = null, thumb = "thumb"),
+    info: GameDetails.GameInfo = GameDetails.GameInfo(title = "Test Game", steamAppID = null, artwork = GameArtwork(banner300 = "thumb")),
     cheapestPriceEver: GameDetails.GameCheapestPriceEver =
         GameDetails.GameCheapestPriceEver(priceValue = 0.0, priceDenominated = "$0", date = "2026-01-01"),
     deals: ImmutableList<GameDetails.GameDeal> = persistentListOf(),
@@ -66,7 +67,7 @@ fun gameInfo(
     retailPriceDenominated = retailPriceDenominated,
     steamRatingCount = steamRatingCount,
     publisher = publisher,
-    thumb = thumb,
+    artwork = GameArtwork(banner300 = thumb),
 )
 
 fun cheaperStore(

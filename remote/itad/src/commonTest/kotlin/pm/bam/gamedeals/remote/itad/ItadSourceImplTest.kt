@@ -18,6 +18,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.models.DealFlag
 import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
@@ -142,7 +143,7 @@ class ItadSourceImplTest {
         assertEquals("USD", deal.price.currency)
         assertEquals(50, deal.cutPercent)
         assertEquals("https://store/halo", deal.url)
-        assertEquals("halo-banner300.png", deal.boxart) // prioritized banner300 over boxart
+        assertEquals("halo-banner300.png", deal.artwork.thumbnail) // prioritized banner300 over boxart
         assertTrue(deal.isLowestEver) // flag "N" (new historical low)
         assertTrue(deal.isNewHistoricalLow) // "N" is specifically a *new* low
         assertFalse(deal.isStoreLow)
@@ -317,7 +318,7 @@ class ItadSourceImplTest {
         assertEquals("$14.99", bundle.priceDenominated) // cheapest of the two tiers
         assertEquals(2, bundle.games.size) // union across both tiers
         assertEquals("Construction Simulator", bundle.games.first().title)
-        assertEquals("cs-box.png", bundle.games.first().boxart)
+        assertEquals("cs-box.png", bundle.games.first().artwork.thumbnail)
         assertEquals("/bundles/v1", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
     }
@@ -400,7 +401,7 @@ class ItadSourceImplTest {
         assertEquals(1, results.size)
         assertEquals("uuid-1", results.first().id)
         assertEquals("Halo", results.first().title)
-        assertEquals("banner400.png", results.first().boxart) // prioritized banner400 over boxart
+        assertEquals("banner400.png", results.first().artwork.thumbnail) // prioritized banner400 over boxart
         assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
     }
 
@@ -440,7 +441,7 @@ class ItadSourceImplTest {
         assertEquals("\$9.99", deal.salePriceDenominated)
         assertEquals(19.99, deal.normalPriceValue)
         assertEquals(50.0, deal.savings)
-        assertEquals("halo-banner300.png", deal.thumb) // prioritized banner300 over boxart
+        assertEquals("halo-banner300.png", deal.artwork.thumbnail) // prioritized banner300 over boxart
         assertEquals("https://store/halo", deal.url)
         assertTrue(deal.isLowestEver) // flag "N" survives onto the (Room-cached) store-deal model
         assertTrue(deal.isNewHistoricalLow)
@@ -468,7 +469,7 @@ class ItadSourceImplTest {
         assertEquals(35, deal.storeID)
         assertEquals("Halo", deal.title)
         assertEquals(7.49, deal.salePriceValue)
-        assertEquals("banner400.png", deal.thumb) // prioritized banner400 over boxart
+        assertEquals("banner400.png", deal.artwork.thumbnail) // prioritized banner400 over boxart
         assertTrue(deal.isLowestEver) // flag "H" derived from the /games/prices/v3 deal entry
         assertFalse(deal.isNewHistoricalLow) // "H" is at the low, but not *new*
         assertFalse(deal.isStoreLow)
@@ -510,7 +511,7 @@ class ItadSourceImplTest {
 
         assertEquals(1, games.size)
         assertEquals("uuid-1", games.first().gameID)
-        assertEquals("banner400.png", games.first().thumb) // prioritized banner400 over boxart
+        assertEquals("banner400.png", games.first().artwork.thumbnail) // prioritized banner400 over boxart
         assertEquals("/games/search/v1", recordedRequests.single().url.encodedPath)
     }
 

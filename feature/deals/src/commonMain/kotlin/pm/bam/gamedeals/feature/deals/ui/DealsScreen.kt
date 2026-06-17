@@ -84,6 +84,7 @@ import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_discover_by_tag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
@@ -373,8 +374,8 @@ private fun DealsContent(
                                         else Res.string.deals_screen_deal_row_description,
                                         deal.title, deal.salePriceDenominated,
                                     ),
-                                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
-                                    imageUrl = deal.thumb,
+                                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                                    imageUrl = deal.artwork.thumbnail,
                                     salePrice = deal.salePriceDenominated,
                                     regularPrice = deal.normalPriceDenominated,
                                     discountPercent = deal.savings.roundToInt(),
@@ -488,7 +489,7 @@ private fun SearchResultsBody(
                         isWaitlisted = group.gameID in waitlistIds,
                         isCollected = group.gameID in collectionIds,
                         store = storesById[group.cheapestDeal.storeID],
-                        onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.thumb) },
+                        onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.artwork.thumbnail) },
                     )
                 }
             }
@@ -522,7 +523,7 @@ private fun SearchResultListItem(
             title = deal.title,
             contentDescription = rowCd,
             onClick = onGame,
-            imageUrl = deal.thumb,
+            imageUrl = deal.artwork.thumbnail,
             salePrice = deal.salePriceDenominated,
             regularPrice = deal.normalPriceDenominated,
             discountPercent = deal.savings.roundToInt(),

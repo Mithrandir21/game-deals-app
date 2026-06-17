@@ -70,6 +70,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_expiry
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_game_image
@@ -308,7 +309,7 @@ private fun BundleDetailBody(
             bundle.tiers.forEachIndexed { index, tier ->
                 item(key = "tier_$index") { TierHeader(tierNumber = index + 1, priceDenominated = tier.priceDenominated) }
                 items(tier.games, key = { "tier_${index}_${it.id}" }) { game ->
-                    BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.boxart) })
+                    BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.artwork.thumbnail) })
                 }
             }
         } else if (bundle.games.isNotEmpty()) {
@@ -320,7 +321,7 @@ private fun BundleDetailBody(
                 )
             }
             items(bundle.games, key = { it.id }) { game ->
-                BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.boxart) })
+                BundleGameRow(game = game, price = data.prices[game.id], onClick = { onPeekGame(game.id, game.title, game.artwork.thumbnail) })
             }
         }
 
@@ -365,7 +366,7 @@ private fun BundleGameRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
-                model = game.boxart,
+                model = game.artwork.thumbnail,
                 contentDescription = stringResource(Res.string.bundle_detail_game_image, game.title),
                 error = painterResource(CommonRes.drawable.videogame_thumb),
                 contentScale = ContentScale.Crop,
@@ -509,9 +510,9 @@ private fun BundleFooter(bundle: Bundle) {
 @Composable
 private fun BundleDetailScreenPreview() {
     val games = persistentListOf(
-        Bundle.BundleGame("a", "Descenders", ""),
-        Bundle.BundleGame("b", "MudRunner", ""),
-        Bundle.BundleGame("c", "DRIFT CE", ""),
+        Bundle.BundleGame("a", "Descenders"),
+        Bundle.BundleGame("b", "MudRunner"),
+        Bundle.BundleGame("c", "DRIFT CE"),
     )
     val prices: ImmutableMap<String, BundleGamePrice> = listOf(
         BundleGamePrice(

@@ -117,6 +117,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.domain.models.portrait
 import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_developer
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_porting
@@ -477,7 +478,7 @@ private fun GamePageBody(
 @Composable
 private fun HeroSection(data: GamePageData.Data) {
     val igdb = data.igdbGame
-    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetails?.info?.thumb
+    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetails?.info?.artwork?.portrait
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
         verticalAlignment = Alignment.Top,

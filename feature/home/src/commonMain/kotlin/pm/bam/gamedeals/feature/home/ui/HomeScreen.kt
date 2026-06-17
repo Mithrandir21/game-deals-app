@@ -70,6 +70,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundles_label
@@ -333,7 +334,7 @@ private fun HomeFeed(
                             storeName = store?.storeName,
                             storeIconUrl = store?.iconUrl,
                             contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
-                            onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
+                            onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
                             isWaitlisted = deal.gameID in waitlistIds,
                             isCollected = deal.gameID in collectionIds,
                             modifier = Modifier.weight(1f),
@@ -366,8 +367,8 @@ private fun HomeFeed(
                         else Res.string.home_screen_store_deal_row_description,
                         deal.title, deal.normalPriceDenominated, deal.salePriceDenominated,
                     ),
-                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
-                    imageUrl = deal.thumb,
+                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                    imageUrl = deal.artwork.thumbnail,
                     salePrice = deal.salePriceDenominated,
                     regularPrice = deal.normalPriceDenominated,
                     discountPercent = deal.savings.roundToInt(),
@@ -495,8 +496,8 @@ private fun LazyListScope.rankedSection(
         DealListRow(
             title = game.title,
             contentDescription = cd,
-            onClick = { onPeekGame(game.gameId, game.title, game.boxart) },
-            imageUrl = game.boxart,
+            onClick = { onPeekGame(game.gameId, game.title, game.artwork.thumbnail) },
+            imageUrl = game.artwork.thumbnail,
             salePrice = game.priceDenominated,
             regularPrice = game.regularPriceDenominated,
             discountPercent = game.cutPercent ?: 0,

@@ -18,7 +18,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
 import pm.bam.gamedeals.remote.itad.mappers.toRankedGame
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadRankedGame
-import pm.bam.gamedeals.remote.itad.models.bestArt
+import pm.bam.gamedeals.remote.itad.models.toGameArtwork
 import pm.bam.gamedeals.remote.logic.log
 import pm.bam.gamedeals.remote.logic.mapAnyFailure
 
@@ -72,7 +72,7 @@ internal class ItadStatsSourceImpl(
             .map { game ->
                 game.copy(
                     priceDenominated = prices[game.gameId],
-                    boxart = infos[game.gameId]?.assets.bestArt(),
+                    artwork = infos[game.gameId]?.assets.toGameArtwork(),
                 )
             }
     }

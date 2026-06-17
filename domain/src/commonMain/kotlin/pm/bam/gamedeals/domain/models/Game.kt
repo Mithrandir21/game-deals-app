@@ -5,6 +5,7 @@ package pm.bam.gamedeals.domain.models
 
 import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -32,8 +33,9 @@ data class Game(
     val title: String,
     @SerialName("internalName")
     val internalName: String,
-    @SerialName("thumb")
-    val thumb: String,
+    @Embedded(prefix = "art_")
+    @SerialName("artwork")
+    val artwork: GameArtwork = GameArtwork(),
 
     /**
      * Epoch-millisecond expiry stamp written when the entity is persisted by the repository.
@@ -65,8 +67,8 @@ data class GameDetails(
         val title: String,
         @SerialName("steamAppID")
         val steamAppID: Int? = null,
-        @SerialName("thumb")
-        val thumb: String
+        @SerialName("artwork")
+        val artwork: GameArtwork = GameArtwork()
     )
 
     @Immutable

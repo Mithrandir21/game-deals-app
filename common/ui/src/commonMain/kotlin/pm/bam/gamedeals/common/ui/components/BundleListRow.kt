@@ -35,6 +35,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.thumbnail
 import kotlin.time.Instant
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.bundle_row_art_strip
@@ -133,7 +134,7 @@ private fun BundleArtStrip(
     ) {
         games.take(shownCount).forEach { game ->
             AsyncImage(
-                model = game.boxart,
+                model = game.artwork.thumbnail,
                 contentDescription = null,
                 error = painterResource(CommonRes.drawable.videogame_thumb),
                 contentScale = ContentScale.Crop,
@@ -175,13 +176,13 @@ private val MONTH_ABBREV = listOf(
 @Composable
 private fun BundleListRow_Preview() {
     val games = persistentListOf(
-        Bundle.BundleGame("a", "Game A", ""),
-        Bundle.BundleGame("b", "Game B", ""),
-        Bundle.BundleGame("c", "Game C", ""),
-        Bundle.BundleGame("d", "Game D", ""),
-        Bundle.BundleGame("e", "Game E", ""),
-        Bundle.BundleGame("f", "Game F", ""),
-        Bundle.BundleGame("g", "Game G", ""),
+        Bundle.BundleGame("a", "Game A"),
+        Bundle.BundleGame("b", "Game B"),
+        Bundle.BundleGame("c", "Game C"),
+        Bundle.BundleGame("d", "Game D"),
+        Bundle.BundleGame("e", "Game E"),
+        Bundle.BundleGame("f", "Game F"),
+        Bundle.BundleGame("g", "Game G"),
     )
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {

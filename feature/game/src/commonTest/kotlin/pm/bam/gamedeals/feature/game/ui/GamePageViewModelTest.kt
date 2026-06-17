@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.Country
@@ -116,7 +117,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
     @Test
     fun deal_entry_loads_details_deals_meta_bundles_and_igdb() = runTest {
         val details = gameDetails(
-            info = GameDetails.GameInfo(title = "Halo Infinite", steamAppID = 1240440, thumb = "t"),
+            info = GameDetails.GameInfo(title = "Halo Infinite", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")),
             deals = persistentListOf(gameDeal(storeID = 61)),
         )
         val meta = GameMeta(gameId = "g1", developers = persistentListOf("343"), players = GameMeta.Players(recent = 9000))
@@ -141,7 +142,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
 
     @Test
     fun deal_entry_igdb_failure_still_shows_deals() = runTest {
-        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
         everySuspend { gamesRepository.getGameDetails("g1") } returns details
         everySuspend { igdbRepository.fetchGameDetailsBySteamId(1240440) } calls { throw Exception("IGDB down") }
 
@@ -187,7 +188,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
     fun regions_tab_lazily_loads_regional_prices_on_selection() = runTest {
         everySuspend { igdbRepository.fetchGameDetailsBySteamId(1240440) } returns igdb(steamAppId = 1240440)
         everySuspend { gamesRepository.getGameDetails("g1") } returns gameDetails(
-            info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"),
+            info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")),
             deals = persistentListOf(gameDeal()),
         )
         everySuspend { gamesRepository.getRegionalPrices("g1") } returns listOf(
@@ -211,7 +212,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleWaitlist_SignInRequired_when_logged_out() = runTest {
-        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
         everySuspend { gamesRepository.getGameDetails("g1") } returns details
         val vm = viewModel(mapOf("gameId" to "g1"))
         everySuspend { waitlistRepository.toggleWaitlist("g1") } returns RepoUpdateResult.NOT_LOGGED_IN
@@ -225,7 +226,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
 
     @Test
     fun toggleIgnore_SignInRequired_when_logged_out() = runTest {
-        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
         everySuspend { gamesRepository.getGameDetails("g1") } returns details
         val vm = viewModel(mapOf("gameId" to "g1"))
         everySuspend { ignoredRepository.toggleIgnored("g1") } returns RepoUpdateResult.NOT_LOGGED_IN
@@ -239,7 +240,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
 
     @Test
     fun setNote_SignInRequired_when_logged_out() = runTest {
-        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, thumb = "t"), deals = persistentListOf(gameDeal()))
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
         everySuspend { gamesRepository.getGameDetails("g1") } returns details
         val vm = viewModel(mapOf("gameId" to "g1"))
         everySuspend { notesRepository.setNote("g1", "text") } returns RepoUpdateResult.NOT_LOGGED_IN

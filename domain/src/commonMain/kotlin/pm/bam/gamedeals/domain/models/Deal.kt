@@ -5,6 +5,7 @@ package pm.bam.gamedeals.domain.models
 
 import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.collections.immutable.ImmutableList
@@ -62,8 +63,9 @@ data class Deal(
     val lastChange: Int? = null,
     @SerialName("dealRating")
     val dealRating: Double? = null,
-    @SerialName("thumb")
-    val thumb: String,
+    @Embedded(prefix = "art_")
+    @SerialName("artwork")
+    val artwork: GameArtwork = GameArtwork(),
 
     /**
      * Source-neutral deep link to this deal at its store, read by the UI and share text.
@@ -186,8 +188,8 @@ data class DealDetails(
         val publisher: String? = null,
         @SerialName("steamworks")
         val steamworks: Boolean? = null,
-        @SerialName("thumb")
-        val thumb: String
+        @SerialName("artwork")
+        val artwork: GameArtwork = GameArtwork()
     )
 
     @Immutable

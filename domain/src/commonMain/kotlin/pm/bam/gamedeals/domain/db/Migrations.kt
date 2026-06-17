@@ -241,6 +241,28 @@ private val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+/**
+ * v21 → v22 — game artwork as a variant set (replaced the single-URL `bestArt()` selector). `Deal` and
+ * `Game` swapped their one `thumb` TEXT column for the embedded `GameArtwork` (`art_banner145/300/400/600`
+ * + `art_boxart`); both are TTL caches, so they're recreated **empty** (clean slate — they refetch on
+ * next open) rather than backfilled, matching the recreate rationale of MIGRATION_19_20. The `Deal`/`Game`
+ * `CREATE TABLE` DDL is copied verbatim from `domain/schemas/.../22.json` so the post-migration identity
+ * matches the compiled v22 database. The JSON-blob caches still hold the old String image shape
+ * (`thumb`/`boxart`), which no longer decodes into the `GameArtwork` object, so they're cleared too.
+ */
+private val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `Deal`")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Deal` (`dealID` TEXT NOT NULL, `internalName` TEXT, `title` TEXT NOT NULL, `metacriticLink` TEXT, `storeID` INTEGER NOT NULL, `gameID` TEXT NOT NULL, `salePriceValue` REAL NOT NULL, `salePriceDenominated` TEXT NOT NULL, `normalPriceValue` REAL NOT NULL, `normalPriceDenominated` TEXT NOT NULL, `isOnSale` INTEGER NOT NULL, `savings` REAL NOT NULL, `metacriticScore` INTEGER, `steamRatingText` TEXT, `steamRatingPercent` INTEGER, `steamRatingCount` TEXT, `steamAppID` INTEGER, `releaseDate` INTEGER, `lastChange` INTEGER, `dealRating` REAL, `url` TEXT NOT NULL, `expires` INTEGER NOT NULL, `isLowestEver` INTEGER NOT NULL DEFAULT 0, `isNewHistoricalLow` INTEGER NOT NULL DEFAULT 0, `isStoreLow` INTEGER NOT NULL DEFAULT 0, `hasVoucher` INTEGER NOT NULL DEFAULT 0, `country` TEXT NOT NULL DEFAULT 'US', `art_banner145` TEXT, `art_banner300` TEXT, `art_banner400` TEXT, `art_banner600` TEXT, `art_boxart` TEXT, PRIMARY KEY(`dealID`))")
+        connection.execSQL("DROP TABLE IF EXISTS `Game`")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `Game` (`gameID` TEXT NOT NULL, `steamAppID` INTEGER, `cheapestValue` REAL NOT NULL, `cheapestDenominated` TEXT NOT NULL, `cheapestDealID` TEXT NOT NULL, `title` TEXT NOT NULL, `internalName` TEXT NOT NULL, `expires` INTEGER NOT NULL DEFAULT 0, `art_banner145` TEXT, `art_banner300` TEXT, `art_banner400` TEXT, `art_banner600` TEXT, `art_boxart` TEXT, PRIMARY KEY(`gameID`))")
+        connection.execSQL("DELETE FROM `BundlesCache`")
+        connection.execSQL("DELETE FROM `StatsRankingsCache`")
+        connection.execSQL("DELETE FROM `GameDetailsCache`")
+        connection.execSQL("DELETE FROM `DealDetailsCache`")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
 
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

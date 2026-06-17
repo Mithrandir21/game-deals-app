@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import pm.bam.gamedeals.domain.models.GameArtwork
 
 /**
  * ITAD (IsThereAnyDeal) API v2 transport DTOs. Only the fields the app currently consumes are
@@ -34,19 +35,24 @@ data class RemoteItadShop(
 @Serializable
 data class RemoteItadGameAssets(
     @SerialName("boxart") val boxart: String? = null,
+    @SerialName("banner145") val banner145: String? = null,
     @SerialName("banner300") val banner300: String? = null,
     @SerialName("banner400") val banner400: String? = null,
     @SerialName("banner600") val banner600: String? = null,
 )
 
 /**
- * Prioritizes wide-aspect banners over the portrait boxart (epic #219, Phase 5), smallest first so
- * list rows fetch the lightest art that fills the slot. Order: banner300 -> banner400 -> banner600 -> boxart.
+ * Transport assets → the domain [GameArtwork] carried whole through the app (replaced the old
+ * `bestArt()` single-URL selector). A null asset block (ITAD omitted `assets`) maps to an empty
+ * [GameArtwork] so consumers always get a non-null holder and select via its accessors.
  */
-fun RemoteItadGameAssets?.bestArt(): String? {
-    if (this == null) return null
-    return banner300 ?: banner400 ?: banner600 ?: boxart
-}
+fun RemoteItadGameAssets?.toGameArtwork(): GameArtwork = GameArtwork(
+    banner145 = this?.banner145,
+    banner300 = this?.banner300,
+    banner400 = this?.banner400,
+    banner600 = this?.banner600,
+    boxart = this?.boxart,
+)
 
 @Serializable
 data class RemoteItadSearchGame(

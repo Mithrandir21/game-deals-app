@@ -23,7 +23,7 @@ import kotlinx.serialization.Serializable
 data class RankedGame(
     val gameId: String,
     val title: String,
-    val boxart: String? = null,
+    val artwork: GameArtwork = GameArtwork(),
     val priceDenominated: String? = null,
     val cutPercent: Int? = null,
     val regularPriceDenominated: String? = null,

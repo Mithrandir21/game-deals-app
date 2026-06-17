@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.cache.StatsRankingsCacheEntry
 import pm.bam.gamedeals.domain.db.dao.StatsRankingsCacheDao
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.StatsSource
@@ -58,7 +59,7 @@ class StatsRepositoryTest {
 
     @Test
     fun fresh_cache_returns_decoded_ranking_without_fetch() = runTest {
-        val ranking = listOf(RankedGame("a", "A", boxart = "art", priceDenominated = "$9"))
+        val ranking = listOf(RankedGame("a", "A", artwork = GameArtwork(banner300 = "art"), priceDenominated = "$9"))
         everySuspend { statsRankingsCacheDao.get(RANKING_MOST_WAITLISTED, country) } returns
             entryFor(RANKING_MOST_WAITLISTED, ranking, expires = now + 10_000)
 

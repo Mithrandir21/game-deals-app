@@ -8,6 +8,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
@@ -84,7 +85,7 @@ class ItadAccountSourceImplTest {
         assertEquals(1, entries.size)
         assertEquals("uuid-1", entries.single().gameId)
         assertEquals("Hades", entries.single().title)
-        assertEquals("banner300.jpg", entries.single().boxart) // prioritized banner300 over boxart
+        assertEquals("banner300.jpg", entries.single().artwork.thumbnail) // prioritized banner300 over boxart
         assertEquals("/waitlist/games/v1", recorded.single().url.encodedPath)
     }
 

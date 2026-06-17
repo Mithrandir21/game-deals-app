@@ -65,6 +65,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.store.generated.resources.Res
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.store.generated.resources.store_screen_data_loading_error_retry
@@ -190,8 +191,8 @@ private fun StoreDeals(
                         else Res.string.store_screen_deal_row_description,
                         deal.title, deal.salePriceDenominated,
                     ),
-                    onClick = { onPeekGame(deal.gameID, deal.title, deal.thumb) },
-                    imageUrl = deal.thumb,
+                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                    imageUrl = deal.artwork.thumbnail,
                     salePrice = deal.salePriceDenominated,
                     regularPrice = deal.normalPriceDenominated,
                     discountPercent = deal.savings.roundToInt(),

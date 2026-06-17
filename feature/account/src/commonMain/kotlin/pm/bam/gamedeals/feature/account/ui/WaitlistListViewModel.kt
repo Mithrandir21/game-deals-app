@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
@@ -27,7 +28,7 @@ internal class WaitlistListViewModel(
         viewModelScope.launch {
             val items = runCatching { waitlistRepository.getWaitlist() }
                 .getOrElse { fatal(logger, it); emptyList() }
-                .map { GameListItem(it.gameId, it.title, it.boxart) }
+                .map { GameListItem(it.gameId, it.title, it.artwork.thumbnail) }
             uiState.update { it.copy(loading = false, items = items.toImmutableList()) }
         }
     }

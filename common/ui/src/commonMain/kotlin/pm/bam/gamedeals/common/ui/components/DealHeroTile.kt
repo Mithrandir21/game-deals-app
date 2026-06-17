@@ -33,6 +33,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsElevation
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.hero
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_new_low_content_suffix
@@ -44,7 +45,12 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * The ITAD-style featured-deal tile (UI Improvements board, Phase B): wide-aspect banner art
  * on top, with the deal's identity stacked *below* it on the card surface — matching the ITAD
  * website's hero grid. It assembles the Phase-A building blocks ([StoreLabel], [DiscountBadge],
- * [PriceBlock]) over and under the art ([Deal.thumb] already prefers wide banners via `bestArt()`).
+ * [PriceBlock]) over and under the art.
+ *
+ * The art slot is `16:9`, fed by [Deal.artwork]'s [hero] accessor (ITAD's `banner600`, 600×344 ≈ `16:9`)
+ * rather than the [thumbnail][pm.bam.gamedeals.domain.models.thumbnail] (`banner300`, 300×140) the list
+ * rows use: at full card width the 300px thumb looked soft, and its 2.14:1 ratio left `ContentScale.Crop`
+ * slicing the sides. `banner600` is both crisper and the right shape, so the card stops cropping and stays sharp.
  *
  * The interactive waitlist heart (and the full-image scrim it needed for contrast) was retired —
  * toggling now lives in the `GamePeekSheet`. The only thing over the art is now the small **passive**
@@ -102,7 +108,7 @@ fun DealHeroTile(
                         .aspectRatio(16f / 9f),
                 ) {
                     AsyncImage(
-                        model = deal.thumb,
+                        model = deal.artwork.hero,
                         contentDescription = null, // the tile's contentDescription carries the spoken text
                         contentScale = ContentScale.Crop,
                         error = painterResource(CommonRes.drawable.videogame_thumb),
