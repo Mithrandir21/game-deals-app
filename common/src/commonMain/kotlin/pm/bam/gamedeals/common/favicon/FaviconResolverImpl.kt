@@ -38,6 +38,7 @@ class FaviconResolverImpl : FaviconResolver {
             "reddit.com" in h -> "brand:reddit"
             "wikipedia.org" in h -> "brand:wikipedia"
             "itch.io" in h -> "brand:itch"
+            "bsky.app" in h -> "brand:bluesky"
             else -> null
         }
     }
@@ -45,8 +46,14 @@ class FaviconResolverImpl : FaviconResolver {
     // Canonical favicon URLs for brands whose IGDB-stored URLs vary across games. Empirically
     // discovered via the FaviconProbe diagnostic — e.g. `epicgames.com/favicon.ico` returns a
     // real 48x48 image while `store.epicgames.com/favicon.ico` returns bytes that won't decode.
-    // Brands whose every variant fails (Discord, Bluesky) are intentionally omitted — those
-    // chips render label-only rather than chase versioned CDN paths we'd have to babysit.
+    // Most entries are the brand's `/favicon.ico`; a few point at a static-asset path where the
+    // brand serves no root favicon (Bluesky's `bsky.app/favicon.ico` 404s, but its bundled
+    // `apple-touch-icon.png` is a real 180x180 image).
+    //
+    // Brands left to the label-only fallback: Discord (every favicon variant fails to decode) and
+    // Wikia/Fandom (its favicon is Cloudflare bot-blocked — a programmatic client gets a 403 HTML
+    // body, never an image). A bundled drawable (à la StoreLogos) is the only way to show Fandom's
+    // mark; until such an asset ships, its links render label-only.
     private companion object {
         private val brandFaviconUrls: Map<String, String> = mapOf(
             "brand:epicgames" to "https://epicgames.com/favicon.ico",
@@ -63,6 +70,7 @@ class FaviconResolverImpl : FaviconResolver {
             "brand:reddit" to "https://www.reddit.com/favicon.ico",
             "brand:wikipedia" to "https://en.wikipedia.org/favicon.ico",
             "brand:itch" to "https://itch.io/favicon.ico",
+            "brand:bluesky" to "https://bsky.app/static/apple-touch-icon.png",
         )
     }
 }

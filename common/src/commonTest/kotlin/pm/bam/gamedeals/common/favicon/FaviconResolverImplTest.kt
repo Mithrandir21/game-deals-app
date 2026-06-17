@@ -72,6 +72,14 @@ class FaviconResolverImplTest {
     }
 
     @Test
+    fun bluesky_resolves_to_its_static_apple_touch_icon_not_root_favicon() {
+        // bsky.app/favicon.ico 404s; the brand map points at the static PNG that actually decodes.
+        val ref = resolver.resolve("https://bsky.app/profile/somegame.bsky.social")
+        assertEquals("https://bsky.app/static/apple-touch-icon.png", ref.url)
+        assertEquals("brand:bluesky", ref.cacheKey)
+    }
+
+    @Test
     fun host_only_url_with_no_path_still_resolves() {
         val ref = resolver.resolve("https://www.gog.com")
         assertEquals("https://www.gog.com/favicon.ico", ref.url)

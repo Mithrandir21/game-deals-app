@@ -48,6 +48,7 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.LibraryAddCheck
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -97,6 +98,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -998,7 +1001,28 @@ private fun LinksSection(websites: List<WebsiteUiModel>) {
             SectionHeader(stringResource(Res.string.game_details_section_links))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
                 websites.forEach { site ->
-                    AssistChip(onClick = { uriHandler.openUri(site.url) }, label = { Text(site.category.name) })
+                    AssistChip(
+                        onClick = { uriHandler.openUri(site.url) },
+                        label = { Text(site.category.name) },
+                        // Brand-keyed favicon (resolved in the VM via FaviconResolver). Shown only when a
+                        // URL resolved; on a failed fetch Coil renders nothing, leaving a label-only chip.
+                        leadingIcon = site.faviconUrl?.let { faviconUrl ->
+                            {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                                        .data(faviconUrl)
+                                        .memoryCacheKey(site.faviconCacheKey)
+                                        .diskCacheKey(site.faviconCacheKey)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .size(AssistChipDefaults.IconSize)
+                                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall)),
+                                )
+                            }
+                        },
+                    )
                 }
             }
         }
