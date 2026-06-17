@@ -33,6 +33,13 @@ internal class NotificationsViewModel(
     private val logger: Logger,
 ) : ViewModel() {
 
+    // NOTE (per-game collapsing — deferred): notifications cannot be grouped into one row per game.
+    // An ITAD notification is a per-day digest spanning ALL of the user's waitlisted games, not a
+    // per-game event: the /notifications/v1 payload carries no game id and only a generic title
+    // (e.g. "Price drop"). The referenced games surface only via the separate /notifications/waitlist/v1
+    // detail call, and one notification maps to many games — so "same game" has no key in the list and
+    // collapsing-by-game isn't expressible against the current API. Revisit if ITAD adds per-game items.
+
     val uiState: StateFlow<NotificationsScreenData>
         field = MutableStateFlow(NotificationsScreenData(loading = true))
 
