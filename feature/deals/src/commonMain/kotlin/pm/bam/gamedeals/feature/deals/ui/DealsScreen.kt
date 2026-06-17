@@ -568,8 +568,8 @@ private fun FilterBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            .padding(GameDealsCustomTheme.spacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedButton(onClick = onClick) {

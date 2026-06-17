@@ -281,7 +281,12 @@ private fun HomeFeed(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(GameDealsCustomTheme.spacing.medium),
+                        .padding(
+                            start = GameDealsCustomTheme.spacing.medium,
+                            top = GameDealsCustomTheme.spacing.large,
+                            end = GameDealsCustomTheme.spacing.medium,
+                            bottom = GameDealsCustomTheme.spacing.medium
+                        ),
                     horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
                     StatCard(

@@ -212,7 +212,7 @@ fun GameDealsAppShell(
         val contentPadding = if (showTopBar) {
             PaddingValues(
                 start = padding.calculateStartPadding(layoutDirection),
-                top = padding.calculateTopPadding() + GameDealsCustomTheme.spacing.large,
+                top = padding.calculateTopPadding(),
                 end = padding.calculateEndPadding(layoutDirection),
                 bottom = padding.calculateBottomPadding(),
             )
