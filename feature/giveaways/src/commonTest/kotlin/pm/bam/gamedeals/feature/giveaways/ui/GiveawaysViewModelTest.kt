@@ -319,7 +319,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun status_tab_defaults_to_live_and_hides_expired_giveaways() = runTest {
+    fun only_live_giveaways_are_shown_and_expired_are_hidden() = runTest {
         val live = giveaway(id = 1, status = "Active", endDate = null)
         val expired = giveaway(id = 2, status = "Expired", endDate = null)
         every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(live, expired))
@@ -327,30 +327,12 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
 
         val emissions = observeStates(viewModel)
-        assertEquals(GiveawayStatusTab.LIVE, emissions.last().selectedTab)
         assertEquals(1, emissions.last().giveaways.size)
         assertEquals(live, emissions.last().giveaways.first())
     }
 
     @Test
-    fun selecting_the_expired_tab_shows_only_expired_giveaways() = runTest {
-        val live = giveaway(id = 1, status = "Active", endDate = null)
-        val expired = giveaway(id = 2, status = "Expired", endDate = null)
-        every { giveawaysRepository.observeGiveaways() } returns flowOf(listOf(live, expired))
-
-        val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
-
-        val emissions = observeStates(viewModel)
-        viewModel.selectStatusTab(GiveawayStatusTab.EXPIRED)
-        runCurrent()
-
-        assertEquals(GiveawayStatusTab.EXPIRED, emissions.last().selectedTab)
-        assertEquals(1, emissions.last().giveaways.size)
-        assertEquals(expired, emissions.last().giveaways.first())
-    }
-
-    @Test
-    fun an_active_giveaway_past_its_end_date_is_treated_as_expired() = runTest {
+    fun an_active_giveaway_past_its_end_date_is_hidden() = runTest {
         // now = year 2100, so the 2020 end date is in the past and the item is no longer "Live".
         now = 4_102_444_800_000L
         val pastEnd = giveaway(id = 1, status = "Active", endDate = "2020-01-01 00:00:00")
@@ -360,11 +342,6 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
         val emissions = observeStates(viewModel)
         assertTrue(emissions.last().giveaways.isEmpty())
-
-        viewModel.selectStatusTab(GiveawayStatusTab.EXPIRED)
-        runCurrent()
-        assertEquals(1, emissions.last().giveaways.size)
-        assertEquals(pastEnd, emissions.last().giveaways.first())
     }
 
     private fun TestScope.observeStates(viewModel: GiveawaysViewModel) =

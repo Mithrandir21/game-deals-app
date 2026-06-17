@@ -169,6 +169,10 @@ data class GiveawaySearchParameters(
         GiveawayType.entries.map { GiveawayTypeSelection(it, false) }.toImmutableList(),
     val sortBy: GiveawaySortBy = GiveawaySortBy.DATE,
 ) {
+    /** Number of active filter constraints (selected platforms + types) — drives the filter button's count badge. */
+    val activeCount: Int
+        get() = platforms.count { it.selected } + types.count { it.selected }
+
     /**
      * Encodes properties from the this [GiveawaySearchParameters] to a map.
      * `null` values are omitted from the output.

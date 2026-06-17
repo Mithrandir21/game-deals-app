@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -28,16 +28,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -83,9 +81,9 @@ import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_expired
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_live
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filter_button
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filter_button_count
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_label
@@ -99,8 +97,6 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_li
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_title_free_on
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_expired
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_live
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -121,7 +117,6 @@ internal fun GiveawaysScreen(
         onReload = { viewModel.reloadGiveaways() },
         goToWeb = goToWeb,
         goToGiveawayDetail = goToGiveawayDetail,
-        onTabSelected = { viewModel.selectStatusTab(it) },
         existingParameters = existingParameters,
         showFilters = showFilters,
         onShowFiltersChanged = { newShowFilters ->
@@ -156,7 +151,6 @@ private fun GiveawaysScreenContent(
     onReload: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGiveawayDetail: (giveawayId: Int) -> Unit,
-    onTabSelected: (tab: GiveawayStatusTab) -> Unit,
     existingParameters: GiveawaySearchParameters,
     showFilters: Boolean,
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
@@ -181,21 +175,12 @@ private fun GiveawaysScreenContent(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding: PaddingValues ->
             Column(modifier = Modifier.padding(innerPadding)) {
-                // Filter toggle lives beside the Live/Expired tabs (the shared shell top bar is
-                // tab-agnostic) — mirrors how the Deals tab keeps its Filter affordance in content.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GiveawayStatusTabs(
-                        modifier = Modifier.weight(1f),
-                        selectedTab = data.selectedTab,
-                        onTabSelected = onTabSelected,
-                    )
-                    IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(Res.string.giveaway_screen_filters_icon),
-                        )
-                    }
-                }
+                // Filter affordance mirrors the Deals tab (the shared shell top bar is content-agnostic),
+                // keeping the same look and feel across screens.
+                FilterBar(
+                    activeCount = existingParameters.activeCount,
+                    onClick = { onShowFiltersChanged(true) },
+                )
 
                 when (data.status) {
                     GiveawaysViewModel.GiveawaysScreenStatus.LOADING -> CircularProgressIndicator(
@@ -206,11 +191,7 @@ private fun GiveawaysScreenContent(
                     )
 
                     GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS -> if (data.giveaways.isEmpty()) {
-                        val emptyMessage = when (data.selectedTab) {
-                            GiveawayStatusTab.LIVE -> stringResource(Res.string.giveaway_screen_empty_live)
-                            GiveawayStatusTab.EXPIRED -> stringResource(Res.string.giveaway_screen_empty_expired)
-                        }
-                        CenteredMessage(message = emptyMessage)
+                        CenteredMessage(message = stringResource(Res.string.giveaway_screen_empty_live))
                     } else {
                         LazyColumn(
                             state = scrollState,
@@ -255,28 +236,31 @@ private fun GiveawaysScreenContent(
     }
 }
 
+/** Filter affordance mirroring the Deals tab: an outlined "Filter" button with an active-count badge. */
 @Composable
-private fun GiveawayStatusTabs(
-    selectedTab: GiveawayStatusTab,
-    onTabSelected: (tab: GiveawayStatusTab) -> Unit,
+private fun FilterBar(
+    activeCount: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(
-        GiveawayStatusTab.LIVE to stringResource(Res.string.giveaway_screen_tab_live),
-        GiveawayStatusTab.EXPIRED to stringResource(Res.string.giveaway_screen_tab_expired),
-    )
-    TabRow(modifier = modifier, selectedTabIndex = selectedTab.ordinal) {
-        tabs.forEach { (tab, label) ->
-            Tab(
-                selected = selectedTab == tab,
-                onClick = { onTabSelected(tab) },
-                text = { Text(label) },
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(GameDealsCustomTheme.spacing.medium),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(onClick = onClick) {
+            Icon(Icons.Filled.FilterList, contentDescription = null)
+            Text(
+                modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.small),
+                text = if (activeCount > 0) stringResource(Res.string.giveaway_screen_filter_button_count, activeCount)
+                else stringResource(Res.string.giveaway_screen_filter_button),
             )
         }
     }
 }
 
-/** Centered placeholder shown when a status tab (or the active filters) yields no giveaways. */
+/** Centered placeholder shown when the live giveaways (or the active filters) yield no results. */
 @Composable
 private fun CenteredMessage(
     message: String,
@@ -566,7 +550,6 @@ private fun GiveawaysScreen_Success_Preview() {
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
-            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -590,7 +573,6 @@ private fun GiveawaysScreen_Success_Dark_Preview() {
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
-            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -612,7 +594,6 @@ private fun GiveawaysScreen_Loading_Preview() {
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
-            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -631,12 +612,10 @@ private fun GiveawaysScreen_Empty_Preview() {
             data = GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
                 giveaways = persistentListOf(),
-                selectedTab = GiveawayStatusTab.EXPIRED,
             ),
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
-            onTabSelected = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},

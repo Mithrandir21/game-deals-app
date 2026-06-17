@@ -22,14 +22,11 @@ import pm.bam.gamedeals.domain.models.GiveawayPlatform
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_expired
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_live
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filter_button
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_detail
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_expired
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_live
 
 class GiveawaysScreenTest {
 
@@ -117,12 +114,11 @@ class GiveawaysScreenTest {
     }
 
     @Test
-    fun emptyLiveTabShowsPlaceholder() {
+    fun emptyShowsPlaceholder() {
         every { viewModel.uiState } returns MutableStateFlow(
             GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
                 giveaways = persistentListOf(),
-                selectedTab = GiveawayStatusTab.LIVE,
             )
         )
 
@@ -130,40 +126,6 @@ class GiveawaysScreenTest {
 
         composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
         composeTestRule.onNodeWithText(screenSemantics.emptyLive).assertIsDisplayed()
-        composeTestRule.onNodeWithText(screenSemantics.emptyExpired).assertDoesNotExist()
-    }
-
-    @Test
-    fun emptyExpiredTabShowsPlaceholder() {
-        every { viewModel.uiState } returns MutableStateFlow(
-            GiveawaysViewModel.GiveawaysScreenData(
-                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
-                giveaways = persistentListOf(),
-                selectedTab = GiveawayStatusTab.EXPIRED,
-            )
-        )
-
-        setupCompose()
-
-        composeTestRule.onNodeWithText(screenSemantics.emptyExpired).assertIsDisplayed()
-        composeTestRule.onNodeWithText(screenSemantics.emptyLive).assertDoesNotExist()
-    }
-
-    @Test
-    fun selectingExpiredTabSwitchesStatus() {
-        every { viewModel.uiState } returns MutableStateFlow(
-            GiveawaysViewModel.GiveawaysScreenData(
-                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
-                giveaways = persistentListOf(),
-            )
-        )
-        every { viewModel.selectStatusTab(any()) } just Runs
-
-        setupCompose()
-
-        composeTestRule.onNodeWithText(screenSemantics.expiredTab).performClick()
-
-        verify(exactly = 1) { viewModel.selectStatusTab(GiveawayStatusTab.EXPIRED) }
     }
 
     @Test
@@ -172,7 +134,7 @@ class GiveawaysScreenTest {
 
         setupCompose()
 
-        composeTestRule.onNodeWithContentDescription(screenSemantics.filtersIcon, useUnmergedTree = true)
+        composeTestRule.onNodeWithText(screenSemantics.filterButton)
             .performClick()
 
         composeTestRule.onNodeWithText(screenSemantics.platformLabel)
@@ -186,13 +148,10 @@ class GiveawaysScreenTest {
         val loading: String,
         val errorMsg: String,
         val retry: String,
-        val filtersIcon: String,
+        val filterButton: String,
         val platformLabel: String,
         val opensDetail: String,
-        val liveTab: String,
-        val expiredTab: String,
         val emptyLive: String,
-        val emptyExpired: String,
     ) {
         companion object {
             @Composable
@@ -200,13 +159,10 @@ class GiveawaysScreenTest {
                 loading = stringResource(Res.string.giveaway_screen_loading_indicator),
                 errorMsg = stringResource(Res.string.giveaway_screen_data_loading_error_msg),
                 retry = stringResource(Res.string.giveaway_screen_data_loading_error_retry),
-                filtersIcon = stringResource(Res.string.giveaway_screen_filters_icon),
+                filterButton = stringResource(Res.string.giveaway_screen_filter_button),
                 platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label),
                 opensDetail = stringResource(Res.string.giveaway_screen_list_item_opens_detail),
-                liveTab = stringResource(Res.string.giveaway_screen_tab_live),
-                expiredTab = stringResource(Res.string.giveaway_screen_tab_expired),
                 emptyLive = stringResource(Res.string.giveaway_screen_empty_live),
-                emptyExpired = stringResource(Res.string.giveaway_screen_empty_expired),
             )
         }
     }

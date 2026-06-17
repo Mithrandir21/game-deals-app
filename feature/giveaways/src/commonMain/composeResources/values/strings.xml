@@ -10,11 +10,7 @@
     <string name="giveaway_screen_game_image">%1$s Giveaway image</string>
     <string name="giveaway_screen_navigation_back_button">Back</string>
 
-    <string name="giveaway_screen_tab_live">Live</string>
-    <string name="giveaway_screen_tab_expired">Expired</string>
-
     <string name="giveaway_screen_empty_live">No live giveaways right now. Check back soon.</string>
-    <string name="giveaway_screen_empty_expired">No expired giveaways to show.</string>
 
     <string name="giveaway_screen_countdown_label">Ends in</string>
     <string name="giveaway_screen_countdown_ended">Ended</string>
@@ -25,7 +21,8 @@
     <string name="giveaway_screen_filters_sort_by_label">Sort By</string>
     <string name="giveaway_screen_filters_sort_by_descending_label">Sort By Descending</string>
     <string name="giveaway_screen_filters_sort_by_ascending_label">Sort By Ascending</string>
-    <string name="giveaway_screen_filters_icon">Filters icon</string>
+    <string name="giveaway_screen_filter_button">Filter</string>
+    <string name="giveaway_screen_filter_button_count">Filter (%1$d)</string>
 
     <string name="giveaway_screen_filters_type_game">Game</string>
     <string name="giveaway_screen_filters_type_dlc">DLC</string>
