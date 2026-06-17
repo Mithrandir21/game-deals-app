@@ -311,7 +311,7 @@ private fun GiveawayCard(
         onClick = onOpenDetail,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
             .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensDetailCd" },
     ) {
         Column(
