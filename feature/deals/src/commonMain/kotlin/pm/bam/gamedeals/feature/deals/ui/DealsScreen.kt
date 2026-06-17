@@ -23,12 +23,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,13 +54,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
@@ -76,7 +66,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import pm.bam.gamedeals.common.navigation.SearchRequestBus
+import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
@@ -132,9 +122,6 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_empty_lab
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_load_more_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_msg
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_retry
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_close
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_field_label
-import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_icon
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_loading_indicator
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_no_results_label
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_result_count
@@ -195,16 +182,13 @@ internal fun DealsScreen(
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
-    var searchRevealed by rememberSaveable { mutableStateOf(false) }
     var showFilters by rememberSaveable { mutableStateOf(false) }
 
-    // Reveal (and optionally prefill) the search field when requested from elsewhere — the app-shell
-    // search icon, or the Game Page's "search by title" deep-link (consumed once via the bus).
-    LaunchedEffect(Unit) {
-        SearchRequestBus.requests.collect { title ->
-            searchRevealed = true
-            if (!title.isNullOrBlank()) viewModel.setSearchQuery(title)
-        }
+    // The search input lives in the app-shell toolbar; mirror its active query into the VM so this tab
+    // shows results (submit-only) and falls back to the deals feed when the search is cleared.
+    val activeSearch by SearchController.activeQuery.collectAsStateWithLifecycle()
+    LaunchedEffect(activeSearch) {
+        viewModel.setSearchQuery(activeSearch.orEmpty())
     }
 
     SingleEventEffect(viewModel.events) { event ->
@@ -223,7 +207,6 @@ internal fun DealsScreen(
         stores = stores,
         selectedShops = selectedShops,
         filter = filter,
-        searchRevealed = searchRevealed,
         searchQuery = searchQuery,
         searchResults = searchResults,
         showFilters = showFilters,
@@ -242,11 +225,6 @@ internal fun DealsScreen(
         onSetRelease = { viewModel.setRelease(it) },
         onClearFilters = { viewModel.clearFilters() },
         onShowFiltersChange = { showFilters = it },
-        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onCloseSearch = {
-            searchRevealed = false
-            viewModel.clearSearch()
-        },
         onLoadMore = { viewModel.loadNextPage() },
         onRetry = { viewModel.retry() },
         onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
@@ -274,7 +252,6 @@ private fun DealsContent(
     stores: ImmutableList<Store> = persistentListOf(),
     selectedShops: ImmutableSet<Int> = persistentSetOf(),
     filter: DealsFilter = DealsFilter(),
-    searchRevealed: Boolean = false,
     searchQuery: String = "",
     searchResults: SearchResultsState = SearchResultsState.Idle,
     showFilters: Boolean = false,
@@ -293,8 +270,6 @@ private fun DealsContent(
     onSetRelease: (ReleaseWindow?) -> Unit = {},
     onClearFilters: () -> Unit = {},
     onShowFiltersChange: (Boolean) -> Unit = {},
-    onSearchQueryChange: (String) -> Unit = {},
-    onCloseSearch: () -> Unit = {},
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
@@ -351,14 +326,9 @@ private fun DealsContent(
                 .fillMaxSize(),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Toolbar: the title-search field when revealed, otherwise a Filter button opening the sheet.
-                if (searchRevealed) {
-                    DealsSearchField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        onClose = onCloseSearch,
-                    )
-                } else {
+                // The search input lives in the app-shell toolbar; show the Filter bar only in browse
+                // mode (during a search the results fill the screen).
+                if (!searching) {
                     FilterBar(
                         activeCount = selectedShops.size + filter.activeCount,
                         onClick = { onShowFiltersChange(true) },
@@ -615,46 +585,6 @@ private fun FilterBar(
             Text(stringResource(Res.string.deals_discover_by_tag))
         }
     }
-}
-
-@Composable
-private fun DealsSearchField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
-
-    // Focus the field as soon as it is revealed so the user can type immediately.
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-    TextField(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
-            .focusRequester(focusRequester),
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        maxLines = 1,
-        leadingIcon = {
-            Icon(Icons.Filled.Search, contentDescription = stringResource(Res.string.deals_search_icon))
-        },
-        trailingIcon = {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.deals_search_close))
-            }
-        },
-        label = { Text(stringResource(Res.string.deals_search_field_label)) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions {
-            keyboardController?.hide()
-            focusManager.clearFocus()
-        },
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

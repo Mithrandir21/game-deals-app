@@ -3,6 +3,7 @@ package pm.bam.gamedeals.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -14,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
@@ -55,22 +57,27 @@ internal fun NavGraph(
         }
     }
 
-    // Drive the shell chrome from the current route (epic #219, Phase 1): bottom nav on the top-level
-    // tabs, top bar on all tabs except Giveaways (which keeps its own top bar — interim), no chrome on
-    // detail routes (they own their Scaffold/TopAppBar).
+    // Drive the shell chrome from the current route (epic #219): bottom nav + the shared top bar on
+    // every top-level tab; no chrome on detail routes (they own their Scaffold/TopAppBar).
     val currentDestination by navController.currentBackStackEntryAsState()
     val selectedTab = TopLevelDestination.entries.firstOrNull { tab ->
         currentDestination?.destination?.hierarchy?.any { it.hasRoute(tab.destination::class) } == true
     }
     val isTab = selectedTab != null
 
+    // The shared toolbar's search field reflects the active query (null = browse mode), kept in sync via
+    // SearchController so a search started anywhere (toolbar submit or a deep-link) is shown there.
+    val activeSearchQuery by SearchController.activeQuery.collectAsState()
+
     GameDealsAppShell(
         modifier = modifier,
         selectedTab = selectedTab,
-        showTopBar = isTab && selectedTab != TopLevelDestination.GIVEAWAYS,
+        showTopBar = isTab,
         showBottomBar = isTab,
         onSelectTab = { navActions.navigateTopLevel(it.destination) },
-        onSearch = { navActions.navigateToSearch() },
+        activeSearchQuery = activeSearchQuery,
+        onSearchSubmit = { query -> navActions.searchDeals(query) },
+        onSearchClosed = { navActions.clearSearch() },
         onBrowseStores = null,
         accountUnreadCount = rememberAccountTabUnreadCount(),
     ) { padding ->
@@ -121,7 +128,7 @@ internal fun NavGraph(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
-                goToSearchByTitle = { title -> navActions.navigateToSearch(title) },
+                goToSearchByTitle = { title -> navActions.searchDeals(title) },
             )
 
             webViewScreen(
@@ -129,7 +136,6 @@ internal fun NavGraph(
             )
 
             giveawaysScreen(
-                navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToGiveawayDetail = { giveawayId -> navActions.navigateToGiveawayDetail(giveawayId) },
             )

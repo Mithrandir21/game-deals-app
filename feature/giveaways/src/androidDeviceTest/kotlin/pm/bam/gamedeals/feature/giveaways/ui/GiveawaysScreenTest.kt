@@ -41,7 +41,6 @@ class GiveawaysScreenTest {
     private lateinit var screenSemantics: ScreenSemantics
 
     private fun setupCompose(
-        onBack: () -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
         goToGiveawayDetail: (Int) -> Unit = {},
     ) {
@@ -49,7 +48,6 @@ class GiveawaysScreenTest {
             screenSemantics = ScreenSemantics.load()
             GameDealsTheme {
                 GiveawaysScreen(
-                    onBack = onBack,
                     goToWeb = goToWeb,
                     goToGiveawayDetail = goToGiveawayDetail,
                     viewModel = viewModel,

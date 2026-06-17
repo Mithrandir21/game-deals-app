@@ -56,6 +56,8 @@
     <!-- App shell / bottom navigation (epic #219, Phase 0) -->
     <string name="app_shell_title">Game Deals</string>
     <string name="app_shell_search_action">Search</string>
+    <string name="app_shell_search_placeholder">Search games</string>
+    <string name="app_shell_search_close">Close search</string>
     <string name="app_shell_more_action">More options</string>
     <string name="app_shell_overflow_stores">Browse by store</string>
     <string name="app_shell_tab_home">Home</string>

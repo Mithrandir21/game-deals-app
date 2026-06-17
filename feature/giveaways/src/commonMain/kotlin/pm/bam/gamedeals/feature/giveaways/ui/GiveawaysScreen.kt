@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -39,8 +39,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -90,7 +87,6 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_em
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_live
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_icon
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_toolbar_title
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_sort_by_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_type_label
@@ -102,7 +98,6 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_li
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_row_description_worth
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_title_free_on
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_navigation_back_button
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_expired
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_tab_live
@@ -111,7 +106,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
 internal fun GiveawaysScreen(
-    onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGiveawayDetail: (giveawayId: Int) -> Unit,
     viewModel: GiveawaysViewModel = koinViewModel()
@@ -124,7 +118,6 @@ internal fun GiveawaysScreen(
 
     GiveawaysScreenContent(
         data = uiState.value,
-        onBack = onBack,
         onReload = { viewModel.reloadGiveaways() },
         goToWeb = goToWeb,
         goToGiveawayDetail = goToGiveawayDetail,
@@ -160,7 +153,6 @@ internal fun GiveawaysScreen(
 @Composable
 private fun GiveawaysScreenContent(
     data: GiveawaysViewModel.GiveawaysScreenData,
-    onBack: () -> Unit,
     onReload: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGiveawayDetail: (giveawayId: Int) -> Unit,
@@ -183,42 +175,27 @@ private fun GiveawaysScreenContent(
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    title = {
-                        Text(
-                            modifier = Modifier.semantics { heading() },
-                            text = stringResource(Res.string.giveaway_screen_toolbar_title),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { onBack() }) {
-                            Icon(
-                                imageVector = Icons.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.giveaway_screen_navigation_back_button)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                stringResource(Res.string.giveaway_screen_filters_icon)
-                            )
-                        }
-                    }
-                )
-            },
+            // The app shell owns the top bar + bottom nav and insets the NavHost; this inner
+            // Scaffold only hosts the snackbar, so it contributes no insets of its own.
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding: PaddingValues ->
             Column(modifier = Modifier.padding(innerPadding)) {
-                GiveawayStatusTabs(selectedTab = data.selectedTab, onTabSelected = onTabSelected)
+                // Filter toggle lives beside the Live/Expired tabs (the shared shell top bar is
+                // tab-agnostic) — mirrors how the Deals tab keeps its Filter affordance in content.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GiveawayStatusTabs(
+                        modifier = Modifier.weight(1f),
+                        selectedTab = data.selectedTab,
+                        onTabSelected = onTabSelected,
+                    )
+                    IconButton(onClick = { onShowFiltersChanged(!showFilters) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(Res.string.giveaway_screen_filters_icon),
+                        )
+                    }
+                }
 
                 when (data.status) {
                     GiveawaysViewModel.GiveawaysScreenStatus.LOADING -> CircularProgressIndicator(
@@ -282,12 +259,13 @@ private fun GiveawaysScreenContent(
 private fun GiveawayStatusTabs(
     selectedTab: GiveawayStatusTab,
     onTabSelected: (tab: GiveawayStatusTab) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val tabs = listOf(
         GiveawayStatusTab.LIVE to stringResource(Res.string.giveaway_screen_tab_live),
         GiveawayStatusTab.EXPIRED to stringResource(Res.string.giveaway_screen_tab_expired),
     )
-    TabRow(selectedTabIndex = selectedTab.ordinal) {
+    TabRow(modifier = modifier, selectedTabIndex = selectedTab.ordinal) {
         tabs.forEach { (tab, label) ->
             Tab(
                 selected = selectedTab == tab,
@@ -585,7 +563,6 @@ private fun GiveawaysScreen_Success_Preview() {
                 giveaways = previewGiveawaysList,
                 endDateMillis = previewEndDateMillis,
             ),
-            onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
@@ -610,7 +587,6 @@ private fun GiveawaysScreen_Success_Dark_Preview() {
                 giveaways = previewGiveawaysList,
                 endDateMillis = previewEndDateMillis,
             ),
-            onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
@@ -633,7 +609,6 @@ private fun GiveawaysScreen_Loading_Preview() {
             data = GiveawaysViewModel.GiveawaysScreenData(
                 status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING,
             ),
-            onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
@@ -658,7 +633,6 @@ private fun GiveawaysScreen_Empty_Preview() {
                 giveaways = persistentListOf(),
                 selectedTab = GiveawayStatusTab.EXPIRED,
             ),
-            onBack = {},
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},

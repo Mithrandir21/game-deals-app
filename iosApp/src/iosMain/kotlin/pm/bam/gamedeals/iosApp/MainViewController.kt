@@ -3,6 +3,7 @@ package pm.bam.gamedeals.iosApp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -29,7 +30,7 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
-import pm.bam.gamedeals.common.navigation.SearchRequestBus
+import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -163,15 +164,21 @@ private fun AppNavHost() {
     }
     val isTab = selectedTab != null
 
+    // The shared toolbar's search field reflects the active query (null = browse mode), kept in sync via
+    // SearchController so a search started anywhere (toolbar submit or a deep-link) is shown there.
+    val activeSearchQuery by SearchController.activeQuery.collectAsState()
+
     GameDealsAppShell(
         selectedTab = selectedTab,
-        showTopBar = isTab && selectedTab != TopLevelDestination.GIVEAWAYS,
+        showTopBar = isTab,
         showBottomBar = isTab,
         onSelectTab = { navigateTopLevel(it.destination) },
-        onSearch = {
+        activeSearchQuery = activeSearchQuery,
+        onSearchSubmit = { query ->
             navigateTopLevel(Destination.Deals)
-            SearchRequestBus.request()
+            SearchController.search(query)
         },
+        onSearchClosed = { SearchController.clear() },
         onBrowseStores = null,
         accountUnreadCount = rememberAccountTabUnreadCount(),
     ) { padding ->
@@ -224,11 +231,10 @@ private fun AppNavHost() {
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
             goToSearchByTitle = { title ->
                 navigateTopLevel(Destination.Deals)
-                SearchRequestBus.request(title)
+                SearchController.search(title)
             },
         )
         giveawaysScreen(
-            navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
             goToGiveawayDetail = { giveawayId -> navController.navigate(Destination.GiveawayDetail(giveawayId)) },
         )

@@ -8,13 +8,11 @@ import pm.bam.gamedeals.feature.giveaways.ui.GiveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.ui.GiveawaysScreen
 
 fun NavGraphBuilder.giveawaysScreen(
-    navController: NavController,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGiveawayDetail: (giveawayId: Int) -> Unit,
 ) {
     composable<Destination.Giveaways> {
         GiveawaysScreen(
-            onBack = { navController.popBackStack() },
             goToWeb = goToWeb,
             goToGiveawayDetail = goToGiveawayDetail,
         )

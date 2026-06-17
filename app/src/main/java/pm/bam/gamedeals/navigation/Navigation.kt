@@ -3,7 +3,7 @@ package pm.bam.gamedeals.navigation
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import pm.bam.gamedeals.common.navigation.Destination
-import pm.bam.gamedeals.common.navigation.SearchRequestBus
+import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 
 
@@ -73,13 +73,16 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     /**
      * Search lives on the Deals tab (Search was merged into Deals): switch to the tab with the standard
-     * tab back-stack behaviour, then ask the Deals screen to reveal its search field — optionally
-     * prefilled with [title] (e.g. the Game Page's "search by title" deep-link).
+     * tab back-stack behaviour, then run [query] there. Used by the app-shell toolbar search submit and
+     * the Game Page's "search by title" deep-link.
      */
-    fun navigateToSearch(title: String? = null) {
+    fun searchDeals(query: String) {
         navigateTopLevel(Destination.Deals)
-        SearchRequestBus.request(title)
+        SearchController.search(query)
     }
+
+    /** Clear the active search (the app-shell toolbar search field was closed). */
+    fun clearSearch() = SearchController.clear()
 
     fun navigateToGiveaways() {
         navController.navigate(Destination.Giveaways) {
