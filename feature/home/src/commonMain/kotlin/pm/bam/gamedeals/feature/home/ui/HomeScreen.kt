@@ -2,6 +2,7 @@
 
 package pm.bam.gamedeals.feature.home.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,8 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
@@ -38,6 +42,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
@@ -512,10 +517,12 @@ private fun LazyListScope.rankedSection(
 }
 
 /**
- * A light, ITAD-style section header (UI Improvements #252): the title styled as a heading with
- * no full-bleed primary block, and an optional inline "View all" affordance on the trailing edge
- * (replacing the old separate full-width [Button] row). The title keeps `heading()` semantics so
- * TalkBack still navigates by section; the action is a separate, independently actionable node.
+ * A light, ITAD-style section header (UI Improvements #252): a prominent `headlineSmall` title
+ * anchored by a slim teal accent bar so the user is clearly aware which section they're scrolling
+ * through, with no full-bleed primary block, and an optional inline "View all" affordance on the
+ * trailing edge (replacing the old separate full-width [Button] row). The title keeps `heading()`
+ * semantics so TalkBack still navigates by section; the action is a separate, independently
+ * actionable node.
  */
 @Composable
 private fun SectionHeader(
@@ -530,17 +537,26 @@ private fun SectionHeader(
             .padding(
                 start = GameDealsCustomTheme.spacing.medium,
                 end = GameDealsCustomTheme.spacing.small,
-                top = GameDealsCustomTheme.spacing.medium,
-                bottom = GameDealsCustomTheme.spacing.small,
+                top = GameDealsCustomTheme.spacing.large,
+                bottom = GameDealsCustomTheme.spacing.medium,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Slim teal accent bar anchoring the section title — adds ITAD identity while keeping the
+        // title itself high-contrast onSurface text.
+        Box(
+            modifier = Modifier
+                .padding(end = GameDealsCustomTheme.spacing.medium)
+                .height(22.dp)
+                .width(4.dp)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+        )
         Text(
             text = text,
             modifier = Modifier
                 .weight(1f)
                 .semantics { heading() },
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
         if (actionText != null && onActionClick != null) {
