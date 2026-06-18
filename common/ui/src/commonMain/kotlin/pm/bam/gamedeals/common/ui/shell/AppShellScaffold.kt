@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -38,14 +39,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_account_unread
@@ -55,26 +62,12 @@ import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_action
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_close
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_placeholder
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_title
-import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /**
- * The app shell (epic #219): a Material3 [Scaffold] hosting the bottom [NavigationBar] (the four
- * [TopLevelDestination] tabs) and a shared [TopAppBar] (an expandable search field + overflow), wrapping
- * the per-tab [content].
- *
- * Deliberately navigation-agnostic so it lives in `:common:ui` commonMain (navigation-compose is not a
- * common dependency): the hosting NavHost computes [selectedTab] from the current route and toggles
- * [showTopBar] / [showBottomBar]:
- * - top-level tab routes → both bars (so re-selecting a tab is handled by the host's `navigateTopLevel`);
- * - detail routes → neither bar (the detail screen owns its own `Scaffold`/`TopAppBar`).
- *
- * Search lives in the top bar: the Search icon expands an in-bar field; submitting fires [onSearchSubmit]
- * (the host navigates to the Deals tab and runs the search), closing it fires [onSearchClosed]. Once a
- * search is active ([activeSearchQuery] non-null) the field stays shown — and focused — only on the Deals
- * tab; every other tab falls back to the default title + Search icon.
- *
- * [contentWindowInsets] is zeroed so inner screens (which each have their own `Scaffold`) manage their
- * own system-bar insets; the shell's own [TopAppBar]/[NavigationBar] consume their insets via M3 defaults.
+ * The Material3 [Scaffold] shell hosting the bottom [NavigationBar] and shared [TopAppBar].
+ * Manages tab selection, search field expansion, and hide-on-scroll behavior.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,37 +85,51 @@ fun GameDealsAppShell(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     var overflowExpanded by remember { mutableStateOf(false) }
-    // The search field shows while the user is opening one (manualSearch) OR whenever there's an active
-    // search and we're on the Deals tab — so an actioned search stays visible+focused on Deals, while
-    // every other screen falls back to the default toolbar. searchText holds the editable text.
+
+    // Show search field if manually opened or if there's an active query on the Deals tab.
     var manualSearch by rememberSaveable { mutableStateOf(false) }
     var searchText by rememberSaveable { mutableStateOf("") }
     val isDealsTab = selectedTab == TopLevelDestination.DEALS
     val showSearchField = manualSearch || (isDealsTab && activeSearchQuery != null)
-    // Seed the field from the active query whenever it's shown for an active search (so re-entering Deals
-    // shows the query); the user's own typing survives because this only re-runs when those two change.
+
+    // Sync field text with active query.
     LaunchedEffect(showSearchField, activeSearchQuery) {
         if (showSearchField) searchText = activeSearchQuery.orEmpty()
     }
-    // A manual (not-yet-submitted) open shouldn't bleed across tabs; drop it whenever the tab changes.
+    // Reset manual search state on tab change.
     LaunchedEffect(selectedTab) { manualSearch = false }
 
-    // The shared top bar scrolls away as the tab content scrolls down and re-enters immediately on any
-    // upward scroll (Material3 "enter always"). Snap it back to fully shown whenever the tab changes or we
-    // return to a tab route, so a new screen never starts with a half-hidden bar.
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    LaunchedEffect(selectedTab, showTopBar) { scrollBehavior.state.heightOffset = 0f }
+    // Manage hide-on-scroll behavior for both bars.
+    val topScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    val density = LocalDensity.current
+    val bottomBarHeightPx = with(density) { 80.dp.toPx() }
+    var bottomBarOffsetHeightPx by remember { mutableStateOf(0f) }
+
+    val nestedScrollConnection = remember(topScrollBehavior, bottomBarHeightPx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                bottomBarOffsetHeightPx = (bottomBarOffsetHeightPx + delta).coerceIn(-bottomBarHeightPx, 0f)
+                return topScrollBehavior.nestedScrollConnection.onPreScroll(available, source)
+            }
+        }
+    }
+
+    // Reset bar visibility on tab change or visibility toggle.
+    LaunchedEffect(selectedTab, showTopBar, showBottomBar) {
+        topScrollBehavior.state.heightOffset = 0f
+        bottomBarOffsetHeightPx = 0f
+    }
 
     Scaffold(
-        // Feed the tab content's nested scroll to the top bar only while it's shown (detail routes have no
-        // shell top bar). Inner screens' LazyColumns propagate their scroll up to this connection.
-        modifier = if (showTopBar) modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else modifier,
+        // Feed the tab content's nested scroll to the bars while shown.
+        modifier = modifier.then(if (showTopBar || showBottomBar) Modifier.nestedScroll(nestedScrollConnection) else Modifier),
         // Inner screens own their insets; the bars below consume their own via M3 defaults.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (showTopBar) {
                 TopAppBar(
-                    scrollBehavior = scrollBehavior,
+                    scrollBehavior = topScrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = MaterialTheme.colorScheme.primary,
@@ -134,8 +141,6 @@ fun GameDealsAppShell(
                                 onValueChange = { searchText = it },
                                 onSubmit = {
                                     if (searchText.isNotBlank()) {
-                                        // Action the search; on Deals the field stays shown (active +
-                                        // Deals), elsewhere it collapses back to the default toolbar.
                                         onSearchSubmit(searchText)
                                         manualSearch = false
                                     }
@@ -147,8 +152,6 @@ fun GameDealsAppShell(
                                 },
                             )
                         } else {
-                            // A single constant title — the bottom nav already names the current tab,
-                            // so the top bar doesn't duplicate it.
                             Text(
                                 modifier = Modifier.semantics { heading() },
                                 text = stringResource(Res.string.app_shell_title),
@@ -156,17 +159,13 @@ fun GameDealsAppShell(
                         }
                     },
                     actions = {
-                        // While the field is shown (with its own close affordance) it fills the bar.
                         if (!showSearchField) {
                             IconButton(onClick = {
-                                // Pre-fill with the active search (if any) so re-opening lets the user refine it.
                                 searchText = activeSearchQuery.orEmpty()
                                 manualSearch = true
                             }) {
                                 Icon(Icons.Filled.Search, contentDescription = stringResource(Res.string.app_shell_search_action))
                             }
-                            // The overflow only appears when there's something in it (Settings folded into the
-                            // Account hub in #276; "Browse by store" is the remaining — currently unused — entry).
                             if (onBrowseStores != null) {
                                 IconButton(onClick = { overflowExpanded = true }) {
                                     Icon(Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.app_shell_more_action))
@@ -191,7 +190,11 @@ fun GameDealsAppShell(
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    modifier = Modifier.graphicsLayer {
+                        translationY = -bottomBarOffsetHeightPx
+                    }
+                ) {
                     TopLevelDestination.entries.forEach { tab ->
                         val showAccountBadge = tab == TopLevelDestination.ACCOUNT && accountUnreadCount > 0
                         NavigationBarItem(
@@ -217,15 +220,15 @@ fun GameDealsAppShell(
             }
         },
     ) { padding ->
-        // A little breathing room between the shared top bar and the tab content below it (only
-        // on tab routes; detail routes have no shell top bar and own their own spacing).
+        // Content spacing on tab routes; detail routes own their own padding.
+        // Ignore bottom padding to avoid the gap when the bottom bar hides.
         val layoutDirection = LocalLayoutDirection.current
         val contentPadding = if (showTopBar) {
             PaddingValues(
                 start = padding.calculateStartPadding(layoutDirection),
                 top = padding.calculateTopPadding(),
                 end = padding.calculateEndPadding(layoutDirection),
-                bottom = padding.calculateBottomPadding(),
+                bottom = 0.dp,
             )
         } else {
             padding
@@ -235,9 +238,7 @@ fun GameDealsAppShell(
 }
 
 /**
- * The in-toolbar search field (submit-only): typing edits [value]; pressing the keyboard Search action
- * fires [onSubmit] (the host then navigates to the Deals tab and runs the search); the trailing close
- * button fires [onClose]. Styled to sit transparently on the top bar's `primaryContainer` background.
+ * Inline toolbar search field. Submitting navigates to Deals; closing clears the search.
  */
 @Composable
 private fun ToolbarSearchField(
@@ -281,4 +282,23 @@ private fun ToolbarSearchField(
             unfocusedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
     )
+}
+
+@Preview
+@Composable
+private fun GameDealsAppShell_Preview() {
+    GameDealsTheme {
+        GameDealsAppShell(
+            selectedTab = TopLevelDestination.HOME,
+            showTopBar = true,
+            showBottomBar = true,
+            onSelectTab = {},
+            activeSearchQuery = null,
+            onSearchSubmit = {},
+            onSearchClosed = {},
+            content = { padding ->
+                Text("Content", modifier = Modifier.padding(padding))
+            }
+        )
+    }
 }
