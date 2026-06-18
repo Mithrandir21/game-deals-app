@@ -10,7 +10,8 @@ import dev.mokkery.verifySuspend
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.ItadNotification
-import pm.bam.gamedeals.domain.models.NotificationGame
+import pm.bam.gamedeals.domain.models.NotificationDealGame
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,7 +19,7 @@ import kotlin.test.assertTrue
 class NotificationSyncTest {
 
     private val repository: NotificationsRepository = mock(MockMode.autoUnit) {
-        everySuspend { getWaitlistGames(any()) } returns emptyList()
+        everySuspend { getNotificationDetail(any()) } returns NotificationDetail("", emptyList())
     }
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
     private val surfacedStore: SurfacedNotificationStore = mock(MockMode.autoUnit) {
@@ -69,13 +70,15 @@ class NotificationSyncTest {
     fun first_run_surfaces_all_unread_with_their_games() = runTest {
         loggedIn(true)
         everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = false))
-        everySuspend { repository.getWaitlistGames("n1") } returns listOf(NotificationGame("g1", "Halo"))
-        everySuspend { repository.getWaitlistGames("n2") } returns listOf(NotificationGame("g2", "Hades"), NotificationGame("g3", "Celeste"))
+        everySuspend { repository.getNotificationDetail("n1") } returns
+            NotificationDetail("n1", listOf(NotificationDealGame("g1", "Halo")))
+        everySuspend { repository.getNotificationDetail("n2") } returns
+            NotificationDetail("n2", listOf(NotificationDealGame("g2", "Hades"), NotificationDealGame("g3", "Celeste")))
 
         val alerts = sync().syncAndCollectNew()
 
         assertEquals(2, alerts.size)
-        assertEquals(listOf(NotificationGame("g1", "Halo")), alerts.first { it.notificationId == "n1" }.games)
+        assertEquals(listOf(NotificationDealGame("g1", "Halo")), alerts.first { it.notificationId == "n1" }.games)
         assertEquals(2, alerts.first { it.notificationId == "n2" }.games.size)
     }
 
@@ -87,7 +90,7 @@ class NotificationSyncTest {
         val alerts = sync().syncAndCollectNew()
 
         assertEquals(emptyList(), alerts.single().games)
-        verifySuspend(exactly(0)) { repository.getWaitlistGames(any()) }
+        verifySuspend(exactly(0)) { repository.getNotificationDetail(any()) }
     }
 
     @Test

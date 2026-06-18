@@ -4,9 +4,11 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
-/** Where tapping a delivered system notification should land the user (#288 deep-link reuse). */
+/** Where tapping a delivered system notification should land the user (#272 follow-up). */
 sealed interface NotificationRoute {
-    data class Game(val gameId: String) : NotificationRoute
+    /** A tapped per-notification alert opens that notification's in-app detail screen. */
+    data class NotificationDetail(val notificationId: String) : NotificationRoute
+    /** The group summary opens the Notifications list. */
     data object Notifications : NotificationRoute
 }
 

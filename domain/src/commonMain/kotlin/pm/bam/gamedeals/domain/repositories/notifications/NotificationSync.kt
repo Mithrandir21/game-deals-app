@@ -5,18 +5,18 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
-import pm.bam.gamedeals.domain.models.NotificationGame
+import pm.bam.gamedeals.domain.models.NotificationDealGame
 
 /**
  * A notification that should be surfaced to the OS tray (background delivery — epic #272 follow-up). Carries
- * the [games] referenced by a waitlist notification so the platform layer can build a deep-link
- * ([NotificationPresenter]): a single game → that game's detail, several → the in-app Notifications screen.
+ * the [games] (with their best deals) referenced by a waitlist notification so the platform layer can build
+ * rich tray text and a deep-link to that notification's in-app detail screen ([NotificationPresenter]).
  */
 @Immutable
 data class PendingNotificationAlert(
     val notificationId: String,
     val title: String,
-    val games: List<NotificationGame>,
+    val games: List<NotificationDealGame>,
 )
 
 /**
@@ -48,8 +48,10 @@ internal class NotificationSyncImpl(
         val alerts = coroutineScope {
             new.map { notification ->
                 async {
+                    // Fetch the full deal content for rich tray text; this also warms the repository's
+                    // detail cache so opening the in-app detail screen from the tap is instant.
                     val games = if (notification.type == WAITLIST_TYPE) {
-                        runCatching { repository.getWaitlistGames(notification.id) }.getOrDefault(emptyList())
+                        runCatching { repository.getNotificationDetail(notification.id).games }.getOrDefault(emptyList())
                     } else {
                         emptyList()
                     }

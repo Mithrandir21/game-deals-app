@@ -48,9 +48,14 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
-    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped multi-game background alert, #288). */
+    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped background alert's group summary). */
     fun navigateToNotifications() {
         navController.navigate(Destination.Notifications)
+    }
+
+    /** Open one notification's in-app detail screen (e.g. from a tapped background alert, #272 follow-up). */
+    fun navigateToNotificationDetail(notificationId: String) {
+        navController.navigate(Destination.NotificationDetail(notificationId))
     }
 
     /** Open the Waitlist list (from the Home account stat card). Registered under the shared NavHost. */
