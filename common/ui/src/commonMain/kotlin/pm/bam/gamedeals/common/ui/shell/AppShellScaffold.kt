@@ -27,6 +27,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
@@ -105,13 +107,22 @@ fun GameDealsAppShell(
     // A manual (not-yet-submitted) open shouldn't bleed across tabs; drop it whenever the tab changes.
     LaunchedEffect(selectedTab) { manualSearch = false }
 
+    // The shared top bar scrolls away as the tab content scrolls down and re-enters immediately on any
+    // upward scroll (Material3 "enter always"). Snap it back to fully shown whenever the tab changes or we
+    // return to a tab route, so a new screen never starts with a half-hidden bar.
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    LaunchedEffect(selectedTab, showTopBar) { scrollBehavior.state.heightOffset = 0f }
+
     Scaffold(
-        modifier = modifier,
+        // Feed the tab content's nested scroll to the top bar only while it's shown (detail routes have no
+        // shell top bar). Inner screens' LazyColumns propagate their scroll up to this connection.
+        modifier = if (showTopBar) modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else modifier,
         // Inner screens own their insets; the bars below consume their own via M3 defaults.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (showTopBar) {
                 TopAppBar(
+                    scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = MaterialTheme.colorScheme.primary,
