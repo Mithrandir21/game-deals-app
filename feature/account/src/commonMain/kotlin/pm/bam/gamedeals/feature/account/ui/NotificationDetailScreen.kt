@@ -35,8 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
@@ -44,6 +46,7 @@ import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
 import pm.bam.gamedeals.common.ui.components.StoreLowBadge
 import pm.bam.gamedeals.common.ui.components.VoucherBadge
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.NotificationShopDeal
 import pm.bam.gamedeals.domain.models.hero
@@ -232,6 +235,55 @@ private fun ShopDealRow(deal: NotificationShopDeal) {
             text = deal.salePriceDenominated,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+private val previewDetailGames = persistentListOf(
+    NotificationDealGame(
+        gameId = "g1",
+        title = "Cyberpunk 2077",
+        historicalLowDenominated = "€17.99",
+        deals = listOf(
+            NotificationShopDeal("GOG", 17.09, "€17.09", "€59.99", cutPercent = 72, url = "", isNewHistoricalLow = true),
+            NotificationShopDeal("Steam", 29.99, "€29.99", "€59.99", cutPercent = 50, url = "", isStoreLow = true),
+            NotificationShopDeal("Fanatical", 32.99, "€32.99", "€59.99", cutPercent = 45, url = "", hasVoucher = true),
+        ),
+    ),
+    NotificationDealGame(
+        gameId = "g2",
+        title = "Hades",
+        historicalLowDenominated = "€12.49",
+        deals = emptyList(), // expired → "deal expired" note
+    ),
+)
+
+@Preview
+@Composable
+private fun NotificationDetailScreenPreview() {
+    GameDealsTheme {
+        NotificationDetailScreenContent(
+            data = NotificationDetailScreenData(
+                loading = false,
+                games = previewDetailGames,
+                expandedGameIds = setOf("g1"), // first card expanded to all shop deals
+            ),
+            onBack = {},
+            onToggleExpanded = {},
+            onOpenGame = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun NotificationDetailScreenEmptyPreview() {
+    GameDealsTheme {
+        NotificationDetailScreenContent(
+            data = NotificationDetailScreenData(loading = false, games = persistentListOf()),
+            onBack = {},
+            onToggleExpanded = {},
+            onOpenGame = {},
         )
     }
 }

@@ -37,9 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
@@ -166,4 +169,40 @@ private fun UnreadDot() {
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary),
     )
+}
+
+private fun previewNotification(id: String, read: Boolean) =
+    ItadNotification(id = id, type = "waitlist", title = "Price drop", timestamp = "2026-06-18T09:30:00+00:00", read = read)
+
+@Preview
+@Composable
+private fun NotificationsScreenPreview() {
+    GameDealsTheme {
+        NotificationsScreenContent(
+            data = NotificationsScreenData(
+                loading = false,
+                notifications = persistentListOf(
+                    previewNotification("n1", read = false),
+                    previewNotification("n2", read = false),
+                    previewNotification("n3", read = true),
+                ),
+            ),
+            onBack = {},
+            onNotificationClick = {},
+            onMarkAllRead = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun NotificationsScreenEmptyPreview() {
+    GameDealsTheme {
+        NotificationsScreenContent(
+            data = NotificationsScreenData(loading = false, notifications = persistentListOf()),
+            onBack = {},
+            onNotificationClick = {},
+            onMarkAllRead = {},
+        )
+    }
 }
