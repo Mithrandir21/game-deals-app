@@ -34,6 +34,10 @@ sealed interface Destination {
     @Serializable
     data object Notifications : Destination
 
+    /** The deals inside one daily notification (#272 follow-up). Owns its Scaffold/TopAppBar + back arrow. */
+    @Serializable
+    data class NotificationDetail(val notificationId: String) : Destination
+
     @Serializable
     data object IgnoredGames : Destination
 

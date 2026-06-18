@@ -54,9 +54,15 @@
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
 
-    <!-- Notification → game deep-link chooser (#288) -->
-    <string name="account_notifications_chooser_title">Open which game?</string>
-    <string name="account_notifications_chooser_dismiss">Cancel</string>
+    <!-- Notification detail: the deals inside one daily notification (#272 follow-up) -->
+    <string name="account_notification_detail_title">New deals</string>
+    <string name="account_notification_detail_empty">This notification has no deals.</string>
+    <string name="account_notification_detail_image">Cover art for %1$s</string>
+    <string name="account_notification_historical_low">All-time low %1$s</string>
+    <string name="account_notification_deal_expired">Deal expired</string>
+    <string name="account_notification_open_game">Open game</string>
+    <string name="account_notification_show_all_deals">Show all deals</string>
+    <string name="account_notification_show_less">Show less</string>
 
     <!-- Ignored games (P3.3, #281) -->
     <string name="account_ignored_empty">You haven\'t ignored any games.</string>
