@@ -129,8 +129,8 @@ internal class StoreViewModel(
 
     init {
         // Re-fetch this store's deals when the region changes. observeStoreDeals reads the active
-        // region's cached rows (D5 / Phase 2), so re-subscribing reads the new region — fetching on a
-        // miss — without any cache clear (#212). `drop(1)` skips the region already loaded on subscribe.
+        // region's cached rows, so re-subscribing reads the new region — fetching on a miss — without
+        // any cache clear. `drop(1)` skips the region already loaded on subscribe.
         viewModelScope.launch {
             regionRepository.observeSelectedCountry()
                 .map { it.code }

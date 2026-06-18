@@ -44,11 +44,10 @@ internal fun itadHttpClient(
 
         install(ContentNegotiation) { json(json) }
 
-        // Cap simultaneous in-flight ITAD calls (Phase 5a, #266): a Semaphore bounds concurrency so a
-        // fan-out burst — e.g. Home firing one `/games/info` per ranked game across two rankings — is
-        // throttled to N at a time instead of spiking into a 429. A proactive complement to the reactive
-        // 429 retry below and the RequestCoalescer (which only dedups *identical* calls, not the distinct
-        // per-game ids here).
+        // Cap simultaneous in-flight ITAD calls: a Semaphore bounds concurrency so a fan-out burst —
+        // e.g. Home firing one `/games/info` per ranked game across two rankings — is throttled to N at
+        // a time instead of spiking into a 429. A proactive complement to the reactive 429 retry below
+        // and the RequestCoalescer (which only dedups *identical* calls, not the distinct per-game ids here).
         install(ItadConcurrencyLimiter) { permits = maxConcurrency }
 
         install(HttpTimeout) {

@@ -4,10 +4,9 @@ package pm.bam.gamedeals.common.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ITAD-style palette (UI Improvements #253): a teal/green "deal" accent over cool, neutral
-// blue-grey surfaces. Light theme stays bright and usable; the dark theme (below) carries the
-// dense, near-black ITAD look. Only the base tokens are tuned — the Medium/High-contrast variants
-// below are unused scaffolding from the Material Theme Builder export and left untouched.
+// ITAD-style palette: a teal/green "deal" accent over cool, neutral blue-grey surfaces. Light theme
+// stays bright; the dark theme (below) carries the dense, near-black ITAD look. Only the base tokens
+// are tuned — the Medium/High-contrast variants below are unused Material Theme Builder scaffolding.
 val primaryLight = Color(0xFF006B55)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFF88F8D5)

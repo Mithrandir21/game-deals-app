@@ -248,7 +248,7 @@ internal class GamesRepositoryImpl(
         }
         return lookup.fold(
             onSuccess = { resolved ->
-                // Cache only a resolved mapping; a genuine miss stays uncached (D3).
+                // Cache only a resolved mapping; a genuine miss stays uncached.
                 if (resolved != null) {
                     gameIdMappingDao.upsert(GameIdMappingEntry(steamAppId, resolved, clock.nowMillis() + GAME_ID_MAPPING_TTL_MILLIS))
                 }

@@ -50,8 +50,8 @@ internal fun igdbHttpClient(
         install(ContentNegotiation) { json(json) }
 
         // IGDB allows 4 req/s and up to 8 open connections. A Semaphore bounds simultaneous in-flight
-        // calls so the tag-discovery vocabulary fan-out (epic #307) and any future paging bursts can't
-        // spike past the connection cap. Mirrors the ITAD concurrency limiter (#266).
+        // calls so the tag-discovery vocabulary fan-out and any future paging bursts can't spike past
+        // the connection cap. Mirrors the ITAD concurrency limiter.
         install(IgdbConcurrencyLimiter) { permits = IGDB_MAX_CONCURRENCY }
 
         install(HttpTimeout) {

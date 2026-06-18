@@ -39,7 +39,7 @@ actual fun GameDealsTheme(
     if (!view.isInEditMode && activity != null) {
         LaunchedEffect(colorScheme.surface, darkTheme) {
             val window = activity.window
-            // Match the status bar to the surface for the dense ITAD look (UI Improvements #253),
+            // Match the status bar to the surface for the dense ITAD look,
             // with icon contrast following the theme (dark icons on the light surface, light on dark).
             window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme

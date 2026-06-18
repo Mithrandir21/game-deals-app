@@ -18,7 +18,7 @@ import pm.bam.gamedeals.notifications.AndroidNotificationPresenter
 val appModule = module {
     single<Clock> { Clock { System.currentTimeMillis() } }
 
-    // Background notification presentation (Phase B) — bound here because the tap PendingIntent targets MainActivity.
+    // Background notification presentation — bound here because the tap PendingIntent targets MainActivity.
     single<NotificationPresenter> { AndroidNotificationPresenter(androidContext()) }
 
     single<CoilLogger> {

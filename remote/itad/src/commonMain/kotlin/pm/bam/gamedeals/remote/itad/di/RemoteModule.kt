@@ -32,10 +32,10 @@ val itadRemoteModule = module {
 
     single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
 
-    // Global ranking stats (epic #219, Phase 5.1): rankings + best-effort price enrichment.
+    // Global ranking stats: rankings + best-effort price enrichment.
     single<StatsSource> { ItadStatsSourceImpl(get(), get(), get(), get(), get()) }
 
-    // Login orchestration (epic #219, Phase 2.4): OAuth client + browser launcher (platform-bound) +
+    // Login orchestration: OAuth client + browser launcher (platform-bound) +
     // account source + token store + credentials + clock.
     single<ItadLoginSource> { ItadLoginSourceImpl(get(), get(), get(), get(), get(), get()) }
 }

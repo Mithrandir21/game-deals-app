@@ -146,7 +146,7 @@ private fun AccountScreenContent(
             data = data,
             onLogout = onLogout,
             // Reconnect re-runs the same OAuth flow as a fresh sign-in; on success the token is
-            // re-stamped with the current scope version and the banner disappears (#273).
+            // re-stamped with the current scope version and the banner disappears.
             onReconnect = onLogin,
             onOpenWaitlist = onOpenWaitlist,
             onOpenCollection = onOpenCollection,

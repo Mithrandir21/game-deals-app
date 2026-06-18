@@ -60,7 +60,7 @@ internal class NotificationDetailViewModel(
                 .getOrElse { fatal(logger, it); emptyList() }
             uiState.update { it.copy(loading = false, games = games.toImmutableList()) }
         }
-        // Opening the detail is the read action (#272 P2 — mark read on open).
+        // Opening the detail is the read action — mark read on open.
         viewModelScope.launch {
             runCatching { notificationsRepository.markRead(id) }.onFailure { fatal(logger, it) }
         }

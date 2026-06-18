@@ -68,7 +68,7 @@ class BundlesRepositoryTest {
         everySuspend { bundlesCacheDao.get(country) } returns entryFor(bundles, expires = now - 1)
         everySuspend { dealsSource.fetchBundles() } throws Exception("boom")
 
-        // Warm cache + failed refresh: fall back to the cached list (D7), don't throw, don't upsert.
+        // Warm cache + failed refresh: fall back to the cached list, don't throw, don't upsert.
         assertEquals(bundles, repository.getBundles())
         verifySuspend(exactly(0)) { bundlesCacheDao.upsert(any()) }
     }

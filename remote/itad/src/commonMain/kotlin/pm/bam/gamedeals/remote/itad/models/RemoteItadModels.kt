@@ -210,7 +210,7 @@ data class RemoteItadHistoryEntry(
     @SerialName("deal") val deal: RemoteItadHistoryDeal? = null,
 )
 
-// --- /bundles/v1 (a bare array of bundles; epic #205 Phase 3c) ---
+// --- /bundles/v1 (a bare array of bundles) ---
 @Serializable
 data class RemoteItadBundlePage(
     @SerialName("id") val id: Int? = null,

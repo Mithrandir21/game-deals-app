@@ -217,7 +217,7 @@ class GamesRepositoryTest {
         everySuspend { priceHistoryCacheDao.get(gameId, country) } returns entryFor(gameId, cached, expires = now - 1)
         everySuspend { dealsSource.fetchPriceHistory(gameId, 1_000L) } throws Exception("network down")
 
-        // Warm cache + failed refresh: fall back to the stale series (D7), don't throw, don't upsert.
+        // Warm cache + failed refresh: fall back to the stale series, don't throw, don't upsert.
         val result = impl.getPriceHistory(gameId)
         assertEquals(cached, result)
         verifySuspend(exactly(0)) { priceHistoryCacheDao.upsert(any()) }
@@ -270,7 +270,7 @@ class GamesRepositoryTest {
         val result = impl.findGameIdBySteamAppId(steamAppId = 999999, title = "Unknown Game")
 
         assertEquals(null, result)
-        // A genuine "no match" must not be cached, so a later retry can still resolve (D3).
+        // A genuine "no match" must not be cached, so a later retry can still resolve.
         verifySuspend(exactly(0)) { gameIdMappingDao.upsert(any()) }
     }
 

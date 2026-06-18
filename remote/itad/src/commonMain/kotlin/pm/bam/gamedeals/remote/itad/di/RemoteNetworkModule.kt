@@ -44,14 +44,13 @@ val itadNetworkModule = module {
     single { ItadBundlesApi(get(ITAD_QUALIFIER)) }
     single { ItadStatsApi(get(ITAD_QUALIFIER)) }
 
-    // --- ITAD OAuth (epic #219, Phase 2). The user endpoints that consume the bearer client land in
-    // Phase 2.3 (#228); these are the wired-but-not-yet-consumed seam. ---
+    // --- ITAD OAuth ---
     single<HttpClient>(ITAD_OAUTH_QUALIFIER) { itadOAuthHttpClient(json = get(), buildUtil = get()) }
     single { ItadOAuthClient(httpClient = get(ITAD_OAUTH_QUALIFIER), credentials = get()) }
     single { ItadTokenProvider(authTokenStore = get(), oauthClient = get(), clock = get(), logger = get()) }
     single<HttpClient>(ITAD_AUTH_QUALIFIER) { itadAuthHttpClient(json = get(), buildUtil = get(), tokenProvider = get()) }
 
-    // User endpoints use the bearer client (epic #219, Phase 2.3).
+    // User endpoints use the bearer client.
     single { ItadUserApi(get(ITAD_AUTH_QUALIFIER)) }
     single { ItadWaitlistApi(get(ITAD_AUTH_QUALIFIER)) }
     single { ItadCollectionApi(get(ITAD_AUTH_QUALIFIER)) }

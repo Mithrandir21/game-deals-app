@@ -95,8 +95,8 @@ private fun bootstrapKoin() {
         }
         // IGDB creds come from Info.plist keys IGDBClientId / IGDBClientSecret
         single { IgdbCredentials(infoPlistString("IGDBClientId"), infoPlistString("IGDBClientSecret")) }
-        // ITAD key comes from Info.plist key ITADApiKey (Secrets.xcconfig: ITAD_API_KEY). Epic #205.
-        // OAuth client id from ITADOAuthClientId (Secrets.xcconfig: ITAD_OAUTH_CLIENT_ID). Epic #219, Phase 2.
+        // ITAD key comes from Info.plist key ITADApiKey (Secrets.xcconfig: ITAD_API_KEY).
+        // OAuth client id from ITADOAuthClientId (Secrets.xcconfig: ITAD_OAUTH_CLIENT_ID).
         single { ItadCredentials(infoPlistString("ITADApiKey"), infoPlistString("ITADOAuthClientId")) }
     }
 
@@ -113,7 +113,7 @@ private fun bootstrapKoin() {
             gamerpowerRemoteModule,
             igdbNetworkModule,
             igdbRemoteModule,
-            // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
+            // ITAD is the live DealsSource.
             itadNetworkModule,
             itadRemoteModule,
             itadIosModule,
@@ -149,7 +149,7 @@ private fun AppNavHost() {
     val uriHandler = LocalUriHandler.current
 
     // Top-level (bottom-nav tab) navigation: pop to start saving state, single-top, restore — mirrors
-    // the Android `NavigationActions.navigateTopLevel` (epic #219, Phase 1).
+    // the Android `NavigationActions.navigateTopLevel`.
     fun navigateTopLevel(destination: Destination) {
         navController.navigate(destination) {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }

@@ -46,7 +46,7 @@ class TestGameDealsApplication : Application() {
                 domainModule,
                 domainAndroidModule,
                 remoteModule(RemoteBuildType.RELEASE),
-                // ITAD is the live DealsSource (epic #205); the GamerPower client is overridden with a
+                // ITAD is the live DealsSource; the GamerPower client is overridden with a
                 // MockEngine by testNetworkOverridesModule. ITAD isn't exercised by any current
                 // instrumented test, so it is left unmocked (real binding, never resolved).
                 itadNetworkModule,

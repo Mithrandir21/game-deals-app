@@ -89,7 +89,7 @@ internal class ItadSourceImpl(
             .getOrThrow()
             .map { it.toStore() }
 
-    // --- DealsSource (ITAD live since #205 Phase 2b) ---
+    // --- DealsSource ---
 
     override suspend fun fetchDealsForStore(query: SearchParameters?): List<Deal> {
         val storeId = query?.storeID
@@ -101,7 +101,7 @@ internal class ItadSourceImpl(
             storeId != null -> fetchItadDeals(country = country, limit = limit, shops = listOf(storeId)).map { it.toDeal() }
             // Title search (release lookup + Search screen): ITAD has no title filter on /deals/v2, so
             // resolve via game search → current prices → cheapest deal per game. Price/Steam-rating/
-            // Metacritic filters in [query] aren't supported by ITAD and are ignored (epic #205 ADR trade-off).
+            // Metacritic filters in [query] aren't supported by ITAD and are ignored.
             !title.isNullOrBlank() -> dealsByTitle(title, limit, country)
             else -> fetchItadDeals(country = country, limit = limit).map { it.toDeal() }
         }

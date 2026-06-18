@@ -65,7 +65,7 @@ class ItadSourceImplTest {
     private lateinit var impl: ItadSourceImpl
 
     // The source reads the country from [RegionRepository]; the tests assert `country=US`, so the fake
-    // always reports US (regional pricing — Phase 3b, #212).
+    // always reports US.
     private val regionRepository = object : RegionRepository {
         override val supportedCountries: List<Country> = SUPPORTED_COUNTRIES
         override fun observeSelectedCountry(): Flow<Country> = flowOf(DEFAULT_COUNTRY)

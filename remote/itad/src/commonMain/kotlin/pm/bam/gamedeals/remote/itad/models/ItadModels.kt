@@ -59,7 +59,7 @@ data class ItadGamePrices(
 )
 
 data class ItadPriceHistoryEntry(
-    val timestamp: String, // ISO-8601; parsing/formatting deferred to the consumer (Phase 3)
+    val timestamp: String, // ISO-8601; parsing/formatting deferred to the consumer
     val shop: ItadShop,
     val price: ItadMoney,
     val regular: ItadMoney?,

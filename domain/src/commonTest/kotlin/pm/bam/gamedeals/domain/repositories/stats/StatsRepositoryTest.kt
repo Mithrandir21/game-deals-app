@@ -76,7 +76,7 @@ class StatsRepositoryTest {
             entryFor(RANKING_MOST_WAITLISTED, ranking, expires = now - 1)
         everySuspend { statsSource.fetchMostWaitlisted(10) } throws Exception("stats down")
 
-        // Warm cache + failed refresh: serve the stale ranking (D7), don't throw, don't upsert.
+        // Warm cache + failed refresh: serve the stale ranking, don't throw, don't upsert.
         assertEquals(ranking, repo.getMostWaitlisted(limit = 10))
         verifySuspend(exactly(0)) { statsRankingsCacheDao.upsert(any()) }
     }

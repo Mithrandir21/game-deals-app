@@ -65,7 +65,7 @@ fun NavGraphBuilder.accountScreen(
         MyNotesScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
 
-    // Placeholder routes — filled in by later phases (P5).
+    // Placeholder routes — not yet implemented.
     composable<Destination.LinkedAccounts> {
         ComingSoonScreen(title = stringResource(Res.string.account_row_linked), onBack = { navController.popBackStack() })
     }

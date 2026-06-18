@@ -346,8 +346,8 @@ class IgdbSourceImplTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
             // Both exact passes (decorated + normalized) must miss so the search fallback fires: the first
-            // TWO requests return empty, the THIRD (search) returns the game. (Pre-existing test bug fixed
-            // in #294 — this guard was `< 2`, which let the exact-normalized pass resolve before search.)
+            // TWO requests return empty, the THIRD (search) returns the game. The guard must be `< 3`, not
+            // `< 2`, or the exact-normalized pass resolves before search.
             val body = if (recorded.size < 3) "[]" else ONE_GAME_DIRECT_BODY
             respond(
                 content = body,

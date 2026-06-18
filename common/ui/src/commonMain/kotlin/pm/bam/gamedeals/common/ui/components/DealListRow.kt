@@ -75,8 +75,8 @@ fun DealListRow(
     isCollected: Boolean = false,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
-    // their spoken equivalents to the row's content description — keeping each badge and its TalkBack
-    // announcement in lock-step (#259). Mirrored in DealHeroTile.
+    // their spoken equivalents to the row's content description, keeping each badge and its TalkBack
+    // announcement in lock-step. Mirrored in DealHeroTile.
     val newLowSuffix = stringResource(CommonRes.string.deal_new_low_content_suffix)
     val storeLowSuffix = stringResource(CommonRes.string.deal_store_low_content_suffix)
     val voucherSuffix = stringResource(CommonRes.string.deal_voucher_content_suffix)

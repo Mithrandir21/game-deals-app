@@ -285,7 +285,7 @@ private fun DealsContent(
     goToGame: (gameId: String) -> Unit = {},
 ) {
     val searching = searchQuery.isNotBlank()
-    // Hide ignored games from the deals list (#280). Paging still tracks the full fetched list (offset),
+    // Hide ignored games from the deals list. Paging still tracks the full fetched list (offset),
     // so only the rendered list is filtered; the id set is Room-backed (correct on cold start + offline).
     val visibleDeals = remember(data.deals, ignoredIds) { data.deals.filter { it.gameID !in ignoredIds } }
     val listState = rememberLazyListState()
@@ -476,7 +476,7 @@ private fun SearchResultsBody(
         )
 
         is SearchResultsState.Results -> {
-            // Hide ignored games from the results (#280); the id set is Room-backed (cold-start/offline correct).
+            // Hide ignored games from the results; the id set is Room-backed (cold-start/offline correct).
             val visible = remember(state.results, ignoredIds) { state.results.filter { it.gameID !in ignoredIds } }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -508,7 +508,7 @@ private fun SearchResultListItem(
 ) {
     val showBadge = dealCount > 1
     // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
-    // node carries the count, so we keep it out of the row CD to avoid TalkBack announcing it twice (#257).
+    // node carries the count, so we keep it out of the row CD to avoid TalkBack announcing it twice.
     val rowCd = if (isWaitlisted) {
         stringResource(Res.string.deals_search_result_row_description_waitlisted, deal.title, deal.salePriceDenominated)
     } else {
@@ -581,7 +581,7 @@ private fun FilterBar(
                 else stringResource(Res.string.deals_filter_button),
             )
         }
-        // Catalogue-wide tag discovery (epic #307) — distinct from the deal-feed filters above.
+        // Catalogue-wide tag discovery — distinct from the deal-feed filters above.
         OutlinedButton(onClick = onDiscover) {
             Text(stringResource(Res.string.deals_discover_by_tag))
         }

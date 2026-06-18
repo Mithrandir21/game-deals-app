@@ -136,7 +136,7 @@ internal class HomeViewModel(
 
     init {
         // Initial load, then reload whenever the selected region changes. Home reads deals via the
-        // un-cached getDeals passthrough, so the reload always fetches the new region's prices (#212).
+        // un-cached getDeals passthrough, so the reload always fetches the new region's prices.
         viewModelScope.launch {
             regionRepository.observeSelectedCountry()
                 .map { it.code }

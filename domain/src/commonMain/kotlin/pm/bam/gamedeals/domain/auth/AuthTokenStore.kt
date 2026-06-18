@@ -64,7 +64,7 @@ internal data class StoredAuthToken(
     val refreshToken: String,
     val expiresAtEpochMs: Long,
     val username: String,
-    // Defaults to 0 so a token persisted before this field existed (the original #219 scope set) reads
+    // Defaults to 0 so a token persisted before this field existed (the original scope set) reads
     // back as the legacy version → needsReconnect, exactly as intended for already-signed-in users.
     val scopeVersion: Int = 0,
 )

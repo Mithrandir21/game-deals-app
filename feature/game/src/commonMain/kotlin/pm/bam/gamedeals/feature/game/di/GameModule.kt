@@ -5,6 +5,6 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel
 
 val gameModule = module {
-    // The single Game Page ViewModel (epic #291) — replaced GameViewModel + GameDetailsViewModel in Phase 8.
+    // The single Game Page ViewModel.
     viewModel { GamePageViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

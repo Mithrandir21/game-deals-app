@@ -200,7 +200,7 @@ private fun HomeScreenContent(
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
-            // The app shell (epic #219) owns the top bar + bottom nav and provides outer padding;
+            // The app shell owns the top bar + bottom nav and provides outer padding;
             // zero this Scaffold's insets so its content isn't double-inset under the shell.
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },

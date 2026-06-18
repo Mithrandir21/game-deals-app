@@ -59,7 +59,7 @@ class AuthTokenStoreImplTest {
 
     @Test
     fun legacy_token_without_a_scope_version_field_needs_reconnect() = runTest {
-        // A token persisted before scopeVersion existed (the original #219 scope set) — no scopeVersion key.
+        // A token persisted before scopeVersion existed (the original scope set) — no scopeVersion key.
         backing[AUTH_TOKEN_KEY] =
             """{"accessToken":"AT","refreshToken":"RT","expiresAtEpochMs":0,"username":"bob"}"""
 

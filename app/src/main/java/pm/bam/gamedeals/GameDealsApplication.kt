@@ -84,7 +84,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 igdbNetworkModule,
                 igdbRemoteModule,
                 module { single { IgdbCredentials(BuildConfig.IGDB_CLIENT_ID, BuildConfig.IGDB_CLIENT_SECRET) } },
-                // ITAD is the live DealsSource (epic #205, Phase 2b); :remote:cheapshark was removed in Phase 4.
+                // ITAD is the live DealsSource.
                 itadNetworkModule,
                 itadRemoteModule,
                 itadAndroidModule,

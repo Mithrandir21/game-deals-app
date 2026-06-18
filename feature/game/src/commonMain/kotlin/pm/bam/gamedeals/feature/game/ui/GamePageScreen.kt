@@ -461,7 +461,7 @@ private fun GamePageBody(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
         // The hero is the persistent header; everything else lives under a tab so each tab shows only its
-        // own data — the game info/metadata sits under the first "Overview" tab (epic #291).
+        // own data — the game info/metadata sits under the first "Overview" tab.
         HeroSection(data)
         GameTabs(
             data = data,

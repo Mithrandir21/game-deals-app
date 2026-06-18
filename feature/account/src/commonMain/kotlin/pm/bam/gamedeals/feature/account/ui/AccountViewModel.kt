@@ -46,7 +46,7 @@ internal class AccountViewModel(
     val countries: ImmutableList<Country> = regionRepository.supportedCountries.toImmutableList()
 
     init {
-        // The selected storefront region (app-local preference folded into the hub, #276).
+        // The selected storefront region (app-local preference).
         viewModelScope.launch {
             regionRepository.observeSelectedCountry().collect { country ->
                 uiState.update { it.copy(selectedCountry = country) }
@@ -61,7 +61,7 @@ internal class AccountViewModel(
             }
         }
 
-        // Unread notifications for the hub's Notifications row badge (#278). The app-wide refresh is
+        // Unread notifications for the hub's Notifications row badge. The app-wide refresh is
         // driven by AccountTabBadgeViewModel at the shell level; here we just observe the shared tally.
         viewModelScope.launch {
             notificationsRepository.observeUnreadCount().collect { unread ->

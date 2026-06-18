@@ -350,7 +350,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             limit $limit;
             """.trimIndent()
 
-        // Tag discovery (epic #307). AND semantics: `<dim> = [a,b]` means "contains ALL of a and b"
+        // Tag discovery. AND semantics: `<dim> = [a,b]` means "contains ALL of a and b"
         // (NOT `(a,b)`, which is OR); clauses across dimensions are joined with `&` (also AND). Empty
         // dimensions are omitted entirely. `cover != null` drops the long tail of cover-less stubs and
         // also guarantees a non-empty `where` even if (defensively) every dimension list is empty —

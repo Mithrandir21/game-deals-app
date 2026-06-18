@@ -43,12 +43,12 @@ internal fun NavGraph(
     navActions: NavigationActions = remember(navController) { NavigationActions(navController) }
 ) {
     // External / website links open in an in-app Custom Tab (Android) / SFSafariViewController (iOS)
-    // rather than the standalone system browser, so the user stays in-context (#287).
+    // rather than the standalone system browser, so the user stays in-context.
     val platformActions = LocalPlatformActions.current
 
-    // Route taps on background (OS-tray) notifications into the nav graph (#272 follow-up): a tapped
-    // notification opens its detail screen, the group summary opens the Notifications list. The bus is
-    // consume-once, so this won't re-navigate.
+    // Route taps on background (OS-tray) notifications into the nav graph: a tapped notification opens
+    // its detail screen, the group summary opens the Notifications list. The bus is consume-once, so
+    // this won't re-navigate.
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
             when (route) {
@@ -58,8 +58,8 @@ internal fun NavGraph(
         }
     }
 
-    // Drive the shell chrome from the current route (epic #219): bottom nav + the shared top bar on
-    // every top-level tab; no chrome on detail routes (they own their Scaffold/TopAppBar).
+    // Drive the shell chrome from the current route: bottom nav + the shared top bar on every
+    // top-level tab; no chrome on detail routes (they own their Scaffold/TopAppBar).
     val currentDestination by navController.currentBackStackEntryAsState()
     val selectedTab = TopLevelDestination.entries.firstOrNull { tab ->
         currentDestination?.destination?.hierarchy?.any { it.hasRoute(tab.destination::class) } == true

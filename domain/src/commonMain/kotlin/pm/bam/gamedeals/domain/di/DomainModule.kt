@@ -92,22 +92,21 @@ val domainModule = module {
     single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
     single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
     single<IgdbRepository> { IgdbRepositoryImpl(get()) }
-    // Tag discovery (epic #307): composes IGDB tag search + the ITAD pricing bridge, with a Room-cached
+    // Tag discovery: composes IGDB tag search + the ITAD pricing bridge, with a Room-cached
     // picker vocabulary (logger, igdbRepository, gamesRepository, igdbTagDao, clock).
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER)) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
 
-    // ITAD account (epic #219). AuthTokenStore is Storage-backed (like RegionRepository). Waitlist/
-    // Collection are backed by the live ITAD account source (Phase 2.3); Stats by the live ITAD stats
-    // source (Phase 5.1, #235).
+    // ITAD account. AuthTokenStore is Storage-backed (like RegionRepository); Waitlist/Collection are
+    // backed by the live ITAD account source, Stats by the live ITAD stats source.
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
-    // Background (OS-tray) notification delivery (epic #272 follow-up). Scheduler is platform-bound
+    // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
@@ -115,7 +114,7 @@ val domainModule = module {
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get()) }
 
-    // Startup cache maintenance (Phase 8): cacheSchemaVersion guard + eviction sweep over the ITAD caches.
+    // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.
     single<CacheMaintenance> {
         CacheMaintenanceImpl(get(SETTINGS_QUALIFIER), get(), get(), get(), get(), get(), get(), get(), get())
     }

@@ -14,8 +14,8 @@ fun NavGraphBuilder.homeScreen(
     goToBundles: () -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
 ) {
-    // Search + Settings live on the app-shell top bar / overflow (epic #219, Phase 1). Giveaways moved
-    // off Home to their own tab (row-consolidation work), so Home is now 100% in-app content.
+    // Search + Settings live on the app-shell top bar / overflow. Giveaways moved off Home to their
+    // own tab, so Home is now 100% in-app content.
     composable<Destination.Home> {
         HomeScreen(
             goToGame = goToGame,
