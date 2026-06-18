@@ -102,6 +102,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -110,6 +111,7 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
@@ -1227,4 +1229,51 @@ private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul
 private fun formatReleaseDate(instant: Instant): String {
     val date = instant.toLocalDateTime(TimeZone.UTC).date
     return "${MONTH_ABBREV[date.month.ordinal]} ${date.dayOfMonth}, ${date.year}"
+}
+
+@Composable
+private fun GamePagePreview(data: GamePageData) {
+    GameDealsTheme {
+        GamePageContent(
+            data = data,
+            isFavourite = false,
+            isCollected = false,
+            isIgnored = false,
+            note = null,
+            onBack = {},
+            goToWeb = { _, _ -> },
+            onSimilarGameClick = {},
+            onSearchDealsByTitle = {},
+            onShareDeal = { _, _, _ -> },
+            onToggleFavourite = {},
+            onToggleCollection = {},
+            onToggleIgnore = {},
+            onSaveNote = {},
+            onDeleteNote = {},
+            onRetry = {},
+            onWarningTap = {},
+            onPickerDismiss = {},
+            onCandidatePicked = {},
+            onBundleClick = {},
+            onRegionsSelected = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GamePage_Loading_Preview() {
+    GamePagePreview(GamePageData.Loading)
+}
+
+@Preview
+@Composable
+private fun GamePage_NoMatch_Preview() {
+    GamePagePreview(GamePageData.NoMatch(title = "Some Obscure Game"))
+}
+
+@Preview
+@Composable
+private fun GamePage_Data_Preview() {
+    GamePagePreview(GamePageData.Data(title = "Hades"))
 }

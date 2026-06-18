@@ -41,8 +41,10 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_collection_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
@@ -176,6 +178,40 @@ private fun GameRow(title: String, boxart: String?, onClick: () -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .padding(start = GameDealsCustomTheme.spacing.medium),
+        )
+    }
+}
+
+private val previewGameListItems = persistentListOf(
+    GameListItem(gameId = "g1", title = "Hades", boxart = null),
+    GameListItem(gameId = "g2", title = "Stardew Valley", boxart = null),
+    GameListItem(gameId = "g3", title = "Hollow Knight", boxart = null),
+)
+
+@Preview
+@Composable
+private fun GameListScaffoldPreview() {
+    GameDealsTheme {
+        GameListScaffold(
+            title = "Waitlist",
+            state = GameListState(loading = false, items = previewGameListItems),
+            emptyText = "Your waitlist is empty.",
+            onBack = {},
+            onGameClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameListScaffoldEmptyPreview() {
+    GameDealsTheme {
+        GameListScaffold(
+            title = "Collection",
+            state = GameListState(loading = false),
+            emptyText = "You haven’t collected any games yet.",
+            onBack = {},
+            onGameClick = {},
         )
     }
 }

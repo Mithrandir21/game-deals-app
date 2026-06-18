@@ -39,11 +39,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
@@ -446,5 +449,53 @@ private fun HubRow(
         } else {
             null
         },
+    )
+}
+
+private val previewCountries = persistentListOf(Country("US", "United States"), Country("GB", "United Kingdom"))
+
+@Composable
+private fun AccountScreenContentPreview(data: AccountScreenData) {
+    GameDealsTheme {
+        AccountScreenContent(
+            data = data,
+            countries = previewCountries,
+            onLogin = {},
+            onLogout = {},
+            onCountrySelected = {},
+            onSetMature = {},
+            onOpenWaitlist = {},
+            onOpenCollection = {},
+            onOpenNotifications = {},
+            onOpenIgnored = {},
+            onOpenMyNotes = {},
+            onOpenLinkedAccounts = {},
+            onOpenWebsite = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun AccountScreen_LoggedOut_Preview() {
+    AccountScreenContentPreview(
+        AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States")),
+    )
+}
+
+@Preview
+@Composable
+private fun AccountScreen_LoggedIn_Preview() {
+    AccountScreenContentPreview(
+        AccountScreenData(
+            loggedIn = true,
+            username = "alice",
+            waitlistCount = 12,
+            collectionCount = 34,
+            unreadNotifications = 3,
+            linkedSteam = true,
+            selectedCountry = Country("US", "United States"),
+            matureOptIn = true,
+        ),
     )
 }

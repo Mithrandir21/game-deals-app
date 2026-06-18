@@ -37,10 +37,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_ignored_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_ignored_unignore
@@ -49,7 +52,6 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun IgnoredScreen(
     onBack: () -> Unit,
@@ -57,6 +59,22 @@ internal fun IgnoredScreen(
     viewModel: IgnoredViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    IgnoredScreenContent(
+        state = state,
+        onBack = onBack,
+        onGameClick = onGameClick,
+        onUnignore = viewModel::onUnignore,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IgnoredScreenContent(
+    state: GameListState,
+    onBack: () -> Unit,
+    onGameClick: (gameId: String) -> Unit,
+    onUnignore: (gameId: String) -> Unit,
+) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
@@ -99,7 +117,7 @@ internal fun IgnoredScreen(
                         IgnoredRow(
                             item = item,
                             onClick = { onGameClick(item.gameId) },
-                            onUnignore = { viewModel.onUnignore(item.gameId) },
+                            onUnignore = { onUnignore(item.gameId) },
                         )
                     }
                 }
@@ -142,5 +160,37 @@ private fun IgnoredRow(item: GameListItem, onClick: () -> Unit, onUnignore: () -
         TextButton(onClick = onUnignore) {
             Text(stringResource(Res.string.account_ignored_unignore))
         }
+    }
+}
+
+@Preview
+@Composable
+private fun IgnoredScreenPreview() {
+    GameDealsTheme {
+        IgnoredScreenContent(
+            state = GameListState(
+                loading = false,
+                items = persistentListOf(
+                    GameListItem(gameId = "g1", title = "Untitled Goose Game", boxart = null),
+                    GameListItem(gameId = "g2", title = "Goat Simulator", boxart = null),
+                ),
+            ),
+            onBack = {},
+            onGameClick = {},
+            onUnignore = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun IgnoredScreenEmptyPreview() {
+    GameDealsTheme {
+        IgnoredScreenContent(
+            state = GameListState(loading = false),
+            onBack = {},
+            onGameClick = {},
+            onUnignore = {},
+        )
     }
 }

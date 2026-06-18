@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_coming_soon
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
@@ -65,5 +67,13 @@ internal fun ComingSoonScreen(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun ComingSoonScreenPreview() {
+    GameDealsTheme {
+        ComingSoonScreen(title = "Linked accounts", onBack = {})
     }
 }

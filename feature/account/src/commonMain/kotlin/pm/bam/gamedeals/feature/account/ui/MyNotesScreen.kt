@@ -37,10 +37,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
 import pm.bam.gamedeals.feature.account.generated.resources.account_notes_empty
@@ -48,7 +51,6 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MyNotesScreen(
     onBack: () -> Unit,
@@ -56,6 +58,16 @@ internal fun MyNotesScreen(
     viewModel: MyNotesViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    MyNotesScreenContent(state = state, onBack = onBack, onGameClick = onGameClick)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyNotesScreenContent(
+    state: NotesListState,
+    onBack: () -> Unit,
+    onGameClick: (gameId: String) -> Unit,
+) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
@@ -140,5 +152,35 @@ private fun NotesRow(item: NotesListItem, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun MyNotesScreenPreview() {
+    GameDealsTheme {
+        MyNotesScreenContent(
+            state = NotesListState(
+                loading = false,
+                items = persistentListOf(
+                    NotesListItem(gameId = "g1", title = "Elden Ring", boxart = null, note = "Wait for a deeper sale — never below 20% yet."),
+                    NotesListItem(gameId = "g2", title = "Disco Elysium", boxart = null, note = "Final Cut only."),
+                ),
+            ),
+            onBack = {},
+            onGameClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MyNotesScreenEmptyPreview() {
+    GameDealsTheme {
+        MyNotesScreenContent(
+            state = NotesListState(loading = false),
+            onBack = {},
+            onGameClick = {},
+        )
     }
 }

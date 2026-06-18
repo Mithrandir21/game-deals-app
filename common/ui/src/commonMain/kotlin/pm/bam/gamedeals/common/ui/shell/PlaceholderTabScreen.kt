@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 
 /**
  * Empty-state placeholder for a top-level tab whose real screen hasn't been built yet (epic #219,
@@ -28,5 +30,13 @@ fun PlaceholderTabScreen(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() },
         )
+    }
+}
+
+@Preview
+@Composable
+private fun PlaceholderTabScreenPreview() {
+    GameDealsTheme {
+        PlaceholderTabScreen(label = "Bundles")
     }
 }
