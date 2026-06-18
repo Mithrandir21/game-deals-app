@@ -13,8 +13,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationDealGame
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
+import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,5 +120,32 @@ class NotificationsRepositoryTest {
         assertEquals(emptyList(), repo().getWaitlistGames("n1"))
 
         verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationGames(any()) }
+    }
+
+    @Test
+    fun getNotificationDetail_joins_waitlist_art_and_caches() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns
+            NotificationDetail("n1", listOf(NotificationDealGame(gameId = "g1", title = "Halo")))
+        everySuspend { accountSource.getWaitlist() } returns
+            listOf(WaitlistEntry(gameId = "g1", title = "Halo", artwork = GameArtwork(banner400 = "art-g1")))
+
+        val repo = repo()
+        val first = repo.getNotificationDetail("n1")
+        val second = repo.getNotificationDetail("n1")
+
+        assertEquals("art-g1", first.games.single().artwork.banner400) // art joined by game id
+        assertEquals(first, second)                                    // served from cache
+        verifySuspend(exactly(1)) { accountSource.getWaitlistNotificationDetail("n1") }
+        verifySuspend(exactly(1)) { accountSource.getWaitlist() }
+    }
+
+    @Test
+    fun getNotificationDetail_is_empty_when_logged_out_without_calling_remote() = runTest {
+        loggedIn(false)
+
+        assertEquals(NotificationDetail("n1", emptyList()), repo().getNotificationDetail("n1"))
+
+        verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationDetail(any()) }
     }
 }

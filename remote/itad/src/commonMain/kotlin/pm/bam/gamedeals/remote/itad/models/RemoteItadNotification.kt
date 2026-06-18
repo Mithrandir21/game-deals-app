@@ -27,11 +27,16 @@ data class RemoteItadNotificationWaitlist(
 )
 
 /**
- * Minimal `obj.notification.game` subset (#288): the game id + title needed to deep-link. The rest of the
- * game payload (slug/type/mature/prices/deals) is dropped via `ignoreUnknownKeys`.
+ * `obj.notification.game` (#288, extended): the game id + title (for deep-linking) plus the deal content
+ * surfaced by the in-app notification detail screen — the all-time-[historyLow] and the per-shop [deals].
+ * `obj.notification.deal` is a superset of [RemoteItadDealEntry] (it additionally carries drm/platforms/
+ * timestamp/expiry), so the extra fields drop via `ignoreUnknownKeys`. `slug/type/mature/lastPrice` are
+ * not consumed and likewise dropped.
  */
 @Serializable
 data class RemoteItadNotificationGame(
     @SerialName("id") val id: String,
     @SerialName("title") val title: String,
+    @SerialName("historyLow") val historyLow: RemoteItadPrice? = null,
+    @SerialName("deals") val deals: List<RemoteItadDealEntry> = emptyList(),
 )

@@ -6,6 +6,7 @@ import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
@@ -21,6 +22,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toCollectionEntry
 import pm.bam.gamedeals.remote.itad.mappers.toIgnoredEntry
 import pm.bam.gamedeals.remote.itad.mappers.toItadNote
 import pm.bam.gamedeals.remote.itad.mappers.toItadNotification
+import pm.bam.gamedeals.remote.itad.mappers.toNotificationDetail
 import pm.bam.gamedeals.remote.itad.mappers.toNotificationGame
 import pm.bam.gamedeals.remote.itad.mappers.toItadUser
 import pm.bam.gamedeals.remote.itad.mappers.toWaitlistEntry
@@ -124,6 +126,13 @@ internal class ItadAccountSourceImpl(
             .getOrThrow()
             .games
             .map { it.toNotificationGame() }
+
+    override suspend fun getWaitlistNotificationDetail(id: String): NotificationDetail =
+        notificationsApi.getWaitlistDetail(id)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .toNotificationDetail(id)
 
     override suspend fun getIgnored(): List<IgnoredEntry> =
         ignoredApi.getIgnored()

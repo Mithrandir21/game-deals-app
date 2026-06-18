@@ -5,9 +5,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 
@@ -29,6 +33,14 @@ interface NotificationsRepository {
 
     /** The games a waitlist notification refers to, for deep-linking (#288). Empty when logged out. */
     suspend fun getWaitlistGames(notificationId: String): List<NotificationGame>
+
+    /**
+     * The full deal content of a waitlist notification (games + deals + joined banner art) for the in-app
+     * detail screen. Cached in-memory: a second open is served from cache, and the per-game art is joined
+     * (and itself cached) from the user's waitlist — the only cheap art source. A fresh [getNotifications]
+     * (remote-as-truth reload) invalidates these caches. Empty when logged out.
+     */
+    suspend fun getNotificationDetail(notificationId: String): NotificationDetail
 }
 
 internal class NotificationsRepositoryImpl(
@@ -37,6 +49,14 @@ internal class NotificationsRepositoryImpl(
 ) : NotificationsRepository {
 
     private val notifications = MutableStateFlow<List<ItadNotification>>(emptyList())
+
+    // Cache-from-sync + lazy-on-open: the per-notification detail is cached so a second open (or a tray
+    // tap that the sync already warmed) is free. [waitlistArt] is the one-shot game-id → art join source,
+    // cached for the process so a multi-notification sync fetches the waitlist once. Both are invalidated
+    // by [getNotifications] (the remote-as-truth reload) and on logout.
+    private val cacheMutex = Mutex()
+    private val detailCache = mutableMapOf<String, NotificationDetail>()
+    private var waitlistArt: Map<String, GameArtwork>? = null
 
     override fun observeNotifications(): Flow<List<ItadNotification>> =
         combine(authTokenStore.observeAuthState(), notifications) { authState, list ->
@@ -47,6 +67,7 @@ internal class NotificationsRepositoryImpl(
         observeNotifications().map { list -> list.count { !it.read } }
 
     override suspend fun getNotifications(): List<ItadNotification> {
+        invalidateDetailCache() // remote-as-truth reload: drop any stale detail/art so reopens re-fetch.
         if (!loggedIn()) {
             notifications.value = emptyList()
             return emptyList()
@@ -72,6 +93,36 @@ internal class NotificationsRepositoryImpl(
     override suspend fun getWaitlistGames(notificationId: String): List<NotificationGame> {
         if (!loggedIn()) return emptyList()
         return accountSource.getWaitlistNotificationGames(notificationId)
+    }
+
+    override suspend fun getNotificationDetail(notificationId: String): NotificationDetail {
+        if (!loggedIn()) {
+            invalidateDetailCache()
+            return NotificationDetail(notificationId, emptyList())
+        }
+        cacheMutex.withLock { detailCache[notificationId] }?.let { return it }
+
+        // Fetch the deal content and the art map outside the lock (the art map is fetched at most once per
+        // process); join art by game id, then memoise the joined detail.
+        val detail = accountSource.getWaitlistNotificationDetail(notificationId)
+        val art = cachedWaitlistArt()
+        val joined = detail.copy(
+            games = detail.games.map { game -> game.copy(artwork = art[game.gameId] ?: game.artwork) },
+        )
+        cacheMutex.withLock { detailCache[notificationId] = joined }
+        return joined
+    }
+
+    private suspend fun cachedWaitlistArt(): Map<String, GameArtwork> =
+        cacheMutex.withLock {
+            waitlistArt ?: runCatching { accountSource.getWaitlist().associate { it.gameId to it.artwork } }
+                .getOrDefault(emptyMap())
+                .also { waitlistArt = it }
+        }
+
+    private suspend fun invalidateDetailCache() = cacheMutex.withLock {
+        detailCache.clear()
+        waitlistArt = null
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

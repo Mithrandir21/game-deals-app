@@ -14,6 +14,7 @@ import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -113,6 +114,7 @@ internal class FakeAccountSource(
     override suspend fun markNotificationRead(id: String) = Unit
     override suspend fun markAllNotificationsRead() = Unit
     override suspend fun getWaitlistNotificationGames(id: String): List<NotificationGame> = emptyList()
+    override suspend fun getWaitlistNotificationDetail(id: String): NotificationDetail = NotificationDetail(id, emptyList())
     override suspend fun getIgnored(): List<IgnoredEntry> = ignored
     override suspend fun addToIgnored(gameId: String) { added += gameId }
     override suspend fun removeFromIgnored(gameId: String) { removed += gameId }

@@ -22,6 +22,8 @@ import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * HTTP-level coverage for [ItadAccountSourceImpl] + the user `*Api` classes against a MockEngine
@@ -47,9 +49,10 @@ class ItadAccountSourceImplTest {
                 request.url.encodedPath == "/notifications/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/notifications/waitlist/v1" && request.method == HttpMethod.Get ->
-                    // Extra game fields (slug/type/mature/prices/deals) are present on the wire and must be ignored.
+                    // Unconsumed game fields (slug/type/mature/lastPrice) and deal fields (drm/platforms/
+                    // timestamp/expiry) are present on the wire and must be ignored; deals + historyLow are mapped.
                     respond(
-                        """{"id":"n1","timestamp":"2026-06-12T00:00:00+00:00","read":null,"games":[{"id":"uuid-9","slug":"hades","title":"Hades","type":"game","mature":false,"historyLow":null,"lastPrice":null,"deals":[]}]}""",
+                        """{"id":"n1","timestamp":"2026-06-12T00:00:00+00:00","read":null,"games":[{"id":"uuid-9","slug":"hades","title":"Hades","type":"game","mature":false,"historyLow":{"amount":6.99,"amountInt":699,"currency":"EUR"},"lastPrice":{"amount":13.99,"amountInt":1399,"currency":"EUR"},"deals":[{"shop":{"id":35,"name":"GOG"},"price":{"amount":17.09,"amountInt":1709,"currency":"EUR"},"regular":{"amount":59.99,"amountInt":5999,"currency":"EUR"},"cut":72,"voucher":"PROMO","storeLow":{"amount":7,"amountInt":700,"currency":"EUR"},"flag":"N","drm":[{"id":1,"name":"Steam"}],"platforms":[{"id":1,"name":"Windows"}],"timestamp":"2024-02-11T01:20:50+01:00","expiry":null,"url":"https://itad.link/abc/"}]}]}""",
                         HttpStatusCode.OK,
                         jsonHeaders,
                     )
@@ -147,6 +150,28 @@ class ItadAccountSourceImplTest {
         val games = source().getWaitlistNotificationGames("n1")
         assertEquals("uuid-9", games.single().gameId)
         assertEquals("Hades", games.single().title)
+        assertEquals("/notifications/waitlist/v1", recorded.single().url.encodedPath)
+        assertEquals("n1", recorded.single().url.parameters["id"])
+    }
+
+    @Test
+    fun getWaitlistNotificationDetail_maps_deals_history_low_and_flags() = runTest {
+        val detail = source().getWaitlistNotificationDetail("n1")
+
+        assertEquals("n1", detail.notificationId)
+        val game = detail.games.single()
+        assertEquals("uuid-9", game.gameId)
+        assertEquals("Hades", game.title)
+        assertFalse(game.isExpired)
+        assertNotNull(game.historicalLowDenominated) // historyLow mapped + formatted
+
+        val deal = game.bestDeal!!
+        assertEquals("GOG", deal.shopName)
+        assertEquals(72, deal.cutPercent)
+        assertTrue(deal.isNewHistoricalLow) // flag "N"
+        assertTrue(deal.hasVoucher)         // non-blank voucher
+        assertFalse(deal.isStoreLow)        // flag is "N", not "S"
+
         assertEquals("/notifications/waitlist/v1", recorded.single().url.encodedPath)
         assertEquals("n1", recorded.single().url.parameters["id"])
     }

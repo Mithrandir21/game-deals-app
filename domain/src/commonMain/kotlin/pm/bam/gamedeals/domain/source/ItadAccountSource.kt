@@ -5,6 +5,7 @@ import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 
@@ -30,6 +31,9 @@ interface ItadAccountSource {
 
     /** The games referenced by a waitlist notification, for deep-linking (#288). */
     suspend fun getWaitlistNotificationGames(id: String): List<NotificationGame>
+
+    /** The full deal content of a waitlist notification (games + their deals) for the in-app detail screen. */
+    suspend fun getWaitlistNotificationDetail(id: String): NotificationDetail
 
     suspend fun getIgnored(): List<IgnoredEntry>
     suspend fun addToIgnored(gameId: String)
