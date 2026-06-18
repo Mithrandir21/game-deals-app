@@ -39,11 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -99,31 +96,22 @@ fun GameDealsAppShell(
     // Reset manual search state on tab change.
     LaunchedEffect(selectedTab) { manualSearch = false }
 
-    // Manage hide-on-scroll behavior for both bars.
+    // Both bars hide on scroll-down, re-enter on scroll-up: the top bar uses Material's enterAlways
+    // behavior; the bottom bar mirrors its collapse progress (below) so they move + settle in lockstep.
     val topScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val density = LocalDensity.current
     val bottomBarHeightPx = with(density) { 80.dp.toPx() }
-    var bottomBarOffsetHeightPx by remember { mutableStateOf(0f) }
 
-    val nestedScrollConnection = remember(topScrollBehavior, bottomBarHeightPx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
-                bottomBarOffsetHeightPx = (bottomBarOffsetHeightPx + delta).coerceIn(-bottomBarHeightPx, 0f)
-                return topScrollBehavior.nestedScrollConnection.onPreScroll(available, source)
-            }
-        }
-    }
-
-    // Reset bar visibility on tab change or visibility toggle.
+    // Snap both bars back to fully shown on tab change / return to a tab route.
     LaunchedEffect(selectedTab, showTopBar, showBottomBar) {
         topScrollBehavior.state.heightOffset = 0f
-        bottomBarOffsetHeightPx = 0f
     }
 
     Scaffold(
         // Feed the tab content's nested scroll to the bars while shown.
-        modifier = modifier.then(if (showTopBar || showBottomBar) Modifier.nestedScroll(nestedScrollConnection) else Modifier),
+        modifier = modifier.then(
+            if (showTopBar || showBottomBar) Modifier.nestedScroll(topScrollBehavior.nestedScrollConnection) else Modifier,
+        ),
         // Inner screens own their insets; the bars below consume their own via M3 defaults.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
@@ -191,8 +179,9 @@ fun GameDealsAppShell(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
+                    // Mirror the top bar's collapse: 0 = fully shown, +height = slid off the bottom.
                     modifier = Modifier.graphicsLayer {
-                        translationY = -bottomBarOffsetHeightPx
+                        translationY = bottomBarHeightPx * topScrollBehavior.state.collapsedFraction
                     }
                 ) {
                     TopLevelDestination.entries.forEach { tab ->
