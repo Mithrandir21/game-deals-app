@@ -167,6 +167,8 @@ private fun GiveawayDetailBody(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
         item {
+            // Matches GamerPower's source image ratio (460×215 ≈ 2.14:1) so the full Steam-header art
+            // shows uncropped; 460px wide is also its max resolution (can't be made sharper).
             AsyncImage(
                 model = giveaway.image,
                 contentDescription = stringResource(Res.string.giveaway_detail_image, giveaway.title),
@@ -174,7 +176,7 @@ private fun GiveawayDetailBody(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                    .aspectRatio(460f / 215f)
                     .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
             )
         }

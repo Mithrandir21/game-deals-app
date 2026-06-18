@@ -319,7 +319,9 @@ private fun GiveawayCard(
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
             // Full-width hero art uses the card's whole width; the platform badges and countdown
-            // run along the row below it, and the title and worth follow at full width.
+            // run along the row below it, and the title and worth follow at full width. The ratio
+            // matches GamerPower's source image (460×215 ≈ 2.14:1, a Steam header) so Crop no longer
+            // slices the sides — that's also its max resolution, so it can't be made sharper.
             AsyncImage(
                 model = giveaway.image,
                 contentDescription = stringResource(Res.string.giveaway_screen_game_image, giveaway.title),
@@ -327,7 +329,7 @@ private fun GiveawayCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                    .aspectRatio(460f / 215f)
                     .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
             )
             Row(
