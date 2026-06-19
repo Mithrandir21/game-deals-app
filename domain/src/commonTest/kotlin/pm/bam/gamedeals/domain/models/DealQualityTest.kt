@@ -10,7 +10,7 @@ import kotlin.test.assertNull
 class DealQualityTest {
 
     private fun details(low: Double, vararg dealPrices: Double) = gameDetails(
-        cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = low, priceDenominated = "$$low", date = "2025-11-21"),
+        cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = low, priceDenominated = "$$low", date = ""),
         deals = dealPrices.mapIndexed { i, p -> gameDeal(dealID = "d$i", priceValue = p, priceDenominated = "$$p") }.let { persistentListOf(*it.toTypedArray()) },
     )
 
@@ -55,6 +55,6 @@ class DealQualityTest {
         val quality = details(low = 10.0, dealPrices = doubleArrayOf(15.0)).dealQuality()
         assertEquals(DealQuality.Tier.Elevated, quality?.tier)
         assertEquals(50, quality?.percentAboveLow)
-        assertEquals("2025-11-21", quality?.allTimeLowDate)
+        assertEquals("$10.0", quality?.allTimeLowDenominated)
     }
 }

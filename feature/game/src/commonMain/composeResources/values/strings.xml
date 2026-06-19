@@ -60,8 +60,8 @@
     <string name="game_page_deal_quality_all_time_low_title">Lowest price ever</string>
     <string name="game_page_deal_quality_near_low_title">Great price</string>
     <string name="game_page_deal_quality_elevated_title">It\'s been cheaper before</string>
-    <string name="game_page_deal_quality_at_low_detail">Matches its all-time low (%1$s)</string>
-    <string name="game_page_deal_quality_above_detail">%1$d%% above the all-time low — %2$s on %3$s</string>
+    <string name="game_page_deal_quality_at_low_detail">Matches its all-time low of %1$s</string>
+    <string name="game_page_deal_quality_above_detail">%1$d%% above the all-time low of %2$s</string>
     <string name="game_page_deal_quality_cd">Deal quality: %1$s. %2$s</string>
     <string name="game_page_price_alert_title">Price alert</string>
     <string name="game_page_price_alert_subtitle">Get an OS notification when this drops to your target price.</string>

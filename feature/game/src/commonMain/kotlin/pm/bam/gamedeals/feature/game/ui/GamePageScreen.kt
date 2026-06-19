@@ -930,12 +930,11 @@ private fun DealQualityCallout(quality: DealQuality) {
         }
     )
     val detail = when (quality.tier) {
-        DealQuality.Tier.AllTimeLow -> stringResource(Res.string.game_page_deal_quality_at_low_detail, quality.allTimeLowDate)
+        DealQuality.Tier.AllTimeLow -> stringResource(Res.string.game_page_deal_quality_at_low_detail, quality.allTimeLowDenominated)
         else -> stringResource(
             Res.string.game_page_deal_quality_above_detail,
             quality.percentAboveLow,
             quality.allTimeLowDenominated,
-            quality.allTimeLowDate,
         )
     }
     val mergedCd = stringResource(Res.string.game_page_deal_quality_cd, title, detail)

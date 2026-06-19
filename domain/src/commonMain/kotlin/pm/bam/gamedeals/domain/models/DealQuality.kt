@@ -15,7 +15,6 @@ data class DealQuality(
     /** Whole-percent the current best price sits above the all-time low; 0 when at or below the low. */
     val percentAboveLow: Int,
     val allTimeLowDenominated: String,
-    val allTimeLowDate: String,
 ) {
     enum class Tier {
         /** Current best price matches (or beats) the all-time low — the strongest buy signal. */
@@ -60,6 +59,5 @@ fun GameDetails.dealQuality(): DealQuality? {
         tier = tier,
         percentAboveLow = percentAboveLow,
         allTimeLowDenominated = cheapestPriceEver.priceDenominated,
-        allTimeLowDate = cheapestPriceEver.date,
     )
 }
