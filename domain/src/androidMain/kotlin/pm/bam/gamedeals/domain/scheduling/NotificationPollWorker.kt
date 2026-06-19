@@ -19,7 +19,7 @@ internal class NotificationPollWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     override suspend fun doWork(): Result = try {
-        runNotificationPoll(get(), get())
+        runNotificationPoll(get(), get(), get())
         Result.success()
     } catch (ce: CancellationException) {
         throw ce

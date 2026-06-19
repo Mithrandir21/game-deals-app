@@ -14,8 +14,10 @@ import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAle
 
 internal const val EXTRA_NOTIFICATION_ROUTE = "extra_notification_route"
 internal const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
+internal const val EXTRA_GAME_ID = "extra_game_id"
 internal const val ROUTE_NOTIFICATION_DETAIL = "notification_detail"
 internal const val ROUTE_NOTIFICATIONS = "notifications"
+internal const val ROUTE_GAME = "game"
 
 /** Cap the per-game lines listed in an expanded notification so the tray text stays readable. */
 private const val MAX_GAME_LINES = 6
@@ -102,16 +104,23 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
         val requestCode = alert.notificationId.hashCode()
         return when (val route = alert.toNotificationRoute()) {
             is NotificationRoute.NotificationDetail ->
-                routeIntent(ROUTE_NOTIFICATION_DETAIL, notificationId = route.notificationId, requestCode = requestCode)
-            NotificationRoute.Notifications -> routeIntent(ROUTE_NOTIFICATIONS, notificationId = null, requestCode = requestCode)
+                routeIntent(ROUTE_NOTIFICATION_DETAIL, requestCode = requestCode, notificationId = route.notificationId)
+            NotificationRoute.Notifications -> routeIntent(ROUTE_NOTIFICATIONS, requestCode = requestCode)
+            is NotificationRoute.Game -> routeIntent(ROUTE_GAME, requestCode = requestCode, gameId = route.gameId)
         }
     }
 
-    private fun routeIntent(route: String, notificationId: String?, requestCode: Int): PendingIntent {
+    private fun routeIntent(
+        route: String,
+        requestCode: Int,
+        notificationId: String? = null,
+        gameId: String? = null,
+    ): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra(EXTRA_NOTIFICATION_ROUTE, route)
             notificationId?.let { putExtra(EXTRA_NOTIFICATION_ID, it) }
+            gameId?.let { putExtra(EXTRA_GAME_ID, it) }
         }
         return PendingIntent.getActivity(context, requestCode, intent, PENDING_FLAGS)
     }

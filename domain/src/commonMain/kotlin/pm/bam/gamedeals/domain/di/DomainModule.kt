@@ -41,6 +41,10 @@ import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositor
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
 import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStoreImpl
+import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchChecker
+import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchCheckerImpl
+import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchRepository
+import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -111,6 +115,13 @@ val domainModule = module {
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSync> { NotificationSyncImpl(get(), get(), get()) }
+    // Client-side target-price alerts (Phase 3). Watches persist via Storage; the checker compares them to
+    // live prices in the same background poll as the ITAD sync. The alert title is built here (domain has no
+    // string resources) — concise English copy, consistent with the ITAD waitlist channel.
+    single<PriceWatchRepository> { PriceWatchRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
+    single<PriceWatchChecker> {
+        PriceWatchCheckerImpl(get(), get()) { gameTitle, priceDenominated -> "$gameTitle hit your target — now $priceDenominated" }
+    }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get()) }
 

@@ -10,6 +10,8 @@ sealed interface NotificationRoute {
     data class NotificationDetail(val notificationId: String) : NotificationRoute
     /** The group summary opens the Notifications list. */
     data object Notifications : NotificationRoute
+    /** A tapped target-price alert (Phase 3) opens that game's page directly. */
+    data class Game(val gameId: String) : NotificationRoute
 }
 
 /**

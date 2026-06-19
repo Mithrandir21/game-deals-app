@@ -54,6 +54,7 @@ internal fun NavGraph(
             when (route) {
                 is NotificationRoute.NotificationDetail -> navActions.navigateToNotificationDetail(route.notificationId)
                 NotificationRoute.Notifications -> navActions.navigateToNotifications()
+                is NotificationRoute.Game -> navActions.navigateToGame(route.gameId)
             }
         }
     }

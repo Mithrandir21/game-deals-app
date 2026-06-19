@@ -6,5 +6,5 @@ import pm.bam.gamedeals.feature.game.ui.GamePageViewModel
 
 val gameModule = module {
     // The single Game Page ViewModel.
-    viewModel { GamePageViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { GamePageViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

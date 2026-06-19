@@ -17,6 +17,11 @@ data class PendingNotificationAlert(
     val notificationId: String,
     val title: String,
     val games: List<NotificationDealGame>,
+    /**
+     * When non-null the tap deep-links straight to this game's page instead of a notification detail
+     * screen — used by client-side target-price alerts (Phase 3), which have no ITAD notification id.
+     */
+    val gameId: String? = null,
 )
 
 /**

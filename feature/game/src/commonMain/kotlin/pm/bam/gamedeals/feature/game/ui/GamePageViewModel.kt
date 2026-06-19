@@ -31,6 +31,7 @@ import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.PriceWatch
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
@@ -39,6 +40,7 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
@@ -73,6 +75,7 @@ internal class GamePageViewModel(
     private val ignoredRepository: IgnoredRepository,
     private val notesRepository: NotesRepository,
     private val faviconResolver: FaviconResolver,
+    private val priceWatchRepository: PriceWatchRepository,
 ) : ViewModel() {
 
     // The ITAD game UUID. Seeded from the deal-entry arg and *updated* once an IGDB-only entry resolves its
@@ -93,6 +96,11 @@ internal class GamePageViewModel(
 
     val note: StateFlow<String?> = gameIdFlow
         .flatMapLatest { id -> if (id == null) flowOf(null) else notesRepository.observeNote(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The user's target-price alert for this game, or null when none is set (Phase 3). */
+    val priceWatch: StateFlow<PriceWatch?> = gameIdFlow
+        .flatMapLatest { id -> if (id == null) flowOf(null) else priceWatchRepository.observeWatch(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val uiState: StateFlow<GamePageData>
@@ -241,6 +249,20 @@ internal class GamePageViewModel(
                 events.tryEmit(GameUiEvent.SignInRequired)
             }
         }
+    }
+
+    /** Set a target-price alert at [targetPriceValue] (Phase 3). Requires a resolved ITAD game id + deals. */
+    fun setPriceWatch(targetPriceValue: Double, targetPriceDenominated: String) {
+        val data = uiState.value as? GamePageData.Data ?: return
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch {
+            priceWatchRepository.setWatch(id, data.title, targetPriceValue, targetPriceDenominated)
+        }
+    }
+
+    fun removePriceWatch() {
+        val id = gameIdFlow.value ?: return
+        viewModelScope.launch { priceWatchRepository.removeWatch(id) }
     }
 
     fun onShareDealClicked(gameInfo: GameDetails.GameInfo, store: Store, deal: GameDetails.GameDeal) {
