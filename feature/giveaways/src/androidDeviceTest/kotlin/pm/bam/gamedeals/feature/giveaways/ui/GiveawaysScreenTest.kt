@@ -1,6 +1,10 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -126,6 +130,22 @@ class GiveawaysScreenTest {
 
         composeTestRule.onNodeWithContentDescription(screenSemantics.loading).assertDoesNotExist()
         composeTestRule.onNodeWithText(screenSemantics.emptyLive).assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyPlaceholderIsPoliteLiveRegion() {
+        every { viewModel.uiState } returns MutableStateFlow(
+            GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = persistentListOf(),
+            )
+        )
+
+        setupCompose()
+
+        // The empty message must announce itself when it replaces the loading spinner.
+        composeTestRule.onNodeWithText(screenSemantics.emptyLive)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
     @Test
