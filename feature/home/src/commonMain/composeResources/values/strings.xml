@@ -10,6 +10,8 @@
     <string name="home_screen_trending_label">Trending</string>
     <string name="home_screen_most_waitlisted_label">Most Waitlisted</string>
     <string name="home_screen_most_collected_label">Most Collected</string>
+    <string name="home_screen_recommended_label">Recommended for you</string>
+    <string name="home_screen_recommendation_row_description">%1$s, recommended for you</string>
     <string name="home_screen_stat_waitlisted">Waitlisted</string>
     <string name="home_screen_stat_collected">Collected</string>
     <string name="home_screen_hero_deal_description">%1$s, was %2$s, now %3$s</string>

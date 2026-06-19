@@ -73,8 +73,10 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
@@ -89,6 +91,8 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_most_waitli
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_new_releases_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_ranked_game_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_ranked_game_description_no_price
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_recommendation_row_description
+import pm.bam.gamedeals.feature.home.generated.resources.home_screen_recommended_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_release_row_description
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_release_upcoming
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_stat_collected
@@ -414,6 +418,28 @@ private fun HomeFeed(
                 collectionIds = collectionIds,
                 onPeekGame = onPeekGame,
             )
+        }
+
+        // 5.5. Recommended for you (#6) — IGDB games similar to the user's waitlist/collection. Title-only
+        // rows like New Releases; the tap resolves the title → game on open (price shown on the game page).
+        if (data.recommendations.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_recommended_label)) }
+            items(
+                count = data.recommendations.size,
+                key = { index -> "recommendation-${data.recommendations[index].id}" },
+                contentType = { CONTENT_TYPE_RELEASE },
+            ) { index ->
+                val rec = data.recommendations[index]
+                val image = rec.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }
+                DealListRow(
+                    title = rec.name,
+                    contentDescription = stringResource(Res.string.home_screen_recommendation_row_description, rec.name),
+                    onClick = { onPeekRelease(rec.name, image) },
+                    imageUrl = image,
+                )
+            }
         }
 
         // 6. New Releases (IGDB) — title-only rows; the price column is a neutral "Upcoming" chip and the

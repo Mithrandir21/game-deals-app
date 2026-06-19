@@ -35,6 +35,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
@@ -92,6 +93,9 @@ class HomeViewModelTest : MainDispatcherTest() {
         everySuspend { getGamePrices(any()) } returns emptyList()
     }
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
+    private val recommendationsRepository: RecommendationsRepository = mock(MockMode.autoUnit) {
+        everySuspend { getRecommendations(any()) } returns emptyList()
+    }
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -111,6 +115,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
         igdbRepository = igdbRepository,
+        recommendationsRepository = recommendationsRepository,
         logger = logger,
     )
 

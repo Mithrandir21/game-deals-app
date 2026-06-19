@@ -5,5 +5,5 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel
 
 val homeModule = module {
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

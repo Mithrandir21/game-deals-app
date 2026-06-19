@@ -35,6 +35,8 @@ import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettingsImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
@@ -123,6 +125,8 @@ val domainModule = module {
     single<PriceWatchRepository> { PriceWatchRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
     // Followed franchises/series (#7) — client-side, Storage-backed like price watches.
     single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
+    single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
     single<PriceWatchChecker> {
         PriceWatchCheckerImpl(get(), get()) { gameTitle, priceDenominated -> "$gameTitle hit your target — now $priceDenominated" }
     }

@@ -36,6 +36,7 @@ import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsQuery
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.RankedGame
@@ -49,6 +50,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
@@ -63,6 +65,7 @@ internal const val LIMIT_TRENDING = 10
 internal const val LIMIT_STATS = 10
 internal const val LIMIT_BUNDLES = 5
 internal const val LIMIT_RELEASES = 5
+internal const val LIMIT_RECOMMENDATIONS = 12
 
 /**
  * Drives the curated Home feed (epic #219, Phase 5). The feed is a fixed set of sections
@@ -93,6 +96,7 @@ internal class HomeViewModel(
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
     private val igdbRepository: IgdbRepository,
+    private val recommendationsRepository: RecommendationsRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -156,6 +160,7 @@ internal class HomeViewModel(
                 val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
                 val releases = async { section { loadReleases() } }
                 val bundles = async { section { bundlesRepository.getBundles().take(LIMIT_BUNDLES) } }
+                val recommendations = async { section { recommendationsRepository.getRecommendations(LIMIT_RECOMMENDATIONS) } }
 
                 // Enrich the ranked rows with a current price + discount (one batched lookup over both
                 // lists' game ids) so they read with the same anatomy as the Trending deal rows.
@@ -173,6 +178,7 @@ internal class HomeViewModel(
                     mostCollected = enrichRanked(mostCollectedRaw, prices),
                     releases = releases.await(),
                     bundles = bundles.await(),
+                    recommendations = recommendations.await(),
                 )
             }
             // Best-effort sections hide on failure; if the whole feed came back empty (e.g. fully
@@ -292,11 +298,12 @@ internal class HomeViewModel(
         val mostCollected: ImmutableList<RankedGame> = persistentListOf(),
         val releases: ImmutableList<Release> = persistentListOf(),
         val bundles: ImmutableList<Bundle> = persistentListOf(),
+        val recommendations: ImmutableList<IgdbGame.IgdbSimilarGame> = persistentListOf(),
     ) {
         val hasContent: Boolean
             get() = accountStats != null || featuredHero.isNotEmpty() || trending.isNotEmpty() ||
                 mostWaitlisted.isNotEmpty() || mostCollected.isNotEmpty() || releases.isNotEmpty() ||
-                bundles.isNotEmpty()
+                bundles.isNotEmpty() || recommendations.isNotEmpty()
     }
 
     @Immutable
