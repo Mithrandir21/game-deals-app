@@ -64,7 +64,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_ever_label
-import pm.bam.gamedeals.common.ui.generated.resources.deal_details_cheapest_on_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_game_image
@@ -283,8 +282,10 @@ private fun PeekBody(
         }
 
         data.cheapestPriceEver?.let {
+            // ITAD's prices endpoint doesn't return the low's date (it's mapped to ""), so show just the
+            // price rather than a dangling "… on ".
             Text(
-                text = stringResource(Res.string.deal_details_cheapest_ever_label) + stringResource(Res.string.deal_details_cheapest_on_label, it.priceDenominated, it.date),
+                text = stringResource(Res.string.deal_details_cheapest_ever_label) + it.priceDenominated,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

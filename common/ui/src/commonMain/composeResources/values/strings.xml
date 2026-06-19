@@ -46,7 +46,6 @@
     <string name="deal_details_game_image">%1$s Game image</string>
 
     <string name="deal_details_cheapest_ever_label">Cheapest Ever: </string>
-    <string name="deal_details_cheapest_on_label">%1$s on %2$s</string>
 
     <string name="deal_details_data_loading_error_msg">Something went wrong. Please try again.</string>
     <string name="deal_details_data_loading_error_retry">Retry</string>

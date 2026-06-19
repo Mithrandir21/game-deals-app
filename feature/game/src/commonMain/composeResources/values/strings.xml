@@ -9,7 +9,6 @@
     <string name="game_screen_loading_indicator">Loading game</string>
     <string name="game_screen_cheapest_value_label">(%1$s and up)</string>
     <string name="game_screen_cheapest_ever_label">Cheapest Ever:</string>
-    <string name="game_screen_cheapest_ever_on_date_label">%1$s on %2$s</string>
     <string name="game_screen_list_item_savings_label">Save %1$s%</string>
     <string name="game_screen_price_history_label">Price history</string>
     <string name="game_screen_price_history_range_3m">3M</string>

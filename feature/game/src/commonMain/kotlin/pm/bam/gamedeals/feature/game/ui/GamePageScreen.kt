@@ -211,7 +211,6 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_regions
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_on_date_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_value_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
@@ -967,14 +966,8 @@ private fun StatsTab(data: GamePageData.Data) {
 private fun CheapestEverBlock(gameDetails: GameDetails) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
         Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
-        Text(
-            text = stringResource(
-                Res.string.game_screen_cheapest_ever_on_date_label,
-                gameDetails.cheapestPriceEver.priceDenominated,
-                gameDetails.cheapestPriceEver.date,
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        // ITAD's prices endpoint doesn't return the low's date (mapped to ""), so show just the price.
+        Text(text = gameDetails.cheapestPriceEver.priceDenominated, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
