@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
@@ -637,7 +638,7 @@ private fun DealsFilterSheet(
                 Text(
                     text = stringResource(Res.string.deals_filter_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 if (!filter.isEmpty()) {
                     TextButton(onClick = onClearFilters) {
@@ -799,7 +800,7 @@ private fun DealsFilterSheet(
 
 @Composable
 private fun FilterSectionTitle(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleSmall)
+    Text(text = text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
 }
 
 @OptIn(ExperimentalLayoutApi::class)

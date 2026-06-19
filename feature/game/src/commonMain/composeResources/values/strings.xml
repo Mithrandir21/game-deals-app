@@ -34,6 +34,7 @@
     <string name="game_screen_note_delete_action">Delete note</string>
     <string name="game_screen_note_dialog_title">Your note</string>
     <string name="game_screen_note_dialog_placeholder">Write a note about this game…</string>
+    <string name="game_screen_note_dialog_label">Note</string>
     <string name="game_screen_note_dialog_save">Save</string>
     <string name="game_screen_note_dialog_cancel">Cancel</string>
 

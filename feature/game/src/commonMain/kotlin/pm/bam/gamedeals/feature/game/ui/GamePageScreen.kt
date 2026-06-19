@@ -184,6 +184,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_add_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_delete_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_cancel
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_placeholder
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_save
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_title
@@ -1076,7 +1077,17 @@ private fun NoteEditDialog(initial: String, onDismiss: () -> Unit, onConfirm: (S
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.game_screen_note_dialog_title)) },
-        text = { OutlinedTextField(modifier = Modifier.fillMaxWidth(), value = text, onValueChange = { text = it }, placeholder = { Text(stringResource(Res.string.game_screen_note_dialog_placeholder)) }) },
+        text = {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = text,
+                onValueChange = { text = it },
+                // A persistent label gives the field a programmatic name for TalkBack; the placeholder
+                // is only a hint and disappears once the user types.
+                label = { Text(stringResource(Res.string.game_screen_note_dialog_label)) },
+                placeholder = { Text(stringResource(Res.string.game_screen_note_dialog_placeholder)) },
+            )
+        },
         confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(Res.string.game_screen_note_dialog_save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.game_screen_note_dialog_cancel)) } },
     )
