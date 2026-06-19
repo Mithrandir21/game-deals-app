@@ -37,6 +37,22 @@ data class PriceHistory(
         @SerialName("priceValue")
         val priceValue: Double,
         @SerialName("priceDenominated")
-        val priceDenominated: String
+        val priceDenominated: String,
+        /**
+         * Discount applied at this point, as a whole percentage (e.g. `75` = −75%); `0` when the
+         * price was the regular one. New in the chart-enrichment work — defaulted so older cached
+         * blobs (serialized before this field existed) still deserialize.
+         */
+        @SerialName("cutPercent")
+        val cutPercent: Int = 0,
+        /**
+         * The regular (non-sale) price at this point, when ITAD reported one. Drives the chart's MSRP
+         * reference line (latest non-null value wins). Defaulted for cache back-compat.
+         */
+        @SerialName("regularValue")
+        val regularValue: Double? = null,
+        /** The shop offering this price (e.g. "Steam"), shown in the chart's scrub tooltip. */
+        @SerialName("shopName")
+        val shopName: String? = null,
     )
 }

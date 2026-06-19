@@ -84,6 +84,9 @@ private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
         timestampEpochMs = epochMs,
         priceValue = price.amount,
         priceDenominated = price.denominated(),
+        cutPercent = cutPercent,
+        regularValue = regular?.amount,
+        shopName = shop.name,
     )
 }
 
