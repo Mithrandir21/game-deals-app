@@ -53,6 +53,7 @@
     <string name="account_notifications_empty">No notifications yet.</string>
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
+    <string name="account_notification_unread_state">Unread</string>
 
     <!-- Notification detail: the deals inside one daily notification (#272 follow-up) -->
     <string name="account_notification_detail_title">New deals</string>

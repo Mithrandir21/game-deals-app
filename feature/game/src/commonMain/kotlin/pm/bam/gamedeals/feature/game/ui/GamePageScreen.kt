@@ -33,7 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -90,6 +90,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -322,7 +323,7 @@ private fun GamePageContent(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
-                                imageVector = Icons.Filled.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(Res.string.game_screen_navigation_back_button),
                             )
                         }
@@ -701,8 +702,16 @@ private fun PlayersBlock(players: GameMeta.Players) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(stringResource(Res.string.game_page_section_players))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-            recent?.let { AssistChip(onClick = {}, label = { Text(stringResource(Res.string.game_page_players_recent, formatCount(it))) }) }
-            peak?.let { AssistChip(onClick = {}, label = { Text(stringResource(Res.string.game_page_players_peak, formatCount(it))) }) }
+            // Display-only stat chips: clear the (no-op) button semantics so TalkBack reads them as text
+            // rather than offering a "double-tap to activate" that does nothing.
+            recent?.let {
+                val label = stringResource(Res.string.game_page_players_recent, formatCount(it))
+                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+            }
+            peak?.let {
+                val label = stringResource(Res.string.game_page_players_peak, formatCount(it))
+                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+            }
         }
     }
 }
@@ -883,7 +892,8 @@ private fun ChipsSection(chips: List<String>) {
         contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
     ) {
-        items(chips) { label -> AssistChip(onClick = {}, label = { Text(label) }) }
+        // Display-only genre/theme tags: clear the no-op button semantics (read as text, not a button).
+        items(chips) { label -> AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) }) }
     }
 }
 

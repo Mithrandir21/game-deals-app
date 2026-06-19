@@ -47,8 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -323,7 +325,11 @@ private fun PeekError(onRetry: () -> Unit) {
             .wrapContentSize(Alignment.Center),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(Res.string.deal_details_data_loading_error_msg))
+        // Announce the error when it replaces the loading spinner in the already-open sheet.
+        Text(
+            text = stringResource(Res.string.deal_details_data_loading_error_msg),
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
         Button(
             modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.large),
             onClick = onRetry,

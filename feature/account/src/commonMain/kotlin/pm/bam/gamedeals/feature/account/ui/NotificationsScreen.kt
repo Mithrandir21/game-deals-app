@@ -35,6 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.collections.immutable.persistentListOf
@@ -49,6 +52,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_b
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_mark_all_read
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_more_actions
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_unread_state
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationsScreenData
 
@@ -144,8 +148,13 @@ private fun MarkAllReadAction(enabled: Boolean, onMarkAllRead: () -> Unit) {
 
 @Composable
 private fun NotificationRow(notification: ItadNotification, onClick: () -> Unit) {
+    // Unread is otherwise conveyed only by the dot + bold weight (both visual-only); announce it to
+    // TalkBack so read/unread rows don't sound identical.
+    val unreadState = stringResource(Res.string.account_notification_unread_state)
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { if (!notification.read) stateDescription = unreadState },
         headlineContent = {
             Text(
                 text = notification.title,
