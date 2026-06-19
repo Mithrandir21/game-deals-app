@@ -25,6 +25,10 @@ data class IgdbGame(
     val similarGames: ImmutableList<IgdbSimilarGame> = persistentListOf(),
     val dlcs: ImmutableList<IgdbSimilarGame> = persistentListOf(),
     val expansions: ImmutableList<IgdbSimilarGame> = persistentListOf(),
+    /** Platform labels (IGDB `platforms`, abbreviation preferred over full name) — "PC", "PS5", "Switch". */
+    val platforms: ImmutableList<String> = persistentListOf(),
+    /** Trailers/gameplay clips (IGDB `videos`) — each carries a YouTube id the UI opens externally. */
+    val videos: ImmutableList<IgdbVideo> = persistentListOf(),
     /**
      * HowLongToBeat-style completion estimates (epic #291, Phase 2). Fetched separately from IGDB's
      * `/v4/game_time_to_beats` endpoint (not part of the games dot-expansion) and merged in by the
@@ -66,6 +70,13 @@ data class IgdbGame(
         val id: Long,
         val name: String,
         val coverImageId: String?,
+    )
+
+    /** A trailer/gameplay clip. [videoId] is a YouTube id (e.g. `dQw4w9WgXcQ`); [name] is its label. */
+    @Immutable
+    data class IgdbVideo(
+        val videoId: String,
+        val name: String?,
     )
 
     /** HowLongToBeat completion estimates in **seconds** (IGDB `game_time_to_beats`); UI formats to hours. */

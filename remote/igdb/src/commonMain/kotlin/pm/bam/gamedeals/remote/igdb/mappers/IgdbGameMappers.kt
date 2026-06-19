@@ -31,6 +31,12 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
     similarGames = similarGames.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
     dlcs = dlcs.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
     expansions = expansions.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+    // Abbreviation ("PC", "PS5") is the compact chip label; fall back to the full name when absent.
+    platforms = platforms.mapNotNull { it.abbreviation?.takeIf(String::isNotBlank) ?: it.name?.takeIf(String::isNotBlank) }
+        .distinct()
+        .toImmutableList(),
+    videos = videos.mapNotNull { v -> v.videoId?.takeIf(String::isNotBlank)?.let { IgdbGame.IgdbVideo(videoId = it, name = v.name) } }
+        .toImmutableList(),
     // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
     steamAppId = externalGames
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }

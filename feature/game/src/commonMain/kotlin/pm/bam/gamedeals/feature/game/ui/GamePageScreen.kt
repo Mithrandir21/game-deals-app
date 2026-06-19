@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -139,6 +141,9 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_de
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_trailers
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_thumbnail_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_close
@@ -208,6 +213,11 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_requ
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 private val AlwaysScrollable: () -> Boolean = { true }
+
+// IGDB video ids are YouTube ids; we open the watch page externally and show YouTube's thumbnail tile.
+private fun youTubeWatchUrl(videoId: String): String = "https://www.youtube.com/watch?v=$videoId"
+private fun youTubeThumbnailUrl(videoId: String): String = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+
 private const val COVER_ASPECT_RATIO = 0.75f
 private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
 private const val COLLAPSED_LINES = 5
@@ -551,6 +561,7 @@ private fun GameTabs(
             0 -> OverviewTab(
                 data = data,
                 note = note,
+                goToWeb = goToWeb,
                 onSimilarGameClick = onSimilarGameClick,
                 onSaveNote = onSaveNote,
                 onDeleteNote = onDeleteNote,
@@ -582,6 +593,7 @@ private fun GameTabs(
 private fun OverviewTab(
     data: GamePageData.Data,
     note: String?,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
@@ -598,6 +610,8 @@ private fun OverviewTab(
         data.igdbGame?.let { igdb ->
             if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
             if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
+            if (igdb.platforms.isNotEmpty()) PlatformsSection(igdb.platforms)
+            if (igdb.videos.isNotEmpty()) TrailersSection(igdb, goToWeb)
             if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
             igdb.timeToBeat?.let { HltbSection(it) }
             val dlcs = igdb.dlcs + igdb.expansions
@@ -930,6 +944,69 @@ private fun ScreenshotsSection(game: IgdbGame) {
             initialPage = startPage,
             onDismiss = { openIndex = null },
         )
+    }
+}
+
+/** Platform availability (IGDB `platforms`) — compact, display-only chips ("PC", "PS5", "Switch"). */
+@Composable
+private fun PlatformsSection(platforms: List<String>) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_platforms), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            items(platforms) { label ->
+                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+            }
+        }
+    }
+}
+
+/**
+ * Trailers/gameplay clips (IGDB `videos`). Each tile shows the YouTube thumbnail with a play overlay and
+ * opens the clip externally via the shared in-app web view ([goToWeb]) — no embedded player needed.
+ */
+@Composable
+private fun TrailersSection(game: IgdbGame, goToWeb: (url: String, gameTitle: String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_trailers), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            itemsIndexed(game.videos) { index, video ->
+                val description = stringResource(Res.string.game_page_trailer_thumbnail_cd, index + 1, game.videos.size, game.name)
+                Box(
+                    modifier = Modifier
+                        .height(180.dp)
+                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clickable(role = Role.Button) { goToWeb(youTubeWatchUrl(video.videoId), game.name) }
+                        .semantics { contentDescription = description },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AsyncImage(
+                        model = youTubeThumbnailUrl(video.videoId),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                            .padding(GameDealsCustomTheme.spacing.extraSmall),
+                    )
+                }
+            }
+        }
     }
 }
 

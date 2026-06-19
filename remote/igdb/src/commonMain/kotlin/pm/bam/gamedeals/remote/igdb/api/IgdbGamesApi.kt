@@ -254,6 +254,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 game.similar_games.id, game.similar_games.name, game.similar_games.cover.image_id,
                 game.dlcs.id, game.dlcs.name, game.dlcs.cover.image_id,
                 game.expansions.id, game.expansions.name, game.expansions.cover.image_id,
+                game.platforms.name, game.platforms.abbreviation,
+                game.videos.name, game.videos.video_id,
                 game.external_games.uid, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
         """.trimIndent()
@@ -273,6 +275,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 similar_games.id, similar_games.name, similar_games.cover.image_id,
                 dlcs.id, dlcs.name, dlcs.cover.image_id,
                 expansions.id, expansions.name, expansions.cover.image_id,
+                platforms.name, platforms.abbreviation,
+                videos.name, videos.video_id,
                 external_games.uid, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
@@ -301,7 +305,9 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     websites.url, websites.type.id, websites.type.type,
                     similar_games.id, similar_games.name, similar_games.cover.image_id,
                     dlcs.id, dlcs.name, dlcs.cover.image_id,
-                    expansions.id, expansions.name, expansions.cover.image_id;
+                    expansions.id, expansions.name, expansions.cover.image_id,
+                    platforms.name, platforms.abbreviation,
+                    videos.name, videos.video_id;
                 where name = "$escaped"; limit 1;
             """.trimIndent()
         }
@@ -321,7 +327,9 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     websites.url, websites.type.id, websites.type.type,
                     similar_games.id, similar_games.name, similar_games.cover.image_id,
                     dlcs.id, dlcs.name, dlcs.cover.image_id,
-                    expansions.id, expansions.name, expansions.cover.image_id;
+                    expansions.id, expansions.name, expansions.cover.image_id,
+                    platforms.name, platforms.abbreviation,
+                    videos.name, videos.video_id;
                 limit 1;
             """.trimIndent()
         }

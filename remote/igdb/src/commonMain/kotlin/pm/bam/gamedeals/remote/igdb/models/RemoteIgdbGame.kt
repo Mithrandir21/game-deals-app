@@ -25,7 +25,23 @@ data class RemoteIgdbGame(
     // DLCs and expansions share the similar-game shape (id, name, cover) so they map through the same path.
     val dlcs: List<RemoteIgdbSimilarGame> = emptyList(),
     val expansions: List<RemoteIgdbSimilarGame> = emptyList(),
+    val platforms: List<RemoteIgdbPlatform> = emptyList(),
+    val videos: List<RemoteIgdbVideo> = emptyList(),
     @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteIgdbPlatform(
+    val id: Long,
+    val name: String? = null,
+    val abbreviation: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbVideo(
+    val id: Long,
+    val name: String? = null,
+    @SerialName("video_id") val videoId: String? = null,
 )
 
 /**
