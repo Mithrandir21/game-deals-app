@@ -41,6 +41,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
 import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
 import pm.bam.gamedeals.common.ui.components.StoreLowBadge
@@ -123,6 +124,7 @@ private fun NotificationDetailScreenContent(
                 data.games.isEmpty() -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(Res.string.account_notification_detail_empty),
+                        modifier = Modifier.politeLiveRegion(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -38,6 +38,7 @@ import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -194,7 +195,7 @@ private fun CenteredMessage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        Text(text = message, style = MaterialTheme.typography.bodyLarge)
+        Text(text = message, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.politeLiveRegion())
         if (actionLabel != null && onAction != null) {
             Button(onClick = onAction) { Text(actionLabel) }
         }

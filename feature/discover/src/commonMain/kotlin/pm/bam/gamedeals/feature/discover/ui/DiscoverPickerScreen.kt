@@ -38,6 +38,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.IgdbTag
@@ -145,7 +146,7 @@ private fun DiscoverPickerContent(
 
                 PickerState.Error -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(Res.string.discover_picker_error))
+                        Text(stringResource(Res.string.discover_picker_error), modifier = Modifier.politeLiveRegion())
                         TextButton(onClick = onRetry) { Text(stringResource(Res.string.discover_picker_retry)) }
                     }
                 }

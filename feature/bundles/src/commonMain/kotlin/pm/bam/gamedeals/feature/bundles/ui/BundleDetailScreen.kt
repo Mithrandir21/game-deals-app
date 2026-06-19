@@ -59,6 +59,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
 import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
 import pm.bam.gamedeals.common.ui.components.StoreLowBadge
@@ -221,7 +222,7 @@ private fun BundleDetailScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                     ) {
-                        Text(stringResource(Res.string.bundles_screen_data_loading_error_msg))
+                        Text(stringResource(Res.string.bundles_screen_data_loading_error_msg), modifier = Modifier.politeLiveRegion())
                         Button(onClick = onRetry) { Text(stringResource(Res.string.bundles_screen_data_loading_error_retry)) }
                     }
 

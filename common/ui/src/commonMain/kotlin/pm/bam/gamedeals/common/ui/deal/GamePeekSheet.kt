@@ -47,10 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -59,6 +57,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.PreviewStore
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -328,7 +327,7 @@ private fun PeekError(onRetry: () -> Unit) {
         // Announce the error when it replaces the loading spinner in the already-open sheet.
         Text(
             text = stringResource(Res.string.deal_details_data_loading_error_msg),
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.politeLiveRegion(),
         )
         Button(
             modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.large),

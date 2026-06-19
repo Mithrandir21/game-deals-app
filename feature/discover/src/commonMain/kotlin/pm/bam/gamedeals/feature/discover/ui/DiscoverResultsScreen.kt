@@ -41,6 +41,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -179,14 +180,14 @@ private fun DiscoverResultsContent(
 
                     ResultsScreenData.Status.EMPTY -> Text(
                         text = stringResource(Res.string.discover_results_empty),
-                        modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+                        modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
                     )
 
                     ResultsScreenData.Status.ERROR -> Column(
                         modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(stringResource(Res.string.discover_results_error))
+                        Text(stringResource(Res.string.discover_results_error), modifier = Modifier.politeLiveRegion())
                         TextButton(onClick = onRetry) { Text(stringResource(Res.string.discover_results_retry)) }
                     }
 

@@ -68,6 +68,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
@@ -355,7 +356,7 @@ private fun DealsContent(
 
                         data.status == DealsScreenData.Status.DATA && data.deals.isEmpty() -> Text(
                             text = stringResource(Res.string.deals_screen_empty_label),
-                            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+                            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
                         )
 
                         else -> LazyColumn(
@@ -467,12 +468,12 @@ private fun SearchResultsBody(
 
         SearchResultsState.NoResults -> Text(
             text = stringResource(Res.string.deals_search_no_results_label),
-            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
         )
 
         SearchResultsState.Error -> Text(
             text = errorMessage,
-            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
         )
 
         is SearchResultsState.Results -> {
