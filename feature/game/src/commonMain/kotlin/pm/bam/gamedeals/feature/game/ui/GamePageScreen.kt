@@ -53,6 +53,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -119,6 +120,8 @@ import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.DealQuality
+import pm.bam.gamedeals.domain.models.dealQuality
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
@@ -141,6 +144,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_de
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_above_detail
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_all_time_low_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_at_low_detail
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_near_low_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_trailers
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_thumbnail_cd
@@ -672,12 +681,61 @@ private fun PricesTab(
         Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.bodyMedium)
         return
     }
+    gameDetails.dealQuality()?.let { DealQualityCallout(it) }
     Text(
         text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
         style = MaterialTheme.typography.titleMedium,
     )
     data.dealDetails.forEach { pair ->
         StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+    }
+}
+
+/**
+ * The deal-quality buy-signal callout (Phase 2) — sits atop the Prices tab and answers "should I buy
+ * now?" by comparing the current best price to the game's all-time low. The tier drives both the colour
+ * and the copy; the whole card is merged into one spoken phrase for TalkBack.
+ */
+@Composable
+private fun DealQualityCallout(quality: DealQuality) {
+    val container = when (quality.tier) {
+        DealQuality.Tier.AllTimeLow -> MaterialTheme.colorScheme.tertiaryContainer
+        DealQuality.Tier.NearLow -> MaterialTheme.colorScheme.secondaryContainer
+        DealQuality.Tier.Elevated -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val onContainer = when (quality.tier) {
+        DealQuality.Tier.AllTimeLow -> MaterialTheme.colorScheme.onTertiaryContainer
+        DealQuality.Tier.NearLow -> MaterialTheme.colorScheme.onSecondaryContainer
+        DealQuality.Tier.Elevated -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val title = stringResource(
+        when (quality.tier) {
+            DealQuality.Tier.AllTimeLow -> Res.string.game_page_deal_quality_all_time_low_title
+            DealQuality.Tier.NearLow -> Res.string.game_page_deal_quality_near_low_title
+            DealQuality.Tier.Elevated -> Res.string.game_page_deal_quality_elevated_title
+        }
+    )
+    val detail = when (quality.tier) {
+        DealQuality.Tier.AllTimeLow -> stringResource(Res.string.game_page_deal_quality_at_low_detail, quality.allTimeLowDate)
+        else -> stringResource(
+            Res.string.game_page_deal_quality_above_detail,
+            quality.percentAboveLow,
+            quality.allTimeLowDenominated,
+            quality.allTimeLowDate,
+        )
+    }
+    val mergedCd = stringResource(Res.string.game_page_deal_quality_cd, title, detail)
+    Card(
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = mergedCd },
+        colors = CardDefaults.cardColors(containerColor = container, contentColor = onContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(text = detail, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 

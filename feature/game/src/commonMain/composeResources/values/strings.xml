@@ -57,6 +57,12 @@
     <string name="game_details_section_description">Description</string>
     <string name="game_details_section_storyline">Story</string>
     <string name="game_details_section_screenshots">Screenshots</string>
+    <string name="game_page_deal_quality_all_time_low_title">Lowest price ever</string>
+    <string name="game_page_deal_quality_near_low_title">Great price</string>
+    <string name="game_page_deal_quality_elevated_title">It\'s been cheaper before</string>
+    <string name="game_page_deal_quality_at_low_detail">Matches its all-time low (%1$s)</string>
+    <string name="game_page_deal_quality_above_detail">%1$d%% above the all-time low — %2$s on %3$s</string>
+    <string name="game_page_deal_quality_cd">Deal quality: %1$s. %2$s</string>
     <string name="game_page_section_platforms">Platforms</string>
     <string name="game_page_section_trailers">Trailers</string>
     <string name="game_page_trailer_thumbnail_cd">Play trailer %1$d of %2$d for %3$s</string>
