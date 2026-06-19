@@ -76,6 +76,9 @@
     <string name="game_page_price_alert_custom_label">Custom amount (%1$s)</string>
     <string name="game_page_price_alert_dialog_confirm">Set alert</string>
     <string name="game_page_price_alert_dialog_cancel">Cancel</string>
+    <string name="game_page_series_section">Series: %1$s</string>
+    <string name="game_page_series_follow">Follow</string>
+    <string name="game_page_series_following">Following</string>
     <string name="game_page_section_platforms">Platforms</string>
     <string name="game_page_section_trailers">Trailers</string>
     <string name="game_page_trailer_thumbnail_cd">Play trailer %1$d of %2$d for %3$s</string>

@@ -23,6 +23,8 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
@@ -119,6 +121,8 @@ val domainModule = module {
     // live prices in the same background poll as the ITAD sync. The alert title is built here (domain has no
     // string resources) — concise English copy, consistent with the ITAD waitlist channel.
     single<PriceWatchRepository> { PriceWatchRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
+    // Followed franchises/series (#7) — client-side, Storage-backed like price watches.
+    single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<PriceWatchChecker> {
         PriceWatchCheckerImpl(get(), get()) { gameTitle, priceDenominated -> "$gameTitle hit your target — now $priceDenominated" }
     }

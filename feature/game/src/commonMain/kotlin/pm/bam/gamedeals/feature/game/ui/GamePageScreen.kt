@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
@@ -56,6 +57,8 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -169,6 +172,9 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_s
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_subtitle
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_follow
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_following
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_section
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_trailers
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_thumbnail_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
@@ -270,6 +276,7 @@ internal fun GamePageScreen(
     val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
     val note = viewModel.note.collectAsStateWithLifecycle()
     val priceWatch = viewModel.priceWatch.collectAsStateWithLifecycle()
+    val followedFranchiseIds = viewModel.followedFranchiseIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
@@ -288,6 +295,7 @@ internal fun GamePageScreen(
         isIgnored = isIgnored.value,
         note = note.value,
         priceWatch = priceWatch.value,
+        followedFranchiseIds = followedFranchiseIds.value,
         onBack = onBack,
         goToWeb = goToWeb,
         onSimilarGameClick = onSimilarGameClick,
@@ -295,6 +303,7 @@ internal fun GamePageScreen(
         onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
         onSetPriceWatch = viewModel::setPriceWatch,
         onRemovePriceWatch = viewModel::removePriceWatch,
+        onToggleFollowFranchise = viewModel::toggleFollowFranchise,
         onToggleFavourite = viewModel::toggleWaitlist,
         onToggleCollection = viewModel::toggleCollection,
         onToggleIgnore = viewModel::toggleIgnore,
@@ -319,6 +328,7 @@ private fun GamePageContent(
     isIgnored: Boolean,
     note: String?,
     priceWatch: PriceWatch?,
+    followedFranchiseIds: Set<Long>,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
@@ -326,6 +336,7 @@ private fun GamePageContent(
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
     onRemovePriceWatch: () -> Unit,
+    onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onToggleFavourite: () -> Unit,
     onToggleCollection: () -> Unit,
     onToggleIgnore: () -> Unit,
@@ -470,6 +481,7 @@ private fun GamePageContent(
                     data = data,
                     note = note,
                     priceWatch = priceWatch,
+                    followedFranchiseIds = followedFranchiseIds,
                     goToWeb = goToWeb,
                     onSimilarGameClick = onSimilarGameClick,
                     onShareDeal = onShareDeal,
@@ -477,6 +489,7 @@ private fun GamePageContent(
                     onDeleteNote = onDeleteNote,
                     onSetPriceWatch = onSetPriceWatch,
                     onRemovePriceWatch = onRemovePriceWatch,
+                    onToggleFollowFranchise = onToggleFollowFranchise,
                     onBundleClick = onBundleClick,
                     onRegionsSelected = onRegionsSelected,
                 )
@@ -495,6 +508,7 @@ private fun GamePageBody(
     data: GamePageData.Data,
     note: String?,
     priceWatch: PriceWatch?,
+    followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
@@ -502,6 +516,7 @@ private fun GamePageBody(
     onDeleteNote: () -> Unit,
     onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
     onRemovePriceWatch: () -> Unit,
+    onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
 ) {
@@ -519,6 +534,7 @@ private fun GamePageBody(
             data = data,
             note = note,
             priceWatch = priceWatch,
+            followedFranchiseIds = followedFranchiseIds,
             goToWeb = goToWeb,
             onSimilarGameClick = onSimilarGameClick,
             onShareDeal = onShareDeal,
@@ -526,6 +542,7 @@ private fun GamePageBody(
             onDeleteNote = onDeleteNote,
             onSetPriceWatch = onSetPriceWatch,
             onRemovePriceWatch = onRemovePriceWatch,
+            onToggleFollowFranchise = onToggleFollowFranchise,
             onBundleClick = onBundleClick,
             onRegionsSelected = onRegionsSelected,
         )
@@ -573,6 +590,7 @@ private fun GameTabs(
     data: GamePageData.Data,
     note: String?,
     priceWatch: PriceWatch?,
+    followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
@@ -580,6 +598,7 @@ private fun GameTabs(
     onDeleteNote: () -> Unit,
     onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
     onRemovePriceWatch: () -> Unit,
+    onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
 ) {
@@ -607,10 +626,12 @@ private fun GameTabs(
             0 -> OverviewTab(
                 data = data,
                 note = note,
+                followedFranchiseIds = followedFranchiseIds,
                 goToWeb = goToWeb,
                 onSimilarGameClick = onSimilarGameClick,
                 onSaveNote = onSaveNote,
                 onDeleteNote = onDeleteNote,
+                onToggleFollowFranchise = onToggleFollowFranchise,
                 onBundleClick = onBundleClick,
             )
             1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
@@ -639,10 +660,12 @@ private fun GameTabs(
 private fun OverviewTab(
     data: GamePageData.Data,
     note: String?,
+    followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
+    onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large)) {
@@ -658,6 +681,14 @@ private fun OverviewTab(
             if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
             if (igdb.platforms.isNotEmpty()) PlatformsSection(igdb.platforms)
             if (igdb.videos.isNotEmpty()) TrailersSection(igdb, goToWeb)
+            igdb.franchises.forEach { franchise ->
+                SeriesSection(
+                    franchise = franchise,
+                    isFollowed = franchise.id in followedFranchiseIds,
+                    onToggleFollow = { onToggleFollowFranchise(franchise.id, franchise.name) },
+                    onGameClick = onSimilarGameClick,
+                )
+            }
             if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
             igdb.timeToBeat?.let { HltbSection(it) }
             val dlcs = igdb.dlcs + igdb.expansions
@@ -666,6 +697,47 @@ private fun OverviewTab(
             if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
         }
         if (data.websites.isNotEmpty()) LinksSection(data.websites)
+    }
+}
+
+/**
+ * A franchise/series the game belongs to (#7): the series name with a Follow/Following toggle, and its
+ * other member games as tappable tiles (reusing the similar-games row). Following persists locally so the
+ * user can keep tabs on the whole series.
+ */
+@Composable
+private fun SeriesSection(
+    franchise: IgdbGame.IgdbFranchise,
+    isFollowed: Boolean,
+    onToggleFollow: () -> Unit,
+    onGameClick: (igdbGameId: Long) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionHeader(stringResource(Res.string.game_page_series_section, franchise.name), Modifier.weight(1f))
+            FilterChip(
+                selected = isFollowed,
+                onClick = onToggleFollow,
+                label = {
+                    Text(stringResource(if (isFollowed) Res.string.game_page_series_following else Res.string.game_page_series_follow))
+                },
+                leadingIcon = if (isFollowed) {
+                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                } else null,
+            )
+        }
+        if (franchise.games.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            ) {
+                items(franchise.games, key = { it.id }) { game -> IgdbGameTile(game, onGameClick, Modifier.width(112.dp)) }
+            }
+        }
     }
 }
 
@@ -1539,6 +1611,7 @@ private fun GamePagePreview(data: GamePageData) {
             isIgnored = false,
             note = null,
             priceWatch = null,
+            followedFranchiseIds = emptySet(),
             onBack = {},
             goToWeb = { _, _ -> },
             onSimilarGameClick = {},
@@ -1546,6 +1619,7 @@ private fun GamePagePreview(data: GamePageData) {
             onShareDeal = { _, _, _ -> },
             onSetPriceWatch = { _, _ -> },
             onRemovePriceWatch = {},
+            onToggleFollowFranchise = { _, _ -> },
             onToggleFavourite = {},
             onToggleCollection = {},
             onToggleIgnore = {},

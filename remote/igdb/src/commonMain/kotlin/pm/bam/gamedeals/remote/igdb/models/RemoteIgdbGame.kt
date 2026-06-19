@@ -27,7 +27,16 @@ data class RemoteIgdbGame(
     val expansions: List<RemoteIgdbSimilarGame> = emptyList(),
     val platforms: List<RemoteIgdbPlatform> = emptyList(),
     val videos: List<RemoteIgdbVideo> = emptyList(),
+    val franchises: List<RemoteIgdbFranchise> = emptyList(),
     @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteIgdbFranchise(
+    val id: Long,
+    val name: String? = null,
+    // The franchise's member games share the similar-game shape (id, name, cover) so they map identically.
+    val games: List<RemoteIgdbSimilarGame> = emptyList(),
 )
 
 @Serializable

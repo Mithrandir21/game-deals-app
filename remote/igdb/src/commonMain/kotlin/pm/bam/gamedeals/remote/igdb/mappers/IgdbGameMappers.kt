@@ -37,6 +37,15 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
         .toImmutableList(),
     videos = videos.mapNotNull { v -> v.videoId?.takeIf(String::isNotBlank)?.let { IgdbGame.IgdbVideo(videoId = it, name = v.name) } }
         .toImmutableList(),
+    // Franchises this game belongs to; each franchise's member list excludes the game itself.
+    franchises = franchises.mapNotNull { f ->
+        val n = f.name ?: return@mapNotNull null
+        IgdbGame.IgdbFranchise(
+            id = f.id,
+            name = n,
+            games = f.games.filter { it.id != id }.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
+        )
+    }.toImmutableList(),
     // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
     steamAppId = externalGames
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }

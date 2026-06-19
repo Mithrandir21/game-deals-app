@@ -39,6 +39,7 @@ class GamePageScreenTest {
         every { viewModel.isIgnored } returns MutableStateFlow(false)
         every { viewModel.note } returns MutableStateFlow(null)
         every { viewModel.priceWatch } returns MutableStateFlow(null)
+        every { viewModel.followedFranchiseIds } returns MutableStateFlow(emptySet())
         every { viewModel.events } returns MutableSharedFlow<GamePageViewModel.GameUiEvent>().asSharedFlow()
     }
 

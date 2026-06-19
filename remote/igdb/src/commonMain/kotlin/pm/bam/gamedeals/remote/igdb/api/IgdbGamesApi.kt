@@ -256,6 +256,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 game.expansions.id, game.expansions.name, game.expansions.cover.image_id,
                 game.platforms.name, game.platforms.abbreviation,
                 game.videos.name, game.videos.video_id,
+                game.franchises.id, game.franchises.name, game.franchises.games.id, game.franchises.games.name, game.franchises.games.cover.image_id,
                 game.external_games.uid, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
         """.trimIndent()
@@ -277,6 +278,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 expansions.id, expansions.name, expansions.cover.image_id,
                 platforms.name, platforms.abbreviation,
                 videos.name, videos.video_id,
+                franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
                 external_games.uid, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
@@ -307,7 +309,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     dlcs.id, dlcs.name, dlcs.cover.image_id,
                     expansions.id, expansions.name, expansions.cover.image_id,
                     platforms.name, platforms.abbreviation,
-                    videos.name, videos.video_id;
+                    videos.name, videos.video_id,
+                    franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id;
                 where name = "$escaped"; limit 1;
             """.trimIndent()
         }
@@ -329,7 +332,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                     dlcs.id, dlcs.name, dlcs.cover.image_id,
                     expansions.id, expansions.name, expansions.cover.image_id,
                     platforms.name, platforms.abbreviation,
-                    videos.name, videos.video_id;
+                    videos.name, videos.video_id,
+                    franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id;
                 limit 1;
             """.trimIndent()
         }

@@ -36,6 +36,7 @@ import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -76,6 +77,7 @@ internal class GamePageViewModel(
     private val notesRepository: NotesRepository,
     private val faviconResolver: FaviconResolver,
     private val priceWatchRepository: PriceWatchRepository,
+    private val followedFranchiseRepository: FollowedFranchiseRepository,
 ) : ViewModel() {
 
     // The ITAD game UUID. Seeded from the deal-entry arg and *updated* once an IGDB-only entry resolves its
@@ -102,6 +104,10 @@ internal class GamePageViewModel(
     val priceWatch: StateFlow<PriceWatch?> = gameIdFlow
         .flatMapLatest { id -> if (id == null) flowOf(null) else priceWatchRepository.observeWatch(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Ids of the franchises/series the user follows (#7) — drives the game page's follow toggle. */
+    val followedFranchiseIds: StateFlow<Set<Long>> = followedFranchiseRepository.observeFollowedIds()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val uiState: StateFlow<GamePageData>
         field = MutableStateFlow<GamePageData>(GamePageData.Loading)
@@ -263,6 +269,11 @@ internal class GamePageViewModel(
     fun removePriceWatch() {
         val id = gameIdFlow.value ?: return
         viewModelScope.launch { priceWatchRepository.removeWatch(id) }
+    }
+
+    /** Follow/unfollow a franchise/series (#7). */
+    fun toggleFollowFranchise(franchiseId: Long, name: String) {
+        viewModelScope.launch { followedFranchiseRepository.toggle(franchiseId, name) }
     }
 
     fun onShareDealClicked(gameInfo: GameDetails.GameInfo, store: Store, deal: GameDetails.GameDeal) {

@@ -33,6 +33,7 @@ import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
 import pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -84,6 +85,9 @@ class GamePageViewModelTest : MainDispatcherTest() {
     private val priceWatchRepository: PriceWatchRepository = mock(MockMode.autoUnit) {
         every { observeWatch(any()) } returns flowOf(null)
     }
+    private val followedFranchiseRepository: FollowedFranchiseRepository = mock(MockMode.autoUnit) {
+        every { observeFollowedIds() } returns flowOf(emptySet())
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -101,6 +105,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         notesRepository = notesRepository,
         faviconResolver = FaviconResolverImpl(),
         priceWatchRepository = priceWatchRepository,
+        followedFranchiseRepository = followedFranchiseRepository,
     )
 
     private fun igdb(id: Long = 100L, steamAppId: Int? = null) =
