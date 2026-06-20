@@ -13,7 +13,7 @@ import pm.bam.gamedeals.feature.account.ui.ComingSoonScreen
 import pm.bam.gamedeals.feature.account.ui.FollowedSeriesScreen
 import pm.bam.gamedeals.feature.account.ui.IgnoredScreen
 import pm.bam.gamedeals.feature.account.ui.MyNotesScreen
-import pm.bam.gamedeals.feature.account.ui.NotificationDetailScreen
+import pm.bam.gamedeals.feature.account.ui.NotificationDayScreen
 import pm.bam.gamedeals.feature.account.ui.NotificationsScreen
 import pm.bam.gamedeals.feature.account.ui.WaitlistListScreen
 
@@ -59,12 +59,12 @@ fun NavGraphBuilder.accountScreen(
     composable<Destination.Notifications> {
         NotificationsScreen(
             onBack = { navController.popBackStack() },
-            onOpenDetail = { notificationId -> navController.navigate(Destination.NotificationDetail(notificationId)) },
+            onOpenDay = { date -> navController.navigate(Destination.NotificationDay(date)) },
         )
     }
 
-    composable<Destination.NotificationDetail> {
-        NotificationDetailScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+    composable<Destination.NotificationDay> {
+        NotificationDayScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
     }
 
     composable<Destination.IgnoredGames> {

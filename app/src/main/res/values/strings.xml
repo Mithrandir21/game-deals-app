@@ -3,6 +3,9 @@
     <string name="app_name">Game Deals</string>
     <string name="notification_channel_waitlist">Waitlist alerts</string>
     <string name="notification_summary_text">%1$d new deals</string>
+    <!-- Bundled per-path tray summaries (#7 notification revamp): one each per poll. -->
+    <string name="notification_waitlist_summary_title">Waitlist price drops</string>
+    <string name="notification_franchise_summary_title">Followed-series deals</string>
     <!-- One line per game inside a waitlist notification: title · -cut% · price -->
     <string name="notification_game_line">%1$s · -%2$d%% · %3$s</string>
     <string name="notification_game_line_expired">%1$s · deal expired</string>

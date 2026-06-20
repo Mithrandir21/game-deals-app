@@ -1,11 +1,12 @@
 package pm.bam.gamedeals.feature.account.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,13 +27,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
@@ -53,47 +54,46 @@ import pm.bam.gamedeals.domain.models.NotificationShopDeal
 import pm.bam.gamedeals.domain.models.hero
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_best_deal
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_deal_expired
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_image
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_historical_low
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_open_game
-import pm.bam.gamedeals.feature.account.generated.resources.account_notification_show_all_deals
-import pm.bam.gamedeals.feature.account.generated.resources.account_notification_show_less
-import pm.bam.gamedeals.feature.account.ui.NotificationDetailViewModel.NotificationDetailEvent
-import pm.bam.gamedeals.feature.account.ui.NotificationDetailViewModel.NotificationDetailScreenData
+import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayEvent
+import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
-internal fun NotificationDetailScreen(
+internal fun NotificationDayScreen(
     onBack: () -> Unit,
     onGameClick: (gameId: String) -> Unit,
-    viewModel: NotificationDetailViewModel = koinViewModel(),
+    viewModel: NotificationDayViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is NotificationDetailEvent.OpenGame -> onGameClick(event.gameId)
+            is NotificationDayEvent.OpenGame -> onGameClick(event.gameId)
         }
     }
 
-    NotificationDetailScreenContent(
+    NotificationDayScreenContent(
         data = data,
         onBack = onBack,
-        onToggleExpanded = viewModel::onToggleExpanded,
+        onGameViewed = viewModel::onGameViewed,
         onOpenGame = viewModel::onOpenGame,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotificationDetailScreenContent(
-    data: NotificationDetailScreenData,
+private fun NotificationDayScreenContent(
+    data: NotificationDayScreenData,
     onBack: () -> Unit,
-    onToggleExpanded: (gameId: String) -> Unit,
+    onGameViewed: (gameId: String) -> Unit,
     onOpenGame: (gameId: String) -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -136,12 +136,9 @@ private fun NotificationDetailScreenContent(
                     verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
                     items(data.games, key = { it.gameId }) { game ->
-                        GameDealCard(
-                            game = game,
-                            expanded = game.gameId in data.expandedGameIds,
-                            onToggleExpanded = { onToggleExpanded(game.gameId) },
-                            onOpenGame = { onOpenGame(game.gameId) },
-                        )
+                        // Viewing a game's card is the per-game read action — fires once the card composes.
+                        LaunchedEffect(game.gameId) { onGameViewed(game.gameId) }
+                        GameDealCard(game = game, onOpenGame = { onOpenGame(game.gameId) })
                     }
                 }
             }
@@ -152,8 +149,6 @@ private fun NotificationDetailScreenContent(
 @Composable
 private fun GameDealCard(
     game: NotificationDealGame,
-    expanded: Boolean,
-    onToggleExpanded: () -> Unit,
     onOpenGame: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -193,19 +188,9 @@ private fun GameDealCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                val shown = if (expanded) game.deals else listOfNotNull(game.bestDeal)
-                shown.forEach { ShopDealRow(it) }
-
-                if (game.deals.size > 1) {
-                    TextButton(onClick = onToggleExpanded, contentPadding = PaddingValues(0.dp)) {
-                        Text(
-                            stringResource(
-                                if (expanded) Res.string.account_notification_show_less
-                                else Res.string.account_notification_show_all_deals,
-                            ),
-                        )
-                    }
-                }
+                // All shop deals, with the best (lowest) price highlighted as the notified deal.
+                val best = game.bestDeal
+                game.deals.forEach { deal -> ShopDealRow(deal = deal, highlighted = deal == best) }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -218,17 +203,35 @@ private fun GameDealCard(
 }
 
 @Composable
-private fun ShopDealRow(deal: NotificationShopDeal) {
+private fun ShopDealRow(deal: NotificationShopDeal, highlighted: Boolean) {
+    val rowModifier = if (highlighted) {
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(GameDealsCustomTheme.spacing.small)
+    } else {
+        Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.small)
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = rowModifier,
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = deal.shopName,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = deal.shopName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
+            )
+            if (highlighted) {
+                Text(
+                    text = stringResource(Res.string.account_notification_best_deal),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
         if (deal.isNewHistoricalLow) NewHistoricalLowBadge()
         if (deal.isStoreLow) StoreLowBadge()
         if (deal.hasVoucher) VoucherBadge()
@@ -241,7 +244,7 @@ private fun ShopDealRow(deal: NotificationShopDeal) {
     }
 }
 
-private val previewDetailGames = persistentListOf(
+private val previewDayGames = persistentListOf(
     NotificationDealGame(
         gameId = "g1",
         title = "Cyberpunk 2077",
@@ -262,16 +265,12 @@ private val previewDetailGames = persistentListOf(
 
 @Preview
 @Composable
-private fun NotificationDetailScreenPreview() {
+private fun NotificationDayScreenPreview() {
     GameDealsTheme {
-        NotificationDetailScreenContent(
-            data = NotificationDetailScreenData(
-                loading = false,
-                games = previewDetailGames,
-                expandedGameIds = setOf("g1"), // first card expanded to all shop deals
-            ),
+        NotificationDayScreenContent(
+            data = NotificationDayScreenData(loading = false, games = previewDayGames),
             onBack = {},
-            onToggleExpanded = {},
+            onGameViewed = {},
             onOpenGame = {},
         )
     }
@@ -279,12 +278,12 @@ private fun NotificationDetailScreenPreview() {
 
 @Preview
 @Composable
-private fun NotificationDetailScreenEmptyPreview() {
+private fun NotificationDayScreenEmptyPreview() {
     GameDealsTheme {
-        NotificationDetailScreenContent(
-            data = NotificationDetailScreenData(loading = false, games = persistentListOf()),
+        NotificationDayScreenContent(
+            data = NotificationDayScreenData(loading = false, games = persistentListOf()),
             onBack = {},
-            onToggleExpanded = {},
+            onGameViewed = {},
             onOpenGame = {},
         )
     }

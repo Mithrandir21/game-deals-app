@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,20 +46,21 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_day_count
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_mark_all_read
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_more_actions
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_unread_state
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
+import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationDay
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationsScreenData
 
 @Composable
 internal fun NotificationsScreen(
     onBack: () -> Unit,
-    onOpenDetail: (notificationId: String) -> Unit,
+    onOpenDay: (date: String) -> Unit,
     viewModel: NotificationsViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,7 +68,7 @@ internal fun NotificationsScreen(
     NotificationsScreenContent(
         data = data,
         onBack = onBack,
-        onNotificationClick = { notification -> onOpenDetail(notification.id) },
+        onDayClick = { day -> onOpenDay(day.date) },
         onMarkAllRead = viewModel::onMarkAllRead,
     )
 }
@@ -78,7 +78,7 @@ internal fun NotificationsScreen(
 private fun NotificationsScreenContent(
     data: NotificationsScreenData,
     onBack: () -> Unit,
-    onNotificationClick: (notification: ItadNotification) -> Unit,
+    onDayClick: (day: NotificationDay) -> Unit,
     onMarkAllRead: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -99,7 +99,7 @@ private fun NotificationsScreenContent(
                         }
                     },
                     actions = {
-                        if (data.notifications.isNotEmpty()) {
+                        if (data.days.isNotEmpty()) {
                             MarkAllReadAction(enabled = data.hasUnread, onMarkAllRead = onMarkAllRead)
                         }
                     },
@@ -111,7 +111,7 @@ private fun NotificationsScreenContent(
                     CircularProgressIndicator()
                 }
 
-                data.notifications.isEmpty() -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                data.days.isEmpty() -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(Res.string.account_notifications_empty),
                         modifier = Modifier.politeLiveRegion(),
@@ -121,8 +121,8 @@ private fun NotificationsScreenContent(
                 }
 
                 else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                    items(data.notifications, key = { it.id }) { notification ->
-                        NotificationRow(notification = notification, onClick = { onNotificationClick(notification) })
+                    items(data.days, key = { it.date }) { day ->
+                        NotificationDayRow(day = day, onClick = { onDayClick(day) })
                     }
                 }
             }
@@ -149,25 +149,25 @@ private fun MarkAllReadAction(enabled: Boolean, onMarkAllRead: () -> Unit) {
 }
 
 @Composable
-private fun NotificationRow(notification: ItadNotification, onClick: () -> Unit) {
+private fun NotificationDayRow(day: NotificationDay, onClick: () -> Unit) {
     // Unread is otherwise conveyed only by the dot + bold weight (both visual-only); announce it to
     // TalkBack so read/unread rows don't sound identical.
     val unreadState = stringResource(Res.string.account_notification_unread_state)
     ListItem(
         modifier = Modifier
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { if (!notification.read) stateDescription = unreadState },
+            .semantics { if (day.hasUnread) stateDescription = unreadState },
         headlineContent = {
             Text(
-                text = notification.title,
-                fontWeight = if (notification.read) FontWeight.Normal else FontWeight.Bold,
+                text = day.date,
+                fontWeight = if (day.hasUnread) FontWeight.Bold else FontWeight.Normal,
             )
         },
-        supportingContent = { Text(notification.timestamp.substringBefore('T')) },
-        leadingContent = if (notification.read) {
-            null
-        } else {
+        supportingContent = { Text(stringResource(Res.string.account_notifications_day_count, day.count)) },
+        leadingContent = if (day.hasUnread) {
             { UnreadDot() }
+        } else {
+            null
         },
     )
 }
@@ -182,9 +182,6 @@ private fun UnreadDot() {
     )
 }
 
-private fun previewNotification(id: String, read: Boolean) =
-    ItadNotification(id = id, type = "waitlist", title = "Price drop", timestamp = "2026-06-18T09:30:00+00:00", read = read)
-
 @Preview
 @Composable
 private fun NotificationsScreenPreview() {
@@ -192,14 +189,14 @@ private fun NotificationsScreenPreview() {
         NotificationsScreenContent(
             data = NotificationsScreenData(
                 loading = false,
-                notifications = persistentListOf(
-                    previewNotification("n1", read = false),
-                    previewNotification("n2", read = false),
-                    previewNotification("n3", read = true),
+                days = persistentListOf(
+                    NotificationDay(date = "2026-06-18", count = 5, hasUnread = true),
+                    NotificationDay(date = "2026-06-17", count = 2, hasUnread = true),
+                    NotificationDay(date = "2026-06-15", count = 1, hasUnread = false),
                 ),
             ),
             onBack = {},
-            onNotificationClick = {},
+            onDayClick = {},
             onMarkAllRead = {},
         )
     }
@@ -210,9 +207,9 @@ private fun NotificationsScreenPreview() {
 private fun NotificationsScreenEmptyPreview() {
     GameDealsTheme {
         NotificationsScreenContent(
-            data = NotificationsScreenData(loading = false, notifications = persistentListOf()),
+            data = NotificationsScreenData(loading = false, days = persistentListOf()),
             onBack = {},
-            onNotificationClick = {},
+            onDayClick = {},
             onMarkAllRead = {},
         )
     }

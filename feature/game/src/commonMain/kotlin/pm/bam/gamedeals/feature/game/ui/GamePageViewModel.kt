@@ -36,6 +36,7 @@ import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseFollowSeeder
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
@@ -75,6 +76,7 @@ internal class GamePageViewModel(
     private val notesRepository: NotesRepository,
     private val faviconResolver: FaviconResolver,
     private val followedFranchiseRepository: FollowedFranchiseRepository,
+    private val franchiseFollowSeeder: FranchiseFollowSeeder,
 ) : ViewModel() {
 
     // The ITAD game UUID. Seeded from the deal-entry arg and *updated* once an IGDB-only entry resolves its
@@ -251,7 +253,15 @@ internal class GamePageViewModel(
 
     /** Follow/unfollow a franchise/series (#7). */
     fun toggleFollowFranchise(franchiseId: Long, name: String) {
-        viewModelScope.launch { followedFranchiseRepository.toggle(franchiseId, name) }
+        viewModelScope.launch {
+            followedFranchiseRepository.toggle(franchiseId, name)
+            // On a *new* follow, baseline the franchise's already-on-sale games as "seen" so the next poll
+            // only alerts on future drops (no back-catalog tray flood). Best-effort, off the UI path.
+            val nowFollowed = followedFranchiseRepository.getFollowed().any { it.franchiseId == franchiseId }
+            if (nowFollowed) {
+                runCatching { franchiseFollowSeeder.seedSeen(franchiseId) }
+            }
+        }
     }
 
     fun onShareDealClicked(gameInfo: GameDetails.GameInfo, store: Store, deal: GameDetails.GameDeal) {

@@ -29,6 +29,9 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseCheckerImpl
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseFollowSeeder
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStoreImpl
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
@@ -126,11 +129,16 @@ val domainModule = module {
     // title is built here (domain has no string resources) — concise English copy, consistent with the
     // price-watch precedent and the ITAD waitlist channel.
     single<FollowedDealSeenStore> { FollowedDealSeenStoreImpl(get(SETTINGS_QUALIFIER)) }
-    single<FollowedFranchiseChecker> {
-        FollowedFranchiseCheckerImpl(get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
+    single<FranchiseSaleSnapshotStore> { FranchiseSaleSnapshotStoreImpl(get(SETTINGS_QUALIFIER)) }
+    // One impl instance backs both the background checker and the follow-time seeder (seed-on-follow
+    // suppresses the existing on-sale back-catalog from the tray; the Followed-series screen still shows it).
+    single {
+        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
             "$gameTitle is $cutPercent% off in $franchiseName — now $priceDenominated"
         }
     }
+    single<FollowedFranchiseChecker> { get<FollowedFranchiseCheckerImpl>() }
+    single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }

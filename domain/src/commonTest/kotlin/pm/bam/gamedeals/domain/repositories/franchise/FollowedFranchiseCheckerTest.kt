@@ -11,6 +11,7 @@ import dev.mokkery.verifySuspend
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.FollowedFranchise
+import pm.bam.gamedeals.domain.models.FranchiseSaleGame
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
@@ -24,7 +25,8 @@ class FollowedFranchiseCheckerTest {
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val seenStore: FollowedDealSeenStore = mock(MockMode.autoUnit)
-    private val checker = FollowedFranchiseCheckerImpl(followedRepository, igdbRepository, gamesRepository, seenStore) { game, franchise, cut, price ->
+    private val snapshotStore: FranchiseSaleSnapshotStore = mock(MockMode.autoUnit)
+    private val checker = FollowedFranchiseCheckerImpl(followedRepository, igdbRepository, gamesRepository, seenStore, snapshotStore) { game, franchise, cut, price ->
         "$game|$franchise|$cut|$price"
     }
 
@@ -46,11 +48,50 @@ class FollowedFranchiseCheckerTest {
     @Test
     fun no_followed_franchises_skips_all_lookups_and_returns_empty() = runTest {
         everySuspend { followedRepository.getFollowed() } returns emptyList()
+        everySuspend { seenStore.get() } returns emptySet()
 
         assertTrue(checker.collectCrossedAlerts().isEmpty())
 
         verifySuspend(exactly(0)) { igdbRepository.fetchFranchiseGames(any(), any()) }
         verifySuspend(exactly(0)) { gamesRepository.getGamePrices(any()) }
+    }
+
+    @Test
+    fun collect_persists_the_full_on_sale_snapshot() = runTest {
+        everySuspend { followedRepository.getFollowed() } returns listOf(franchise(1L, "Halo"))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5", steamAppId = 500))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(any(), any()) } returns "itad-10"
+        everySuspend { seenStore.get() } returns emptySet()
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = 7.49, cut = 75))
+
+        checker.collectCrossedAlerts()
+
+        // The full current on-sale set is persisted (regardless of which are *new*) for the in-app screen.
+        verifySuspend(exactly(1)) {
+            snapshotStore.replace(
+                listOf(
+                    FranchiseSaleGame(
+                        franchiseId = 1L, franchiseName = "Halo", igdbGameId = 10L, itadGameId = "itad-10",
+                        title = "Halo 5", cutPercent = 75, priceValue = 7.49, priceDenominated = "\$7.49",
+                    ),
+                )
+            )
+        }
+    }
+
+    @Test
+    fun seedSeen_merges_a_new_follows_on_sale_signatures_into_the_seen_set() = runTest {
+        everySuspend { followedRepository.getFollowed() } returns listOf(franchise(1L, "Halo"))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5", steamAppId = 500))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(any(), any()) } returns "itad-10"
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = 7.49, cut = 75))
+        everySuspend { seenStore.get() } returns setOf("other@1.0")
+
+        checker.seedSeen(1L)
+
+        // The franchise's currently-on-sale signature is baselined so the next poll won't tray-alert it,
+        // while other franchises' already-seen signatures survive.
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("other@1.0", "itad-10@7.49")) }
     }
 
     @Test

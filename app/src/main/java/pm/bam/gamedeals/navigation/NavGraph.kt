@@ -46,15 +46,14 @@ internal fun NavGraph(
     // rather than the standalone system browser, so the user stays in-context.
     val platformActions = LocalPlatformActions.current
 
-    // Route taps on background (OS-tray) notifications into the nav graph: a tapped ITAD notification opens
-    // its detail screen, a followed-franchise deal alert opens that game's page, and the group summary opens
-    // the Notifications list. The bus is consume-once, so this won't re-navigate.
+    // Route taps on background (OS-tray) notifications into the nav graph: the bundled waitlist summary opens
+    // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen. The bus
+    // is consume-once, so this won't re-navigate.
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
             when (route) {
-                is NotificationRoute.NotificationDetail -> navActions.navigateToNotificationDetail(route.notificationId)
-                is NotificationRoute.Game -> navActions.navigateToGame(route.gameId)
                 NotificationRoute.Notifications -> navActions.navigateToNotifications()
+                NotificationRoute.FollowedSeries -> navActions.navigateToFollowedSeries()
             }
         }
     }

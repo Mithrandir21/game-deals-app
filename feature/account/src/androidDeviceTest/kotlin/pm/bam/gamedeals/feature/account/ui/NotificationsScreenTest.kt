@@ -13,14 +13,14 @@ import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
-import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_unread_state
+import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationDay
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationsScreenData
 
 /**
- * Locks the accessibility fix where an unread notification's status was conveyed only by a colored
- * dot + bold weight (both visual-only). Each unread row must expose an "Unread" stateDescription so
+ * Locks the accessibility fix where an unread notification day's status was conveyed only by a colored
+ * dot + bold weight (both visual-only). Each unread day row must expose an "Unread" stateDescription so
  * TalkBack can distinguish it from a read one; read rows must expose none.
  */
 class NotificationsScreenTest {
@@ -32,29 +32,24 @@ class NotificationsScreenTest {
 
     private lateinit var unreadLabel: String
 
-    private fun setup(notifications: ImmutableList<ItadNotification>) {
+    private fun setup(days: ImmutableList<NotificationDay>) {
         every { viewModel.uiState } returns MutableStateFlow(
-            NotificationsScreenData(loading = false, notifications = notifications),
+            NotificationsScreenData(loading = false, days = days),
         )
         composeTestRule.setContent {
             unreadLabel = stringResource(Res.string.account_notification_unread_state)
             GameDealsTheme {
-                NotificationsScreen(onBack = {}, onOpenDetail = {}, viewModel = viewModel)
+                NotificationsScreen(onBack = {}, onOpenDay = {}, viewModel = viewModel)
             }
         }
     }
 
-    private fun notification(id: String, read: Boolean) = ItadNotification(
-        id = id,
-        type = "waitlist",
-        title = "Title $id",
-        timestamp = "2026-06-18T09:30:00+00:00",
-        read = read,
-    )
+    private fun day(date: String, hasUnread: Boolean) =
+        NotificationDay(date = date, count = 3, hasUnread = hasUnread)
 
     @Test
     fun unreadRowExposesUnreadStateDescription() {
-        setup(persistentListOf(notification("a", read = false), notification("b", read = true)))
+        setup(persistentListOf(day("2026-06-18", hasUnread = true), day("2026-06-17", hasUnread = false)))
 
         composeTestRule
             .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, unreadLabel))
@@ -63,7 +58,7 @@ class NotificationsScreenTest {
 
     @Test
     fun allReadListExposesNoUnreadStateDescription() {
-        setup(persistentListOf(notification("a", read = true), notification("b", read = true)))
+        setup(persistentListOf(day("2026-06-18", hasUnread = false), day("2026-06-17", hasUnread = false)))
 
         composeTestRule
             .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, unreadLabel))

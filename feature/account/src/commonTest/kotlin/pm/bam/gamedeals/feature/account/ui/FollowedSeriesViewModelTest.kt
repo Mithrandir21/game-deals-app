@@ -15,8 +15,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.FollowedFranchise
+import pm.bam.gamedeals.domain.models.FranchiseSaleGame
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -25,11 +28,14 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 
 class FollowedSeriesViewModelTest : MainDispatcherTest() {
 
     private val followedRepository: FollowedFranchiseRepository = mock(MockMode.autoUnit)
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
+    private val snapshotStore: FranchiseSaleSnapshotStore = mock(MockMode.autoUnit)
+    private val franchiseChecker: FollowedFranchiseChecker = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest
@@ -37,11 +43,12 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
         installMainDispatcher()
         every { followedRepository.observeFollowed() } returns flowOf(emptyList())
         everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns emptyList()
+        everySuspend { snapshotStore.get() } returns emptyList()
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun viewModel() = FollowedSeriesViewModel(followedRepository, igdbRepository, logger)
+    private fun viewModel() = FollowedSeriesViewModel(followedRepository, igdbRepository, snapshotStore, franchiseChecker, logger)
 
     private fun franchise(id: Long, name: String, addedAtMs: Long) =
         FollowedFranchise(franchiseId = id, name = name, addedAtMs = addedAtMs)
@@ -74,6 +81,42 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(listOf("Newer", "Older"), vm.uiState.value.items.map { it.name })
+    }
+
+    @Test
+    fun on_sale_games_are_badged_and_sorted_first() = runTest {
+        every { followedRepository.observeFollowed() } returns flowOf(listOf(franchise(1L, "Halo", addedAtMs = 0L)))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5"), igdbGame(11L, "Halo Infinite"))
+        everySuspend { snapshotStore.get() } returns listOf(
+            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 11L, itadGameId = "itad-11", title = "Halo Infinite", cutPercent = 80, priceValue = 5.0, priceDenominated = "\$5"),
+        )
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val games = vm.uiState.value.items.single().games
+        assertEquals(11L, games.first().igdbGameId) // on-sale floated to front
+        assertEquals(80, games.first().cutPercent)
+        assertEquals("\$5", games.first().priceDenominated)
+        assertNull(games.last().cutPercent) // game 10 not on sale
+    }
+
+    @Test
+    fun refresh_recomputes_and_persists_the_snapshot() = runTest {
+        every { followedRepository.observeFollowed() } returns flowOf(listOf(franchise(1L, "Halo", addedAtMs = 0L)))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5"))
+        val refreshed = listOf(
+            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 10L, itadGameId = "itad-10", title = "Halo 5", cutPercent = 60, priceValue = 9.0, priceDenominated = "\$9"),
+        )
+        everySuspend { franchiseChecker.currentOnSale() } returns refreshed
+
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.refresh()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { snapshotStore.replace(refreshed) }
+        assertEquals(60, vm.uiState.value.items.single().games.single().cutPercent)
     }
 
     @Test

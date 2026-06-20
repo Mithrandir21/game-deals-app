@@ -21,9 +21,9 @@ class NotificationRouteBusTest {
     @Test
     fun deliver_before_collect_is_buffered_then_received_on_first_subscribe() = runTest {
         // Cold-start tap: nothing is collecting yet.
-        NotificationRouteBus.deliver(NotificationRoute.NotificationDetail("g1"))
+        NotificationRouteBus.deliver(NotificationRoute.FollowedSeries)
 
-        assertEquals(NotificationRoute.NotificationDetail("g1"), NotificationRouteBus.routes.first())
+        assertEquals(NotificationRoute.FollowedSeries, NotificationRouteBus.routes.first())
     }
 
     @Test
@@ -35,18 +35,18 @@ class NotificationRouteBusTest {
 
     @Test
     fun deliveries_are_received_in_order() = runTest {
-        NotificationRouteBus.deliver(NotificationRoute.NotificationDetail("g1"))
+        NotificationRouteBus.deliver(NotificationRoute.FollowedSeries)
         NotificationRouteBus.deliver(NotificationRoute.Notifications)
 
-        assertEquals(NotificationRoute.NotificationDetail("g1"), NotificationRouteBus.routes.first())
+        assertEquals(NotificationRoute.FollowedSeries, NotificationRouteBus.routes.first())
         assertEquals(NotificationRoute.Notifications, NotificationRouteBus.routes.first())
     }
 
     @Test
     fun a_received_route_is_consumed_once_and_not_replayed() = runTest {
-        NotificationRouteBus.deliver(NotificationRoute.NotificationDetail("g7"))
+        NotificationRouteBus.deliver(NotificationRoute.FollowedSeries)
 
-        assertEquals(NotificationRoute.NotificationDetail("g7"), NotificationRouteBus.routes.first())
+        assertEquals(NotificationRoute.FollowedSeries, NotificationRouteBus.routes.first())
 
         // A re-subscription (e.g. after a config change) must not see the already-consumed route again.
         val replayed = withTimeoutOrNull(1_000) { NotificationRouteBus.routes.first() }

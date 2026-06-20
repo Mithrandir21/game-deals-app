@@ -40,19 +40,29 @@ class NotificationsViewModelTest : MainDispatcherTest() {
 
     private fun viewModel() = NotificationsViewModel(notificationsRepository, logger)
 
-    private fun notification(id: String, read: Boolean = false) =
-        ItadNotification(id = id, type = "waitlist", title = id, timestamp = "2026-06-13T00:00:00+00:00", read = read)
+    private fun notification(id: String, day: String = "2026-06-13", read: Boolean = false) =
+        ItadNotification(id = id, type = "waitlist", title = id, timestamp = "${day}T00:00:00+00:00", read = read)
 
     @Test
-    fun init_reconciles_and_reflects_observed_list() = runTest {
+    fun init_reconciles_and_groups_the_observed_list_by_day() = runTest {
         every { notificationsRepository.observeNotifications() } returns
-            flowOf(listOf(notification("n1", read = false), notification("n2", read = true)))
+            flowOf(
+                listOf(
+                    notification("n1", day = "2026-06-13", read = false),
+                    notification("n2", day = "2026-06-13", read = true),
+                    notification("n3", day = "2026-06-12", read = true),
+                )
+            )
 
         val vm = viewModel()
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.loading)
-        assertEquals(2, vm.uiState.value.notifications.size)
+        // Two calendar days, newest first; the 13th bundles two entries (one unread).
+        assertEquals(listOf("2026-06-13", "2026-06-12"), vm.uiState.value.days.map { it.date })
+        assertEquals(2, vm.uiState.value.days.first().count)
+        assertTrue(vm.uiState.value.days.first().hasUnread)
+        assertFalse(vm.uiState.value.days.last().hasUnread)
         assertTrue(vm.uiState.value.hasUnread)
         verifySuspend(exactly(1)) { notificationsRepository.getNotifications() }
     }

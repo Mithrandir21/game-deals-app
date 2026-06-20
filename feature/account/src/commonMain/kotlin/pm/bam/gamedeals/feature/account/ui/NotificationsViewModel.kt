@@ -10,19 +10,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
 /**
- * Backs the Notifications **list** sub-screen (epic #272, P2.2 #278): observes the reactive notifications
- * list (so mark-read edits reflect immediately) and triggers the remote-as-truth load on open.
- * [onMarkAllRead] goes through the repository (remote-first); the observed list then updates.
+ * Backs the Notifications **list** sub-screen (#7 notification revamp): ITAD emits one notification entry per
+ * game price-drop, so the list groups them by **calendar day** — one row per day (e.g. "5 price drops"),
+ * tapping it opens that day's [NotificationDayScreen] (the games + deals notified that day).
  *
- * Each row is a daily digest; tapping it opens the [NotificationDetailScreen] (the deals inside that
- * notification), which is where the notification is marked read — so this VM no longer fetches per-game
- * detail or marks read on tap (the row click is a pure navigation callback in the screen).
+ * Observes the reactive notifications list (so per-game mark-read edits made in the day detail reflect here
+ * immediately) and triggers the remote-as-truth load on open. [onMarkAllRead] goes through the repository.
  */
 internal class NotificationsViewModel(
     private val notificationsRepository: NotificationsRepository,
@@ -35,7 +33,12 @@ internal class NotificationsViewModel(
     init {
         viewModelScope.launch {
             notificationsRepository.observeNotifications().collect { list ->
-                uiState.update { it.copy(notifications = list.toImmutableList()) }
+                val days = list
+                    .groupBy { it.timestamp.substringBefore('T') }
+                    .map { (date, entries) -> NotificationDay(date = date, count = entries.size, hasUnread = entries.any { !it.read }) }
+                    .sortedByDescending { it.date }
+                    .toImmutableList()
+                uiState.update { it.copy(days = days) }
             }
         }
         viewModelScope.launch {
@@ -50,11 +53,19 @@ internal class NotificationsViewModel(
         }
     }
 
+    /** One calendar day of notifications. [date] is the ISO date (e.g. "2026-06-18") and the nav key. */
+    @Immutable
+    data class NotificationDay(
+        val date: String,
+        val count: Int,
+        val hasUnread: Boolean,
+    )
+
     @Immutable
     data class NotificationsScreenData(
         val loading: Boolean = false,
-        val notifications: ImmutableList<ItadNotification> = persistentListOf(),
+        val days: ImmutableList<NotificationDay> = persistentListOf(),
     ) {
-        val hasUnread: Boolean get() = notifications.any { !it.read }
+        val hasUnread: Boolean get() = days.any { it.hasUnread }
     }
 }

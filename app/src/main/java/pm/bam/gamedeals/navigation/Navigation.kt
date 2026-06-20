@@ -48,14 +48,19 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
-    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped background alert's group summary). */
+    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped bundled waitlist alert). */
     fun navigateToNotifications() {
         navController.navigate(Destination.Notifications)
     }
 
-    /** Open one notification's in-app detail screen (e.g. from a tapped background alert, #272 follow-up). */
-    fun navigateToNotificationDetail(notificationId: String) {
-        navController.navigate(Destination.NotificationDetail(notificationId))
+    /** Open one day's in-app notification detail (the games + deals notified that day). */
+    fun navigateToNotificationDay(date: String) {
+        navController.navigate(Destination.NotificationDay(date))
+    }
+
+    /** Open the Followed-series screen (e.g. from a tapped bundled followed-franchise alert). */
+    fun navigateToFollowedSeries() {
+        navController.navigate(Destination.FollowedSeriesList)
     }
 
     /** Open the Waitlist list (from the Home account stat card). Registered under the shared NavHost. */

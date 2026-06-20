@@ -54,16 +54,18 @@
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
     <string name="account_notification_unread_state">Unread</string>
+    <!-- One row per calendar day; count of price-drop notifications that day (#7 notification revamp). -->
+    <string name="account_notifications_day_count">%1$d price drops</string>
 
-    <!-- Notification detail: the deals inside one daily notification (#272 follow-up) -->
+    <!-- Notification day detail: the games + deals notified on one calendar day (#7 notification revamp) -->
     <string name="account_notification_detail_title">New deals</string>
-    <string name="account_notification_detail_empty">This notification has no deals.</string>
+    <string name="account_notification_detail_empty">No deals for this day.</string>
     <string name="account_notification_detail_image">Cover art for %1$s</string>
     <string name="account_notification_historical_low">All-time low %1$s</string>
     <string name="account_notification_deal_expired">Deal expired</string>
     <string name="account_notification_open_game">Open game</string>
-    <string name="account_notification_show_all_deals">Show all deals</string>
-    <string name="account_notification_show_less">Show less</string>
+    <!-- Marks the highlighted (lowest-price) row as the deal the user was notified about. -->
+    <string name="account_notification_best_deal">Best price</string>
 
     <!-- Ignored games (P3.3, #281) -->
     <string name="account_ignored_empty">You haven\'t ignored any games.</string>

@@ -30,6 +30,12 @@ data class NotificationDealGame(
     /** The game's all-time-low price, pre-formatted for display (null when ITAD omits it). */
     val historicalLowDenominated: String? = null,
     val deals: List<NotificationShopDeal> = emptyList(),
+    /**
+     * The id of the ITAD notification entry this game came from. Set when a *day* aggregates several
+     * per-game notification entries, so viewing a game's card can mark *its* entry read (per-game read).
+     * Null outside the day-detail aggregation.
+     */
+    val sourceNotificationId: String? = null,
 ) {
     /** The cheapest current deal, surfaced collapsed before the card expands to all shops. */
     val bestDeal: NotificationShopDeal? get() = deals.minByOrNull { it.salePriceValue }

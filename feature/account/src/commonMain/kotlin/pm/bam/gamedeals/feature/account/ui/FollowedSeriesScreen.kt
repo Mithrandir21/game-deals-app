@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +50,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
+import pm.bam.gamedeals.common.ui.components.DiscountBadge
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -71,6 +74,7 @@ internal fun FollowedSeriesScreen(
         onBack = onBack,
         onGameClick = onGameClick,
         onUnfollow = viewModel::unfollow,
+        onRefresh = viewModel::refresh,
     )
 }
 
@@ -81,6 +85,7 @@ private fun FollowedSeriesContent(
     onBack: () -> Unit,
     onGameClick: (igdbGameId: Long) -> Unit,
     onUnfollow: (franchiseId: Long) -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -117,13 +122,19 @@ private fun FollowedSeriesContent(
                     )
                 }
 
-                else -> LazyColumn(
+                else -> PullToRefreshBox(
+                    isRefreshing = state.refreshing,
+                    onRefresh = onRefresh,
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.large),
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
-                    items(state.items, key = { it.franchiseId }) { item ->
-                        FollowedSeriesCard(item, onGameClick, onUnfollow)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                    ) {
+                        items(state.items, key = { it.franchiseId }) { item ->
+                            FollowedSeriesCard(item, onGameClick, onUnfollow)
+                        }
                     }
                 }
             }
@@ -203,6 +214,21 @@ private fun FollowedSeriesGameTile(game: FollowedSeriesGame, onGameClick: (igdbG
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (game.onSale) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+            ) {
+                game.cutPercent?.let { DiscountBadge(discountPercent = it) }
+                game.priceDenominated?.let { price ->
+                    Text(
+                        text = price,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -211,7 +237,7 @@ private val previewItems = persistentListOf(
         franchiseId = 1L,
         name = "Halo",
         games = persistentListOf(
-            FollowedSeriesGame(10L, "Halo: Combat Evolved", null),
+            FollowedSeriesGame(10L, "Halo: Combat Evolved", null, cutPercent = 75, priceDenominated = "€4.99"),
             FollowedSeriesGame(11L, "Halo 2", null),
             FollowedSeriesGame(12L, "Halo 3", null),
         ),
@@ -228,6 +254,7 @@ private fun FollowedSeriesContentPreview() {
             onBack = {},
             onGameClick = {},
             onUnfollow = {},
+            onRefresh = {},
         )
     }
 }
@@ -236,6 +263,6 @@ private fun FollowedSeriesContentPreview() {
 @Composable
 private fun FollowedSeriesEmptyPreview() {
     GameDealsTheme {
-        FollowedSeriesContent(state = FollowedSeriesState(), onBack = {}, onGameClick = {}, onUnfollow = {})
+        FollowedSeriesContent(state = FollowedSeriesState(), onBack = {}, onGameClick = {}, onUnfollow = {}, onRefresh = {})
     }
 }
