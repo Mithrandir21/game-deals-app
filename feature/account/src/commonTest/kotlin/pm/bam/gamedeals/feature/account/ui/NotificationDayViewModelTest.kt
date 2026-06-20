@@ -66,10 +66,30 @@ class NotificationDayViewModelTest : MainDispatcherTest() {
 
         assertFalse(vm.uiState.value.loading)
         assertEquals(listOf("g1", "g2"), vm.uiState.value.games.map { it.gameId })
-        assertEquals("n1", vm.uiState.value.games.first { it.gameId == "g1" }.sourceNotificationId)
         assertEquals("GOG", vm.uiState.value.games.first { it.gameId == "g1" }.bestDeal?.shopName)
         // The other-day entry is excluded.
         verifySuspend(exactly(0)) { notificationsRepository.getNotificationDetail("other") }
+    }
+
+    @Test
+    fun a_game_referenced_by_two_entries_is_one_card_and_marks_both_read() = runTest {
+        // Regression: a day with two entries for the SAME game must not produce duplicate LazyColumn keys.
+        every { notificationsRepository.observeNotifications() } returns flowOf(listOf(notification("n1"), notification("n2")))
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns
+            NotificationDetail("n1", listOf(NotificationDealGame(gameId = "g1", title = "Halo", deals = listOf(deal("GOG", 9.99)))))
+        everySuspend { notificationsRepository.getNotificationDetail("n2") } returns
+            NotificationDetail("n2", listOf(NotificationDealGame(gameId = "g1", title = "Halo", deals = listOf(deal("Steam", 8.0)))))
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("g1"), vm.uiState.value.games.map { it.gameId }) // one card despite two entries
+
+        vm.onGameViewed("g1")
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { notificationsRepository.markRead("n1") }
+        verifySuspend(exactly(1)) { notificationsRepository.markRead("n2") }
     }
 
     @Test

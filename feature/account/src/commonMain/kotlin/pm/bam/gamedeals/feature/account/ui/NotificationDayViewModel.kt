@@ -23,12 +23,14 @@ import pm.bam.gamedeals.logging.fatal
 /**
  * Backs the notification **day** detail screen (#7 notification revamp) — the games + deals notified on one
  * calendar [date]. ITAD emits one entry per game, so a day aggregates several entries: each entry's deal
- * content is loaded ([NotificationsRepository.getNotificationDetail], cached + art-joined) and merged, with
- * every game tagged with its source entry id.
+ * content is loaded ([NotificationsRepository.getNotificationDetail], cached + art-joined) and merged. The
+ * **same game can be referenced by more than one entry that day** (e.g. it dropped twice), so games are
+ * de-duplicated by id for display (one card per game — a unique LazyColumn key) while every source entry is
+ * remembered ([sourceIdsByGameId]).
  *
- * Read state is **per-game**: there's no "mark the whole day read on open". A game's source entry is marked
- * read when its card is *viewed* ([onGameViewed], fired as the card scrolls into view), deduped so each
- * entry is marked at most once. Each game card lists **all** its shop deals with the best (lowest) price
+ * Read state is **per-game**: there's no "mark the whole day read on open". When a game's card is *viewed*
+ * ([onGameViewed], fired as it scrolls into view) **all** that game's source entries are marked read, deduped
+ * so each entry is marked at most once. Each card lists **all** its shop deals with the best (lowest) price
  * highlighted as "the deal you were notified about".
  */
 internal class NotificationDayViewModel(
@@ -41,6 +43,9 @@ internal class NotificationDayViewModel(
 
     /** Source entry ids already marked read this session — keeps [onGameViewed] idempotent. */
     private val markedRead = mutableSetOf<String>()
+
+    /** game id → the ids of every notification entry that referenced it this day (for per-game read). */
+    private var sourceIdsByGameId: Map<String, List<String>> = emptyMap()
 
     val uiState: StateFlow<NotificationDayScreenData>
         field = MutableStateFlow(NotificationDayScreenData(loading = true))
@@ -66,21 +71,28 @@ internal class NotificationDayViewModel(
             val entries = runCatching { notificationsRepository.observeNotifications().first() }
                 .getOrElse { fatal(logger, it); emptyList() }
                 .filter { it.timestamp.substringBefore('T') == day }
-            val games = entries.flatMap { entry ->
+            // (entryId, game) pairs across all the day's entries.
+            val pairs = entries.flatMap { entry ->
                 runCatching { notificationsRepository.getNotificationDetail(entry.id).games }
                     .getOrElse { fatal(logger, it); emptyList() }
-                    .map { it.copy(sourceNotificationId = entry.id) }
+                    .map { entry.id to it }
             }
+            sourceIdsByGameId = pairs.groupBy({ it.second.gameId }, { it.first })
+            // One card per game (a game may be referenced by several entries the same day) — distinct ids
+            // also keep the LazyColumn keys unique.
+            val games = pairs.map { it.second }.distinctBy { it.gameId }
             uiState.update { it.copy(loading = false, games = games.toImmutableList()) }
         }
     }
 
-    /** A game's card became visible — mark *its* notification entry read (once). */
+    /** A game's card became visible — mark every entry that referenced it read (once each). */
     fun onGameViewed(gameId: String) {
-        val sourceId = uiState.value.games.firstOrNull { it.gameId == gameId }?.sourceNotificationId ?: return
-        if (!markedRead.add(sourceId)) return
-        viewModelScope.launch {
-            runCatching { notificationsRepository.markRead(sourceId) }.onFailure { fatal(logger, it) }
+        sourceIdsByGameId[gameId]?.forEach { sourceId ->
+            if (markedRead.add(sourceId)) {
+                viewModelScope.launch {
+                    runCatching { notificationsRepository.markRead(sourceId) }.onFailure { fatal(logger, it) }
+                }
+            }
         }
     }
 
