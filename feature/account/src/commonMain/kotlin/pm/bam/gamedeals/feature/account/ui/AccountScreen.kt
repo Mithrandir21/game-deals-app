@@ -54,6 +54,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_ac
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_body
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_followed_series
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_how_it_works
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_permission_denied
@@ -94,6 +95,7 @@ internal fun AccountScreen(
     onOpenFollowedSeries: () -> Unit = {},
     onOpenLinkedAccounts: () -> Unit = {},
     onOpenWebsite: (url: String) -> Unit = {},
+    onReplayOnboarding: () -> Unit = {},
     viewModel: AccountViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
@@ -112,6 +114,7 @@ internal fun AccountScreen(
         onOpenFollowedSeries = onOpenFollowedSeries,
         onOpenLinkedAccounts = onOpenLinkedAccounts,
         onOpenWebsite = onOpenWebsite,
+        onReplayOnboarding = onReplayOnboarding,
     )
 }
 
@@ -131,6 +134,7 @@ private fun AccountScreenContent(
     onOpenFollowedSeries: () -> Unit,
     onOpenLinkedAccounts: () -> Unit,
     onOpenWebsite: (url: String) -> Unit,
+    onReplayOnboarding: () -> Unit,
 ) {
     var showRegionPicker by rememberSaveable { mutableStateOf(false) }
     val onOpenRegion = { showRegionPicker = true }
@@ -145,6 +149,7 @@ private fun AccountScreenContent(
             onOpenRegion = onOpenRegion,
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
+            onReplayOnboarding = onReplayOnboarding,
         )
     } else {
         LoggedInContent(
@@ -165,6 +170,7 @@ private fun AccountScreenContent(
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
             onOpenWebsite = { onOpenWebsite(ITAD_SETTINGS_URL) },
+            onReplayOnboarding = onReplayOnboarding,
         )
     }
 
@@ -187,6 +193,7 @@ private fun LoggedOutContent(
     onOpenRegion: () -> Unit,
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
+    onReplayOnboarding: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -200,6 +207,7 @@ private fun LoggedOutContent(
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
+        item { HubRow(label = stringResource(Res.string.account_row_how_it_works), onClick = onReplayOnboarding) }
     }
 }
 
@@ -245,6 +253,7 @@ private fun LoggedInContent(
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
     onOpenWebsite: () -> Unit,
+    onReplayOnboarding: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -296,6 +305,7 @@ private fun LoggedInContent(
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
+        item { HubRow(label = stringResource(Res.string.account_row_how_it_works), onClick = onReplayOnboarding) }
 
         item { SectionHeader(stringResource(Res.string.account_section_website)) }
         item {
@@ -483,6 +493,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
             onOpenFollowedSeries = {},
             onOpenLinkedAccounts = {},
             onOpenWebsite = {},
+            onReplayOnboarding = {},
         )
     }
 }

@@ -33,6 +33,7 @@ import pm.bam.gamedeals.feature.discover.di.discoverModule
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.home.di.homeModule
+import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
@@ -98,6 +99,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 accountModule,
                 dealsModule,
                 discoverModule,
+                onboardingModule,
             )
         }
         warmDomainDatabase()

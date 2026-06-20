@@ -17,6 +17,25 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     fun navigateHome() = navigateTopLevel(Destination.Home)
 
+    /** Open the onboarding carousel as a pushed screen (the Account hub's "How it works" replay). */
+    fun navigateToOnboarding() {
+        navController.navigate(Destination.Onboarding)
+    }
+
+    /**
+     * Leave the onboarding carousel. On a replay it pops back to wherever it was launched from (e.g. the
+     * Account hub); on first run — where Onboarding is the start destination and nothing is behind it —
+     * it instead opens Home and drops Onboarding from the back stack so a back press exits the app.
+     */
+    fun finishOnboarding() {
+        val popped = navController.popBackStack()
+        if (!popped) {
+            navController.navigate(Destination.Home) {
+                popUpTo(Destination.Onboarding) { inclusive = true }
+            }
+        }
+    }
+
     /**
      * Navigate to a top-level (bottom-nav tab) [destination] with the standard tab back-stack
      * behaviour (epic #219): pop up to the graph's start destination saving state, single-top, and

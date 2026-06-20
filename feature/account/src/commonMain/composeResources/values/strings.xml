@@ -30,6 +30,7 @@
     <string name="account_row_notes">My notes</string>
     <string name="account_row_linked">Linked accounts</string>
     <string name="account_row_region">Region</string>
+    <string name="account_row_how_it_works">How it works</string>
     <string name="account_row_mature">Show adult titles</string>
     <string name="account_row_mature_desc">Include mature-rated games in Deals and Bundles</string>
     <string name="account_row_mature_switch_description">Show adult titles toggle</string>

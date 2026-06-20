@@ -13,6 +13,13 @@ import kotlinx.serialization.Serializable
  */
 sealed interface Destination {
 
+    /**
+     * First-run onboarding carousel (one-time, replayable from the Account hub). Not a top-level tab, so
+     * the app shell renders it chrome-free. Used as the start destination on first launch.
+     */
+    @Serializable
+    data object Onboarding : Destination
+
     @Serializable
     data object Home : Destination
 

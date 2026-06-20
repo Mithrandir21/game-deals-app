@@ -27,6 +27,7 @@ fun NavGraphBuilder.accountScreen(
     navController: NavController,
     goToGame: (gameId: String) -> Unit,
     goToWeb: (url: String) -> Unit,
+    onReplayOnboarding: () -> Unit,
 ) {
     composable<Destination.Account> {
         AccountScreen(
@@ -38,6 +39,7 @@ fun NavGraphBuilder.accountScreen(
             onOpenFollowedSeries = { navController.navigate(Destination.FollowedSeriesList) },
             onOpenLinkedAccounts = { navController.navigate(Destination.LinkedAccounts) },
             onOpenWebsite = goToWeb,
+            onReplayOnboarding = onReplayOnboarding,
         )
     }
 

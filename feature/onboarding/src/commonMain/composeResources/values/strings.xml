@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Carousel chrome -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_page_indicator">Step %1$d of %2$d</string>
+
+    <!-- 1. Welcome -->
+    <string name="onboarding_welcome_title">Never miss a deal</string>
+    <string name="onboarding_welcome_body">Track game prices across every store — deals, bundles and free giveaways, all in one place.</string>
+
+    <!-- 2. Tab tour -->
+    <string name="onboarding_tabs_title">Find your way around</string>
+    <string name="onboarding_tab_home_label">Home</string>
+    <string name="onboarding_tab_home_desc">Your hub: featured deals, bundles and giveaways.</string>
+    <string name="onboarding_tab_deals_label">Deals</string>
+    <string name="onboarding_tab_deals_desc">Browse and filter deals from every store.</string>
+    <string name="onboarding_tab_giveaways_label">Giveaways</string>
+    <string name="onboarding_tab_giveaways_desc">Claim games that are free right now.</string>
+    <string name="onboarding_tab_account_label">Account</string>
+    <string name="onboarding_tab_account_desc">Your sign-in, waitlist, collection and alerts.</string>
+
+    <!-- 3. Discover & filters -->
+    <string name="onboarding_discover_title">Dig deeper in Deals</string>
+    <string name="onboarding_discover_body">Tap search to find any game, open the filters to narrow by price and store, or use Discover by tag to browse by genre, theme and mood.</string>
+
+    <!-- 4. Save & follow -->
+    <string name="onboarding_save_title">Save the games you want</string>
+    <string name="onboarding_save_body">Waitlist a game to track its price, mark what you own in your collection, and follow a series to hear when any entry goes on sale.</string>
+
+    <!-- 5. Region (interactive) -->
+    <string name="onboarding_region_title">Prices for your region</string>
+    <string name="onboarding_region_body">We\'ve set your region from your device. Change it any time so prices and currency match your stores.</string>
+    <string name="onboarding_region_change">Change region</string>
+    <string name="onboarding_region_picker_title">Choose your region</string>
+
+    <!-- 6. Notifications (interactive) -->
+    <string name="onboarding_notifications_title">Get sale alerts</string>
+    <string name="onboarding_notifications_body">Get notified when a game on your waitlist or a series you follow goes on sale. Alerts start working once you sign in.</string>
+    <string name="onboarding_notifications_enable">Turn on alerts</string>
+    <string name="onboarding_notifications_enabled">Alerts are on</string>
+    <string name="onboarding_notifications_denied">Notifications are blocked. You can turn them on later in system settings.</string>
+
+    <!-- 7. Sign in (interactive, last) -->
+    <string name="onboarding_signin_title">Sign in to sync</string>
+    <string name="onboarding_signin_body">Sign in with IsThereAnyDeal to keep your waitlist, collection and notes in sync across devices. You can always do this later.</string>
+    <string name="onboarding_signin_action">Sign in with IsThereAnyDeal</string>
+    <string name="onboarding_signin_later">Maybe later</string>
+
+</resources>

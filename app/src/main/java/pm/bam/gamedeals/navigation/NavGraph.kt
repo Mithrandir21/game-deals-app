@@ -30,6 +30,7 @@ import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.notifications.NotificationRoute
@@ -87,6 +88,10 @@ internal fun NavGraph(
             startDestination = startDestination,
             modifier = Modifier.padding(padding)
         ) {
+            onboardingScreen(
+                onFinish = { navActions.finishOnboarding() },
+            )
+
             homeScreen(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToGameByTitle = { title -> navActions.navigateToGameDetailsByTitle(title) },
@@ -117,6 +122,7 @@ internal fun NavGraph(
                 navController = navController,
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToWeb = { url -> platformActions.openInApp(url) },
+                onReplayOnboarding = { navActions.navigateToOnboarding() },
             )
 
             storeScreen(

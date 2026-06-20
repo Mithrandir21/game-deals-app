@@ -28,10 +28,19 @@ interface SettingsRepository {
     fun observeDealsFilter(): Flow<DealsFilter>
     suspend fun getDealsFilter(): DealsFilter
     suspend fun setDealsFilter(filter: DealsFilter)
+
+    /**
+     * Whether the new-user onboarding carousel has been completed (or skipped). Gates the first-run flow:
+     * `false`/absent until the user finishes, skips, or starts sign-in. Once `true` it stays `true` — the
+     * carousel can still be replayed from the Account hub without clearing the flag.
+     */
+    suspend fun getOnboardingCompleted(): Boolean
+    suspend fun setOnboardingCompleted(completed: Boolean)
 }
 
 internal const val MATURE_OPT_IN_KEY = "mature_opt_in"
 internal const val DEALS_FILTER_KEY = "deals_filter"
+internal const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
 
 internal class SettingsRepositoryImpl(
     private val storage: Storage,
@@ -71,6 +80,13 @@ internal class SettingsRepositoryImpl(
     override suspend fun setDealsFilter(filter: DealsFilter) {
         storage.save(DEALS_FILTER_KEY, filter)
         dealsFilter.value = filter
+    }
+
+    override suspend fun getOnboardingCompleted(): Boolean =
+        runCatching { storage.getNullable<Boolean>(ONBOARDING_COMPLETED_KEY) }.getOrNull() ?: false
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        storage.save(ONBOARDING_COMPLETED_KEY, completed)
     }
 
     private suspend fun loadMatureFromStorage(): Boolean =
