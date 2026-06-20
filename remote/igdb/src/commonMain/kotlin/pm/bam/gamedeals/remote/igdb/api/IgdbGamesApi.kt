@@ -197,6 +197,26 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
     }
 
     /**
+     * All games belonging to a franchise/series (the followed-franchise surface + its background deal
+     * check). Targets `/v4/games` filtered by `where franchises = (id)` (array containment), most-popular
+     * first. Each row carries `name`, `cover.image_id` and the Steam app id (`external_games`) so the
+     * member games can be priced through the ITAD bridge without a second IGDB round-trip — the same lean
+     * shape as [fetchGamesByTags].
+     */
+    suspend fun fetchFranchiseGames(franchiseId: Long, limit: Int): ApiResponse<List<RemoteIgdbGame>> = try {
+        ApiResponse.Success(
+            httpClient.post("/v4/games") {
+                contentType(ContentType.Text.Plain)
+                setBody(buildFranchiseGamesQuery(franchiseId, limit))
+            }.body()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /**
      * Enumerate one of IGDB's small vocabulary endpoints — `/v4/genres`, `/v4/themes`,
      * `/v4/game_modes`, `/v4/player_perspectives` — for the tag picker (epic #307). All share the
      * `{ id, name, slug }` shape, so the dimension is supplied by the caller, not the wire.
@@ -391,6 +411,17 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
                 limit $limit; offset $offset;
             """.trimIndent()
         }
+
+        // A franchise's games. `where franchises = (id)` is APICalypse array containment — every game whose
+        // `franchises` array includes this id. Sorted by popularity (sortable without selecting the field)
+        // so the most relevant entries lead the followed-series list and the deal check's per-franchise cap.
+        internal fun buildFranchiseGamesQuery(franchiseId: Long, limit: Int): String =
+            """
+            fields id,name,cover.image_id,external_games.uid,external_games.external_game_source;
+            where franchises = ($franchiseId);
+            sort total_rating_count desc;
+            limit $limit;
+            """.trimIndent()
 
         // `field = [a,b]` is APICalypse's "array contains ALL of these" (AND). Returns null for an
         // empty list so the caller can omit the dimension instead of emitting `field = []`.

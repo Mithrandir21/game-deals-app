@@ -53,6 +53,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_action
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_body
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_title
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_followed_series
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_permission_denied
@@ -90,6 +91,7 @@ internal fun AccountScreen(
     onOpenNotifications: () -> Unit = {},
     onOpenIgnored: () -> Unit = {},
     onOpenMyNotes: () -> Unit = {},
+    onOpenFollowedSeries: () -> Unit = {},
     onOpenLinkedAccounts: () -> Unit = {},
     onOpenWebsite: (url: String) -> Unit = {},
     viewModel: AccountViewModel = koinViewModel(),
@@ -107,6 +109,7 @@ internal fun AccountScreen(
         onOpenNotifications = onOpenNotifications,
         onOpenIgnored = onOpenIgnored,
         onOpenMyNotes = onOpenMyNotes,
+        onOpenFollowedSeries = onOpenFollowedSeries,
         onOpenLinkedAccounts = onOpenLinkedAccounts,
         onOpenWebsite = onOpenWebsite,
     )
@@ -125,6 +128,7 @@ private fun AccountScreenContent(
     onOpenNotifications: () -> Unit,
     onOpenIgnored: () -> Unit,
     onOpenMyNotes: () -> Unit,
+    onOpenFollowedSeries: () -> Unit,
     onOpenLinkedAccounts: () -> Unit,
     onOpenWebsite: (url: String) -> Unit,
 ) {
@@ -136,6 +140,7 @@ private fun AccountScreenContent(
         LoggedOutContent(
             loggingIn = data.loggingIn,
             onLogin = onLogin,
+            onOpenFollowedSeries = onOpenFollowedSeries,
             regionName = regionName,
             onOpenRegion = onOpenRegion,
             matureOptIn = data.matureOptIn,
@@ -153,6 +158,7 @@ private fun AccountScreenContent(
             onOpenNotifications = onOpenNotifications,
             onOpenIgnored = onOpenIgnored,
             onOpenMyNotes = onOpenMyNotes,
+            onOpenFollowedSeries = onOpenFollowedSeries,
             onOpenLinkedAccounts = onOpenLinkedAccounts,
             onOpenRegion = onOpenRegion,
             regionName = regionName,
@@ -176,6 +182,7 @@ private fun AccountScreenContent(
 private fun LoggedOutContent(
     loggingIn: Boolean,
     onLogin: () -> Unit,
+    onOpenFollowedSeries: () -> Unit,
     regionName: String?,
     onOpenRegion: () -> Unit,
     matureOptIn: Boolean,
@@ -187,7 +194,9 @@ private fun LoggedOutContent(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
         item { SignInCard(loggingIn = loggingIn, onLogin = onLogin) }
-        // App-level preferences are reachable without signing in.
+        // Following series needs no ITAD account, so it's reachable signed-out alongside the app prefs.
+        item { SectionHeader(stringResource(Res.string.account_section_discovery)) }
+        item { HubRow(label = stringResource(Res.string.account_row_followed_series), onClick = onOpenFollowedSeries) }
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
@@ -229,6 +238,7 @@ private fun LoggedInContent(
     onOpenNotifications: () -> Unit,
     onOpenIgnored: () -> Unit,
     onOpenMyNotes: () -> Unit,
+    onOpenFollowedSeries: () -> Unit,
     onOpenLinkedAccounts: () -> Unit,
     onOpenRegion: () -> Unit,
     regionName: String?,
@@ -272,6 +282,7 @@ private fun LoggedInContent(
         item { NotificationDeliveryRow() }
         item { HubRow(label = stringResource(Res.string.account_row_ignored), onClick = onOpenIgnored) }
         item { HubRow(label = stringResource(Res.string.account_row_notes), onClick = onOpenMyNotes) }
+        item { HubRow(label = stringResource(Res.string.account_row_followed_series), onClick = onOpenFollowedSeries) }
 
         item { SectionHeader(stringResource(Res.string.account_section_connections)) }
         item {
@@ -469,6 +480,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
             onOpenNotifications = {},
             onOpenIgnored = {},
             onOpenMyNotes = {},
+            onOpenFollowedSeries = {},
             onOpenLinkedAccounts = {},
             onOpenWebsite = {},
         )

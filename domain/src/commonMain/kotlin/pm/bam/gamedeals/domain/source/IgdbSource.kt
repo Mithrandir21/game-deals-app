@@ -65,6 +65,13 @@ interface IgdbSource {
     suspend fun fetchGamesByTags(filter: IgdbTagFilter, limit: Int, offset: Int): List<IgdbGame>
 
     /**
+     * Every game in a franchise/series, most-popular first (the Followed-series surface + its background
+     * deal check). Each game carries its Steam app id (when known) for downstream ITAD pricing. Capped by
+     * [limit]; returns an empty list on miss.
+     */
+    suspend fun fetchFranchiseGames(franchiseId: Long, limit: Int): List<IgdbGame>
+
+    /**
      * The curated tag-picker vocabulary (epic #307): all genres, themes, game-modes and player
      * perspectives, each tagged with its dimension. Keywords are fetched separately via
      * [fetchCuratedKeywords] because they come from a hand-picked slug allow-list.

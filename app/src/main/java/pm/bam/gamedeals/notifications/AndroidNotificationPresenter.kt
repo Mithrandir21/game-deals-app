@@ -105,8 +105,8 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
         return when (val route = alert.toNotificationRoute()) {
             is NotificationRoute.NotificationDetail ->
                 routeIntent(ROUTE_NOTIFICATION_DETAIL, requestCode = requestCode, notificationId = route.notificationId)
-            NotificationRoute.Notifications -> routeIntent(ROUTE_NOTIFICATIONS, requestCode = requestCode)
             is NotificationRoute.Game -> routeIntent(ROUTE_GAME, requestCode = requestCode, gameId = route.gameId)
+            NotificationRoute.Notifications -> routeIntent(ROUTE_NOTIFICATIONS, requestCode = requestCode)
         }
     }
 

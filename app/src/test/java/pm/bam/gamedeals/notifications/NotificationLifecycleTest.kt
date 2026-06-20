@@ -32,16 +32,32 @@ class NotificationLifecycleTest {
     }
 
     @Test
-    fun login_without_opt_in_does_not_arm_the_poll() = runTest {
+    fun login_without_opt_in_cancels_the_poll() = runTest {
         coEvery { settings.isEnabled() } returns false
 
         apply(AuthState.LoggedIn("user"))
 
         verify(exactly = 0) { scheduler.schedule() }
+        verify(exactly = 1) { scheduler.cancel() }
     }
 
     @Test
-    fun logout_cancels_the_poll_and_clears_the_surfaced_set() = runTest {
+    fun logout_with_opt_in_keeps_the_poll_for_franchise_alerts_and_clears_the_surfaced_set() = runTest {
+        coEvery { settings.isEnabled() } returns true
+
+        apply(AuthState.LoggedOut)
+
+        // The poll runs logged-out for followed-franchise alerts (no ITAD account needed)…
+        verify(exactly = 1) { scheduler.schedule() }
+        verify(exactly = 0) { scheduler.cancel() }
+        // …but the ITAD surfaced-id set is cleared so a different account re-alerts cleanly.
+        coVerify(exactly = 1) { surfacedStore.replace(emptySet()) }
+    }
+
+    @Test
+    fun logout_without_opt_in_cancels_the_poll_and_clears_the_surfaced_set() = runTest {
+        coEvery { settings.isEnabled() } returns false
+
         apply(AuthState.LoggedOut)
 
         verify(exactly = 1) { scheduler.cancel() }

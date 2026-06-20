@@ -4,8 +4,8 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 /**
- * A franchise/series the user follows (#7). Stored locally (like [PriceWatch]) since following is a
- * client-side affordance layered on IGDB's `franchises`. [franchiseId] is the IGDB franchise id; [name]
+ * A franchise/series the user follows (#7). Stored locally since following is a client-side affordance
+ * layered on IGDB's `franchises`. [franchiseId] is the IGDB franchise id; [name]
  * is kept so the followed list renders without re-fetching.
  */
 @Immutable

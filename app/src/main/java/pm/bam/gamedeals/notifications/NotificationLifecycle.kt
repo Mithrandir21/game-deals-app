@@ -6,11 +6,13 @@ import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationSt
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 
 /**
- * Reconciles the background notification poll with the current auth state + opt-in (Phase D). On login the
- * poll is (re-)armed only when the user has opted in (the schedule is idempotent, so this also covers app
- * start / reboot); on logout it's cancelled and the surfaced-id set cleared so a different account re-alerts
- * cleanly — the opt-in preference itself is preserved. Extracted from `GameDealsApplication` so the
- * per-state behaviour is unit-testable; the Application owns the auth-state collection and error handling.
+ * Reconciles the background notification poll with the current auth state + opt-in (Phase D). The poll is
+ * armed purely by the opt-in, **independent of login**: it also serves followed-franchise deal alerts, which
+ * need no ITAD account, so it runs logged-out too (the ITAD sync inside the poll is separately login-gated).
+ * The schedule is idempotent, so this also covers app start / reboot. On logout the surfaced-id set is
+ * cleared so a different account re-alerts cleanly — the opt-in preference (and the independent
+ * followed-franchise dedupe store) are preserved. Extracted from `GameDealsApplication` so the per-state
+ * behaviour is unit-testable; the Application owns the auth-state collection and error handling.
  */
 internal suspend fun applyNotificationLifecycle(
     state: AuthState,
@@ -18,11 +20,6 @@ internal suspend fun applyNotificationLifecycle(
     scheduler: NotificationScheduler,
     surfacedStore: SurfacedNotificationStore,
 ) {
-    when (state) {
-        is AuthState.LoggedIn -> if (settings.isEnabled()) scheduler.schedule()
-        AuthState.LoggedOut -> {
-            scheduler.cancel()
-            surfacedStore.replace(emptySet())
-        }
-    }
+    if (settings.isEnabled()) scheduler.schedule() else scheduler.cancel()
+    if (state is AuthState.LoggedOut) surfacedStore.replace(emptySet())
 }

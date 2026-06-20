@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 sealed interface NotificationRoute {
     /** A tapped per-notification alert opens that notification's in-app detail screen. */
     data class NotificationDetail(val notificationId: String) : NotificationRoute
+    /** A tapped followed-franchise deal alert opens that game's page directly. */
+    data class Game(val gameId: String) : NotificationRoute
     /** The group summary opens the Notifications list. */
     data object Notifications : NotificationRoute
-    /** A tapped target-price alert (Phase 3) opens that game's page directly. */
-    data class Game(val gameId: String) : NotificationRoute
 }
 
 /**

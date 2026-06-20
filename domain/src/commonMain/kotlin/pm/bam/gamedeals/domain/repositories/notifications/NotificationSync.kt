@@ -8,19 +8,18 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 
 /**
- * A notification that should be surfaced to the OS tray (background delivery — epic #272 follow-up). Carries
- * the [games] (with their best deals) referenced by a waitlist notification so the platform layer can build
- * rich tray text and a deep-link to that notification's in-app detail screen ([NotificationPresenter]).
+ * A notification that should be surfaced to the OS tray (background delivery — epic #272 follow-up). An
+ * ITAD waitlist alert carries the [games] (with their best deals) it references so the platform layer can
+ * build rich tray text and deep-link to that notification's in-app detail screen. A followed-franchise deal
+ * alert (client-side [FollowedFranchiseChecker][pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker])
+ * instead sets [gameId] and self-describes in [title], so the tap deep-links straight to that game's page
+ * ([NotificationPresenter]).
  */
 @Immutable
 data class PendingNotificationAlert(
     val notificationId: String,
     val title: String,
     val games: List<NotificationDealGame>,
-    /**
-     * When non-null the tap deep-links straight to this game's page instead of a notification detail
-     * screen — used by client-side target-price alerts (Phase 3), which have no ITAD notification id.
-     */
     val gameId: String? = null,
 )
 

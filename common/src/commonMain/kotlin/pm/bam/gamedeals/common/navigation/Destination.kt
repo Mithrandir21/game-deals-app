@@ -44,6 +44,10 @@ sealed interface Destination {
     @Serializable
     data object MyNotes : Destination
 
+    /** The franchises/series the user follows (#7). Owns its Scaffold/TopAppBar + back arrow. */
+    @Serializable
+    data object FollowedSeriesList : Destination
+
     @Serializable
     data object LinkedAccounts : Destination
 

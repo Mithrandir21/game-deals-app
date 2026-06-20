@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,7 +39,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.material.icons.filled.MoreVert
@@ -95,7 +93,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
@@ -114,7 +111,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.roundToLong
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -130,7 +126,6 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.DealQuality
 import pm.bam.gamedeals.domain.models.dealQuality
 import pm.bam.gamedeals.domain.models.IgdbImageSize
-import pm.bam.gamedeals.domain.models.PriceWatch
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.portrait
@@ -158,25 +153,13 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_near_low_title
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_active
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_custom_label
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_dialog_cancel
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_dialog_confirm
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_dialog_message
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_dialog_title
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_edit
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_preset_all_time_low
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_preset_ten_below
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_remove
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_set
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_subtitle
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_price_alert_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_follow
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_following
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_section
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_trailers
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_thumbnail_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_title_fallback
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_close
@@ -252,6 +235,7 @@ private fun youTubeThumbnailUrl(videoId: String): String = "https://img.youtube.
 
 private const val COVER_ASPECT_RATIO = 0.75f
 private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
+private val TRAILER_TILE_WIDTH = 320.dp // 180.dp tall × 16:9
 private const val COLLAPSED_LINES = 5
 
 /**
@@ -274,7 +258,6 @@ internal fun GamePageScreen(
     val isCollected = viewModel.isCollected.collectAsStateWithLifecycle()
     val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
     val note = viewModel.note.collectAsStateWithLifecycle()
-    val priceWatch = viewModel.priceWatch.collectAsStateWithLifecycle()
     val followedFranchiseIds = viewModel.followedFranchiseIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -293,15 +276,12 @@ internal fun GamePageScreen(
         isCollected = isCollected.value,
         isIgnored = isIgnored.value,
         note = note.value,
-        priceWatch = priceWatch.value,
         followedFranchiseIds = followedFranchiseIds.value,
         onBack = onBack,
         goToWeb = goToWeb,
         onSimilarGameClick = onSimilarGameClick,
         onSearchDealsByTitle = onSearchDealsByTitle,
         onShareDeal = { info, store, deal -> viewModel.onShareDealClicked(info, store, deal) },
-        onSetPriceWatch = viewModel::setPriceWatch,
-        onRemovePriceWatch = viewModel::removePriceWatch,
         onToggleFollowFranchise = viewModel::toggleFollowFranchise,
         onToggleFavourite = viewModel::toggleWaitlist,
         onToggleCollection = viewModel::toggleCollection,
@@ -326,15 +306,12 @@ private fun GamePageContent(
     isCollected: Boolean,
     isIgnored: Boolean,
     note: String?,
-    priceWatch: PriceWatch?,
     followedFranchiseIds: Set<Long>,
     onBack: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onSearchDealsByTitle: (title: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
-    onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-    onRemovePriceWatch: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onToggleFavourite: () -> Unit,
     onToggleCollection: () -> Unit,
@@ -479,15 +456,12 @@ private fun GamePageContent(
                     modifier = Modifier.padding(innerPadding),
                     data = data,
                     note = note,
-                    priceWatch = priceWatch,
                     followedFranchiseIds = followedFranchiseIds,
                     goToWeb = goToWeb,
                     onSimilarGameClick = onSimilarGameClick,
                     onShareDeal = onShareDeal,
                     onSaveNote = onSaveNote,
                     onDeleteNote = onDeleteNote,
-                    onSetPriceWatch = onSetPriceWatch,
-                    onRemovePriceWatch = onRemovePriceWatch,
                     onToggleFollowFranchise = onToggleFollowFranchise,
                     onBundleClick = onBundleClick,
                     onRegionsSelected = onRegionsSelected,
@@ -506,15 +480,12 @@ private fun GamePageBody(
     modifier: Modifier,
     data: GamePageData.Data,
     note: String?,
-    priceWatch: PriceWatch?,
     followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
-    onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-    onRemovePriceWatch: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
@@ -532,15 +503,12 @@ private fun GamePageBody(
         GameTabs(
             data = data,
             note = note,
-            priceWatch = priceWatch,
             followedFranchiseIds = followedFranchiseIds,
             goToWeb = goToWeb,
             onSimilarGameClick = onSimilarGameClick,
             onShareDeal = onShareDeal,
             onSaveNote = onSaveNote,
             onDeleteNote = onDeleteNote,
-            onSetPriceWatch = onSetPriceWatch,
-            onRemovePriceWatch = onRemovePriceWatch,
             onToggleFollowFranchise = onToggleFollowFranchise,
             onBundleClick = onBundleClick,
             onRegionsSelected = onRegionsSelected,
@@ -588,15 +556,12 @@ private fun HeroSection(data: GamePageData.Data) {
 private fun GameTabs(
     data: GamePageData.Data,
     note: String?,
-    priceWatch: PriceWatch?,
     followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onSaveNote: (String) -> Unit,
     onDeleteNote: () -> Unit,
-    onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-    onRemovePriceWatch: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
@@ -634,7 +599,7 @@ private fun GameTabs(
                 onBundleClick = onBundleClick,
             )
             1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                PricesTab(data, priceWatch, goToWeb, onShareDeal, onSetPriceWatch, onRemovePriceWatch)
+                PricesTab(data, goToWeb, onShareDeal)
             }
             2 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
                 data.gameDetails?.let { CheapestEverBlock(it) }
@@ -781,11 +746,8 @@ private fun RegionsTab(
 @Composable
 private fun PricesTab(
     data: GamePageData.Data,
-    priceWatch: PriceWatch?,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
-    onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-    onRemovePriceWatch: () -> Unit,
 ) {
     val gameDetails = data.gameDetails
     if (gameDetails == null || data.dealDetails.isEmpty()) {
@@ -793,7 +755,6 @@ private fun PricesTab(
         return
     }
     gameDetails.dealQuality()?.let { DealQualityCallout(it) }
-    PriceAlertSection(gameDetails, priceWatch, onSetPriceWatch, onRemovePriceWatch)
     Text(
         text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
         style = MaterialTheme.typography.titleMedium,
@@ -801,107 +762,6 @@ private fun PricesTab(
     data.dealDetails.forEach { pair ->
         StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
     }
-}
-
-/**
- * Target-price alert control (Phase 3). When no watch is set it offers one-tap presets derived from the
- * game's own prices (its all-time low + a 10%-below-current target) plus a custom amount; when a watch is
- * set it shows the target and a remove action. The background poll fires an OS notification once the
- * current best price falls at/below the target.
- */
-@Composable
-private fun PriceAlertSection(
-    gameDetails: GameDetails,
-    priceWatch: PriceWatch?,
-    onSetPriceWatch: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-    onRemovePriceWatch: () -> Unit,
-) {
-    var showDialog by rememberSaveable { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-                Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text(text = stringResource(Res.string.game_page_price_alert_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            }
-            if (priceWatch != null) {
-                Text(
-                    text = stringResource(Res.string.game_page_price_alert_active, priceWatch.targetPriceDenominated),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-                    TextButton(onClick = { showDialog = true }) { Text(stringResource(Res.string.game_page_price_alert_edit)) }
-                    TextButton(onClick = onRemovePriceWatch) { Text(stringResource(Res.string.game_page_price_alert_remove)) }
-                }
-            } else {
-                Text(text = stringResource(Res.string.game_page_price_alert_subtitle), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = { showDialog = true }) { Text(stringResource(Res.string.game_page_price_alert_set)) }
-            }
-        }
-    }
-    if (showDialog) {
-        PriceAlertDialog(
-            gameDetails = gameDetails,
-            onDismiss = { showDialog = false },
-            onConfirm = { value, denominated ->
-                onSetPriceWatch(value, denominated)
-                showDialog = false
-            },
-        )
-    }
-}
-
-@Composable
-private fun PriceAlertDialog(
-    gameDetails: GameDetails,
-    onDismiss: () -> Unit,
-    onConfirm: (targetPriceValue: Double, targetPriceDenominated: String) -> Unit,
-) {
-    val bestDeal = gameDetails.deals.minBy { it.priceValue }
-    val allTimeLow = gameDetails.cheapestPriceEver
-    // Reuse an existing denominated string to recover this region's currency prefix (e.g. "$", "€", "£")
-    // so a custom/computed target renders in the right currency without a platform number formatter.
-    val symbol = bestDeal.priceDenominated.takeWhile { !it.isDigit() }
-    val tenBelowValue = (bestDeal.priceValue * 0.9)
-    var customText by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.game_page_price_alert_dialog_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-                Text(stringResource(Res.string.game_page_price_alert_dialog_message), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = { onConfirm(allTimeLow.priceValue, allTimeLow.priceDenominated) }) {
-                    Text(stringResource(Res.string.game_page_price_alert_preset_all_time_low, allTimeLow.priceDenominated))
-                }
-                TextButton(onClick = { onConfirm(tenBelowValue, "$symbol${formatPrice(tenBelowValue)}") }) {
-                    Text(stringResource(Res.string.game_page_price_alert_preset_ten_below, "$symbol${formatPrice(tenBelowValue)}"))
-                }
-                OutlinedTextField(
-                    value = customText,
-                    onValueChange = { customText = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text(stringResource(Res.string.game_page_price_alert_custom_label, symbol.ifBlank { "$" })) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                )
-            }
-        },
-        confirmButton = {
-            val custom = customText.toDoubleOrNull()
-            TextButton(
-                enabled = custom != null && custom > 0.0,
-                onClick = { custom?.let { onConfirm(it, "$symbol${formatPrice(it)}") } },
-            ) { Text(stringResource(Res.string.game_page_price_alert_dialog_confirm)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.game_page_price_alert_dialog_cancel)) } },
-    )
-}
-
-// Two-decimal price string for computed/custom targets; the value comparison is what actually matters.
-private fun formatPrice(value: Double): String {
-    val cents = (value * 100).roundToLong()
-    return "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
 }
 
 /**
@@ -1242,31 +1102,45 @@ private fun TrailersSection(game: IgdbGame, goToWeb: (url: String, gameTitle: St
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
             itemsIndexed(game.videos) { index, video ->
-                val description = stringResource(Res.string.game_page_trailer_thumbnail_cd, index + 1, game.videos.size, game.name)
-                Box(
+                val title = video.name ?: stringResource(Res.string.game_page_trailer_title_fallback, index + 1)
+                val description = stringResource(Res.string.game_page_trailer_thumbnail_cd, index + 1, game.videos.size, game.name, title)
+                Column(
                     modifier = Modifier
-                        .height(180.dp)
-                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .width(TRAILER_TILE_WIDTH)
                         .clickable(role = Role.Button) { goToWeb(youTubeWatchUrl(video.videoId), game.name) }
-                        .semantics { contentDescription = description },
-                    contentAlignment = Alignment.Center,
+                        .semantics(mergeDescendants = true) { contentDescription = description },
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
                 ) {
-                    AsyncImage(
-                        model = youTubeThumbnailUrl(video.videoId),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = null,
-                        tint = Color.White,
+                    Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                            .padding(GameDealsCustomTheme.spacing.extraSmall),
+                            .fillMaxWidth()
+                            .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                            .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AsyncImage(
+                            model = youTubeThumbnailUrl(video.videoId),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                                .padding(GameDealsCustomTheme.spacing.extraSmall),
+                        )
+                    }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -1602,15 +1476,12 @@ private fun GamePagePreview(data: GamePageData) {
             isCollected = false,
             isIgnored = false,
             note = null,
-            priceWatch = null,
             followedFranchiseIds = emptySet(),
             onBack = {},
             goToWeb = { _, _ -> },
             onSimilarGameClick = {},
             onSearchDealsByTitle = {},
             onShareDeal = { _, _, _ -> },
-            onSetPriceWatch = { _, _ -> },
-            onRemovePriceWatch = {},
             onToggleFollowFranchise = { _, _ -> },
             onToggleFavourite = {},
             onToggleCollection = {},

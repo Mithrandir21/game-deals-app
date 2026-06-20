@@ -128,6 +128,13 @@ internal class IgdbSourceImpl(
             .map { it.toIgdbGame() }
     }
 
+    override suspend fun fetchFranchiseGames(franchiseId: Long, limit: Int): List<IgdbGame> =
+        igdbGamesApi.fetchFranchiseGames(franchiseId, limit)
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .map { it.toIgdbGame() }
+
     override suspend fun fetchTagVocabulary(): List<IgdbTag> =
         TAG_VOCABULARY_ENDPOINTS.flatMap { (endpoint, dimension) ->
             igdbGamesApi.fetchTagVocabulary(endpoint)

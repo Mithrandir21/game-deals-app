@@ -17,6 +17,9 @@ interface IgdbRepository {
     /** Discover games matching an AND-combined tag [filter], paginated (epic #307). */
     suspend fun fetchGamesByTags(filter: IgdbTagFilter, limit: Int, offset: Int): List<IgdbGame>
 
+    /** Every game in a franchise/series, most-popular first, capped at [limit] (followed franchises). */
+    suspend fun fetchFranchiseGames(franchiseId: Long, limit: Int): List<IgdbGame>
+
     /** Curated genre/theme/game-mode/perspective vocabulary for the tag picker (epic #307). */
     suspend fun fetchTagVocabulary(): List<IgdbTag>
 
@@ -48,6 +51,9 @@ internal class IgdbRepositoryImpl(
 
     override suspend fun fetchGamesByTags(filter: IgdbTagFilter, limit: Int, offset: Int): List<IgdbGame> =
         igdbSource.fetchGamesByTags(filter, limit, offset)
+
+    override suspend fun fetchFranchiseGames(franchiseId: Long, limit: Int): List<IgdbGame> =
+        igdbSource.fetchFranchiseGames(franchiseId, limit)
 
     override suspend fun fetchTagVocabulary(): List<IgdbTag> =
         igdbSource.fetchTagVocabulary()

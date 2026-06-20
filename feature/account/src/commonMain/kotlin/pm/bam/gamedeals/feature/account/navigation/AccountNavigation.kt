@@ -10,6 +10,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.ui.AccountScreen
 import pm.bam.gamedeals.feature.account.ui.CollectionListScreen
 import pm.bam.gamedeals.feature.account.ui.ComingSoonScreen
+import pm.bam.gamedeals.feature.account.ui.FollowedSeriesScreen
 import pm.bam.gamedeals.feature.account.ui.IgnoredScreen
 import pm.bam.gamedeals.feature.account.ui.MyNotesScreen
 import pm.bam.gamedeals.feature.account.ui.NotificationDetailScreen
@@ -34,6 +35,7 @@ fun NavGraphBuilder.accountScreen(
             onOpenNotifications = { navController.navigate(Destination.Notifications) },
             onOpenIgnored = { navController.navigate(Destination.IgnoredGames) },
             onOpenMyNotes = { navController.navigate(Destination.MyNotes) },
+            onOpenFollowedSeries = { navController.navigate(Destination.FollowedSeriesList) },
             onOpenLinkedAccounts = { navController.navigate(Destination.LinkedAccounts) },
             onOpenWebsite = goToWeb,
         )
@@ -44,6 +46,14 @@ fun NavGraphBuilder.accountScreen(
     }
     composable<Destination.CollectionList> {
         CollectionListScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+    }
+    composable<Destination.FollowedSeriesList> {
+        // Followed-series tiles carry IGDB ids, so they open the game page by IGDB id (a Steam-id detour
+        // would silently drop console/indie titles), mirroring the game page's series row.
+        FollowedSeriesScreen(
+            onBack = { navController.popBackStack() },
+            onGameClick = { igdbGameId -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) },
+        )
     }
 
     composable<Destination.Notifications> {

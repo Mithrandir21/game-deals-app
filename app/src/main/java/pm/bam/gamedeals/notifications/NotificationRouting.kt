@@ -12,13 +12,13 @@ import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAle
 internal fun Intent.toNotificationRoute(): NotificationRoute? =
     when (getStringExtra(EXTRA_NOTIFICATION_ROUTE)) {
         ROUTE_NOTIFICATION_DETAIL -> getStringExtra(EXTRA_NOTIFICATION_ID)?.let { NotificationRoute.NotificationDetail(it) }
-        ROUTE_NOTIFICATIONS -> NotificationRoute.Notifications
         ROUTE_GAME -> getStringExtra(EXTRA_GAME_ID)?.let { NotificationRoute.Game(it) }
+        ROUTE_NOTIFICATIONS -> NotificationRoute.Notifications
         else -> null
     }
 
 /**
- * Where tapping a delivered alert should land the user: a target-price alert (Phase 3) carries a [gameId]
+ * Where tapping a delivered alert should land the user: a followed-franchise deal alert carries a [gameId]
  * and opens that game's page directly; a per-notification ITAD alert opens that notification's in-app
  * detail screen (the deals inside it).
  */

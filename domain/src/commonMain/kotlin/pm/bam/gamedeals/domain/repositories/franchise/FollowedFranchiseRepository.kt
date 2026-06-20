@@ -11,9 +11,8 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.FollowedFranchise
 
 /**
- * The franchises/series the user follows (#7), persisted via [Storage] (same store as
- * [PriceWatchRepository][pm.bam.gamedeals.domain.repositories.pricewatch.PriceWatchRepository]). Exposed
- * reactively so the game page's follow toggle reflects the current state immediately.
+ * The franchises/series the user follows (#7), persisted via [Storage]. Exposed reactively so the game
+ * page's follow toggle reflects the current state immediately.
  */
 interface FollowedFranchiseRepository {
     fun observeFollowed(): Flow<List<FollowedFranchise>>
