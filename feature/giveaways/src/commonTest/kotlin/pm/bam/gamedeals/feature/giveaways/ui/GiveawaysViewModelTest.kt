@@ -9,6 +9,8 @@ import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
+import dev.mokkery.verify.VerifyMode.Companion.exactly
+import dev.mokkery.verifySuspend
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -50,6 +52,16 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
+
+    @Test
+    fun refreshes_on_init() = runTest {
+        // Regression: the VM must fetch on creation, so a cold/expired cache isn't shown as an empty list.
+        every { giveawaysRepository.observeGiveaways() } returns flowOf(emptyList())
+
+        GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
+
+        verifySuspend(exactly(1)) { giveawaysRepository.refreshGiveaways() }
+    }
 
     @Test
     fun initially_loading() = runTest {
@@ -194,8 +206,7 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
 
-        viewModel.reloadGiveaways()
-        // Pre-condition: first refresh failed → ERROR.
+        // Pre-condition: the initial refresh (triggered in init) failed → ERROR.
         assertEquals(
             GiveawaysViewModel.GiveawaysScreenStatus.ERROR,
             observeStates(viewModel).last().status
@@ -278,6 +289,9 @@ class GiveawaysViewModelTest : MainDispatcherTest() {
         val viewModel = GiveawaysViewModel(TestingLoggingListener(), giveawaysRepository, testDatetimeParsing, testClock)
         unfilteredRoom.emit(emptyList())
         observeStates(viewModel)
+        runCurrent()
+        // Ignore the one refresh the VM fires in init; this test is about the explicit reload path.
+        refreshCount = 0
 
         // reloadGiveaways launches into viewModelScope each time; there is no cancellation gate, so three rapid invocations must each reach refreshGiveaways.
         // Confirms we don't accidentally introduce a flatMapLatest-style collapse on the reload path.

@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
@@ -41,7 +40,10 @@ internal class GiveawaysViewModel(
 
     private val parametersFlow = MutableStateFlow<GiveawaySearchParameters?>(null)
     private val refreshOutcomeFlow = MutableStateFlow<RefreshOutcome>(RefreshOutcome.Idle)
-    private val loadingFlow = MutableStateFlow(false)
+    // Starts true so the first frame is LOADING (the initial refresh runs in init), not an empty list.
+    // The gate is refresh-scoped: cleared in reloadGiveaways' finally, not on every Room emission (an empty
+    // emission from a cold cache would otherwise flash the empty state before the first fetch lands).
+    private val loadingFlow = MutableStateFlow(true)
 
     private val giveawaysFlow = parametersFlow
         .flatMapLatest { params ->
@@ -52,9 +54,6 @@ internal class GiveawaysViewModel(
                 emit(emptyList())
             }
         }
-        // Any Room emission means fresh data has arrived — clear the in-flight reload gate.
-        // Errors are preserved separately on refreshOutcomeFlow.
-        .onEach { loadingFlow.value = false }
 
     val uiState: StateFlow<GiveawaysScreenData> = combine(
         giveawaysFlow,
@@ -86,6 +85,13 @@ internal class GiveawaysViewModel(
         .logFlow(logger)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GiveawaysScreenData())
 
+    init {
+        // Populate the list on first entry. Sibling tabs (Deals/Home/Bundles) load in init too; the
+        // giveaways VM was the outlier, so a cold/expired cache showed an empty list until a manual
+        // pull-to-refresh. refreshGiveaways() is TTL-guarded, so this no-ops when the cache is fresh.
+        reloadGiveaways()
+    }
+
     fun reloadGiveaways() {
         viewModelScope.launch {
             loadingFlow.value = true
@@ -96,6 +102,8 @@ internal class GiveawaysViewModel(
                 throw e
             } catch (_: Throwable) {
                 refreshOutcomeFlow.value = RefreshOutcome.Error
+            } finally {
+                loadingFlow.value = false
             }
         }
     }
