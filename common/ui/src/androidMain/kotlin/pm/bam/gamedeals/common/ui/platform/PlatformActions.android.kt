@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -29,6 +30,27 @@ class AndroidPlatformActions(private val context: Context) : PlatformActions {
                 context.startActivity(Intent(Intent.ACTION_VIEW, uri))
             } catch (_: ActivityNotFoundException) {
                 // Nothing on the device can open a URL — give up silently rather than crash.
+            }
+        }
+    }
+
+    override fun openAppNotificationSettings() {
+        // The per-app notification settings screen (API 26+, which is our minSdk).
+        val notificationSettings = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        try {
+            context.startActivity(notificationSettings)
+        } catch (_: ActivityNotFoundException) {
+            // Fall back to the app's details page, which always has a Notifications entry.
+            try {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    )
+                )
+            } catch (_: ActivityNotFoundException) {
+                // No settings activity available — give up silently rather than crash.
             }
         }
     }

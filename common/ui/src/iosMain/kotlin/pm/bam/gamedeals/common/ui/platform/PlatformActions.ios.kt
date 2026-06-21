@@ -10,6 +10,7 @@ import platform.Foundation.NSURL
 import platform.SafariServices.SFSafariViewController
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UISceneActivationStateForegroundActive
 import platform.UIKit.UIWindow
 import platform.UIKit.UIWindowScene
@@ -50,6 +51,13 @@ class IosPlatformActions : PlatformActions {
         val rootViewController = resolveKeyWindow()?.rootViewController ?: return
         val safari = SFSafariViewController(uRL = nsUrl)
         rootViewController.presentViewController(safari, animated = true, completion = null)
+    }
+
+    override fun openAppNotificationSettings() {
+        // iOS exposes only the app's Settings root (no direct notifications subpage pre-iOS 16); the
+        // Notifications section is one tap in. The string constant is non-null at runtime.
+        val nsUrl = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
+        UIApplication.sharedApplication.openURL(nsUrl, options = emptyMap<Any?, Any>(), completionHandler = null)
     }
 
     /**

@@ -79,6 +79,7 @@
     <string name="account_row_notification_delivery">Background alerts</string>
     <string name="account_row_notification_delivery_desc">Get waitlist and followed-series deal alerts even when the app is closed</string>
     <string name="account_notification_permission_denied">Notifications are blocked. Enable them in system settings to get alerts.</string>
+    <string name="account_notification_open_settings">Open settings</string>
 
     <!-- Followed series/franchises (#7) -->
     <string name="account_row_followed_series">Followed series</string>

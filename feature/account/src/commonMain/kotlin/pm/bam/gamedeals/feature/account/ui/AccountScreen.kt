@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Bookmark
@@ -44,6 +45,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.home.StatCard
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -58,6 +60,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_followed
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_how_it_works
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_open_settings
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_permission_denied
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery
@@ -408,6 +411,7 @@ private fun NotificationDeliveryRow(
     val enabled by viewModel.enabled.collectAsStateWithLifecycle()
     val permissionGranted = rememberNotificationPermissionGranted()
     val permissionRequester = rememberNotificationPermissionRequester()
+    val platformActions = LocalPlatformActions.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
 
     // Opted in but the OS no longer permits posting (revoked in settings) is the same blocked state as a
@@ -417,13 +421,20 @@ private fun NotificationDeliveryRow(
     ListItem(
         headlineContent = { Text(stringResource(Res.string.account_row_notification_delivery)) },
         supportingContent = {
-            Text(
-                if (blocked) {
-                    stringResource(Res.string.account_notification_permission_denied)
-                } else {
-                    stringResource(Res.string.account_row_notification_delivery_desc)
+            if (blocked) {
+                // The in-app prompt won't reappear once blocked, so offer a direct jump to OS settings.
+                Column {
+                    Text(stringResource(Res.string.account_notification_permission_denied))
+                    TextButton(
+                        onClick = { platformActions.openAppNotificationSettings() },
+                        contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.extraSmall),
+                    ) {
+                        Text(stringResource(Res.string.account_notification_open_settings))
+                    }
                 }
-            )
+            } else {
+                Text(stringResource(Res.string.account_row_notification_delivery_desc))
+            }
         },
         trailingContent = {
             Switch(

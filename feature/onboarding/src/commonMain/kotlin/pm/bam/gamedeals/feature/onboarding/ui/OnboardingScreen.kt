@@ -65,6 +65,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -81,6 +82,7 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifi
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enabled
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_off
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_title
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_open_settings
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_page_indicator
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_change
@@ -127,6 +129,7 @@ internal fun OnboardingScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionRequester = rememberNotificationPermissionRequester()
     val permissionGranted = rememberNotificationPermissionGranted()
+    val platformActions = LocalPlatformActions.current
     var notificationsDenied by remember { mutableStateOf(false) }
 
     OnboardingContent(
@@ -141,6 +144,7 @@ internal fun OnboardingScreen(
                 if (granted) viewModel.onNotificationsEnabled()
             }
         },
+        onOpenNotificationSettings = { platformActions.openAppNotificationSettings() },
         onSignIn = { viewModel.signInThenFinish(onFinish) },
         onFinish = { viewModel.finish(onFinish) },
     )
@@ -155,6 +159,7 @@ private fun OnboardingContent(
     notificationsPermissionGranted: Boolean,
     notificationsDenied: Boolean,
     onEnableNotifications: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     onSignIn: () -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -187,6 +192,7 @@ private fun OnboardingContent(
                         permissionGranted = notificationsPermissionGranted,
                         denied = notificationsDenied,
                         onEnable = onEnableNotifications,
+                        onOpenSettings = onOpenNotificationSettings,
                     )
                     6 -> SignInSlide(
                         loggedIn = state.loggedIn,
@@ -416,6 +422,7 @@ private fun NotificationsSlide(
     permissionGranted: Boolean,
     denied: Boolean,
     onEnable: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     SlideScaffold(
         icon = Icons.Filled.Notifications,
@@ -457,8 +464,15 @@ private fun NotificationsSlide(
                 )
                 Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
             }
-            Button(onClick = onEnable) {
-                Text(stringResource(Res.string.onboarding_notifications_enable))
+            // Once blocked the in-app prompt won't reappear, so send the user straight to OS settings.
+            if (denied) {
+                Button(onClick = onOpenSettings) {
+                    Text(stringResource(Res.string.onboarding_open_settings))
+                }
+            } else {
+                Button(onClick = onEnable) {
+                    Text(stringResource(Res.string.onboarding_notifications_enable))
+                }
             }
         }
     }

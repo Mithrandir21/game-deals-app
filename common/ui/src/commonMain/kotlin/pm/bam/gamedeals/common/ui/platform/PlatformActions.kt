@@ -19,6 +19,14 @@ interface PlatformActions {
      * browser) if no in-app tab provider is available.
      */
     fun openInApp(url: String)
+
+    /**
+     * Opens this app's OS-level notification settings — the Android per-app notification screen / the iOS
+     * Settings page for the app — so a user who has blocked notifications can re-enable them. Used when the
+     * in-app permission prompt can no longer be shown (already denied). Falls back to the app details
+     * screen on Android if the notification screen isn't resolvable; no-ops if nothing can handle it.
+     */
+    fun openAppNotificationSettings()
 }
 
 /**
@@ -28,6 +36,7 @@ interface PlatformActions {
 object NoOpPlatformActions : PlatformActions {
     override fun share(text: String) = Unit
     override fun openInApp(url: String) = Unit
+    override fun openAppNotificationSettings() = Unit
 }
 
 val LocalPlatformActions = staticCompositionLocalOf<PlatformActions> { NoOpPlatformActions }
