@@ -465,7 +465,9 @@ private fun NotificationsSlide(
                 Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
             }
             // Once blocked the in-app prompt won't reappear, so send the user straight to OS settings.
-            if (denied) {
+            // After they enable it there and return (permission now granted), fall back to the normal
+            // enable button so a single tap turns the opt-in on.
+            if (denied && !permissionGranted) {
                 Button(onClick = onOpenSettings) {
                     Text(stringResource(Res.string.onboarding_open_settings))
                 }

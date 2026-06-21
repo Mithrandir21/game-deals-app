@@ -414,9 +414,10 @@ private fun NotificationDeliveryRow(
     val platformActions = LocalPlatformActions.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
 
-    // Opted in but the OS no longer permits posting (revoked in settings) is the same blocked state as a
-    // fresh denial — surface the "enable in system settings" rationale for both.
-    val blocked = permissionDenied || (enabled && !permissionGranted)
+    // Blocked = the OS permission is off while the user wants alerts (already opted in, or just tried to
+    // enable). Gating on !permissionGranted means returning from system settings with the permission now
+    // granted clears the rationale immediately — the earlier denial flag is no longer relevant.
+    val blocked = !permissionGranted && (enabled || permissionDenied)
 
     ListItem(
         headlineContent = { Text(stringResource(Res.string.account_row_notification_delivery)) },
