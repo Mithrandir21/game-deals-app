@@ -44,6 +44,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.home.StatCard
+import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -395,20 +396,29 @@ private fun SectionHeader(text: String) {
  * Background-alerts opt-in toggle (background-notifications feature, Phase D). Self-contained: pulls its
  * own [NotificationSettingsViewModel] + the platform permission requester. Flipping on requests the OS
  * notification permission and only enables on grant; a denial leaves it off with an inline rationale.
+ *
+ * The switch reflects the *effective* state — opt-in AND a live OS permission — so a permission revoked in
+ * system settings reads as off (with the blocked rationale) rather than falsely "on"; flipping back on
+ * re-requests and re-arms.
  */
 @Composable
 private fun NotificationDeliveryRow(
     viewModel: NotificationSettingsViewModel = koinViewModel(),
 ) {
     val enabled by viewModel.enabled.collectAsStateWithLifecycle()
+    val permissionGranted = rememberNotificationPermissionGranted()
     val permissionRequester = rememberNotificationPermissionRequester()
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
+
+    // Opted in but the OS no longer permits posting (revoked in settings) is the same blocked state as a
+    // fresh denial — surface the "enable in system settings" rationale for both.
+    val blocked = permissionDenied || (enabled && !permissionGranted)
 
     ListItem(
         headlineContent = { Text(stringResource(Res.string.account_row_notification_delivery)) },
         supportingContent = {
             Text(
-                if (permissionDenied) {
+                if (blocked) {
                     stringResource(Res.string.account_notification_permission_denied)
                 } else {
                     stringResource(Res.string.account_row_notification_delivery_desc)
@@ -417,7 +427,7 @@ private fun NotificationDeliveryRow(
         },
         trailingContent = {
             Switch(
-                checked = enabled,
+                checked = enabled && permissionGranted,
                 onCheckedChange = { checked ->
                     if (checked) {
                         permissionRequester.request { granted ->
