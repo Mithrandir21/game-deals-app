@@ -50,9 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -86,6 +89,7 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_later
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_title
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signing_in
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_skip
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_tab_account_desc
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_tab_account_label
@@ -321,7 +325,9 @@ private fun TabRow(icon: ImageVector, label: StringResource, desc: StringResourc
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = GameDealsCustomTheme.spacing.medium),
+            .padding(vertical = GameDealsCustomTheme.spacing.medium)
+            // Read the label + description as one focus stop ("Home, Your hub: …") rather than two.
+            .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
@@ -368,6 +374,8 @@ private fun RegionSlide(
             Text(
                 text = "${flagEmoji(selected.code)}  ${selected.name}",
                 style = MaterialTheme.typography.titleMedium,
+                // The leading flag emoji would otherwise be read as a second country name.
+                modifier = Modifier.clearAndSetSemantics { contentDescription = selected.name },
             )
             Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
         }
@@ -403,6 +411,8 @@ private fun NotificationsSlide(
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
         if (enabled) {
             Row(
+                // Announce the success the moment the toggle flips, since focus was on the now-gone button.
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
             ) {
@@ -427,6 +437,8 @@ private fun NotificationsSlide(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
+                    // Denial leaves focus on the button; announce the explanation when it appears.
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
         }
@@ -445,7 +457,21 @@ private fun SignInSlide(
         body = Res.string.onboarding_signin_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        Button(onClick = onSignIn, enabled = !signingIn) {
+        // While signing in the button shows only a spinner, so give it an explicit name and announce
+        // the transition — otherwise TalkBack lands on an unlabelled, disabled control.
+        val signingInLabel = stringResource(Res.string.onboarding_signing_in)
+        Button(
+            onClick = onSignIn,
+            enabled = !signingIn,
+            modifier = if (signingIn) {
+                Modifier.semantics {
+                    contentDescription = signingInLabel
+                    liveRegion = LiveRegionMode.Polite
+                }
+            } else {
+                Modifier
+            },
+        ) {
             if (signingIn) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
@@ -495,14 +521,21 @@ private fun OnboardingRegionPicker(
                         .fillMaxWidth()
                         .selectable(
                             selected = country.code == selectedCode,
+                            role = Role.RadioButton,
                             onClick = { onSelect(country) },
                         )
                         .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
+                    // Click + selection are owned by the row's `selectable`, so the RadioButton is a
+                    // non-interactive visual; the flag emoji is decorative (the country name carries it).
                     RadioButton(selected = country.code == selectedCode, onClick = null)
-                    Text(text = flagEmoji(country.code), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = flagEmoji(country.code),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
                     Text(text = country.name, style = MaterialTheme.typography.bodyLarge)
                 }
             }

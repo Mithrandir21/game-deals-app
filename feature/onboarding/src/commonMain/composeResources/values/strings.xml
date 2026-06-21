@@ -48,5 +48,6 @@
     <string name="onboarding_signin_body">Sign in with IsThereAnyDeal to keep your waitlist, collection and notes in sync across devices. You can always do this later.</string>
     <string name="onboarding_signin_action">Sign in with IsThereAnyDeal</string>
     <string name="onboarding_signin_later">Maybe later</string>
+    <string name="onboarding_signing_in">Signing in…</string>
 
 </resources>
