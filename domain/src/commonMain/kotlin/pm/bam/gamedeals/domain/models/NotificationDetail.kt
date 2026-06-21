@@ -37,6 +37,16 @@ data class NotificationDealGame(
 }
 
 /**
+ * Collapse repeated drops of the same game into one entry, merging every deal seen across them, so a tray
+ * notification shows one line per game (its [NotificationDealGame.bestDeal] — the cheapest). Keeps
+ * first-seen order; the title/artwork come from the first entry.
+ */
+fun List<NotificationDealGame>.mergedByGameId(): List<NotificationDealGame> =
+    groupBy { it.gameId }.values.map { entries ->
+        entries.first().copy(deals = entries.flatMap { it.deals })
+    }
+
+/**
  * A single shop's offer on a notification game, with prices pre-formatted for display ([salePriceValue]
  * is retained only to pick the cheapest). The flags drive the same deal badges as the rest of the app
  * ([isNewHistoricalLow] → "N", [isStoreLow] → "S", [hasVoucher] → scissors).

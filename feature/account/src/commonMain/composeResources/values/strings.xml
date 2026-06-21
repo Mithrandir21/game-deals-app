@@ -56,8 +56,10 @@
     <string name="account_notifications_mark_all_read">Mark all read</string>
     <string name="account_notifications_more_actions">More options</string>
     <string name="account_notification_unread_state">Unread</string>
-    <!-- One row per calendar day; count of price-drop notifications that day (#7 notification revamp). -->
-    <string name="account_notifications_day_count">%1$d price drops</string>
+    <!-- One row per calendar day. Title lists the games that dropped; subtitle is the date + game count. -->
+    <string name="account_notifications_day_subtitle">%1$s · %2$d games</string>
+    <string name="account_notifications_day_subtitle_one">%1$s · 1 game</string>
+    <string name="account_notifications_day_more">+%1$d more</string>
 
     <!-- Notification day detail: the games + deals notified on one calendar day (#7 notification revamp) -->
     <string name="account_notification_detail_title">New deals</string>

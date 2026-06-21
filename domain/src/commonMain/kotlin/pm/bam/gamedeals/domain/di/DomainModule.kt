@@ -116,7 +116,7 @@ val domainModule = module {
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
-    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
+    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }

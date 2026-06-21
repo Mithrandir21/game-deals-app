@@ -11,6 +11,8 @@ import dev.mokkery.verifySuspend
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Instant
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.GameArtwork
@@ -28,7 +30,11 @@ class NotificationsRepositoryTest {
     private val accountSource: ItadAccountSource = mock(MockMode.autoUnit)
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
 
-    private fun repo() = NotificationsRepositoryImpl(accountSource, authTokenStore)
+    // Fixed "now" one day after the sample notifications, so they sit inside the 7-day retention window.
+    private val now = Instant.parse("2026-06-13T00:00:00Z").toEpochMilliseconds()
+    private val clock = Clock { now }
+
+    private fun repo() = NotificationsRepositoryImpl(accountSource, authTokenStore, clock)
 
     private fun notification(id: String, read: Boolean) =
         ItadNotification(id = id, type = "waitlist", title = id, timestamp = "2026-06-12T00:00:00+00:00", read = read)
@@ -59,6 +65,23 @@ class NotificationsRepositoryTest {
         repo.getNotifications()
 
         assertEquals(2, repo.observeUnreadCount().first())
+    }
+
+    @Test
+    fun getNotifications_drops_anything_older_than_seven_days_even_if_unread() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(
+            // now = 2026-06-13: 1 day old (kept) and 8 days old (dropped, despite being unread).
+            ItadNotification("recent", "waitlist", "recent", "2026-06-12T00:00:00+00:00", read = false),
+            ItadNotification("stale", "waitlist", "stale", "2026-06-05T00:00:00+00:00", read = false),
+        )
+
+        val repo = repo()
+        val loaded = repo.getNotifications()
+
+        assertEquals(listOf("recent"), loaded.map { it.id })
+        assertEquals(emptyList(), repo.observeNotifications().first().filter { it.id == "stale" })
+        assertEquals(1, repo.observeUnreadCount().first()) // the stale unread one no longer counts
     }
 
     @Test

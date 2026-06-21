@@ -9,6 +9,7 @@ import androidx.core.app.NotificationManagerCompat
 import pm.bam.gamedeals.MainActivity
 import pm.bam.gamedeals.R
 import pm.bam.gamedeals.domain.models.NotificationDealGame
+import pm.bam.gamedeals.domain.models.mergedByGameId
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
 
@@ -49,7 +50,9 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
                 notifySummary(
                     id = WAITLIST_SUMMARY_ID,
                     title = context.getString(R.string.notification_waitlist_summary_title),
-                    lines = waitlistAlerts.flatMap { it.games }.map { it.toLine() },
+                    // One line per game — a game that dropped several times this poll is collapsed to its
+                    // cheapest deal across all those drops (else it floods the MAX_GAME_LINES budget).
+                    lines = waitlistAlerts.flatMap { it.games }.mergedByGameId().map { it.toLine() },
                     fallbackText = context.getString(R.string.notification_summary_text, waitlistAlerts.size),
                     contentIntent = routeIntent(ROUTE_NOTIFICATIONS, WAITLIST_SUMMARY_ID),
                 )
@@ -58,8 +61,9 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
                 notifySummary(
                     id = FRANCHISE_SUMMARY_ID,
                     title = context.getString(R.string.notification_franchise_summary_title),
-                    // Each franchise alert's title already self-describes ("X is Y% off in Z").
-                    lines = franchiseAlerts.map { it.title },
+                    // Each franchise alert's title already self-describes ("X is Y% off in Z"). One line per
+                    // game — a game followed via two franchises would otherwise produce two lines.
+                    lines = franchiseAlerts.distinctBy { it.gameId }.map { it.title },
                     fallbackText = context.getString(R.string.notification_summary_text, franchiseAlerts.size),
                     contentIntent = routeIntent(ROUTE_FOLLOWED_SERIES, FRANCHISE_SUMMARY_ID),
                 )

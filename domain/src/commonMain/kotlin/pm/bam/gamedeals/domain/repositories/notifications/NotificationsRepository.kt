@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Instant
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.GameArtwork
@@ -18,7 +20,13 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
 /**
  * The user's ITAD notifications (epic #272, P2 #277). Unlike the waitlist/collection there is **no Room
  * cache** (the data is cheap to refetch and transient): the list is held in memory, (re)loaded on demand
- * via [getNotifications]. [observeUnreadCount] derives the unread tally from that list and is auth-gated
+ * via [getNotifications].
+ *
+ * Notifications older than [RETENTION_MILLIS] (7 days) are **ignored at load** — dropped from the in-memory
+ * list before it's published, so the list screen, [observeUnreadCount] and the background tray poll all see
+ * the same recent window (ITAD has no delete API, so this client-side cutoff is the only "cleanup" possible;
+ * stale drops aren't worth acting on, even when still unread). [observeUnreadCount] derives the unread tally
+ * from that list and is auth-gated
  * — it emits `0` whenever logged out, mirroring
  * [WaitlistRepository.observeWaitlistIds][pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository.observeWaitlistIds].
  * Writes are **remote-first** (confirm the ITAD mark-read before flipping the in-memory state).
@@ -43,9 +51,13 @@ interface NotificationsRepository {
     suspend fun getNotificationDetail(notificationId: String): NotificationDetail
 }
 
+/** How far back notifications are kept; anything older is ignored at load. */
+internal const val RETENTION_MILLIS = 7L * 24 * 60 * 60 * 1000
+
 internal class NotificationsRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
+    private val clock: Clock,
 ) : NotificationsRepository {
 
     private val notifications = MutableStateFlow<List<ItadNotification>>(emptyList())
@@ -72,9 +84,16 @@ internal class NotificationsRepositoryImpl(
             notifications.value = emptyList()
             return emptyList()
         }
-        val list = accountSource.getNotifications()
+        val list = accountSource.getNotifications().filter { it.isWithinRetention() }
         notifications.value = list
         return list
+    }
+
+    /** True when the notification is within the [RETENTION_MILLIS] window. Unparseable timestamps are kept
+     *  (don't hide a notification over a format quirk). */
+    private fun ItadNotification.isWithinRetention(): Boolean {
+        val millis = runCatching { Instant.parse(timestamp).toEpochMilliseconds() }.getOrNull() ?: return true
+        return millis >= clock.nowMillis() - RETENTION_MILLIS
     }
 
     override suspend fun markRead(id: String) {
