@@ -248,7 +248,7 @@ private fun BottomControls(
 }
 
 @Composable
-private fun PageIndicator(pageCount: Int, currentPage: Int) {
+internal fun PageIndicator(pageCount: Int, currentPage: Int) {
     val label = stringResource(Res.string.onboarding_page_indicator, currentPage + 1, pageCount)
     Row(
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
@@ -418,7 +418,7 @@ private fun RegionSlide(
 }
 
 @Composable
-private fun NotificationsSlide(
+internal fun NotificationsSlide(
     enabled: Boolean,
     permissionGranted: Boolean,
     denied: Boolean,
@@ -492,7 +492,7 @@ private fun NotificationStateMessage(text: StringResource, color: Color) {
 }
 
 @Composable
-private fun SignInSlide(
+internal fun SignInSlide(
     loggedIn: Boolean,
     username: String,
     signingIn: Boolean,
@@ -560,7 +560,7 @@ private fun SignInSlide(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OnboardingRegionPicker(
+internal fun OnboardingRegionPicker(
     countries: ImmutableList<Country>,
     selectedCode: String?,
     onSelect: (Country) -> Unit,
