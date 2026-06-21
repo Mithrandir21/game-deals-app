@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -430,10 +431,8 @@ private fun NotificationsSlide(
         body = Res.string.onboarding_notifications_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        // Alerts are genuinely active only when the opt-in is on AND the OS still permits posting; a
-        // revoked permission must not read as "on".
-        if (enabled && permissionGranted) {
-            Row(
+        when (notificationStep(enabled = enabled, permissionGranted = permissionGranted, denied = denied)) {
+            NotificationStep.Active -> Row(
                 // Announce the success the moment the toggle flips, since focus was on the now-gone button.
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 verticalAlignment = Alignment.CenterVertically,
@@ -449,35 +448,47 @@ private fun NotificationsSlide(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-        } else {
-            // Surface the current OS-permission state up front, before any tap.
-            if (!permissionGranted) {
-                Text(
-                    text = stringResource(
-                        if (denied) Res.string.onboarding_notifications_denied else Res.string.onboarding_notifications_off
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (denied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    // Announce the state when it changes (e.g. a denial after tapping).
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+
+            NotificationStep.Enable -> Button(onClick = onEnable) {
+                Text(stringResource(Res.string.onboarding_notifications_enable))
+            }
+
+            NotificationStep.Off -> {
+                NotificationStateMessage(
+                    text = Res.string.onboarding_notifications_off,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
-            }
-            // Once blocked the in-app prompt won't reappear, so send the user straight to OS settings.
-            // After they enable it there and return (permission now granted), fall back to the normal
-            // enable button so a single tap turns the opt-in on.
-            if (denied && !permissionGranted) {
-                Button(onClick = onOpenSettings) {
-                    Text(stringResource(Res.string.onboarding_open_settings))
-                }
-            } else {
                 Button(onClick = onEnable) {
                     Text(stringResource(Res.string.onboarding_notifications_enable))
                 }
             }
+
+            NotificationStep.Blocked -> {
+                NotificationStateMessage(
+                    text = Res.string.onboarding_notifications_denied,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
+                // The in-app prompt won't reappear once refused, so send the user straight to OS settings.
+                Button(onClick = onOpenSettings) {
+                    Text(stringResource(Res.string.onboarding_open_settings))
+                }
+            }
         }
     }
+}
+
+/** The notification step's status line, announced politely so a state change reaches TalkBack. */
+@Composable
+private fun NotificationStateMessage(text: StringResource, color: Color) {
+    Text(
+        text = stringResource(text),
+        style = MaterialTheme.typography.bodyMedium,
+        color = color,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 @Composable

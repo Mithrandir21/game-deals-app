@@ -414,10 +414,7 @@ private fun NotificationDeliveryRow(
     val platformActions = LocalPlatformActions.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
 
-    // Blocked = the OS permission is off while the user wants alerts (already opted in, or just tried to
-    // enable). Gating on !permissionGranted means returning from system settings with the permission now
-    // granted clears the rationale immediately — the earlier denial flag is no longer relevant.
-    val blocked = !permissionGranted && (enabled || permissionDenied)
+    val blocked = backgroundAlertsBlocked(optedIn = enabled, permissionGranted = permissionGranted, permissionDenied = permissionDenied)
 
     ListItem(
         headlineContent = { Text(stringResource(Res.string.account_row_notification_delivery)) },
@@ -439,7 +436,7 @@ private fun NotificationDeliveryRow(
         },
         trailingContent = {
             Switch(
-                checked = enabled && permissionGranted,
+                checked = backgroundAlertsActive(optedIn = enabled, permissionGranted = permissionGranted),
                 onCheckedChange = { checked ->
                     if (checked) {
                         permissionRequester.request { granted ->
