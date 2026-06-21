@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
@@ -28,6 +29,7 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -53,6 +55,7 @@ class OnboardingViewModelTest : MainDispatcherTest() {
         every { regionRepository.supportedCountries } returns listOf(us, gb)
         every { regionRepository.observeSelectedCountry() } returns flowOf(us)
         every { notificationSettings.observeEnabled() } returns flowOf(false)
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
         // Default: a genuine first run (onboarding not yet completed).
         everySuspend { settingsRepository.getOnboardingCompleted() } returns false
     }
@@ -118,6 +121,25 @@ class OnboardingViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         verifySuspend(exactly(0)) { regionRepository.setSelectedCountry(any()) }
+    }
+
+    @Test
+    fun logged_in_session_is_reflected_in_state() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("bob"))
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.loggedIn)
+        assertEquals("bob", vm.uiState.value.username)
+    }
+
+    @Test
+    fun logged_out_session_leaves_signed_in_state_false() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.loggedIn)
     }
 
     @Test

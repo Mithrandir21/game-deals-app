@@ -65,6 +65,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
@@ -72,11 +73,13 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_title
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_next
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_denied
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enabled
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_off
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_page_indicator
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_body
@@ -87,7 +90,10 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_save_b
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_save_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_action
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_body
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_done_body
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_done_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_later
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_signed_in_as
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signing_in
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_skip
@@ -120,16 +126,19 @@ internal fun OnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionRequester = rememberNotificationPermissionRequester()
+    val permissionGranted = rememberNotificationPermissionGranted()
     var notificationsDenied by remember { mutableStateOf(false) }
 
     OnboardingContent(
         state = state,
         countries = viewModel.countries,
         onCountrySelected = viewModel::onCountrySelected,
+        notificationsPermissionGranted = permissionGranted,
         notificationsDenied = notificationsDenied,
         onEnableNotifications = {
             permissionRequester.request { granted ->
-                if (granted) viewModel.onNotificationsEnabled() else notificationsDenied = true
+                notificationsDenied = !granted
+                if (granted) viewModel.onNotificationsEnabled()
             }
         },
         onSignIn = { viewModel.signInThenFinish(onFinish) },
@@ -143,6 +152,7 @@ private fun OnboardingContent(
     state: OnboardingState,
     countries: ImmutableList<Country>,
     onCountrySelected: (Country) -> Unit,
+    notificationsPermissionGranted: Boolean,
     notificationsDenied: Boolean,
     onEnableNotifications: () -> Unit,
     onSignIn: () -> Unit,
@@ -174,10 +184,13 @@ private fun OnboardingContent(
                     )
                     5 -> NotificationsSlide(
                         enabled = state.notificationsEnabled,
+                        permissionGranted = notificationsPermissionGranted,
                         denied = notificationsDenied,
                         onEnable = onEnableNotifications,
                     )
                     6 -> SignInSlide(
+                        loggedIn = state.loggedIn,
+                        username = state.username,
                         signingIn = state.signingIn,
                         onSignIn = onSignIn,
                         onLater = onFinish,
@@ -400,6 +413,7 @@ private fun RegionSlide(
 @Composable
 private fun NotificationsSlide(
     enabled: Boolean,
+    permissionGranted: Boolean,
     denied: Boolean,
     onEnable: () -> Unit,
 ) {
@@ -409,7 +423,9 @@ private fun NotificationsSlide(
         body = Res.string.onboarding_notifications_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        if (enabled) {
+        // Alerts are genuinely active only when the opt-in is on AND the OS still permits posting; a
+        // revoked permission must not read as "on".
+        if (enabled && permissionGranted) {
             Row(
                 // Announce the success the moment the toggle flips, since focus was on the now-gone button.
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -427,19 +443,22 @@ private fun NotificationsSlide(
                 )
             }
         } else {
-            Button(onClick = onEnable) {
-                Text(stringResource(Res.string.onboarding_notifications_enable))
-            }
-            if (denied) {
-                Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
+            // Surface the current OS-permission state up front, before any tap.
+            if (!permissionGranted) {
                 Text(
-                    text = stringResource(Res.string.onboarding_notifications_denied),
+                    text = stringResource(
+                        if (denied) Res.string.onboarding_notifications_denied else Res.string.onboarding_notifications_off
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (denied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    // Denial leaves focus on the button; announce the explanation when it appears.
+                    // Announce the state when it changes (e.g. a denial after tapping).
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
+                Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
+            }
+            Button(onClick = onEnable) {
+                Text(stringResource(Res.string.onboarding_notifications_enable))
             }
         }
     }
@@ -447,44 +466,67 @@ private fun NotificationsSlide(
 
 @Composable
 private fun SignInSlide(
+    loggedIn: Boolean,
+    username: String,
     signingIn: Boolean,
     onSignIn: () -> Unit,
     onLater: () -> Unit,
 ) {
     SlideScaffold(
         icon = Icons.Filled.AccountCircle,
-        title = Res.string.onboarding_signin_title,
-        body = Res.string.onboarding_signin_body,
+        title = if (loggedIn) Res.string.onboarding_signin_done_title else Res.string.onboarding_signin_title,
+        body = if (loggedIn) Res.string.onboarding_signin_done_body else Res.string.onboarding_signin_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        // While signing in the button shows only a spinner, so give it an explicit name and announce
-        // the transition — otherwise TalkBack lands on an unlabelled, disabled control.
-        val signingInLabel = stringResource(Res.string.onboarding_signing_in)
-        Button(
-            onClick = onSignIn,
-            enabled = !signingIn,
-            modifier = if (signingIn) {
-                Modifier.semantics {
-                    contentDescription = signingInLabel
-                    liveRegion = LiveRegionMode.Polite
-                }
-            } else {
-                Modifier
-            },
-        ) {
-            if (signingIn) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
+        if (loggedIn) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
-            } else {
-                Text(stringResource(Res.string.onboarding_signin_action))
+                Text(
+                    text = stringResource(Res.string.onboarding_signin_signed_in_as, username),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
-        }
-        Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.small))
-        TextButton(onClick = onLater, enabled = !signingIn) {
-            Text(stringResource(Res.string.onboarding_signin_later))
+            Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
+            Button(onClick = onLater) {
+                Text(stringResource(Res.string.onboarding_done))
+            }
+        } else {
+            // While signing in the button shows only a spinner, so give it an explicit name and announce
+            // the transition — otherwise TalkBack lands on an unlabelled, disabled control.
+            val signingInLabel = stringResource(Res.string.onboarding_signing_in)
+            Button(
+                onClick = onSignIn,
+                enabled = !signingIn,
+                modifier = if (signingIn) {
+                    Modifier.semantics {
+                        contentDescription = signingInLabel
+                        liveRegion = LiveRegionMode.Polite
+                    }
+                } else {
+                    Modifier
+                },
+            ) {
+                if (signingIn) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text(stringResource(Res.string.onboarding_signin_action))
+                }
+            }
+            Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.small))
+            TextButton(onClick = onLater, enabled = !signingIn) {
+                Text(stringResource(Res.string.onboarding_signin_later))
+            }
         }
     }
 }

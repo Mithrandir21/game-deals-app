@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
@@ -74,6 +75,19 @@ internal class OnboardingViewModel(
                 uiState.update { it.copy(notificationsEnabled = enabled) }
             }
         }
+
+        // Reflect the current session so a replay (from the Account hub) doesn't tell an already
+        // signed-in user to sign in again.
+        viewModelScope.launch {
+            accountRepository.observeAuthState().collect { auth ->
+                uiState.update {
+                    when (auth) {
+                        is AuthState.LoggedIn -> it.copy(loggedIn = true, username = auth.username)
+                        is AuthState.LoggedOut -> it.copy(loggedIn = false, username = "")
+                    }
+                }
+            }
+        }
     }
 
     fun onCountrySelected(country: Country) {
@@ -126,5 +140,9 @@ internal class OnboardingViewModel(
         val notificationsEnabled: Boolean = false,
         /** True while the OAuth browser round-trip is in flight. */
         val signingIn: Boolean = false,
+        /** Whether an ITAD session is already active (the sign-in step becomes a confirmation). */
+        val loggedIn: Boolean = false,
+        /** The signed-in ITAD username, shown on the sign-in step when [loggedIn]. */
+        val username: String = "",
     )
 }

@@ -15,3 +15,12 @@ interface NotificationPermissionRequester {
 
 @Composable
 expect fun rememberNotificationPermissionRequester(): NotificationPermissionRequester
+
+/**
+ * Reflects whether the OS currently allows this app to post notifications — Android 13+ `POST_NOTIFICATIONS`
+ * grant (always `true` below API 33) / iOS `UNUserNotificationCenter` authorization. Re-checked on lifecycle
+ * resume, so it updates when the user toggles the permission in system settings and returns. Distinct from
+ * the opt-in preference: a user can have opted in while the OS permission is off (e.g. revoked later).
+ */
+@Composable
+expect fun rememberNotificationPermissionGranted(): Boolean
