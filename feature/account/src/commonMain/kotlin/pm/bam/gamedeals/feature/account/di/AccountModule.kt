@@ -11,6 +11,7 @@ import pm.bam.gamedeals.feature.account.ui.MyNotesViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationSettingsViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel
+import pm.bam.gamedeals.feature.account.ui.SignInPromptViewModel
 import pm.bam.gamedeals.feature.account.ui.WaitlistListViewModel
 
 val accountModule = module {
@@ -24,4 +25,5 @@ val accountModule = module {
     viewModel { IgnoredViewModel(get(), get()) }
     viewModel { MyNotesViewModel(get(), get()) }
     viewModel { NotificationSettingsViewModel(get(), get()) }
+    viewModel { SignInPromptViewModel(get(), get()) }
 }

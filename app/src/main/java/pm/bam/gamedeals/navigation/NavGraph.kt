@@ -20,6 +20,7 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
+import pm.bam.gamedeals.feature.account.ui.SignInPromptHost
 import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
@@ -163,5 +164,9 @@ internal fun NavGraph(
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
             )
         }
+
+        // One shell-level sign-in sheet for every gated action (waitlist/collection/ignore/note), driven by
+        // SignInPromptController — replaces the per-screen "go to the Account tab" snackbars.
+        SignInPromptHost()
     }
 }

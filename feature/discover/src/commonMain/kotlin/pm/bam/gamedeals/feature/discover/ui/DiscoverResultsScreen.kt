@@ -59,10 +59,9 @@ import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_re
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_row_description
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_title
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
-import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 
 // Fire a load-more once the user scrolls within this many rows of the end of the loaded page.
 private const val LOAD_MORE_THRESHOLD = 5
@@ -83,12 +82,11 @@ internal fun DiscoverResultsScreen(
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.discover_results_load_more_error)
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             DiscoverResultsViewModel.DiscoverResultsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
-            DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> SignInPromptController.request()
             is DiscoverResultsViewModel.DiscoverResultsUiEvent.ShareDeal -> platformActions.share(event.text)
         }
     }

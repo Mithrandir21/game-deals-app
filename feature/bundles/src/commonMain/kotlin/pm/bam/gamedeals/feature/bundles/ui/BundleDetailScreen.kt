@@ -97,7 +97,7 @@ import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_navig
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleDetailScreenData
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleValueSummary
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 @Composable
@@ -114,7 +114,6 @@ internal fun BundleDetailScreen(
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     BundleDetailScreenContent(
         state = state,
@@ -144,7 +143,7 @@ internal fun BundleDetailScreen(
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is BundleDetailViewModel.BundleDetailUiEvent.ShareDeal -> platformActions.share(event.text)
-            BundleDetailViewModel.BundleDetailUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            BundleDetailViewModel.BundleDetailUiEvent.SignInRequired -> SignInPromptController.request()
         }
     }
 }

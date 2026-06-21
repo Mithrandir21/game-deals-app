@@ -67,7 +67,7 @@ import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -101,7 +101,6 @@ import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_deal_
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_store_deal_row_description_favourite
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_trending_label
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
-import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 
 // Stable contentType tokens for the Home LazyColumn — let Compose recycle scrolled-off items of the same
 // type during a fling instead of re-composing from scratch (fix for fling jank on this mixed list).
@@ -133,7 +132,6 @@ internal fun HomeScreen(
     val stores = viewModel.stores.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     HomeScreenContent(
         data = data.value,
@@ -170,7 +168,7 @@ internal fun HomeScreen(
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
-            HomeViewModel.HomeUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            HomeViewModel.HomeUiEvent.SignInRequired -> SignInPromptController.request()
         }
     }
 }

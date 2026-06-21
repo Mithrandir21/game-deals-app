@@ -150,10 +150,9 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_steam_revie
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_sort_waitlisted
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.SearchResultsState
-import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 
 // Trigger a load-more when the user scrolls within this many rows of the end of the loaded page.
 private const val LOAD_MORE_THRESHOLD = 5
@@ -183,7 +182,6 @@ internal fun DealsScreen(
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     var showFilters by rememberSaveable { mutableStateOf(false) }
 
@@ -198,7 +196,7 @@ internal fun DealsScreen(
         when (event) {
             is DealsViewModel.DealsUiEvent.ShareDeal -> platformActions.share(event.text)
             DealsViewModel.DealsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
-            DealsViewModel.DealsUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            DealsViewModel.DealsUiEvent.SignInRequired -> SignInPromptController.request()
         }
     }
 

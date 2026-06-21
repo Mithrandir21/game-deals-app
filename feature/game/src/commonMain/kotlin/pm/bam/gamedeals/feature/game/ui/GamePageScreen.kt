@@ -224,7 +224,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_more_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 private val AlwaysScrollable: () -> Boolean = { true }
@@ -261,12 +261,11 @@ internal fun GamePageScreen(
     val followedFranchiseIds = viewModel.followedFranchiseIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is GamePageViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
-            GamePageViewModel.GameUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            GamePageViewModel.GameUiEvent.SignInRequired -> SignInPromptController.request()
         }
     }
 

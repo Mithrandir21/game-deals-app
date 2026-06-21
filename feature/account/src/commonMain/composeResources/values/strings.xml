@@ -4,6 +4,7 @@
     <string name="account_signed_out_title">Sync your games with IsThereAnyDeal</string>
     <string name="account_signed_out_body">Sign in to keep your waitlist and collection in sync across devices.</string>
     <string name="account_sign_in">Sign in with IsThereAnyDeal</string>
+    <string name="account_signin_prompt_dismiss">Not now</string>
 
     <string name="account_signed_in_as">Signed in as %1$s</string>
     <string name="account_sign_out">Sign out</string>

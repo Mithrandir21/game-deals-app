@@ -59,7 +59,7 @@ import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.deal_waitlist_sign_in_required
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -92,7 +92,6 @@ internal fun StoreScreen(
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
-    val signInRequired = stringResource(CommonRes.string.deal_waitlist_sign_in_required)
     val platformActions = LocalPlatformActions.current
 
     val store = (uiState as? StoreScreenData.Data)?.store
@@ -100,7 +99,7 @@ internal fun StoreScreen(
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is StoreViewModel.StoreUiEvent.ShareDeal -> platformActions.share(event.text)
-            StoreViewModel.StoreUiEvent.SignInRequired -> snackbarHostState.showSnackbar(signInRequired)
+            StoreViewModel.StoreUiEvent.SignInRequired -> SignInPromptController.request()
         }
     }
 
