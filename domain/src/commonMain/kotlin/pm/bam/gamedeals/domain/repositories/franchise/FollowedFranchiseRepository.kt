@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.builtins.ListSerializer
 import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.time.Clock
@@ -32,21 +34,22 @@ internal class FollowedFranchiseRepositoryImpl(
 
     private val followed = MutableStateFlow<List<FollowedFranchise>?>(null)
 
+    // Serializes the whole-list read-modify-write — without it two near-simultaneous toggles read the same
+    // baseline and the last persist() wins, silently dropping a follow/unfollow (lost update).
+    private val mutex = Mutex()
+
     override fun observeFollowed(): Flow<List<FollowedFranchise>> =
         followed
-            .onStart { if (followed.value == null) followed.value = load() }
+            .onStart { mutex.withLock { ensureLoaded() } }
             .filterNotNull()
 
     override fun observeFollowedIds(): Flow<Set<Long>> =
         observeFollowed().map { list -> list.map { it.franchiseId }.toSet() }
 
-    override suspend fun getFollowed(): List<FollowedFranchise> {
-        if (followed.value == null) followed.value = load()
-        return followed.value.orEmpty()
-    }
+    override suspend fun getFollowed(): List<FollowedFranchise> = mutex.withLock { ensureLoaded() }
 
-    override suspend fun toggle(franchiseId: Long, name: String) {
-        val current = getFollowed()
+    override suspend fun toggle(franchiseId: Long, name: String) = mutex.withLock {
+        val current = ensureLoaded()
         val next = if (current.any { it.franchiseId == franchiseId }) {
             current.filterNot { it.franchiseId == franchiseId }
         } else {
@@ -55,8 +58,15 @@ internal class FollowedFranchiseRepositoryImpl(
         persist(next)
     }
 
-    override suspend fun remove(franchiseId: Long) =
-        persist(getFollowed().filterNot { it.franchiseId == franchiseId })
+    override suspend fun remove(franchiseId: Long) = mutex.withLock {
+        persist(ensureLoaded().filterNot { it.franchiseId == franchiseId })
+    }
+
+    /** Seeds [followed] from [Storage] on first access. Callers must hold [mutex]; [Mutex] is not reentrant. */
+    private suspend fun ensureLoaded(): List<FollowedFranchise> {
+        if (followed.value == null) followed.value = load()
+        return followed.value.orEmpty()
+    }
 
     private suspend fun persist(list: List<FollowedFranchise>) {
         storage.save(FOLLOWED_FRANCHISES_KEY, list, ListSerializer(FollowedFranchise.serializer()))

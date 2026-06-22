@@ -25,6 +25,8 @@ import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
+import pm.bam.gamedeals.domain.repositories.cache.decodeOffMain
+import pm.bam.gamedeals.domain.repositories.cache.encodeOffMain
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInDay
@@ -157,7 +159,7 @@ internal class GamesRepositoryImpl(
                     GameDetailsCacheEntry(
                         gameId = gameId,
                         country = country,
-                        json = json.encodeToString(GameDetails.serializer(), details),
+                        json = json.encodeOffMain(GameDetails.serializer(), details),
                         expires = clock.nowMillis() + GAME_DETAILS_TTL_MILLIS,
                     )
                 )
@@ -167,7 +169,7 @@ internal class GamesRepositoryImpl(
         fetched?.let { return it } // just refreshed — return the fresh value without a re-read/decode
         val cached = gameDetailsCacheDao.get(gameId, country)
             ?: error("Game details for $gameId ($country) missing after refresh")
-        return json.decodeFromString(GameDetails.serializer(), cached.json)
+        return json.decodeOffMain(GameDetails.serializer(), cached.json)
     }
 
     /**
@@ -183,7 +185,7 @@ internal class GamesRepositoryImpl(
     override suspend fun getPriceHistory(gameId: String): PriceHistory {
         val country = regionRepository.getSelectedCountryCode()
         val cachedEntry = priceHistoryCacheDao.get(gameId, country)
-        val cachedHistory = cachedEntry?.let { json.decodeFromString(PriceHistory.serializer(), it.json) }
+        val cachedHistory = cachedEntry?.let { json.decodeOffMain(PriceHistory.serializer(), it.json) }
         var refreshed: PriceHistory? = null
         val cache = CachedResource(
             clock = clock,
@@ -200,7 +202,7 @@ internal class GamesRepositoryImpl(
                     PriceHistoryCacheEntry(
                         gameId = gameId,
                         country = country,
-                        json = json.encodeToString(PriceHistory.serializer(), merged),
+                        json = json.encodeOffMain(PriceHistory.serializer(), merged),
                         fetchedAt = now,
                         expires = now + PRICE_HISTORY_TTL_MILLIS,
                     )

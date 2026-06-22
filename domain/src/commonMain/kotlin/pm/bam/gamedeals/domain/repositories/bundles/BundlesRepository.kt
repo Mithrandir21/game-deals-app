@@ -8,6 +8,8 @@ import pm.bam.gamedeals.domain.db.dao.BundlesCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
+import pm.bam.gamedeals.domain.repositories.cache.decodeOffMain
+import pm.bam.gamedeals.domain.repositories.cache.encodeOffMain
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
@@ -63,7 +65,7 @@ internal class BundlesRepositoryImpl(
                 bundlesCacheDao.upsert(
                     BundlesCacheEntry(
                         country = country,
-                        json = json.encodeToString(serializer, fetched),
+                        json = json.encodeOffMain(serializer, fetched),
                         fetchedAt = now,
                         expires = now + BUNDLES_TTL_MILLIS,
                     )
@@ -71,7 +73,7 @@ internal class BundlesRepositoryImpl(
             },
         )
         cache.refreshIfNeeded()
-        return refreshed ?: cachedEntry?.let { json.decodeFromString(serializer, it.json) } ?: emptyList()
+        return refreshed ?: cachedEntry?.let { json.decodeOffMain(serializer, it.json) } ?: emptyList()
     }
 
     override suspend fun getBundle(id: Int): Bundle? = getBundles().firstOrNull { it.id == id }

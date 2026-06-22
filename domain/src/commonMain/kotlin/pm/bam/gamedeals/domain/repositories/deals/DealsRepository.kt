@@ -18,6 +18,8 @@ import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
+import pm.bam.gamedeals.domain.repositories.cache.decodeOffMain
+import pm.bam.gamedeals.domain.repositories.cache.encodeOffMain
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
@@ -115,7 +117,7 @@ internal class DealsRepositoryImpl(
                     DealDetailsCacheEntry(
                         dealId = dealId,
                         country = country,
-                        json = json.encodeToString(DealDetails.serializer(), details),
+                        json = json.encodeOffMain(DealDetails.serializer(), details),
                         expires = clock.nowMillis() + DEAL_DETAILS_TTL_MILLIS,
                     )
                 )
@@ -125,7 +127,7 @@ internal class DealsRepositoryImpl(
         fetched?.let { return it } // just refreshed — return the fresh value without a re-read/decode
         val cached = dealDetailsCacheDao.get(dealId, country)
             ?: error("Deal details for $dealId ($country) missing after refresh")
-        return json.decodeFromString(DealDetails.serializer(), cached.json)
+        return json.decodeOffMain(DealDetails.serializer(), cached.json)
     }
 
     override suspend fun getDeals(query: DealsQuery): List<Deal> =

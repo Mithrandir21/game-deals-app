@@ -7,6 +7,8 @@ import pm.bam.gamedeals.domain.db.cache.StatsRankingsCacheEntry
 import pm.bam.gamedeals.domain.db.dao.StatsRankingsCacheDao
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
+import pm.bam.gamedeals.domain.repositories.cache.decodeOffMain
+import pm.bam.gamedeals.domain.repositories.cache.encodeOffMain
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.StatsSource
 import pm.bam.gamedeals.domain.utils.millisInHour
@@ -76,7 +78,7 @@ internal class StatsRepositoryImpl(
                     StatsRankingsCacheEntry(
                         rankingType = rankingType,
                         country = country,
-                        json = json.encodeToString(serializer, fetched),
+                        json = json.encodeOffMain(serializer, fetched),
                         fetchedAt = now,
                         expires = now + STATS_RANKINGS_TTL_MILLIS,
                     )
@@ -84,7 +86,7 @@ internal class StatsRepositoryImpl(
             },
         )
         cache.refreshIfNeeded()
-        val result = refreshed ?: cachedEntry?.let { json.decodeFromString(serializer, it.json) } ?: emptyList()
+        val result = refreshed ?: cachedEntry?.let { json.decodeOffMain(serializer, it.json) } ?: emptyList()
         return limit?.let(result::take) ?: result
     }
 }
