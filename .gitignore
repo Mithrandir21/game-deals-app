@@ -14,6 +14,7 @@ iosApp/Configuration/Secrets.xcconfig
 
 # Log/OS Files
 *.log
+**/.DS_Store
 
 # Android Studio generated files and folders
 captures/
