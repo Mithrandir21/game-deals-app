@@ -13,9 +13,10 @@ import pm.bam.gamedeals.domain.models.GameArtwork
 
 @Serializable
 data class RemoteItadPrice(
-    @SerialName("amount") val amount: Double,
+    // Defaulted so an omitted/partial price block degrades to a zero price rather than failing the row.
+    @SerialName("amount") val amount: Double = 0.0,
     @SerialName("amountInt") val amountInt: Int? = null,
-    @SerialName("currency") val currency: String,
+    @SerialName("currency") val currency: String = "",
 )
 
 @Serializable
@@ -58,7 +59,8 @@ fun RemoteItadGameAssets?.toGameArtwork(): GameArtwork = GameArtwork(
 data class RemoteItadSearchGame(
     @SerialName("id") val id: String,
     @SerialName("slug") val slug: String? = null,
-    @SerialName("title") val title: String,
+    // Defaulted (display field); the row's identity is `id`, which stays required.
+    @SerialName("title") val title: String = "",
     @SerialName("type") val type: String? = null,
     @SerialName("mature") val mature: Boolean? = null,
     @SerialName("assets") val assets: RemoteItadGameAssets? = null,

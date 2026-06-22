@@ -39,7 +39,8 @@ internal fun RemoteGiveawayType.toGiveawayType(): GiveawayType =
         RemoteGiveawayType.GAME -> GiveawayType.GAME
         RemoteGiveawayType.DLC -> GiveawayType.DLC
         RemoteGiveawayType.BETA -> GiveawayType.BETA
-        RemoteGiveawayType.OTHER -> GiveawayType.OTHER
+        // A type GamerPower added after this build still shows, bucketed as "Other", rather than crashing.
+        RemoteGiveawayType.OTHER, RemoteGiveawayType.UNKNOWN -> GiveawayType.OTHER
     }
 
 private fun String.toGiveawayPlatform(): ImmutableList<GiveawayPlatform> =

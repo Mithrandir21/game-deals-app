@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 21,
-    "identityHash": "a3a41d9e64c25ee44d5f07e5a27c5b66",
+    "version": 1,
+    "identityHash": "182e859d0828a12905797300087e63b7",
     "entities": [
       {
         "tableName": "Deal",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dealID` TEXT NOT NULL, `internalName` TEXT, `title` TEXT NOT NULL, `metacriticLink` TEXT, `storeID` INTEGER NOT NULL, `gameID` TEXT NOT NULL, `salePriceValue` REAL NOT NULL, `salePriceDenominated` TEXT NOT NULL, `normalPriceValue` REAL NOT NULL, `normalPriceDenominated` TEXT NOT NULL, `isOnSale` INTEGER NOT NULL, `savings` REAL NOT NULL, `metacriticScore` INTEGER, `steamRatingText` TEXT, `steamRatingPercent` INTEGER, `steamRatingCount` TEXT, `steamAppID` INTEGER, `releaseDate` INTEGER, `lastChange` INTEGER, `dealRating` REAL, `thumb` TEXT NOT NULL, `url` TEXT NOT NULL, `expires` INTEGER NOT NULL, `isLowestEver` INTEGER NOT NULL DEFAULT 0, `isNewHistoricalLow` INTEGER NOT NULL DEFAULT 0, `isStoreLow` INTEGER NOT NULL DEFAULT 0, `hasVoucher` INTEGER NOT NULL DEFAULT 0, `country` TEXT NOT NULL DEFAULT 'US', PRIMARY KEY(`dealID`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dealID` TEXT NOT NULL, `internalName` TEXT, `title` TEXT NOT NULL, `metacriticLink` TEXT, `storeID` INTEGER NOT NULL, `gameID` TEXT NOT NULL, `salePriceValue` REAL NOT NULL, `salePriceDenominated` TEXT NOT NULL, `normalPriceValue` REAL NOT NULL, `normalPriceDenominated` TEXT NOT NULL, `isOnSale` INTEGER NOT NULL, `savings` REAL NOT NULL, `metacriticScore` INTEGER, `steamRatingText` TEXT, `steamRatingPercent` INTEGER, `steamRatingCount` TEXT, `steamAppID` INTEGER, `releaseDate` INTEGER, `lastChange` INTEGER, `dealRating` REAL, `url` TEXT NOT NULL, `expires` INTEGER NOT NULL, `isLowestEver` INTEGER NOT NULL DEFAULT 0, `isNewHistoricalLow` INTEGER NOT NULL DEFAULT 0, `isStoreLow` INTEGER NOT NULL DEFAULT 0, `hasVoucher` INTEGER NOT NULL DEFAULT 0, `country` TEXT NOT NULL DEFAULT 'US', `art_banner145` TEXT, `art_banner300` TEXT, `art_banner400` TEXT, `art_banner600` TEXT, `art_boxart` TEXT, PRIMARY KEY(`dealID`))",
         "fields": [
           {
             "fieldPath": "dealID",
@@ -119,12 +119,6 @@
             "affinity": "REAL"
           },
           {
-            "fieldPath": "thumb",
-            "columnName": "thumb",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "url",
             "columnName": "url",
             "affinity": "TEXT",
@@ -170,6 +164,31 @@
             "affinity": "TEXT",
             "notNull": true,
             "defaultValue": "'US'"
+          },
+          {
+            "fieldPath": "artwork.banner145",
+            "columnName": "art_banner145",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner300",
+            "columnName": "art_banner300",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner400",
+            "columnName": "art_banner400",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner600",
+            "columnName": "art_banner600",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.boxart",
+            "columnName": "art_boxart",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -181,7 +200,7 @@
       },
       {
         "tableName": "Game",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`gameID` TEXT NOT NULL, `steamAppID` INTEGER, `cheapestValue` REAL NOT NULL, `cheapestDenominated` TEXT NOT NULL, `cheapestDealID` TEXT NOT NULL, `title` TEXT NOT NULL, `internalName` TEXT NOT NULL, `thumb` TEXT NOT NULL, `expires` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`gameID`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`gameID` TEXT NOT NULL, `steamAppID` INTEGER, `cheapestValue` REAL NOT NULL, `cheapestDenominated` TEXT NOT NULL, `cheapestDealID` TEXT NOT NULL, `title` TEXT NOT NULL, `internalName` TEXT NOT NULL, `expires` INTEGER NOT NULL DEFAULT 0, `art_banner145` TEXT, `art_banner300` TEXT, `art_banner400` TEXT, `art_banner600` TEXT, `art_boxart` TEXT, PRIMARY KEY(`gameID`))",
         "fields": [
           {
             "fieldPath": "gameID",
@@ -225,17 +244,36 @@
             "notNull": true
           },
           {
-            "fieldPath": "thumb",
-            "columnName": "thumb",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "expires",
             "columnName": "expires",
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
+          },
+          {
+            "fieldPath": "artwork.banner145",
+            "columnName": "art_banner145",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner300",
+            "columnName": "art_banner300",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner400",
+            "columnName": "art_banner400",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.banner600",
+            "columnName": "art_banner600",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artwork.boxart",
+            "columnName": "art_boxart",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -773,7 +811,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a3a41d9e64c25ee44d5f07e5a27c5b66')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '182e859d0828a12905797300087e63b7')"
     ]
   }
 }

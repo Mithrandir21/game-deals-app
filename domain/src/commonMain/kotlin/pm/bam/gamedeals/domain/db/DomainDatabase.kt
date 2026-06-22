@@ -39,7 +39,9 @@ import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
 import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
 import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
-internal const val DOMAIN_DB_VERSION = 22
+// v1 is the clean pre-1.0 baseline — the prior v5–v21 history never shipped (see Migrations.kt).
+// From v1 forward, bumping this REQUIRES a real Migration(n, n+1) + a schema-diff test.
+internal const val DOMAIN_DB_VERSION = 1
 
 @Database(
     version = DOMAIN_DB_VERSION,

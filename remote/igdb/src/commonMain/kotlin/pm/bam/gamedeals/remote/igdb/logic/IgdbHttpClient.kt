@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.igdb.logic
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.Send
 import io.ktor.client.plugins.api.createClientPlugin
@@ -13,6 +14,7 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.client.request.url
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -59,6 +61,15 @@ internal fun igdbHttpClient(
             requestTimeoutMillis = 30_000
         }
 
+        // IGDB returns 429 when the 4 req/s budget is exceeded. A throttled request wasn't processed, so
+        // retrying is safe — weather it transparently (honoring Retry-After) rather than surfacing an
+        // error. Complements the proactive concurrency limiter above; mirrors the ITAD retry.
+        install(HttpRequestRetry) {
+            maxRetries = IGDB_MAX_RETRIES
+            retryIf { _, response -> response.status == HttpStatusCode.TooManyRequests }
+            exponentialDelay(respectRetryAfterHeader = true)
+        }
+
         when (buildUtil.buildType()) {
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
@@ -90,6 +101,9 @@ internal const val TWITCH_TOKEN_BASE_URL = "https://id.twitch.tv"
 
 /** Default cap on simultaneous in-flight IGDB requests (IGDB allows up to 8 open connections). */
 private const val IGDB_MAX_CONCURRENCY = 8
+
+/** Retry attempts after the initial request when IGDB returns 429 (see [igdbHttpClient]). */
+private const val IGDB_MAX_RETRIES = 3
 
 /** Config for [IgdbConcurrencyLimiter]. */
 internal class IgdbConcurrencyLimiterConfig {

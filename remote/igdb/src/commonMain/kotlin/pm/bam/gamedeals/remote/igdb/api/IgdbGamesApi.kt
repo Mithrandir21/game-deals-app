@@ -5,13 +5,17 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.igdb.models.RemoteExternalGameLookup
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTag
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTimeToBeat
+import pm.bam.gamedeals.remote.logic.bodyAsListSkippingInvalid
 
 /**
  * IGDB endpoints. IGDB uses Apicalypse — a plain-text query language sent as the request body.
@@ -19,7 +23,19 @@ import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbTimeToBeat
  * raw `String` body. The `Client-ID` header is set on the HttpClient's `defaultRequest`; the
  * `Authorization: Bearer …` header is injected by Ktor's Auth plugin.
  */
-class IgdbGamesApi(private val httpClient: HttpClient) {
+class IgdbGamesApi(
+    private val httpClient: HttpClient,
+    private val json: Json = Json { ignoreUnknownKeys = true; encodeDefaults = true },
+    private val logger: Logger? = null,
+) {
+
+    /**
+     * Decodes a `/v4/games` response element by element so one malformed game row drops that row rather
+     * than failing the whole list (a screen of discovery/franchise results). [json]/[logger] default for
+     * tests; DI injects the configured singletons.
+     */
+    private suspend fun HttpResponse.igdbGames(): List<RemoteIgdbGame> =
+        bodyAsListSkippingInvalid<RemoteIgdbGame>(json, logger, TAG)
 
     /**
      * Lean lookup — only the fields needed for the deal-screen summary card.
@@ -67,7 +83,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildIgdbIdLookupDetailsQuery(igdbGameId))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -85,7 +101,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildExactNameLookupDetailsQuery(title))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -104,7 +120,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildSearchLookupDetailsQuery(title))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -123,7 +139,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildSearchCandidatesQuery(title))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -141,7 +157,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildNewReleasesQuery(nowEpochSeconds, limit))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -188,7 +204,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildTagsDiscoveryQuery(genreIds, themeIds, gameModeIds, perspectiveIds, keywordIds, limit, offset))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -208,7 +224,7 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
             httpClient.post("/v4/games") {
                 contentType(ContentType.Text.Plain)
                 setBody(buildFranchiseGamesQuery(franchiseId, limit))
-            }.body()
+            }.igdbGames()
         )
     } catch (e: CancellationException) {
         throw e
@@ -254,6 +270,8 @@ class IgdbGamesApi(private val httpClient: HttpClient) {
     }
 
     internal companion object {
+        private const val TAG = "IgdbGamesApi"
+
         // IGDB migrated from the legacy `category` enum to a separate `external_game_source` reference
         // table (see /v4/external_game_sources). Steam still has id = 1 there. The old `category` field
         // is empty on modern records (e.g. Halo Infinite, Counter-Strike 2), so filtering on

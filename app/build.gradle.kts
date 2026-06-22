@@ -86,7 +86,9 @@ android {
 
     defaultConfig {
         applicationId = "pm.bam.gamedeals"
-        targetSdk = 34
+        // API 35 is Google Play's current minimum target; matches compileSdk (36) to avoid a near-term re-bump.
+        // NOTE: targeting 35+ forces edge-to-edge — see enableEdgeToEdge() in MainActivity and per-screen insets.
+        targetSdk = 36
         versionCode = 9
         versionName = "1.0.6"
 
@@ -110,8 +112,9 @@ android {
             enableAndroidTestCoverage = true
         }
         release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             signingConfig = signingConfigs.getByName(releaseSigningKey)
         }

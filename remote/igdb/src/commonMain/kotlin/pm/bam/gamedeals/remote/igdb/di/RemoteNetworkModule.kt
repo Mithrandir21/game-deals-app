@@ -28,5 +28,5 @@ val igdbNetworkModule = module {
         )
     }
 
-    single { IgdbGamesApi(get(IGDB_QUALIFIER)) }
+    single { IgdbGamesApi(get(IGDB_QUALIFIER), json = get(), logger = get()) }
 }

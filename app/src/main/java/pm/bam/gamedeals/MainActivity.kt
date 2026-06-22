@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -23,6 +24,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // targetSdk 35+ forces edge-to-edge; call this explicitly so the system-bar scrims/contrast are
+        // applied on older API levels too. Per-surface insets are handled in the shell + screen scaffolds.
+        enableEdgeToEdge()
         handleNotificationIntent(intent) // cold-start tap
         setContent {
             GameDealsTheme {

@@ -46,5 +46,10 @@ class GiveawayPlatformsConverter {
 
     @TypeConverter
     fun convertToObject(json: String): ImmutableList<GiveawayPlatform> =
-        json.split(", ").map { GiveawayPlatform.valueOf(it) }.toImmutableList()
+        json.split(", ")
+            // Skip any token that isn't a current GiveawayPlatform constant. A bare valueOf() throws
+            // IllegalArgumentException on read for an unknown/renamed platform name, which would crash
+            // giveaway hydration; Giveaway is a TTL cache, so dropping the stray token is safe.
+            .mapNotNull { name -> GiveawayPlatform.entries.firstOrNull { it.name == name } }
+            .toImmutableList()
 }

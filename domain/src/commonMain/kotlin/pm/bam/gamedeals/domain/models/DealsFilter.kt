@@ -49,6 +49,13 @@ data class DealsFilter(
         ).count { it }
 }
 
+/*
+ * PERSISTED CONTRACT — these three enums are serialized **by Kotlin constant name** (no @SerialName)
+ * inside the `deals_filter` Storage blob. Renaming a constant silently orphans a user's saved filter
+ * after launch. Add new constants freely; never rename or remove an existing one without a read-time
+ * migration. (`apiValue` is the ITAD wire encoding and is safe to change — it isn't persisted.)
+ */
+
 /** ITAD product type (`type` filter); [apiValue] is the numeric id ITAD expects. */
 enum class ProductType(val apiValue: Int) {
     Game(1),

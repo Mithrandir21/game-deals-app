@@ -5,7 +5,9 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.submitForm
 import io.ktor.http.URLBuilder
 import io.ktor.http.parameters
+import kotlinx.serialization.SerializationException
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The ITAD OAuth authorization-code + PKCE client (epic #219, Phase 2): builds the authorize URL the
@@ -34,25 +36,42 @@ class ItadOAuthClient(
 
     /** Exchanges an authorization [code] (+ the original [codeVerifier]) for tokens. */
     suspend fun exchangeCodeForToken(code: String, codeVerifier: String): RemoteItadTokenResponse =
-        httpClient.submitForm(
-            url = ItadOAuthConfig.TOKEN_URL,
-            formParameters = parameters {
-                append("grant_type", "authorization_code")
-                append("code", code)
-                append("redirect_uri", credentials.redirectUri)
-                append("client_id", credentials.oauthClientId)
-                append("code_verifier", codeVerifier)
-            },
-        ).body()
+        decodeTokenResponse("code exchange") {
+            httpClient.submitForm(
+                url = ItadOAuthConfig.TOKEN_URL,
+                formParameters = parameters {
+                    append("grant_type", "authorization_code")
+                    append("code", code)
+                    append("redirect_uri", credentials.redirectUri)
+                    append("client_id", credentials.oauthClientId)
+                    append("code_verifier", codeVerifier)
+                },
+            ).body()
+        }
 
     /** Exchanges a [refreshToken] for a fresh access token. */
     suspend fun refreshToken(refreshToken: String): RemoteItadTokenResponse =
-        httpClient.submitForm(
-            url = ItadOAuthConfig.TOKEN_URL,
-            formParameters = parameters {
-                append("grant_type", "refresh_token")
-                append("refresh_token", refreshToken)
-                append("client_id", credentials.oauthClientId)
-            },
-        ).body()
+        decodeTokenResponse("token refresh") {
+            httpClient.submitForm(
+                url = ItadOAuthConfig.TOKEN_URL,
+                formParameters = parameters {
+                    append("grant_type", "refresh_token")
+                    append("refresh_token", refreshToken)
+                    append("client_id", credentials.oauthClientId)
+                },
+            ).body()
+        }
+
+    // A token body that can't be parsed into a usable token (e.g. no `access_token`) is a real auth
+    // failure — surface it as a typed [ItadOAuthException] instead of leaking a SerializationException.
+    private suspend fun decodeTokenResponse(
+        operation: String,
+        request: suspend () -> RemoteItadTokenResponse,
+    ): RemoteItadTokenResponse = try {
+        request()
+    } catch (ce: CancellationException) {
+        throw ce
+    } catch (e: SerializationException) {
+        throw ItadOAuthException("ITAD $operation returned a malformed token response", e)
+    }
 }

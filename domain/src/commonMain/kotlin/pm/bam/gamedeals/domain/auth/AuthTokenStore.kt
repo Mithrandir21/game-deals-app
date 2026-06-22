@@ -15,8 +15,9 @@ import pm.bam.gamedeals.domain.models.AuthState
  * [AuthState] reactively — mirroring `RegionRepository`'s lazily-seeded `StateFlow` pattern so the
  * UI re-renders the moment the user logs in or out.
  *
- * SECURITY: [Storage] is plain `SharedPreferences` / `NSUserDefaults` — NOT encrypted. Moving tokens
- * to `EncryptedSharedPreferences` / Keychain is tracked as Phase 6.2 (#239).
+ * SECURITY: this is wired to the SECURE_QUALIFIER [Storage] — encrypted at rest via the Android Keystore
+ * (AES/GCM) and the iOS Keychain (#239), not the plain settings store. The token shape and key string are
+ * unchanged; only the backing store differs.
  */
 interface AuthTokenStore {
     fun observeAuthState(): Flow<AuthState>

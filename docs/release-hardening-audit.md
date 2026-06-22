@@ -1,8 +1,12 @@
 # Pre-Release Hardening Audit
 
-**Status:** findings only — no code changes have been made.
+**Status:** IMPLEMENTED on `dev` (2026-06-22). All tiers landed in one change set. Verified on the Linux
+dev box: `assembleDebug`, module host tests, app unit tests, and a real R8 `assembleRelease` all green;
+Room schema regenerated to a single `1.json`. Still pending hardware: the iOS Keychain backend
+(`:iosApp:compileKotlinIosSimulatorArm64` on macOS) and the on-device edge-to-edge / OAuth / notification
+smoke tests after the targetSdk-36 bump.
 **Audience:** maintainer, pre-1.0.
-**Date:** 2026-06-21.
+**Date:** 2026-06-21 (audit) · 2026-06-22 (implementation).
 
 ## Why this exists
 
@@ -144,25 +148,25 @@ Shared `Json` (leave as-is): `common/src/commonMain/kotlin/pm/bam/gamedeals/comm
 ## Pre-release checklist
 
 **Tier 0 — blockers**
-- [ ] Bump `targetSdk` 34 → 35 (or 36); re-test edge-to-edge, notifications, OAuth.
+- [x] Bump `targetSdk` 34 → **36** (matches `compileSdk`); `enableEdgeToEdge()` added in `MainActivity`. ⚠ Still needs an on-device edge-to-edge / notifications / OAuth re-test.
 
 **Tier 1 — format/contract lock-in (before first install in the wild)**
-- [ ] Reset Room to **v1**: version → 1, empty `DOMAIN_MIGRATIONS`, delete `MIGRATION_*`, `fallbackToDestructiveMigrationOnDowngrade`, regenerate single `1.json`, delete migration tests.
-- [ ] GamerPower `RemoteGiveawayType`: add `UNKNOWN` + custom serializer; filter in mapper.
-- [ ] Add `decodeListSkippingInvalid<T>()` helper; apply to ITAD deals list, GamerPower giveaways, IGDB game arrays.
-- [ ] Add nullable defaults to all-required **display** DTOs (`RemoteGiveaway`, `RemoteItadPrice`, `RemoteItadSearchGame`); keep `id`/`name` required.
-- [ ] Keep auth-token DTOs required; route a missing `access_token` to a typed auth error.
-- [ ] Guard `GiveawayPlatformsConverter.valueOf` against unknown platform names.
-- [ ] Record the 11 Storage keys + `deals_filter` enum names as frozen contracts.
+- [x] Reset Room to **v1**: version → 1, empty `DOMAIN_MIGRATIONS`, deleted `MIGRATION_*`, `fallbackToDestructiveMigrationOnDowngrade`, regenerated single `1.json`, deleted migration tests.
+- [x] GamerPower `RemoteGiveawayType`: added `UNKNOWN` + custom serializer; bucketed to `OTHER` in mapper.
+- [x] Added `decodeListSkippingInvalid<T>()` helper (`remote/.../logic/JsonListDecoding.kt`); applied to ITAD deals list, GamerPower giveaways, IGDB game arrays.
+- [x] Added nullable defaults to all-required **display** DTOs (`RemoteGiveaway`, `RemoteItadPrice`, `RemoteItadSearchGame`); kept `id`/`name` required.
+- [x] Kept auth-token DTOs required; a missing `access_token` now surfaces as a typed `ItadOAuthException`.
+- [x] Guarded `GiveawayPlatformsConverter` against unknown platform names (skip instead of `valueOf` crash).
+- [x] Recorded the 11 Storage keys + `deals_filter` enum names as frozen contracts (code comments).
 
 **Tier 2 — release-readiness (in scope)**
-- [ ] Enable R8 + `shrinkResources`; add `app/proguard-rules.pro`; pass `assembleRelease` + on-device smoke test.
-- [ ] Encrypt `itad_auth_token` via a Keystore-backed Android `actual` (#239); iOS deferred.
-- [ ] Add retry to IGDB; add retry + concurrency limiter to GamerPower.
+- [x] Enabled R8 + `isShrinkResources`; added `app/proguard-rules.pro`; `assembleRelease` passes (on-device smoke test still pending).
+- [x] Encrypted `itad_auth_token` via a `SECURE_QUALIFIER` store — Android Keystore AES/GCM **and** iOS Keychain (#239). *(Deviation from the original "iOS deferred": iOS Keychain backend implemented, pending macOS compile.)*
+- [x] Added 429 retry to IGDB; added retry + concurrency limiter to GamerPower (shared `GameDealsConcurrencyLimiter`).
 
 **Tier 3 — record, don't change**
-- [ ] Freeze notification dedup signature format.
-- [ ] Freeze WorkManager work name, notification channel/IDs, OAuth scheme, intent extras.
+- [x] Froze notification dedup signature format (record).
+- [x] Froze WorkManager work name, notification channel/IDs, OAuth scheme, intent extras (record).
 
 ---
 

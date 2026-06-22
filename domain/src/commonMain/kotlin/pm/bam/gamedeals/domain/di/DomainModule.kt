@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.di
 
 import androidx.room.RoomDatabase
 import org.koin.dsl.module
+import pm.bam.gamedeals.common.di.SECURE_QUALIFIER
 import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.auth.AuthTokenStoreImpl
@@ -73,8 +74,12 @@ val domainModule = module {
 
     single<DomainDatabase> {
         get<RoomDatabase.Builder<DomainDatabase>>()
+            // Empty today (v1 baseline); future schema bumps register their Migration(n, n+1) here.
             .addMigrations(*DOMAIN_MIGRATIONS)
-            .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2, 3, 4)
+            // Dev-convenience ONLY: lets a dev device still on the old v22 recreate cleanly now that the
+            // code version dropped to 1. NEVER widen this to a blanket fallbackToDestructiveMigration() —
+            // that would wipe real user data on a future broken upgrade. See Migrations.kt for the policy.
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .addTypeConverter(get<StoreImagesConverter>())
             .addTypeConverter(get<GiveawayPlatformsConverter>())
             .addTypeConverter(get<LocalDatetimeConverter>())
@@ -112,7 +117,8 @@ val domainModule = module {
 
     // ITAD account. AuthTokenStore is Storage-backed (like RegionRepository); Waitlist/Collection are
     // backed by the live ITAD account source, Stats by the live ITAD stats source.
-    single<AuthTokenStore> { AuthTokenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    // Auth token is encrypted at rest — use the SECURE_QUALIFIER store (#239), not the settings store.
+    single<AuthTokenStore> { AuthTokenStoreImpl(get(SECURE_QUALIFIER)) }
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }

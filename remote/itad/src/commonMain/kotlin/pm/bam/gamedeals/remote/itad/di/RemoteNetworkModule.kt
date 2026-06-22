@@ -39,7 +39,7 @@ val itadNetworkModule = module {
     }
 
     single { ItadShopsApi(get(ITAD_QUALIFIER)) }
-    single { ItadDealsApi(get(ITAD_QUALIFIER)) }
+    single { ItadDealsApi(get(ITAD_QUALIFIER), json = get(), logger = get()) }
     single { ItadGamesApi(get(ITAD_QUALIFIER)) }
     single { ItadBundlesApi(get(ITAD_QUALIFIER)) }
     single { ItadStatsApi(get(ITAD_QUALIFIER)) }
