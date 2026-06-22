@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.notifications
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -73,6 +74,9 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
         }
     }
 
+    // POST_NOTIFICATIONS is guarded by present(): it bails on !areNotificationsEnabled() and wraps the
+    // calls below in a SecurityException catch. Lint can't see across that call frame, so suppress here.
+    @SuppressLint("MissingPermission")
     private fun notifySummary(
         id: Int,
         title: String,
