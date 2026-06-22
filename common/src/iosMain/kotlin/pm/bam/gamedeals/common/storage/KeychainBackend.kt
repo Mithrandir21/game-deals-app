@@ -4,11 +4,15 @@ import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.COpaquePointerVar
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.MemScope
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.plus
+import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import platform.CoreFoundation.CFDictionaryCreate
 import platform.CoreFoundation.CFDictionaryRef
@@ -26,7 +30,6 @@ import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.create
-import platform.Foundation.dataUsingEncoding
 import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
 import platform.Security.SecItemDelete
@@ -82,7 +85,7 @@ internal class KeychainBackend(
 
     override fun writeString(key: String, value: String): Boolean = memScoped {
         remove(key)
-        val data = (value as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: return@memScoped false
+        val data = value.encodeToByteArray().toNSData()
         val serviceRef = CFBridgingRetain(service)
         val accountRef = CFBridgingRetain(key)
         val dataRef = CFBridgingRetain(data)
@@ -139,14 +142,18 @@ internal class KeychainBackend(
         }
     }
 
+    private fun ByteArray.toNSData(): NSData =
+        if (isEmpty()) NSData() else usePinned { NSData.create(bytes = it.addressOf(0), length = size.convert()) }
+
     /** Builds a (CoreFoundation, +1 retained) query dictionary from CF key/value pairs. */
     private fun MemScope.cfDictionaryOf(vararg pairs: Pair<CFStringRef?, CFTypeRef?>): CFDictionaryRef? {
         val count = pairs.size
         val keys = allocArray<COpaquePointerVar>(count)
         val values = allocArray<COpaquePointerVar>(count)
         pairs.forEachIndexed { index, pair ->
-            keys[index] = pair.first
-            values[index] = pair.second
+            // Indexed-set has no candidate for an opaque-pointer array, so write through each slot's var.
+            (keys + index)!!.pointed.value = pair.first
+            (values + index)!!.pointed.value = pair.second
         }
         return CFDictionaryCreate(
             kCFAllocatorDefault,
