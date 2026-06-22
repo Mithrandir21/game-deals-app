@@ -42,7 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
@@ -99,8 +99,10 @@ fun GameDealsAppShell(
     // Both bars hide on scroll-down, re-enter on scroll-up: the top bar uses Material's enterAlways
     // behavior; the bottom bar mirrors its collapse progress (below) so they move + settle in lockstep.
     val topScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    val density = LocalDensity.current
-    val bottomBarHeightPx = with(density) { 80.dp.toPx() }
+    // Measured at layout time rather than hardcoded: the bar's real height is 80.dp PLUS the bottom
+    // safe-area inset (the iOS home-indicator band). A fixed 80.dp left that band stuck on screen
+    // when the bar slid down to hide.
+    var bottomBarHeightPx by remember { mutableStateOf(0f) }
 
     // Snap both bars back to fully shown on tab change / return to a tab route.
     LaunchedEffect(selectedTab, showTopBar, showBottomBar) {
@@ -180,9 +182,11 @@ fun GameDealsAppShell(
             if (showBottomBar) {
                 NavigationBar(
                     // Mirror the top bar's collapse: 0 = fully shown, +height = slid off the bottom.
-                    modifier = Modifier.graphicsLayer {
-                        translationY = bottomBarHeightPx * topScrollBehavior.state.collapsedFraction
-                    }
+                    modifier = Modifier
+                        .onSizeChanged { bottomBarHeightPx = it.height.toFloat() }
+                        .graphicsLayer {
+                            translationY = bottomBarHeightPx * topScrollBehavior.state.collapsedFraction
+                        }
                 ) {
                     TopLevelDestination.entries.forEach { tab ->
                         val showAccountBadge = tab == TopLevelDestination.ACCOUNT && accountUnreadCount > 0
