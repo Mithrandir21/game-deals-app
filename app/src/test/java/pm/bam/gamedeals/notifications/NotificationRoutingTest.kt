@@ -6,6 +6,7 @@ import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import pm.bam.gamedeals.common.navigation.NotificationRoute
 
 /**
  * Covers parsing a tapped notification's extras back into a route (#7 notification revamp): the bundled

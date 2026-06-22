@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.notifications
 
 import android.content.Intent
+import pm.bam.gamedeals.common.navigation.NotificationRoute
 
 /**
  * Parses the deep-link extras written onto a tap [Intent] by [AndroidNotificationPresenter] back into a

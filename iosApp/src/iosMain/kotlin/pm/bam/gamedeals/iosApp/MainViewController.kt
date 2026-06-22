@@ -3,8 +3,10 @@ package pm.bam.gamedeals.iosApp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
@@ -23,6 +25,7 @@ import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
+import org.koin.mp.KoinPlatform
 import platform.Foundation.NSBundle
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
@@ -30,6 +33,8 @@ import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.NotificationRoute
+import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
@@ -40,6 +45,7 @@ import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
@@ -58,6 +64,8 @@ import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
+import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -78,6 +86,14 @@ import pm.bam.gamedeals.remote.logic.RemoteBuildType
 fun MainViewController(): UIViewController {
     bootstrapKoin()
     return ComposeUIViewController { App() }
+}
+
+/** Swift-facing: start Koin early (idempotent) so a background launch has a graph before the Compose UI exists. */
+fun startKoinIfNeeded() = bootstrapKoin()
+
+/** Swift-facing: a tapped notification's `userInfo[route]` → the shared bus the nav host collects. */
+fun deliverNotificationRoute(routeKey: String?) {
+    NotificationRoute.fromKey(routeKey)?.let { NotificationRouteBus.deliver(it) }
 }
 
 private var koinStarted = false
@@ -125,6 +141,7 @@ private fun bootstrapKoin() {
             accountModule,
             dealsModule,
             discoverModule,
+            onboardingModule,
             iosAppModule,
         )
     }
@@ -138,15 +155,32 @@ private fun bootstrapKoin() {
 private fun App() {
     GameDealsTheme {
         CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
-            AppNavHost()
+            // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast) Storage read
+            // is in flight — render nothing rather than flashing Home and bouncing into onboarding.
+            val startDestination by produceState<Destination?>(initialValue = null) {
+                val settings = KoinPlatform.getKoin().get<SettingsRepository>()
+                value = if (settings.getOnboardingCompleted()) Destination.Home else Destination.Onboarding
+            }
+            startDestination?.let { AppNavHost(startDestination = it) }
         }
     }
 }
 
 @Composable
-private fun AppNavHost() {
+private fun AppNavHost(startDestination: Destination) {
     val navController = rememberNavController()
     val uriHandler = LocalUriHandler.current
+
+    // Route taps on background (OS-tray) notifications into the nav graph — mirrors the Android NavGraph.
+    // The bus is consume-once, so this won't re-navigate.
+    LaunchedEffect(Unit) {
+        NotificationRouteBus.routes.collect { route ->
+            when (route) {
+                NotificationRoute.Notifications -> navController.navigate(Destination.Notifications)
+                NotificationRoute.FollowedSeries -> navController.navigate(Destination.FollowedSeriesList)
+            }
+        }
+    }
 
     // Top-level (bottom-nav tab) navigation: pop to start saving state, single-top, restore — mirrors
     // the Android `NavigationActions.navigateTopLevel`.
@@ -184,7 +218,7 @@ private fun AppNavHost() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Destination.Home,
+            startDestination = startDestination,
             modifier = Modifier.padding(padding),
         ) {
         homeScreen(
@@ -224,6 +258,18 @@ private fun AppNavHost() {
             navController = navController,
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToWeb = { url -> uriHandler.openUri(url) },
+            onReplayOnboarding = { navController.navigate(Destination.Onboarding) },
+        )
+        onboardingScreen(
+            // Replay pops back to where it was launched from; first run (nothing behind it) opens Home and
+            // drops Onboarding so a back press exits the app — mirrors Android's NavigationActions.finishOnboarding.
+            onFinish = {
+                if (!navController.popBackStack()) {
+                    navController.navigate(Destination.Home) {
+                        popUpTo(Destination.Onboarding) { inclusive = true }
+                    }
+                }
+            },
         )
         gamePageScreen(
             navController = navController,

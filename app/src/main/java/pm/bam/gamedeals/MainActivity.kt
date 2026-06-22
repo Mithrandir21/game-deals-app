@@ -9,12 +9,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import org.koin.android.ext.android.inject
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.navigation.NavGraph
-import pm.bam.gamedeals.notifications.NotificationRouteBus
 import pm.bam.gamedeals.notifications.toNotificationRoute
 
 class MainActivity : ComponentActivity() {

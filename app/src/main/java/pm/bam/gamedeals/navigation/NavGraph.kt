@@ -15,6 +15,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.NotificationRoute
+import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
@@ -34,8 +36,6 @@ import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
-import pm.bam.gamedeals.notifications.NotificationRoute
-import pm.bam.gamedeals.notifications.NotificationRouteBus
 
 @Composable
 internal fun NavGraph(

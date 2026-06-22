@@ -66,5 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Background notification poll (BGAppRefresh) — identifier must match NOTIFICATION_POLL_TASK_ID. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>pm.bam.gamedeals.notificationpoll</string>
+	</array>
 </dict>
 </plist>

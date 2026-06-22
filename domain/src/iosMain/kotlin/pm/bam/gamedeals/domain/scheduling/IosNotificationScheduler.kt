@@ -1,21 +1,51 @@
 package pm.bam.gamedeals.domain.scheduling
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
+import platform.BackgroundTasks.BGAppRefreshTaskRequest
+import platform.BackgroundTasks.BGTaskScheduler
+import platform.Foundation.NSDate
+import platform.Foundation.NSError
+import platform.Foundation.dateWithTimeIntervalSinceNow
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
+import pm.bam.gamedeals.logging.warn
+
+/** BGTaskScheduler identifier for the periodic poll — must match Info.plist `BGTaskSchedulerPermittedIdentifiers`. */
+const val NOTIFICATION_POLL_TASK_ID = "pm.bam.gamedeals.notificationpoll"
+
+// 6h to mirror the Android WorkManager poll; iOS treats this as the *earliest* time and schedules at its discretion.
+private const val POLL_INTERVAL_SECONDS = 6.0 * 60.0 * 60.0
 
 /**
- * iOS [NotificationScheduler]. The periodic `BGTaskScheduler` poll is not wired yet, so this is a logged
- * no-op: the in-app opt-in toggle still persists via `NotificationSettings`, but no background work is
- * registered. It exists so Koin can resolve `NotificationScheduler` on iOS (the Account hub's
- * `NotificationSettingsViewModel` depends on it) — without it the Account tab crashes on compose.
+ * iOS [NotificationScheduler] backed by `BGTaskScheduler`. [schedule] submits a one-shot `BGAppRefreshTaskRequest`
+ * (the launch handler — registered once at app launch — re-arms the next one); [cancel] clears any pending request.
+ * The opt-in toggle and the poll handler are the only callers, mirroring the Android scheduler's lifecycle.
  */
 internal class IosNotificationScheduler(private val logger: Logger) : NotificationScheduler {
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun schedule() {
-        debug(logger) { "NotificationScheduler.schedule() called on iOS — BGTaskScheduler not yet wired, no background poll registered." }
+        val request = BGAppRefreshTaskRequest(NOTIFICATION_POLL_TASK_ID).apply {
+            earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(POLL_INTERVAL_SECONDS)
+        }
+        memScoped {
+            val errorVar = alloc<ObjCObjectVar<NSError?>>()
+            val submitted = BGTaskScheduler.sharedScheduler.submitTaskRequest(request, errorVar.ptr)
+            if (submitted) {
+                debug(logger) { "Scheduled BGAppRefresh notification poll ($NOTIFICATION_POLL_TASK_ID)." }
+            } else {
+                warn(logger) { "Failed to submit BGAppRefresh poll (${errorVar.value?.localizedDescription}) — is $NOTIFICATION_POLL_TASK_ID in BGTaskSchedulerPermittedIdentifiers?" }
+            }
+        }
     }
 
     override fun cancel() {
-        debug(logger) { "NotificationScheduler.cancel() called on iOS — no background poll to tear down." }
+        BGTaskScheduler.sharedScheduler.cancelTaskRequestWithIdentifier(NOTIFICATION_POLL_TASK_ID)
+        debug(logger) { "Cancelled BGAppRefresh notification poll." }
     }
 }

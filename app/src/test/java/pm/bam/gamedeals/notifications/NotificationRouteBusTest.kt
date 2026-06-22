@@ -6,6 +6,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import pm.bam.gamedeals.common.navigation.NotificationRoute
+import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 
 /**
  * Behavioural coverage for the process-level notification deep-link hand-off (#288). Pins the contract the
