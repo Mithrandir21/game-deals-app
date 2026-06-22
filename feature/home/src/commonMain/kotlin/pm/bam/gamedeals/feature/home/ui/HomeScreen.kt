@@ -126,6 +126,7 @@ internal fun HomeScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
+    val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds = viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
@@ -135,6 +136,7 @@ internal fun HomeScreen(
 
     HomeScreenContent(
         data = data.value,
+        accountStats = accountStats.value,
         waitlistIds = waitlistIds.value,
         collectionIds = collectionIds.value,
         ignoredIds = ignoredIds.value,
@@ -176,6 +178,7 @@ internal fun HomeScreen(
 @Composable
 private fun HomeScreenContent(
     data: HomeViewModel.HomeScreenData,
+    accountStats: HomeViewModel.AccountStats?,
     waitlistIds: ImmutableSet<String>,
     collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
@@ -223,6 +226,7 @@ private fun HomeScreenContent(
                 } else {
                     HomeFeed(
                         data = data,
+                        accountStats = accountStats,
                         waitlistIds = waitlistIds,
                         collectionIds = collectionIds,
                         stores = stores,
@@ -267,6 +271,7 @@ private fun HomeScreenContent(
 @Composable
 private fun HomeFeed(
     data: HomeViewModel.HomeScreenData,
+    accountStats: HomeViewModel.AccountStats?,
     waitlistIds: ImmutableSet<String>,
     collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
@@ -284,7 +289,7 @@ private fun HomeFeed(
         var renderedSection = false
 
         // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
-        data.accountStats?.let { stats ->
+        accountStats?.let { stats ->
             item(contentType = CONTENT_TYPE_STAT_ROW) {
                 Row(
                     modifier = Modifier
@@ -610,7 +615,6 @@ private fun HomeBundleRow(
 
 private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.HomeScreenData(
     status = HomeScreenStatus.DATA,
-    accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
     featuredHero = listOf(
         PreviewDeal,
         PreviewDeal.copy(dealID = "hero-2", title = "Hollow Knight", salePriceDenominated = "$7.49", normalPriceDenominated = "$14.99", gameID = "22222"),
@@ -644,6 +648,7 @@ private fun HomeScreenContent_Success_Preview() {
     GameDealsTheme {
         HomeScreenContent(
             data = previewSuccessData(),
+            accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
             waitlistIds = persistentSetOf("22222"),
             collectionIds = persistentSetOf("33333"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
@@ -673,6 +678,7 @@ private fun HomeScreenContent_Success_Dark_Preview() {
     GameDealsTheme(darkTheme = true) {
         HomeScreenContent(
             data = previewSuccessData(),
+            accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
             waitlistIds = persistentSetOf("22222"),
             collectionIds = persistentSetOf("33333"),
             stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
@@ -702,6 +708,7 @@ private fun HomeScreenContent_Loading_Preview() {
     GameDealsTheme {
         HomeScreenContent(
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.LOADING),
+            accountStats = null,
             waitlistIds = persistentSetOf(),
             collectionIds = persistentSetOf(),
             stores = persistentMapOf(),
@@ -731,6 +738,7 @@ private fun HomeScreenContent_Error_Preview() {
     GameDealsTheme {
         HomeScreenContent(
             data = HomeViewModel.HomeScreenData(status = HomeScreenStatus.ERROR),
+            accountStats = null,
             waitlistIds = persistentSetOf(),
             collectionIds = persistentSetOf(),
             stores = persistentMapOf(),

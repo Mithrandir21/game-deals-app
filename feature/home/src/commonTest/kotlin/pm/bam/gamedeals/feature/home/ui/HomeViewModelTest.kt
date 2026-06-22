@@ -22,12 +22,10 @@ import pm.bam.gamedeals.common.ui.deal.StoreDealPair
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.BundleGamePrice
-import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
-import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -135,7 +133,6 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertEquals(3, state.trending.size) // the remainder
         assertTrue(state.featuredHero.none { hero -> hero in state.trending }) // disjoint slices
         assertEquals(1, state.mostWaitlisted.size)
-        assertNull(state.accountStats) // logged out
     }
 
     @Test
@@ -162,18 +159,31 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun account_stats_present_when_logged_in() = runTest {
+    fun account_stats_reactively_reflect_logged_in_id_set_sizes() = runTest {
+        // Stats are derived from the auth-gated, Room-backed id sets — not a one-shot fetch — so they show/hide
+        // reactively on login/logout regardless of a region reload.
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("bam"))
-        everySuspend { waitlistRepository.getWaitlist() } returns listOf(WaitlistEntry("a", "A"), WaitlistEntry("b", "B"))
-        everySuspend { collectionRepository.getCollection() } returns listOf(CollectionEntry("c", "C"))
+        every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("a", "b"))
+        every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf("c"))
 
         val vm = createViewModel()
+        val emissions = vm.accountStats.observeEmissions(backgroundScope, testDispatcher)
         advanceUntilIdle()
 
-        val stats = vm.uiState.value.accountStats
+        val stats = emissions.last()
         assertNotNull(stats)
         assertEquals(2, stats.waitlistedCount)
         assertEquals(1, stats.collectedCount)
+    }
+
+    @Test
+    fun account_stats_are_null_when_logged_out() = runTest {
+        // Defaults: observeAuthState = LoggedOut, id sets empty.
+        val vm = createViewModel()
+        val emissions = vm.accountStats.observeEmissions(backgroundScope, testDispatcher)
+        advanceUntilIdle()
+
+        assertNull(emissions.last())
     }
 
     @Test

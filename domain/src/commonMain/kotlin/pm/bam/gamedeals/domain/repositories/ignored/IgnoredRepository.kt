@@ -28,6 +28,9 @@ interface IgnoredRepository {
     fun observeIsIgnored(gameId: String): Flow<Boolean>
     suspend fun getIgnored(): List<IgnoredEntry>
 
+    /** Wipes the locally-cached id set (no remote call) — used to clear the row on logout. */
+    suspend fun clearLocal()
+
     /**
      * Adds/removes [gameId] on the user's ITAD ignore list, returning [RepoUpdateResult]. When logged
      * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route to sign in.
@@ -58,6 +61,8 @@ internal class IgnoredRepositoryImpl(
         ignoredDao.replaceAll(entries.map { it.gameId })
         return entries
     }
+
+    override suspend fun clearLocal() = ignoredDao.clear()
 
     override suspend fun toggleIgnored(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN

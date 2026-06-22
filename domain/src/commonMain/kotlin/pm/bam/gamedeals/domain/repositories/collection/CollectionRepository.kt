@@ -26,6 +26,9 @@ interface CollectionRepository {
     fun observeIsCollected(gameId: String): Flow<Boolean>
     suspend fun getCollection(): List<CollectionEntry>
     suspend fun toggleCollection(gameId: String): RepoUpdateResult
+
+    /** Wipes the locally-cached id set (no remote call) — used to clear the row on logout. */
+    suspend fun clearLocal()
 }
 
 internal class CollectionRepositoryImpl(
@@ -51,6 +54,8 @@ internal class CollectionRepositoryImpl(
         collectionDao.replaceAll(entries.map { it.gameId })
         return entries
     }
+
+    override suspend fun clearLocal() = collectionDao.clear()
 
     override suspend fun toggleCollection(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN

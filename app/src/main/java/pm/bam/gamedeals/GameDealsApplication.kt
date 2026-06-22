@@ -11,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
@@ -25,7 +26,9 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
@@ -105,6 +108,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         warmDomainDatabase()
         runCacheMaintenance()
         runNotificationLifecycle()
+        runLibraryLifecycle()
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
@@ -195,6 +199,34 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Keeps the user's ITAD library (waitlist / collection / ignored) in sync with auth, app-wide. Owning this
+     * here — rather than in `AccountViewModel` — means the Room-backed id sets are reconciled on login no matter
+     * which entry point signed the user in (the Account tab, the global sign-in sheet, or onboarding) or which
+     * tab is on screen, and are wiped on logout. Observing [AuthTokenStore.observeAuthState] also covers app
+     * start (the StateFlow emits the current state). `distinctUntilChangedBy { it is LoggedIn }` collapses the
+     * two `LoggedIn` emissions a fresh login produces (blank-then-real username) into a single reconcile.
+     * Fire-and-forget on [applicationScope]; per-emission failures are logged but never tear down the collector.
+     */
+    private fun runLibraryLifecycle() {
+        applicationScope.launch {
+            get<AuthTokenStore>().observeAuthState()
+                .distinctUntilChangedBy { it is AuthState.LoggedIn }
+                .collect { state ->
+                    try {
+                        applyLibraryLifecycle(state, get(), get(), get(), get())
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (t: Throwable) {
+                        try {
+                            error(logger, throwable = t) { "Library lifecycle update failed" }
+                        } catch (_: Throwable) {
+                        }
+                    }
+                }
         }
     }
 

@@ -13,8 +13,11 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.fatal
 
 /**
- * Backs the Collection sub-screen (#274/#275): does the remote-as-truth reconcile via
- * [CollectionRepository.getCollection] when the screen opens and exposes the entries for display.
+ * Backs the Collection sub-screen (#274/#275). Observes the auth-gated, Room-backed collection id set so the
+ * list reacts to login/logout and to in-place removals while the screen is open. Full entries (title/artwork)
+ * come from the remote-as-truth reconcile ([CollectionRepository.getCollection]); they're cached by id and
+ * re-filtered against the live set, so a removal needs no refetch and only a login (or a game added elsewhere)
+ * triggers a network fetch.
  */
 internal class CollectionListViewModel(
     private val collectionRepository: CollectionRepository,
@@ -24,12 +27,29 @@ internal class CollectionListViewModel(
     val uiState: StateFlow<GameListState>
         field = MutableStateFlow(GameListState(loading = true))
 
+    /** Title/artwork lookup by gameId, filled by the reconcile; the displayed list filters this by the live id set. */
+    private var entries: Map<String, GameListItem> = emptyMap()
+
     init {
         viewModelScope.launch {
-            val items = runCatching { collectionRepository.getCollection() }
-                .getOrElse { fatal(logger, it); emptyList() }
-                .map { GameListItem(it.gameId, it.title, it.artwork.thumbnail) }
-            uiState.update { it.copy(loading = false, items = items.toImmutableList()) }
+            collectionRepository.observeCollectionIds().collect { ids ->
+                if (ids.isEmpty()) {
+                    entries = emptyMap()
+                    uiState.update { GameListState(loading = false) }
+                    return@collect
+                }
+                // Fetch full entries only when the cache doesn't already cover the live set (login, or a game
+                // added elsewhere). A removal just re-filters the cache below — no network call.
+                if (!entries.keys.containsAll(ids)) {
+                    if (entries.isEmpty()) uiState.update { it.copy(loading = true) }
+                    entries = runCatching { collectionRepository.getCollection() }
+                        .getOrElse { fatal(logger, it); emptyList() }
+                        .associate { it.gameId to GameListItem(it.gameId, it.title, it.artwork.thumbnail) }
+                }
+                uiState.update {
+                    it.copy(loading = false, items = entries.values.filter { item -> item.gameId in ids }.toImmutableList())
+                }
+            }
         }
     }
 }

@@ -31,6 +31,9 @@ interface WaitlistRepository {
     fun observeIsWaitlisted(gameId: String): Flow<Boolean>
     suspend fun getWaitlist(): List<WaitlistEntry>
 
+    /** Wipes the locally-cached id set (no remote call) — used to clear the row on logout. */
+    suspend fun clearLocal()
+
     /**
      * Adds/removes [gameId] on the user's ITAD waitlist, returning [RepoUpdateResult]. When logged
      * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route the user
@@ -64,6 +67,8 @@ internal class WaitlistRepositoryImpl(
         waitlistDao.replaceAll(entries.map { it.gameId })
         return entries
     }
+
+    override suspend fun clearLocal() = waitlistDao.clear()
 
     override suspend fun toggleWaitlist(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN

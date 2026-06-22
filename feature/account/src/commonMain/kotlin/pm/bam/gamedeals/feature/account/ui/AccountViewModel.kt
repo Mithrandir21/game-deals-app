@@ -26,8 +26,9 @@ import pm.bam.gamedeals.logging.fatal
  * Drives the Account hub (epic #272, P1.2): observes the ITAD auth state and exposes the data the hub
  * needs — login status, profile, the reconnect prompt (#273), and the Waitlist/Collection counts. The
  * waitlist/collection *lists* now live in their own sub-screens; the hub only shows counts, sourced
- * reactively from the Room-backed id sets (no network) while the per-list reconcile is deferred to those
- * sub-screens. A fresh `LoggedIn` emission triggers one [reconcileLibrary] so the counts are current.
+ * reactively from the Room-backed id sets (no network). The remote-as-truth reconcile that fills those id
+ * sets on login is owned app-wide (`applyLibraryLifecycle`), so the counts stay current regardless of where
+ * the user signed in.
  */
 internal class AccountViewModel(
     private val accountRepository: AccountRepository,
@@ -87,9 +88,8 @@ internal class AccountViewModel(
                     is AuthState.LoggedOut -> uiState.update {
                         it.copy(loggedIn = false, username = "", needsReconnect = false)
                     }
-                    is AuthState.LoggedIn -> {
-                        uiState.update { it.copy(loggedIn = true, username = auth.username, needsReconnect = auth.needsReconnect) }
-                        reconcileLibrary()
+                    is AuthState.LoggedIn -> uiState.update {
+                        it.copy(loggedIn = true, username = auth.username, needsReconnect = auth.needsReconnect)
                     }
                 }
             }
@@ -122,12 +122,6 @@ internal class AccountViewModel(
     /** Toggle whether adult titles are shown across the app (persisted; Deals & Bundles react to it). */
     fun onSetMatureOptIn(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
-    }
-
-    /** Refreshes the Room-backed id sets from ITAD (remote-as-truth) on login; counts then flow reactively. */
-    private suspend fun reconcileLibrary() {
-        runCatching { waitlistRepository.getWaitlist() }.onFailure { fatal(logger, it) }
-        runCatching { collectionRepository.getCollection() }.onFailure { fatal(logger, it) }
     }
 
     @Immutable

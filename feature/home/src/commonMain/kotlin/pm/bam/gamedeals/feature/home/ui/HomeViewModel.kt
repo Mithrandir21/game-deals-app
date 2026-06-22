@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -119,6 +120,23 @@ internal class HomeViewModel(
         .catch { emit(persistentSetOf()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentSetOf())
 
+    /**
+     * The account stat cards: null when logged out, waitlist/collection counts when logged in. Derived from
+     * the same auth-gated, Room-backed id sets as the badges, so the cards show/hide reactively the moment the
+     * user logs in or out — regardless of which tab or login entry point triggered it (the Room sync itself is
+     * owned app-wide by `applyLibraryLifecycle`).
+     */
+    val accountStats: StateFlow<AccountStats?> = combine(
+        accountRepository.observeAuthState(),
+        waitlistRepository.observeWaitlistIds(),
+        collectionRepository.observeCollectionIds(),
+    ) { auth, waitlist, collection ->
+        if (auth is AuthState.LoggedIn) AccountStats(waitlistedCount = waitlist.size, collectedCount = collection.size) else null
+    }
+        .onStart { emit(null) }
+        .catch { emit(null) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     /** Stores keyed by id, for resolving each feed deal's store name/icon in the UI (UI Improvements #248). */
     val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()
         .map { list -> list.associateBy { it.storeID }.toImmutableMap() }
@@ -154,7 +172,6 @@ internal class HomeViewModel(
         loadJob = viewModelScope.launch {
             uiState.update { it.copy(status = HomeScreenStatus.LOADING) }
             val data = coroutineScope {
-                val accountStats = async { runCatching { loadAccountStats() }.getOrNull() }
                 val hotDeals = async { section { dealsRepository.getDeals(DealsQuery(sortField = DealsSortField.Hottest, sortDirection = DealsSortDirection.Descending, limit = LIMIT_HERO + LIMIT_TRENDING)) } }
                 val mostWaitlisted = async { section { statsRepository.getMostWaitlisted(LIMIT_STATS) } }
                 val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
@@ -171,7 +188,6 @@ internal class HomeViewModel(
                 val hot = hotDeals.await()
                 HomeScreenData(
                     status = HomeScreenStatus.DATA,
-                    accountStats = accountStats.await(),
                     featuredHero = hot.take(LIMIT_HERO).toImmutableList(),
                     trending = hot.drop(LIMIT_HERO).toImmutableList(),
                     mostWaitlisted = enrichRanked(mostWaitlistedRaw, prices),
@@ -240,16 +256,6 @@ internal class HomeViewModel(
         events.tryEmit(HomeUiEvent.ShareDeal(text))
     }
 
-    /** Account stat cards are gated on auth state: null when logged out, counts when logged in. */
-    private suspend fun loadAccountStats(): AccountStats? {
-        if (accountRepository.observeAuthState().first() !is AuthState.LoggedIn) return null
-        return coroutineScope {
-            val waitlisted = async { runCatching { waitlistRepository.getWaitlist().size }.getOrDefault(0) }
-            val collected = async { runCatching { collectionRepository.getCollection().size }.getOrDefault(0) }
-            AccountStats(waitlistedCount = waitlisted.await(), collectedCount = collected.await())
-        }
-    }
-
     private suspend fun loadReleases(): List<Release> {
         releasesRepository.refreshReleases()
         return releasesRepository.observeReleases().first().take(LIMIT_RELEASES)
@@ -291,7 +297,6 @@ internal class HomeViewModel(
     @Immutable
     internal data class HomeScreenData(
         val status: HomeScreenStatus = HomeScreenStatus.LOADING,
-        val accountStats: AccountStats? = null,
         val featuredHero: ImmutableList<Deal> = persistentListOf(),
         val trending: ImmutableList<Deal> = persistentListOf(),
         val mostWaitlisted: ImmutableList<RankedGame> = persistentListOf(),
@@ -300,8 +305,10 @@ internal class HomeViewModel(
         val bundles: ImmutableList<Bundle> = persistentListOf(),
         val recommendations: ImmutableList<IgdbGame.IgdbSimilarGame> = persistentListOf(),
     ) {
+        // Account stats are reactive and independent (see [accountStats]); the feed's error/empty decision is
+        // based purely on its content sections.
         val hasContent: Boolean
-            get() = accountStats != null || featuredHero.isNotEmpty() || trending.isNotEmpty() ||
+            get() = featuredHero.isNotEmpty() || trending.isNotEmpty() ||
                 mostWaitlisted.isNotEmpty() || mostCollected.isNotEmpty() || releases.isNotEmpty() ||
                 bundles.isNotEmpty() || recommendations.isNotEmpty()
     }

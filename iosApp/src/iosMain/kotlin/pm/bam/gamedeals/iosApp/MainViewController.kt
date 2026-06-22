@@ -27,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
@@ -51,7 +52,9 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
@@ -109,6 +112,8 @@ fun deliverNotificationRoute(routeKey: String?) {
 private var koinStarted = false
 private var notificationLifecycleStarted = false
 private val notificationLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private var libraryLifecycleStarted = false
+private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 private fun bootstrapKoin() {
     if (koinStarted) return
@@ -163,6 +168,7 @@ private fun bootstrapKoin() {
     }
 
     startNotificationLifecycle()
+    startLibraryLifecycle()
 }
 
 /**
@@ -184,6 +190,32 @@ private fun startNotificationLifecycle() {
                 runCatching { error(koin.get<Logger>(), t) { "Notification lifecycle update failed." } }
             }
         }
+    }
+}
+
+/**
+ * Mirrors Android's `GameDealsApplication.runLibraryLifecycle`: reconcile the user's ITAD library (waitlist /
+ * collection / ignored) into Room on login — regardless of which entry point signed the user in or which tab is
+ * alive — and wipe it on logout. The auth StateFlow emits the current state immediately, so this also syncs on
+ * launch; `distinctUntilChangedBy { it is LoggedIn }` collapses the two `LoggedIn` emissions a fresh login
+ * produces into a single reconcile.
+ */
+private fun startLibraryLifecycle() {
+    if (libraryLifecycleStarted) return
+    libraryLifecycleStarted = true
+    val koin = KoinPlatform.getKoin()
+    libraryLifecycleScope.launch {
+        koin.get<AuthTokenStore>().observeAuthState()
+            .distinctUntilChangedBy { it is AuthState.LoggedIn }
+            .collect { state ->
+                try {
+                    applyLibraryLifecycle(state, koin.get(), koin.get(), koin.get(), koin.get())
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    runCatching { error(koin.get<Logger>(), t) { "Library lifecycle update failed." } }
+                }
+            }
     }
 }
 

@@ -45,11 +45,10 @@ class AccountViewModelTest : MainDispatcherTest() {
     @BeforeTest
     fun setUp() {
         installMainDispatcher()
-        // Defaults so the VM's count/region/notification observers + login reconcile don't hit unstubbed calls; tests override.
+        // Defaults so the VM's count/region/notification observers don't hit unstubbed calls; tests override.
+        // The library reconcile is now owned app-wide (applyLibraryLifecycle), so the VM no longer fetches here.
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf())
         every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
-        everySuspend { waitlistRepository.getWaitlist() } returns emptyList()
-        everySuspend { collectionRepository.getCollection() } returns emptyList()
         every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
         every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
