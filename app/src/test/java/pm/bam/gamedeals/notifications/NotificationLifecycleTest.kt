@@ -10,6 +10,7 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
 import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
+import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 
 /** The auth-state → poll reconciliation extracted from `GameDealsApplication` (Phase D). */
 class NotificationLifecycleTest {

@@ -9,7 +9,9 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSURLComponents
 import platform.Foundation.NSURLQueryItem
 import platform.UIKit.UIApplication
+import platform.UIKit.UISceneActivationStateForegroundActive
 import platform.UIKit.UIWindow
+import platform.UIKit.UIWindowScene
 import platform.darwin.NSObject
 import kotlin.coroutines.resume
 
@@ -53,8 +55,16 @@ class IosAuthBrowserLauncher : AuthBrowserLauncher {
     private val presentationContextProvider =
         object : NSObject(), ASWebAuthenticationPresentationContextProvidingProtocol {
             override fun presentationAnchorForWebAuthenticationSession(session: ASWebAuthenticationSession): ASPresentationAnchor =
-                UIApplication.sharedApplication.keyWindow ?: UIWindow()
+                foregroundWindow() ?: UIWindow()
         }
+
+    // `UIApplication.keyWindow` is nil under multi-scene (deprecated since iOS 13); resolve the foreground-active
+    // window scene's window so the auth sheet has a valid anchor on iPad too (cf. issue #144).
+    private fun foregroundWindow(): UIWindow? {
+        val scenes = UIApplication.sharedApplication.connectedScenes.mapNotNull { it as? UIWindowScene }
+        val active = scenes.firstOrNull { it.activationState == UISceneActivationStateForegroundActive } ?: scenes.firstOrNull()
+        return (active?.windows?.firstOrNull() as? UIWindow) ?: UIApplication.sharedApplication.keyWindow
+    }
 
     private fun toResult(callbackURL: NSURL?, error: NSError?): AuthRedirectResult = when {
         // ASWebAuthenticationSessionErrorCodeCanceledLogin == 1

@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.deals.di.dealsModule
@@ -38,7 +39,6 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
-import pm.bam.gamedeals.notifications.applyNotificationLifecycle
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule

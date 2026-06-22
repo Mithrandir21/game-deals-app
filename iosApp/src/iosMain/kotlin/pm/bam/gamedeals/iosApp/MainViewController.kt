@@ -23,6 +23,11 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
@@ -43,11 +48,14 @@ import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
+import pm.bam.gamedeals.feature.account.ui.SignInPromptHost
 import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
@@ -69,7 +77,9 @@ import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.di.loggingIosModule
+import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -97,6 +107,8 @@ fun deliverNotificationRoute(routeKey: String?) {
 }
 
 private var koinStarted = false
+private var notificationLifecycleStarted = false
+private val notificationLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 private fun bootstrapKoin() {
     if (koinStarted) return
@@ -148,6 +160,30 @@ private fun bootstrapKoin() {
 
     SingletonImageLoader.setSafe { _ ->
         org.koin.mp.KoinPlatform.getKoin().get()
+    }
+
+    startNotificationLifecycle()
+}
+
+/**
+ * Mirrors Android's `GameDealsApplication.runNotificationLifecycle`: reconcile the background poll with auth +
+ * opt-in on every launch (incl. a background launch) and clear the surfaced-id set on logout. The auth StateFlow
+ * emits the current state immediately, so this also re-arms a dropped BGAppRefresh chain after a reboot/force-quit.
+ */
+private fun startNotificationLifecycle() {
+    if (notificationLifecycleStarted) return
+    notificationLifecycleStarted = true
+    val koin = KoinPlatform.getKoin()
+    notificationLifecycleScope.launch {
+        koin.get<AuthTokenStore>().observeAuthState().collect { state ->
+            try {
+                applyNotificationLifecycle(state, koin.get(), koin.get(), koin.get())
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                runCatching { error(koin.get<Logger>(), t) { "Notification lifecycle update failed." } }
+            }
+        }
     }
 }
 
@@ -306,6 +342,10 @@ private fun AppNavHost(startDestination: Destination) {
             onBack = { navController.popBackStack() },
         )
         }
+
+        // One shell-level sign-in sheet for every gated action (waitlist/collection/ignore/note), driven by
+        // SignInPromptController — mirrors the Android NavGraph.
+        SignInPromptHost()
     }
 }
 
