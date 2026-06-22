@@ -50,6 +50,8 @@
     <string name="account_waitlist_empty">Your waitlist is empty.</string>
     <string name="account_collection_empty">Your collection is empty.</string>
     <string name="account_coming_soon">Coming soon</string>
+    <!-- Spoken while a library list (Waitlist/Collection/Ignored) is loading. -->
+    <string name="account_list_loading">Loading</string>
 
     <!-- Notifications (P2.2, #278) -->
     <string name="account_notifications_empty">No notifications yet.</string>
@@ -74,6 +76,8 @@
     <!-- Ignored games (P3.3, #281) -->
     <string name="account_ignored_empty">You haven\'t ignored any games.</string>
     <string name="account_ignored_unignore">Un-ignore</string>
+    <!-- TalkBack label for the un-ignore button so the target game is clear out of list context. -->
+    <string name="account_ignored_unignore_cd">Un-ignore %1$s</string>
 
     <!-- My notes (P4.2, #283) -->
     <string name="account_notes_empty">You haven\'t added any notes yet.</string>

@@ -33,6 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +51,8 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_ignored_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_ignored_unignore
+import pm.bam.gamedeals.feature.account.generated.resources.account_ignored_unignore_cd
+import pm.bam.gamedeals.feature.account.generated.resources.account_list_loading
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_ignored
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -98,7 +103,8 @@ private fun IgnoredScreenContent(
         ) { innerPadding: PaddingValues ->
             when {
                 state.loading -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    val loadingLabel = stringResource(Res.string.account_list_loading)
+                    CircularProgressIndicator(Modifier.semantics { contentDescription = loadingLabel })
                 }
 
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -159,8 +165,11 @@ private fun IgnoredRow(item: GameListItem, onClick: () -> Unit, onUnignore: () -
                     .padding(start = GameDealsCustomTheme.spacing.medium),
             )
         }
-        TextButton(onClick = onUnignore) {
-            Text(stringResource(Res.string.account_ignored_unignore))
+        // The visible label is just "Un-ignore"; give TalkBack the game name too so the target is clear when
+        // the button is focused out of list context. clearAndSetSemantics on the child stops a double-read.
+        val unignoreCd = stringResource(Res.string.account_ignored_unignore_cd, item.title)
+        TextButton(onClick = onUnignore, modifier = Modifier.semantics { contentDescription = unignoreCd }) {
+            Text(stringResource(Res.string.account_ignored_unignore), modifier = Modifier.clearAndSetSemantics { })
         }
     }
 }

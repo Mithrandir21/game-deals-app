@@ -45,7 +45,7 @@ class NotificationsScreenTest {
     }
 
     private fun day(date: String, hasUnread: Boolean) =
-        NotificationDay(date = date, count = 3, hasUnread = hasUnread)
+        NotificationDay(date = date, games = persistentListOf(), count = 3, hasUnread = hasUnread)
 
     @Test
     fun unreadRowExposesUnreadStateDescription() {
