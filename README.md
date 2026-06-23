@@ -1,4 +1,4 @@
-# game-deals-android-app
+# game-deals-app
 A repository for an Android app showing game deals from CheapShark and GamerPower API
 
 #### App explanations

@@ -58,9 +58,9 @@
     <string name="game_details_section_screenshots">Screenshots</string>
     <string name="game_page_deal_quality_all_time_low_title">Lowest price ever</string>
     <string name="game_page_deal_quality_near_low_title">Great price</string>
-    <string name="game_page_deal_quality_elevated_title">It\'s been cheaper before</string>
+    <string name="game_page_deal_quality_elevated_title">It's been cheaper before</string>
     <string name="game_page_deal_quality_at_low_detail">Matches its all-time low of %1$s</string>
-    <string name="game_page_deal_quality_above_detail">%1$d%% above the all-time low of %2$s</string>
+    <string name="game_page_deal_quality_above_detail">%1$d% above the all-time low of %2$s</string>
     <string name="game_page_deal_quality_cd">Deal quality: %1$s. %2$s</string>
     <string name="game_page_series_section">Series: %1$s</string>
     <string name="game_page_series_follow">Follow</string>
@@ -89,7 +89,7 @@
 
     <string name="game_details_title_match_warning_cd">Fuzzy match — tap to see alternative games</string>
     <string name="game_details_title_match_picker_title">Possible matches</string>
-    <string name="game_details_title_match_picker_explanation">This deal didn\'t carry a precise game ID, so we searched IGDB by name. The result might not be the exact game you expected. Pick a different match if needed.</string>
+    <string name="game_details_title_match_picker_explanation">This deal didn't carry a precise game ID, so we searched IGDB by name. The result might not be the exact game you expected. Pick a different match if needed.</string>
     <string name="game_details_title_match_picker_empty">No alternative matches found.</string>
     <string name="game_details_title_match_picker_loading_cd">Loading possible matches</string>
     <string name="game_details_title_match_picker_error">Could not load alternative matches.</string>
@@ -98,7 +98,7 @@
     <string name="game_details_title_match_picker_current_tile_cd">%1$s (currently shown)</string>
 
     <string name="game_details_no_match_title">Game details unavailable</string>
-    <string name="game_details_no_match_message">We couldn\'t find game details for \"%1$s\" in our catalogue. The store may have added edition info to the title that doesn\'t match. You can search the deal database directly instead.</string>
+    <string name="game_details_no_match_message">We couldn't find game details for "%1$s" in our catalogue. The store may have added edition info to the title that doesn't match. You can search the deal database directly instead.</string>
     <string name="game_details_no_match_search_button">Search deals</string>
     <string name="game_details_no_match_back_button">Go back</string>
 
@@ -109,7 +109,7 @@
     <string name="game_page_tab_stats">Stats</string>
     <string name="game_page_tab_regions">Regions</string>
     <string name="game_page_regions_empty">No regional prices available.</string>
-    <string name="game_page_regions_error">Couldn\'t load regional prices.</string>
+    <string name="game_page_regions_error">Couldn't load regional prices.</string>
     <string name="game_page_regions_loading_cd">Loading regional prices</string>
 
     <!-- Game Page sections (Phase 6) -->

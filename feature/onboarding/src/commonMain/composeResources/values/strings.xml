@@ -32,7 +32,7 @@
 
     <!-- 5. Region (interactive) -->
     <string name="onboarding_region_title">Prices for your region</string>
-    <string name="onboarding_region_body">We\'ve set your region from your device. Change it any time so prices and currency match your stores.</string>
+    <string name="onboarding_region_body">We've set your region from your device. Change it any time so prices and currency match your stores.</string>
     <string name="onboarding_region_change">Change region</string>
     <string name="onboarding_region_picker_title">Choose your region</string>
 
@@ -51,7 +51,7 @@
     <string name="onboarding_signin_action">Sign in with IsThereAnyDeal</string>
     <string name="onboarding_signin_later">Maybe later</string>
     <string name="onboarding_signing_in">Signing in…</string>
-    <string name="onboarding_signin_done_title">You\'re all set</string>
+    <string name="onboarding_signin_done_title">You're all set</string>
     <string name="onboarding_signin_done_body">Your waitlist, collection and notes are syncing with IsThereAnyDeal.</string>
     <string name="onboarding_signin_signed_in_as">Signed in as %1$s</string>
     <string name="onboarding_done">Done</string>

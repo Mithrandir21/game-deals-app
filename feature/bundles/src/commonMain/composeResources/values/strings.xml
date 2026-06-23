@@ -4,7 +4,7 @@
     <string name="bundles_screen_title">Bundles</string>
     <string name="bundles_screen_navigation_back_button">Back</string>
     <string name="bundles_screen_loading_indicator">Loading bundles</string>
-    <string name="bundles_screen_data_loading_error_msg">Couldn\'t load bundles. Please try again.</string>
+    <string name="bundles_screen_data_loading_error_msg">Couldn't load bundles. Please try again.</string>
     <string name="bundles_screen_data_loading_error_retry">Retry</string>
     <string name="bundles_screen_empty">No active bundles right now.</string>
 
