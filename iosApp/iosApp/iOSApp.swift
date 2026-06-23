@@ -26,7 +26,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Order matters: registration resolves the logger from Koin, so Koin must be up first.
+        // Order matters: Sentry first so its crash handler arms before any other startup work can throw; then
+        // Koin (registration resolves the logger from it), then the background-poll registration.
+        MainViewControllerKt.startSentry()
         MainViewControllerKt.startKoinIfNeeded()
         NotificationBackgroundPollKt.registerNotificationBackgroundPoll()
         UNUserNotificationCenter.current().delegate = self

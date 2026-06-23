@@ -7,9 +7,8 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.koin.core)
             // Sentry KMP — shared bridge for Android + iOS (SentryLoggingListener / configureSentryOptions).
-            // ⚠️ iOS caveat: the iOS *link* step (Mac/Xcode only) needs the app target to link Sentry-Cocoa
-            // via SPM. Until that's wired, an iOS build will fail to link; the Android build is unaffected.
-            // Do not merge this branch to dev until the Xcode side is done. See docs/ci-cd.md / plan notes.
+            // The iOS klib's cinterop symbols resolve at app-link: iosApp.xcodeproj links Sentry-Cocoa via SPM,
+            // pinned to the cocoa version this KMP release was built against (see gradle/libs.versions.toml).
             implementation(libs.sentry.kotlin.multiplatform)
         }
 

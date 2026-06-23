@@ -30,6 +30,8 @@
 	<string>$(ITAD_API_KEY)</string>
 	<key>ITADOAuthClientId</key>
 	<string>$(ITAD_OAUTH_CLIENT_ID)</string>
+	<key>SentryDsn</key>
+	<string>$(SENTRY_DSN)</string>
 	<!-- ITAD OAuth redirect scheme (epic #219, Phase 2.2): pm.bam.gamedeals://oauth/itad -->
 	<key>CFBundleURLTypes</key>
 	<array>

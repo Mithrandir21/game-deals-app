@@ -1,153 +1,91 @@
-# Sentry iOS — Mac handoff
+# Sentry iOS — implementation notes
 
-> **For the agent/engineer picking this up on a Mac.** You are on branch `feat/sentry-ios`.
-> Android Sentry is **done and verified**; the **shared Kotlin** for iOS is **already in place**. Your
-> job is the iOS-native work that can only happen on macOS + Xcode 16. Everything below is the remaining
-> §3 ("iOS-native") work — the §1/§2 shared changes are committed.
+> **Status: implemented & verified on the build/link side** (Xcode 26.5, macOS, arm64 simulator). The iOS-native
+> §3 work described by the original handoff is done. The only thing that can't be exercised here is the
+> **live-event smoke test**, which needs a real DSN — a secret that isn't in the repo (Android runs dormant for
+> the same reason). See [What's verified](#whats-verified) and [Remaining (secret-gated)](#remaining-secret-gated).
 
-## TL;DR
-1. Link **sentry-cocoa** into the Xcode app target (SPM; CocoaPods fallback documented).
-2. Plumb the **DSN** through `Secrets.xcconfig` + `Info.plist`.
-3. Add an **iOS `initSentry()`** (iosMain) that calls the shared `configureSentryOptions(...)`, call it **first** in the Swift `AppDelegate`, and attach the install-id user after Koin.
-4. Upload **dSYMs** for symbolication.
-5. Build framework + app, run on a simulator, confirm an event reaches Sentry.
-6. **Only then** is the branch mergeable to `dev` (see the hard rule at the bottom).
+## TL;DR of what was wired
+1. **sentry-cocoa linked via SPM**, pinned to **8.58.2** (the exact cocoa version the KMP SDK 0.26.0 was compiled
+   against). Product: **`Sentry-Dynamic`** (auto-embedded by SPM). `iosApp/iosApp.xcodeproj`.
+2. **DSN plumbing**: `SENTRY_DSN` in `Secrets.xcconfig` (+ `.template`) → `SentryDsn` in `Info.plist` → read at
+   runtime via the existing `infoPlistString(...)`.
+3. **`startSentry()`** in `MainViewController.kt` (iosMain) calls the shared `configureSentryOptions(...)`; it is
+   called **first** in the Swift `AppDelegate`. The anonymized install-id user is attached after Koin via
+   `attachSentryUser()`.
+4. **dSYM upload** Run Script build phase (env- + sentry-cli-guarded; uploads only in CI where the secrets exist).
 
----
+## Key decisions (deviations from the original plan, with rationale)
+- **No `sentry-kmp` version bump.** The original note suggested `0.26.0 → 0.27.0`. Verified against the SDK's
+  `buildSrc/Config.kt`: **both 0.26.0 and 0.27.0 pin sentry-cocoa `8.58.2`** — the only difference is the
+  Android-side sentry-java version. Bumping would needlessly re-touch the already-verified Android path, so we
+  kept **0.26.0** and pinned SPM to the matching **8.58.2**. The lockstep is documented in `gradle/libs.versions.toml`.
+- **`Sentry-Dynamic`, not `Sentry`.** The `Sentry` SPM product is a *static* xcframework; `Sentry-Dynamic` is the
+  *dynamic* one. Our `ComposeApp` framework is static (`isStatic = true`). The dynamic Sentry product is what the
+  official KMP SPM sample uses, is auto-embedded by SPM, and avoids the `-ObjC`/static-category linker pitfalls —
+  so it's the robust pairing for a static Kotlin framework.
+- **`startSentry()`, not `initSentry()`.** Kotlin/Native mangles any `init*` top-level function to `doInit*` in the
+  generated ObjC/Swift API (Swift would see `MainViewControllerKt.doInitSentry()`). Renaming to `startSentry()`
+  keeps the Swift call site clean and parallels the existing `startKoinIfNeeded()`.
 
-## What's already done (do NOT redo)
+## What's verified
+On Xcode 26.5 / iOS 26.5 arm64 simulator:
+1. `./gradlew :iosApp:linkDebugFrameworkIosSimulatorArm64` — Kotlin framework compiles with the Sentry calls. ✅
+2. `xcodebuild … build` (Debug, arm64 sim) — **`** BUILD SUCCEEDED **`**; SPM resolved sentry-cocoa @ 8.58.2. ✅
+3. Linkage: `iosApp.debug.dylib` carries `LC_LOAD_DYLIB @rpath/Sentry.framework/Sentry`, and the Kotlin cinterop's
+   undefined ObjC class refs (`_OBJC_CLASS_$_SentryOptions`, `_SentrySDKInternal`, `_SentryScope`, …) resolve
+   against the embedded dynamic `Sentry.framework`. ✅
+4. Runtime: the app boots on the simulator without a startup crash, which means dyld loaded the embedded
+   `Sentry.framework` successfully and `startSentry()` correctly no-ops on the empty DSN. ✅
+5. `SentryDsn` key is present in the built `Info.plist` (empty → dormant, same as Android with no `sentryDsn`). ✅
 
-**Android (verified: assembleDebug / assembleRelease / installRelease + a live event landed):** DSN via the
-secrets pipeline → `BuildConfig.SENTRY_DSN`; release-only init; anonymized install-id user; mapping upload
-via `io.sentry.android.gradle`. See the first commit on this branch.
+> ⚠️ Build for an **arm64 simulator** (a concrete device id, not `generic/platform=iOS Simulator`). The project
+> only declares `iosSimulatorArm64`, so a universal-sim build fails the Kotlin phase with `Unknown iOS simulator
+> arch: 'x86_64'`. This is an invocation gotcha, not a code issue.
 
-**Shared Kotlin (this branch, second commit):**
-- `sentry-kotlin-multiplatform` is in `:logging` **commonMain** (`logging/build.gradle.kts`).
-- `SentryLoggingListener` is in **commonMain** (`logging/src/commonMain/.../implementations/SentryLoggingListener.kt`) and **already registered in `loggingIosModule`** (`logging/src/iosMain/.../di/LoggingIosModule.kt`). It bridges the app `Logger` → Sentry; nothing more to wire.
-- **`configureSentryOptions(options, dsn, release, dist, tracesSampleRate, environment="production")`** exists in `logging/src/commonMain/.../SentryConfig.kt`. It sets environment, sampling, `sendDefaultPii=false`, and the HTTP-breadcrumb URL scrubber. **Call this from iOS init too** — do not duplicate the policy.
-- The anonymized **install-id** is `SettingsRepository.getInstallId()` (already works on iOS — common `Storage` over `NSUserDefaults`).
+## Live-event smoke test — DONE
+With a real DSN in `iosApp/Secrets.xcconfig`, a Debug simulator run transmitted both a session and a
+`Sentry.captureMessage("ios sentry smoke test")` envelope: Sentry returned **HTTP 200** with a server-assigned
+event id, tagged `environment=production`, `release pm.bam.gamedeals@1.0+1`. The temporary capture line +
+`options.debug = true` were then reverted. (A Debug build sends because iOS gates only on DSN presence, not on
+release/debug — unlike Android, which is release-only. See the gating note below.)
 
----
+> **xcconfig `//` escape (this bit us):** the `$()` trick does **not** work in Xcode 26.5 — `SENTRY_DSN = https:$()//…`
+> resolves to just `https:`. Use a single-slash variable so no line contains a literal `//`:
+> ```
+> SLASH = /
+> SENTRY_DSN = https:$(SLASH)$(SLASH)publicKey@o…ingest.de.sentry.io/projectId
+> ```
 
-## §3 — iOS-native work (Mac / Xcode 16 only)
+## Remaining (secret-gated)
+1. **dSYM upload in CI.** The Run Script phase uploads only when `sentry-cli` is installed **and** `SENTRY_AUTH_TOKEN`
+   is set (mirrors Android's `autoUploadProguardMapping` gate). Reuse the Bitrise `SENTRY_ORG` / `SENTRY_PROJECT` /
+   `SENTRY_AUTH_TOKEN` secrets (`docs/ci-cd.md`); ensure `sentry-cli` is on the CI image.
+2. **(Optional) Release/debug gating on iOS.** `startSentry()` currently arms whenever a DSN is present, so a local
+   Debug build with a DSN in `Secrets.xcconfig` *will* send events (tagged `production`). Android instead early-returns
+   on debuggable builds. If local Debug noise on the prod dashboard is unwanted, gate iOS on `Platform.isDebugBinary`
+   too (the `currentRemoteBuildType()` helper already reads it).
 
-### 0. Preconditions & version pairing
-- macOS + **Xcode 16**, sentry-cocoa **8.36.0+** (8.25+ for the Apple privacy manifest).
-- **Pin a sentry-cocoa version compatible with the KMP SDK.** Check the compatibility table in the SDK README: https://github.com/getsentry/sentry-kotlin-multiplatform . **Recommended:** bump `sentry-kmp` `0.26.0 → 0.27.0` in `gradle/libs.versions.toml` and use **sentry-cocoa 8.58.2** (a documented-compatible pair). Mismatched versions are the #1 cause of link/runtime failures here.
+## Note on committing
+`iosApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` was generated by SPM resolution and
+pins sentry-cocoa to 8.58.2 (exact revision). It is **not** gitignored — commit it alongside the project change so
+CI resolves the identical version. `iosApp/Secrets.xcconfig` stays gitignored (local secrets); the `SENTRY_DSN`
+line was added to the committed `Secrets.xcconfig.template`.
 
-### 1. Link sentry-cocoa (SPM — primary)
-The project ships a **static** `ComposeApp` framework (`iosApp/build.gradle.kts`, `isStatic = true`) and uses
-plain Xcode/SPM (no CocoaPods plugin). The `sentry-kotlin-multiplatform` iOS klib carries cinterop bindings
-against Sentry-Cocoa; the symbols resolve when the **app target links Sentry-Cocoa**.
-
-1. In `iosApp/iosApp.xcodeproj`: **File → Add Package Dependencies** → `https://github.com/getsentry/sentry-cocoa` → pin the version chosen in step 0.
-2. Add the **`Sentry`** product to the app target's *Frameworks, Libraries, and Embedded Content*.
-3. Build the app once in Xcode to confirm the Kotlin framework's Sentry symbols link.
-
-**CocoaPods fallback** (if SPM linking fights you): add the Kotlin CocoaPods plugin to `:iosApp`
-(`kotlin { cocoapods { pod("Sentry") { version = "…" } } }`), run `pod install`, open the `.xcworkspace`.
-This is the "blessed" KMP-native pod path and links reliably, at the cost of introducing CocoaPods.
-
-### 2. DSN plumbing (mirror the IGDB/ITAD pattern)
-- Add to `iosApp/Secrets.xcconfig`: `SENTRY_DSN = https://…ingest.sentry.io/…`
-  (⚠️ xcconfig treats `//` as a comment — escape the scheme, e.g. `https:/​/…`, per how the other secrets handle it, or use the `$()`-safe form already used in this file).
-- Reference it in `iosApp/iosApp/Info.plist` as a new key, e.g. `SentryDsn` = `$(SENTRY_DSN)` (same mechanism as the IGDB/ITAD keys at the top of the plist).
-- It's read at runtime via the existing `infoPlistString(...)` helper in `MainViewController.kt`.
-
-### 3. iOS init + user attach
-Add to `iosApp/src/iosMain/kotlin/pm/bam/gamedeals/iosApp/MainViewController.kt` (keeping it in this file
-means Swift sees it as `MainViewControllerKt.initSentry()`, matching `startKoinIfNeeded()`):
-
-```kotlin
-import io.sentry.kotlin.multiplatform.Sentry
-import io.sentry.kotlin.multiplatform.protocol.User
-import pm.bam.gamedeals.logging.configureSentryOptions
-import platform.Foundation.NSBundle
-
-private const val SENTRY_TRACES_SAMPLE_RATE = 1.0   // mirror Android; dial to ~0.2 once volume is known
-
-fun initSentry() {
-    val dsn = infoPlistString("SentryDsn").orEmpty()
-    if (dsn.isEmpty()) return                        // no DSN → no-op (e.g. local dev without secrets)
-    val shortVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: "0"
-    val build = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String ?: "0"
-    Sentry.init { options ->
-        configureSentryOptions(
-            options = options,
-            dsn = dsn,
-            release = "pm.bam.gamedeals@$shortVersion+$build",
-            dist = build,
-            tracesSampleRate = SENTRY_TRACES_SAMPLE_RATE,
-        )
-    }
-}
-```
-
-Attach the install-id user **after Koin starts** (mirrors Android's `attachSentryUser`). Inside
-`bootstrapKoin()`, after `startKoin { … }`, launch a coroutine on the existing app scope:
-
-```kotlin
-if (Sentry.isEnabled()) {
-    appScope.launch {            // reuse whatever scope the lifecycle pollers use in this file
-        runCatching {
-            val installId = koin.get<SettingsRepository>().getInstallId()
-            Sentry.setUser(User().apply { id = installId })
-        }
-    }
-}
-```
-
-Then call `initSentry()` **first** in the Swift entry point so the crash handler arms before anything else
-— `iosApp/iosApp/iOSApp.swift`, in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`:
-
-```swift
-MainViewControllerKt.initSentry()                 // FIRST
-MainViewControllerKt.startKoinIfNeeded()
-NotificationBackgroundPollKt.registerNotificationBackgroundPoll()
-```
-
-> Verify the exact KMP API names against the SDK version you pin — `Sentry.init`, `Sentry.setUser`,
-> `User`, `configureScope` are stable in 0.26/0.27, but double-check if you bump.
-
-### 4. Symbolication (dSYM upload — NOT R8 mapping)
-The Android Gradle plugin does nothing for iOS. Add a **Run Script** build phase (after "Embed Frameworks")
-using `sentry-cli`, or the build-phase the Sentry SPM package documents:
-
-```sh
-export SENTRY_ORG="…" SENTRY_PROJECT="…" SENTRY_AUTH_TOKEN="…"   # same secrets as CI
-sentry-cli debug-files upload --include-sources "$DWARF_DSYM_FOLDER_PATH"
-```
-
-Reuse the `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` from the Android CI setup (`docs/ci-cd.md`).
-Upload dSYMs for both the Kotlin `ComposeApp` framework and the app.
-
-### 5. Verify
-1. `./gradlew :iosApp:linkDebugFrameworkIosSimulatorArm64` (or build via Xcode) — confirms the framework links Sentry-Cocoa (this is the step that's been impossible on Linux).
-2. Run the app on a simulator/device. Confirm Sentry init runs (no crash; the SDK loads).
-3. Temporarily add `Sentry.captureMessage("ios sentry smoke test")` after init (or `Sentry.crash()` for an uncaught test); confirm the Issue appears in the **same Sentry project** as Android, tagged `environment=production`, with `release pm.bam.gamedeals@…`, user = install-id (no PII). **Remove the temporary line.**
-4. Force a crash in a **release**-style build and confirm the trace is **symbolicated** (dSYMs uploaded).
-
-### iOS vs Android differences (for context)
+## iOS vs Android differences (for context)
 - ANR is Android-only; iOS gets **App Hang** detection (`enableAppHangTracking`, on by default) — nothing to wire.
 - Performance: same `tracesSampleRate` knob; sentry-cocoa auto-instruments app-start / screen transactions.
-
----
-
-## ⚠️ Hard rule: do not merge to `dev` until iOS links + verifies
-Moving the Sentry dependency to `commonMain` (already done on this branch) means an **iOS build will fail to
-link** until sentry-cocoa is wired (steps above). The Android build is unaffected. So this branch must NOT
-reach `dev` until §3 is complete and an iOS event has landed. Land it as a single PR once iOS is verified.
 
 ## Reference — files in play
 | File | Role |
 |---|---|
-| `logging/build.gradle.kts` | Sentry dep now in commonMain |
-| `logging/src/commonMain/.../SentryConfig.kt` | shared `configureSentryOptions()` — call from iOS |
-| `logging/src/commonMain/.../implementations/SentryLoggingListener.kt` | Logger→Sentry bridge (shared) |
-| `logging/src/iosMain/.../di/LoggingIosModule.kt` | already registers the bridge for iOS |
-| `iosApp/iosApp.xcodeproj` | add sentry-cocoa SPM package here |
-| `iosApp/Secrets.xcconfig` + `iosApp/iosApp/Info.plist` | DSN plumbing |
-| `iosApp/src/iosMain/.../MainViewController.kt` | add `initSentry()` + user attach; has `infoPlistString()` |
-| `iosApp/iosApp/iOSApp.swift` | call `initSentry()` first in `AppDelegate` |
-| `gradle/libs.versions.toml` | `sentry-kmp` version (consider bump to 0.27.0) |
+| `gradle/libs.versions.toml` | `sentry-kmp = 0.26.0`; lockstep note (↔ sentry-cocoa 8.58.2) |
+| `logging/build.gradle.kts` | Sentry KMP dep in commonMain |
+| `logging/src/commonMain/.../SentryConfig.kt` | shared `configureSentryOptions()` — called from both platforms |
+| `logging/src/iosMain/.../di/LoggingIosModule.kt` | registers the `SentryLoggingListener` bridge for iOS |
+| `iosApp/iosApp.xcodeproj/project.pbxproj` | sentry-cocoa SPM ref (`Sentry-Dynamic` @ 8.58.2) + dSYM-upload phase |
+| `iosApp/Secrets.xcconfig` (+ `Configuration/Secrets.xcconfig.template`) | `SENTRY_DSN` plumbing |
+| `iosApp/iosApp/Info.plist` | `SentryDsn = $(SENTRY_DSN)` |
+| `iosApp/src/iosMain/.../MainViewController.kt` | `startSentry()` + `attachSentryUser()` |
+| `iosApp/iosApp/iOSApp.swift` | calls `startSentry()` first in `AppDelegate` |
 | `docs/ci-cd.md` | `SENTRY_*` secrets reference |

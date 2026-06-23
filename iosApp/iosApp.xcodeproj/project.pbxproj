@@ -11,6 +11,7 @@
 		B100000000000000000000B2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* ContentView.swift */; };
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
 		B100000000000000000000B4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Preview Assets.xcassets */; };
+		B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = S100000000000000000000P1 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,12 +82,16 @@
 				P100000000000000000000E2 /* Sources */,
 				P100000000000000000000E3 /* Frameworks */,
 				P100000000000000000000E4 /* Resources */,
+				P100000000000000000000E5 /* Upload dSYMs to Sentry */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = iosApp;
+			packageProductDependencies = (
+				S100000000000000000000P1 /* Sentry-Dynamic */,
+			);
 			productName = iosApp;
 			productReference = A100000000000000000000A5 /* iosApp.app */;
 			productType = "com.apple.product-type.application";
@@ -114,6 +120,9 @@
 				Base,
 			);
 			mainGroup = G100000000000000000000C1;
+			packageReferences = (
+				S100000000000000000000R1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
 			productRefGroup = G100000000000000000000C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -154,6 +163,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "cd \"$SRCROOT/..\"\nexport JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\"\n./gradlew :iosApp:embedAndSignAppleFrameworkForXcode\n";
+		};
+		P100000000000000000000E5 /* Upload dSYMs to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Upload dSYMs to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if ! which sentry-cli >/dev/null; then\n  echo \"note: sentry-cli not installed - skipping dSYM upload (https://github.com/getsentry/sentry-cli/releases)\"\nelif [ -z \"$SENTRY_AUTH_TOKEN\" ]; then\n  echo \"note: SENTRY_AUTH_TOKEN unset - skipping dSYM upload (local build)\"\nelse\n  sentry-cli debug-files upload --include-sources \"$DWARF_DSYM_FOLDER_PATH\" || echo \"warning: sentry-cli dSYM upload failed\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -383,6 +407,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		S100000000000000000000R1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = exactVersion;
+				version = 8.58.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		S100000000000000000000P1 /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = S100000000000000000000R1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = R100000000000000000000A1 /* Project object */;
 }

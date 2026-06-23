@@ -21,6 +21,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import io.sentry.kotlin.multiplatform.Sentry
+import io.sentry.kotlin.multiplatform.protocol.User
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
 import kotlinx.coroutines.CancellationException
@@ -81,6 +83,7 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.remote.di.remoteModule
@@ -104,16 +107,43 @@ fun MainViewController(): UIViewController {
 /** Swift-facing: start Koin early (idempotent) so a background launch has a graph before the Compose UI exists. */
 fun startKoinIfNeeded() = bootstrapKoin()
 
+/**
+ * Swift-facing: arm Sentry's crash/perf handlers. Call first in `AppDelegate.didFinishLaunching`, before Koin,
+ * so a startup crash is still captured. No-op when no DSN is provisioned (local/dev without `Secrets.xcconfig`),
+ * mirroring Android's `initSentry()`. Release/dist come from the bundle; the shared policy lives in [configureSentryOptions].
+ *
+ * Not named `initSentry`: Kotlin/Native mangles any `init*` top-level function to `doInit*` in the ObjC/Swift API.
+ */
+fun startSentry() {
+    val dsn = infoPlistString("SentryDsn")
+    if (dsn.isEmpty()) return
+    val shortVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: "0"
+    val build = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String ?: "0"
+    Sentry.init { options ->
+        configureSentryOptions(
+            options = options,
+            dsn = dsn,
+            release = "pm.bam.gamedeals@$shortVersion+$build",
+            dist = build,
+            tracesSampleRate = SENTRY_TRACES_SAMPLE_RATE,
+        )
+    }
+}
+
 /** Swift-facing: a tapped notification's `userInfo[route]` → the shared bus the nav host collects. */
 fun deliverNotificationRoute(routeKey: String?) {
     NotificationRoute.fromKey(routeKey)?.let { NotificationRouteBus.deliver(it) }
 }
+
+// Transaction sampling for performance tracing — mirrors Android; dial to ~0.2 once production volume is known.
+private const val SENTRY_TRACES_SAMPLE_RATE = 1.0
 
 private var koinStarted = false
 private var notificationLifecycleStarted = false
 private val notificationLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private var libraryLifecycleStarted = false
 private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val sentryUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 private fun bootstrapKoin() {
     if (koinStarted) return
@@ -167,8 +197,28 @@ private fun bootstrapKoin() {
         org.koin.mp.KoinPlatform.getKoin().get()
     }
 
+    attachSentryUser()
     startNotificationLifecycle()
     startLibraryLifecycle()
+}
+
+/**
+ * Attaches the anonymised, stable install id as the Sentry user so issues group by "users affected" without any
+ * PII — mirrors Android's `attachSentryUser`. The id comes from [SettingsRepository] (needs Koin), hence this runs
+ * after `startKoin`; the crash handler is already armed from [startSentry]. No-op when Sentry is disabled (no DSN).
+ */
+private fun attachSentryUser() {
+    if (!Sentry.isEnabled()) return
+    sentryUserScope.launch {
+        try {
+            val installId = KoinPlatform.getKoin().get<SettingsRepository>().getInstallId()
+            Sentry.setUser(User().apply { id = installId })
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to attach Sentry user." } }
+        }
+    }
 }
 
 /**
