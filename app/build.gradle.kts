@@ -94,8 +94,8 @@ android {
         // and VERSION_CODE derived deterministically from the tag (major*10000 + minor*100 + patch ->
         // 10007) so it is reproducible and strictly increasing. Reading env directly here keeps the
         // override independent of the local.properties-vs-env signing branch above. See bitrise.yml.
-        versionCode = System.getenv("VERSION_CODE")?.toInt() ?: 9
-        versionName = System.getenv("VERSION_NAME") ?: "1.0.6"
+        versionCode = System.getenv("VERSION_CODE")?.toInt() ?: 10
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.7"
 
         testInstrumentationRunner = "pm.bam.gamedeals.KoinTestRunner"
         vectorDrawables {
