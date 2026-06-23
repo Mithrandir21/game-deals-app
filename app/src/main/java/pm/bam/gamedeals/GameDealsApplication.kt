@@ -7,7 +7,6 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import io.sentry.kotlin.multiplatform.Sentry
-import io.sentry.kotlin.multiplatform.protocol.Breadcrumb
 import io.sentry.kotlin.multiplatform.protocol.User
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +42,7 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.remote.di.remoteModule
@@ -246,30 +246,16 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     private fun initSentry() {
         if (isDebuggable() || BuildConfig.SENTRY_DSN.isEmpty()) return
         Sentry.init { options ->
-            options.dsn = BuildConfig.SENTRY_DSN
-            options.environment = "production"
-            options.release = "pm.bam.gamedeals@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
-            options.dist = BuildConfig.VERSION_CODE.toString()
-            // sentry-android-core's automatic activity/app-start transactions ride this. Start at 1.0 to
-            // validate tracing end-to-end, then dial down (~0.2) once production volume is understood.
-            options.tracesSampleRate = TRACES_SAMPLE_RATE
-            options.sendDefaultPii = false
-            options.debug = false
-            // Defence-in-depth: strip query strings off HTTP breadcrumb URLs so an ITAD api key / OAuth
-            // token can never reach Sentry via a `?key=…` query param. (Headers are already excluded by
-            // sendDefaultPii = false.)
-            options.beforeBreadcrumb = { breadcrumb -> scrubBreadcrumb(breadcrumb) }
+            // Shared policy (env, sampling, PII, breadcrumb scrubbing) lives in :logging so Android and iOS
+            // stay in lockstep; only the platform-sourced dsn/release/dist differ.
+            configureSentryOptions(
+                options = options,
+                dsn = BuildConfig.SENTRY_DSN,
+                release = "pm.bam.gamedeals@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}",
+                dist = BuildConfig.VERSION_CODE.toString(),
+                tracesSampleRate = TRACES_SAMPLE_RATE,
+            )
         }
-    }
-
-    /** Strips the query string from HTTP breadcrumb URLs; passes every other breadcrumb through untouched. */
-    private fun scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
-        if (breadcrumb.category == "http") {
-            (breadcrumb.getData()?.get("url") as? String)?.let { url ->
-                breadcrumb.setData("url", url.substringBefore('?'))
-            }
-        }
-        return breadcrumb
     }
 
     /**
