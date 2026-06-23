@@ -1,108 +1,92 @@
-format_version: "13"
+---
+format_version: '13'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: android
-
-# Step @version pins below are major-version pins. When you wire this file into the Bitrise UI,
-# the workflow editor will resolve them to the latest patch and flag any that need updating.
-
 app:
   envs:
-    - MODULE: app
-    - VARIANT: Release
-    - APP_PACKAGE_NAME: pm.bam.gamedeals
-
+  - MODULE: app
+  - VARIANT: Release
+  - APP_PACKAGE_NAME: pm.bam.gamedeals
 trigger_map:
-  # Releases are driven by version tags only (e.g. v1.0.7). GitHub Actions handles branch
-  # verification; its push trigger is branch-filtered, so tags never double-fire on GHA.
-  - tag: "v*.*.*"
-    workflow: release-android
-
+- tag: v*.*.*
+  workflow: release-android
 workflows:
   release-android:
-    summary: Build a signed release AAB from a v*.*.* tag and ship it to the Play Store internal track.
+    summary: Build a signed release AAB from a v*.*.* tag and ship it to the Play
+      Store internal track.
     description: |
       Triggered by pushing a tag like `v1.0.7`. Derives the version from the tag, builds a
       signed AAB (signing config in app/build.gradle.kts reads RELEASE_* env vars + the keystore
       at the repo root), uploads to the Play Store `internal` track with the R8 mapping + release
       notes, and archives the AAB/mapping as Bitrise build artifacts.
     steps:
-      - activate-ssh-key@4:
-          # Only needed for a private repo. Harmless no-op when SSH_RSA_PRIVATE_KEY is unset.
-          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+    - activate-ssh-key@4:
+        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+    - git-clone@8: {}
+    - script@1:
+        title: Derive version from tag
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -euo pipefail
+            # $BITRISE_GIT_TAG is the pushed tag, e.g. "v1.0.7".
+            TAG="${BITRISE_GIT_TAG:?missing BITRISE_GIT_TAG}"
+            VERSION_NAME="${TAG#v}"
 
-      - git-clone@8: {}
+            # Guard: require a strictly numeric MAJOR.MINOR.PATCH tag. A pre-release suffix
+            # (v1.0.7-rc1) or a two-part tag (v1.2) would otherwise yield a wrong versionCode
+            # or a cryptic arithmetic error — fail fast with a clear message instead.
+            if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "ERROR: tag '$TAG' must be vMAJOR.MINOR.PATCH, all numeric (e.g. v1.0.7)." >&2
+              exit 1
+            fi
 
-      # No Bitrise Gradle build-cache steps (restore/save-gradle-cache) — that add-on is paid.
-      # A tag-only release build is infrequent, so a warm Gradle cache buys little; we keep it free.
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+            # minor/patch must each be < 100 to keep the code scheme strictly increasing.
+            if (( 10#$MINOR > 99 || 10#$PATCH > 99 )); then
+              echo "ERROR: tag '$TAG' minor/patch must each be < 100 (versionCode scheme limit)." >&2
+              exit 1
+            fi
 
-      - script@1:
-          title: Derive version from tag
-          inputs:
-            - content: |-
-                #!/usr/bin/env bash
-                set -euo pipefail
-                # $BITRISE_GIT_TAG is the pushed tag, e.g. "v1.0.7".
-                TAG="${BITRISE_GIT_TAG:?missing BITRISE_GIT_TAG}"
-                VERSION_NAME="${TAG#v}"
-
-                # Guard: require a strictly numeric MAJOR.MINOR.PATCH tag. A pre-release suffix
-                # (v1.0.7-rc1) or a two-part tag (v1.2) would otherwise yield a wrong versionCode
-                # or a cryptic arithmetic error — fail fast with a clear message instead.
-                if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                  echo "ERROR: tag '$TAG' must be vMAJOR.MINOR.PATCH, all numeric (e.g. v1.0.7)." >&2
-                  exit 1
-                fi
-
-                IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
-                # minor/patch must each be < 100 to keep the code scheme strictly increasing.
-                if (( 10#$MINOR > 99 || 10#$PATCH > 99 )); then
-                  echo "ERROR: tag '$TAG' minor/patch must each be < 100 (versionCode scheme limit)." >&2
-                  exit 1
-                fi
-
-                # Deterministic, strictly-increasing code from the tag.
-                VERSION_CODE=$(( 10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH ))
-                echo "VERSION_NAME=$VERSION_NAME  VERSION_CODE=$VERSION_CODE"
-                envman add --key VERSION_NAME --value "$VERSION_NAME"
-                envman add --key VERSION_CODE --value "$VERSION_CODE"
-
-      - script@1:
-          title: Place upload keystore at repo root
-          inputs:
-            - content: |-
-                #!/usr/bin/env bash
-                set -euo pipefail
-                # $BITRISEIO_ANDROID_KEYSTORE_URL is published by the Bitrise Code Signing tab.
-                # app/build.gradle.kts expects the keystore at ../upload_keystore.jks (repo root).
-                curl -fsSL "$BITRISEIO_ANDROID_KEYSTORE_URL" -o "$BITRISE_SOURCE_DIR/upload_keystore.jks"
-
-      - android-build@1:
-          title: Build release AAB
-          inputs:
-            - project_location: $BITRISE_SOURCE_DIR
-            - module: $MODULE
-            - variant: $VARIANT
-            - build_type: aab
-
-          # Signing (RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD / RELEASE_STORE_PASSWORD) and API
-          # creds (IGDB_CLIENT_ID/SECRET, ITAD_API_KEY, ITAD_OAUTH_CLIENT_ID) are read from env by
-          # app/build.gradle.kts. VERSION_NAME / VERSION_CODE come from the derive-version step.
-          # Outputs: $BITRISE_AAB_PATH and $BITRISE_MAPPING_PATH.
-      - google-play-deploy@3:
-          title: Deploy to Play Store (internal)
-          inputs:
-            - service_account_json_key_path: $BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL
-            - package_name: $APP_PACKAGE_NAME
-            - app_path: $BITRISE_AAB_PATH
-            - track: internal
-            - status: completed
-            - mapping_file: $BITRISE_MAPPING_PATH
-            - whatsnews_dir: $BITRISE_SOURCE_DIR/whatsnew
-
-      - deploy-to-bitrise-io@2: {}
-
+            # Deterministic, strictly-increasing code from the tag.
+            VERSION_CODE=$(( 10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH ))
+            echo "VERSION_NAME=$VERSION_NAME  VERSION_CODE=$VERSION_CODE"
+            envman add --key VERSION_NAME --value "$VERSION_NAME"
+            envman add --key VERSION_CODE --value "$VERSION_CODE"
+    - script@1:
+        title: Place upload keystore at repo root
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -euo pipefail
+            # $BITRISEIO_ANDROID_KEYSTORE_URL is published by the Bitrise Code Signing tab.
+            # app/build.gradle.kts expects the keystore at ../upload_keystore.jks (repo root).
+            curl -fsSL "$BITRISEIO_ANDROID_KEYSTORE_URL" -o "$BITRISE_SOURCE_DIR/upload_keystore.jks"
+    - android-build@1:
+        title: Build release AAB
+        inputs:
+        - project_location: "$BITRISE_SOURCE_DIR"
+        - module: "$MODULE"
+        - variant: "$VARIANT"
+        - build_type: aab
+    - google-play-deploy@3:
+        title: Deploy to Play Store (internal)
+        inputs:
+        - service_account_json_key_path: "$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL"
+        - package_name: "$APP_PACKAGE_NAME"
+        - app_path: "$BITRISE_AAB_PATH"
+        - track: internal
+        - status: completed
+        - mapping_file: "$BITRISE_MAPPING_PATH"
+        - whatsnews_dir: "$BITRISE_SOURCE_DIR/whatsnew"
+    - deploy-to-bitrise-io@2: {}
+    meta:
+      bitrise.io:
+        stack: ubuntu-resolute-26.04-bitrise-2026-android
+        machine_type_id: standard
   promote-production:
-    summary: Promote a release already on the Play internal track to production (10% staged rollout).
+    summary: Promote a release already on the Play internal track to production (10%
+      staged rollout).
     description: |
       Manual workflow. Production must receive the SAME artifact (identical versionCode + binary)
       that was vetted on internal — never a rebuild, because a rebuilt AAB is a different binary and
@@ -113,16 +97,19 @@ workflows:
       matching `release-android` run (Bitrise build > Apps & Artifacts) and set $PROMOTE_AAB_PATH /
       $PROMOTE_MAPPING_PATH to their local paths before running.
     steps:
-      - git-clone@8: {}
-
-      - google-play-deploy@3:
-          title: Deploy to Play Store (production, 10% staged)
-          inputs:
-            - service_account_json_key_path: $BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL
-            - package_name: $APP_PACKAGE_NAME
-            - app_path: $PROMOTE_AAB_PATH
-            - track: production
-            - status: inProgress
-            - user_fraction: "0.1"
-            - mapping_file: $PROMOTE_MAPPING_PATH
-            - whatsnews_dir: $BITRISE_SOURCE_DIR/whatsnew
+    - git-clone@8: {}
+    - google-play-deploy@3:
+        title: Deploy to Play Store (production, 10% staged)
+        inputs:
+        - service_account_json_key_path: "$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL"
+        - package_name: "$APP_PACKAGE_NAME"
+        - app_path: "$PROMOTE_AAB_PATH"
+        - track: production
+        - status: inProgress
+        - user_fraction: '0.1'
+        - mapping_file: "$PROMOTE_MAPPING_PATH"
+        - whatsnews_dir: "$BITRISE_SOURCE_DIR/whatsnew"
+    meta:
+      bitrise.io:
+        stack: ubuntu-resolute-26.04-bitrise-2026-android
+        machine_type_id: standard
