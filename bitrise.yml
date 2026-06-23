@@ -44,8 +44,23 @@ workflows:
                 # $BITRISE_GIT_TAG is the pushed tag, e.g. "v1.0.7".
                 TAG="${BITRISE_GIT_TAG:?missing BITRISE_GIT_TAG}"
                 VERSION_NAME="${TAG#v}"
+
+                # Guard: require a strictly numeric MAJOR.MINOR.PATCH tag. A pre-release suffix
+                # (v1.0.7-rc1) or a two-part tag (v1.2) would otherwise yield a wrong versionCode
+                # or a cryptic arithmetic error — fail fast with a clear message instead.
+                if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                  echo "ERROR: tag '$TAG' must be vMAJOR.MINOR.PATCH, all numeric (e.g. v1.0.7)." >&2
+                  exit 1
+                fi
+
                 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
-                # Deterministic, strictly-increasing code from the tag (minor/patch must be < 100).
+                # minor/patch must each be < 100 to keep the code scheme strictly increasing.
+                if (( 10#$MINOR > 99 || 10#$PATCH > 99 )); then
+                  echo "ERROR: tag '$TAG' minor/patch must each be < 100 (versionCode scheme limit)." >&2
+                  exit 1
+                fi
+
+                # Deterministic, strictly-increasing code from the tag.
                 VERSION_CODE=$(( 10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH ))
                 echo "VERSION_NAME=$VERSION_NAME  VERSION_CODE=$VERSION_CODE"
                 envman add --key VERSION_NAME --value "$VERSION_NAME"
