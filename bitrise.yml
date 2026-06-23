@@ -32,7 +32,8 @@ workflows:
 
       - git-clone@8: {}
 
-      - restore-gradle-cache@2: {}
+      # No Bitrise Gradle build-cache steps (restore/save-gradle-cache) — that add-on is paid.
+      # A tag-only release build is infrequent, so a warm Gradle cache buys little; we keep it free.
 
       - script@1:
           title: Derive version from tag
@@ -82,8 +83,6 @@ workflows:
             - status: completed
             - mapping_file: $BITRISE_MAPPING_PATH
             - whatsnews_dir: $BITRISE_SOURCE_DIR/whatsnew
-
-      - save-gradle-cache@1: {}
 
       - deploy-to-bitrise-io@2: {}
 

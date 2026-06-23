@@ -103,7 +103,6 @@ trigger_map:
 |---|---|
 | `activate-ssh-key` (run_if) | Only if `SSH_RSA_PRIVATE_KEY` is set (private repo); no-op otherwise. |
 | `git-clone` | Checks out the tagged commit. |
-| `restore-gradle-cache` | Warms the cache for the 22-module build (`save-gradle-cache` writes it back at the end). |
 | Script — **derive version** | From `$BITRISE_GIT_TAG`: `VERSION_NAME` = tag minus `v`; `VERSION_CODE` = `major*10000+minor*100+patch`. Published via `envman` for later steps. |
 | Script — **place keystore** | Downloads the keystore from `$BITRISEIO_ANDROID_KEYSTORE_URL` (Code Signing tab) to `upload_keystore.jks` at the repo root, where `app/build.gradle.kts` expects it. |
 | `android-build` | `./gradlew :app:bundleRelease`. Gradle reads `RELEASE_*`, `IGDB_*`, `ITAD_*`, `VERSION_*` from env. Outputs `$BITRISE_AAB_PATH` + `$BITRISE_MAPPING_PATH`. |
@@ -169,8 +168,9 @@ and the keystore from `upload_keystore.jks` at the repo root (gitignored). Nothi
 - **Generic File Storage**: the Play service-account JSON → `$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL`.
 - **Stack**: Linux + Android (no macOS lane while iOS is deferred → lower cost).
 - Connect the GitHub repo. Add the `activate-ssh-key` step's `SSH_RSA_PRIVATE_KEY` only if private.
-- Import `bitrise.yml`; the workflow editor validates step `@version` pins — fix any it flags
-  (the `restore-gradle-cache`/`save-gradle-cache` versions are the likeliest to need a bump).
+- Import `bitrise.yml`; the workflow editor validates step `@version` pins — fix any it flags.
+- No Gradle build-cache steps are used: the `restore/save-gradle-cache` steps require Bitrise's paid
+  Build Cache add-on, and a tag-only release build is too infrequent to benefit. Kept free.
 
 ### Play Console + Google Cloud
 - Create the app in Play Console; accept agreements; complete the required listing/content forms.
