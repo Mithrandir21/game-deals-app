@@ -5,11 +5,21 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main", "dev" ]
+  workflow_dispatch:
+  schedule:
+    # Nightly release-build (R8) verification on the default branch.
+    - cron: '0 3 * * *'
+
+# Cancel superseded runs for the same ref (e.g. rapid PR pushes) to save runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
     - name: Checking out branch
@@ -43,6 +53,47 @@ jobs:
     # and commit them alongside the source change.
     - name: Compose Stability Check
       run: ./gradlew --no-daemon debugStabilityCheck
+
+  release-verify:
+    name: Release Build Verification (R8)
+    # Exercises R8 / resource shrinking / keep rules on the real release variant so minification
+    # breakage is caught here rather than at release-tag time on Bitrise. Skipped on PRs (R8 is
+    # slow); runs on main pushes, the nightly schedule, and manual dispatch. No keystore in CI, so
+    # the build falls back to debug signing (app/build.gradle.kts) while R8 still runs fully.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+    - name: Checking out branch
+      uses: actions/checkout@v4
+
+    - name: JDK 21 Setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Assemble release bundle (R8)
+      run: ./gradlew --no-daemon :app:bundleRelease
+
+    - name: Upload R8 mapping
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: r8-mapping-${{ github.sha }}
+        path: app/build/outputs/mapping/release/
+        if-no-files-found: ignore
+        retention-days: 90
 
   instrumented-test:
     name: Instrumented UI Tests (API ${{ matrix.api-level }})

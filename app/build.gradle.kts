@@ -89,8 +89,13 @@ android {
         // API 35 is Google Play's current minimum target; matches compileSdk (36) to avoid a near-term re-bump.
         // NOTE: targeting 35+ forces edge-to-edge — see enableEdgeToEdge() in MainActivity and per-screen insets.
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.0.6"
+        // versionCode/versionName default to the last manually-set values for local/dev builds.
+        // Release CI (Bitrise) overrides them via env: VERSION_NAME from the git tag (v1.0.7 -> 1.0.7)
+        // and VERSION_CODE derived deterministically from the tag (major*10000 + minor*100 + patch ->
+        // 10007) so it is reproducible and strictly increasing. Reading env directly here keeps the
+        // override independent of the local.properties-vs-env signing branch above. See bitrise.yml.
+        versionCode = System.getenv("VERSION_CODE")?.toInt() ?: 9
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.6"
 
         testInstrumentationRunner = "pm.bam.gamedeals.KoinTestRunner"
         vectorDrawables {
