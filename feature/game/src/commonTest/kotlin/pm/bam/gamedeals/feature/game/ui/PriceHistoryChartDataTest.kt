@@ -26,19 +26,19 @@ class PriceHistoryChartDataTest {
     private val now = 1000 * MILLIS_PER_DAY
 
     @Test
-    fun `toEpochDay floors to whole UTC days`() {
+    fun toEpochDay_floors_to_whole_UTC_days() {
         assertEquals(0, 0L.toEpochDay())
         assertEquals(1, (MILLIS_PER_DAY + 1).toEpochDay())
         assertEquals(10, (10 * MILLIS_PER_DAY + 500).toEpochDay())
     }
 
     @Test
-    fun `empty input yields empty window`() {
+    fun empty_input_yields_empty_window() {
         assertTrue(windowedPriceHistory(emptyList(), PriceHistoryRange.ALL, now).isEmpty())
     }
 
     @Test
-    fun `ALL keeps every distinct day and extends a flat segment to now`() {
+    fun ALL_keeps_every_distinct_day_and_extends_a_flat_segment_to_now() {
         val result = windowedPriceHistory(
             listOf(pt(900, 60.0), pt(950, 30.0)),
             PriceHistoryRange.ALL,
@@ -53,7 +53,7 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
-    fun `multiple changes in a day collapse to the latest`() {
+    fun multiple_changes_in_a_day_collapse_to_the_latest() {
         val result = windowedPriceHistory(
             listOf(pt(900, 60.0), pt(900, 55.0), pt(950, 30.0)),
             PriceHistoryRange.ALL,
@@ -66,7 +66,7 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
-    fun `bounded range carries the prevailing price forward to the window start`() {
+    fun bounded_range_carries_the_prevailing_price_forward_to_the_window_start() {
         // Both changes predate the 3-month window; the window must still show the held price.
         val result = windowedPriceHistory(
             listOf(pt(800, 60.0), pt(850, 40.0)),
@@ -82,7 +82,7 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
-    fun `bounded range anchors then includes in-window changes`() {
+    fun bounded_range_anchors_then_includes_in_window_changes() {
         val result = windowedPriceHistory(
             listOf(pt(800, 60.0), pt(950, 20.0)),
             PriceHistoryRange.THREE_MONTHS,
@@ -98,7 +98,7 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
-    fun `latestRegular returns the most recent non-null regular price`() {
+    fun latestRegular_returns_the_most_recent_non_null_regular_price() {
         val points = listOf(
             pt(900, 60.0, regular = 60.0),
             pt(950, 30.0, regular = null),
@@ -109,7 +109,7 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
-    fun `lowestPoint returns the cheapest entry`() {
+    fun lowestPoint_returns_the_cheapest_entry() {
         val points = listOf(pt(900, 60.0), pt(950, 12.0), pt(980, 30.0))
         assertEquals(12.0, lowestPoint(points)?.priceValue)
         assertNull(lowestPoint(emptyList()))

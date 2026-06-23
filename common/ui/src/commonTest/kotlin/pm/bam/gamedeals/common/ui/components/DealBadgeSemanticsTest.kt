@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class DealBadgeSemanticsTest {
 
     @Test
-    fun `no flags produces no suffixes`() {
+    fun no_flags_produces_no_suffixes() {
         assertEquals(
             emptyList(),
             dealBadgeSuffixes(isNewHistoricalLow = false, isStoreLow = false, hasVoucher = false),
@@ -14,7 +14,7 @@ class DealBadgeSemanticsTest {
     }
 
     @Test
-    fun `each flag maps to its suffix`() {
+    fun each_flag_maps_to_its_suffix() {
         assertEquals(
             listOf(DealBadgeSuffix.NEW_LOW),
             dealBadgeSuffixes(isNewHistoricalLow = true, isStoreLow = false, hasVoucher = false),
@@ -30,7 +30,7 @@ class DealBadgeSemanticsTest {
     }
 
     @Test
-    fun `new-low precedes voucher in announcement order`() {
+    fun new_low_precedes_voucher_in_announcement_order() {
         assertEquals(
             listOf(DealBadgeSuffix.NEW_LOW, DealBadgeSuffix.VOUCHER),
             dealBadgeSuffixes(isNewHistoricalLow = true, isStoreLow = false, hasVoucher = true),
@@ -38,7 +38,7 @@ class DealBadgeSemanticsTest {
     }
 
     @Test
-    fun `store-low precedes voucher in announcement order`() {
+    fun store_low_precedes_voucher_in_announcement_order() {
         assertEquals(
             listOf(DealBadgeSuffix.STORE_LOW, DealBadgeSuffix.VOUCHER),
             dealBadgeSuffixes(isNewHistoricalLow = false, isStoreLow = true, hasVoucher = true),

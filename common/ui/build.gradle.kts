@@ -49,6 +49,21 @@ kotlin {
                 implementation(libs.coroutines.testing)
             }
         }
+
+        // Compose UI tests for shared components (e.g. GamePeekSheet) run on a device. The library
+        // convention plugin enables `withDeviceTestBuilder` once `src/androidDeviceTest/` exists, but
+        // unlike the feature plugin it doesn't auto-wire the test deps — so they're declared here.
+        val androidDeviceTest by getting {
+            dependencies {
+                implementation(project(":testing"))
+                implementation(libs.mockk.android)
+                implementation(libs.androidx.junit)
+                implementation(libs.androidx.runner)
+                implementation(libs.androidx.espresso.core)
+                implementation(libs.androidx.compose.junit4)
+                implementation(libs.androidx.compose.test)
+            }
+        }
     }
 }
 
