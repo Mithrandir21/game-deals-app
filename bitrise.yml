@@ -54,6 +54,27 @@ workflows:
             envman add --key VERSION_NAME --value "$VERSION_NAME"
             envman add --key VERSION_CODE --value "$VERSION_CODE"
     - script@1:
+        title: Run unit tests
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # NOTE: no `set -e` around gradle — we must export the JUnit XMLs even when tests
+            # fail, then exit with gradle's status so a failure still aborts the release.
+            set -uo pipefail
+            ./gradlew --no-daemon testDebugUnitTest testAndroidHostTest
+            status=$?
+
+            # Surface results in the Bitrise Test Reports tab (which test failed), even on failure.
+            if [[ -n "${BITRISE_TEST_RESULT_DIR:-}" ]]; then
+              dest="$BITRISE_TEST_RESULT_DIR/unit-tests"
+              mkdir -p "$dest"
+              # Flatten with path-encoded names so same-named XMLs across modules don't collide.
+              find . -path '*/build/test-results/*' -name '*.xml' -print0 \
+                | while IFS= read -r -d '' f; do cp "$f" "$dest/$(echo "${f#./}" | tr '/' '_')"; done
+              printf '{"test-name":"Unit tests"}' > "$dest/test-info.json"
+            fi
+            exit $status
+    - script@1:
         title: Place upload keystore at repo root
         inputs:
         - content: |-

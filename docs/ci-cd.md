@@ -104,6 +104,7 @@ trigger_map:
 | `activate-ssh-key` (run_if) | Only if `SSH_RSA_PRIVATE_KEY` is set (private repo); no-op otherwise. |
 | `git-clone` | Checks out the tagged commit. |
 | Script — **derive version** | From `$BITRISE_GIT_TAG`: `VERSION_NAME` = tag minus `v`; `VERSION_CODE` = `major*10000+minor*100+patch`. Published via `envman` for later steps. |
+| Script — **run unit tests** | `./gradlew testDebugUnitTest testAndroidHostTest` (app + all KMP modules; `test` alone misses the KMP modules). A failure aborts the release before keystore/build/deploy. Exports JUnit XMLs to `$BITRISE_TEST_RESULT_DIR` (even on failure) so the failing test shows in the Test Reports tab. |
 | Script — **place keystore** | Downloads the keystore from `$BITRISEIO_ANDROID_KEYSTORE_URL` (Code Signing tab) to `upload_keystore.jks` at the repo root, where `app/build.gradle.kts` expects it. |
 | `android-build` | `./gradlew :app:bundleRelease`. Gradle reads `RELEASE_*`, `IGDB_*`, `ITAD_*`, `VERSION_*` from env. Outputs `$BITRISE_AAB_PATH` + `$BITRISE_MAPPING_PATH`. |
 | `google-play-deploy` | Uploads the AAB to the **internal** track (`status: completed`), with the R8 mapping (readable Play crash stacks) and notes from `whatsnew/`. |
