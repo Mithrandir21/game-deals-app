@@ -7,6 +7,8 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import io.sentry.kotlin.multiplatform.Sentry
+import io.sentry.kotlin.multiplatform.protocol.Breadcrumb
+import io.sentry.kotlin.multiplatform.protocol.User
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,7 @@ import pm.bam.gamedeals.domain.di.domainAndroidModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.feature.account.di.accountModule
@@ -60,8 +63,8 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     private val logger: Logger by inject()
 
     /**
-     * Application-scoped fire-and-forget work, intended to be reused by future
-     * cold-start initializers (e.g. moving `Sentry.init` off the Main thread).
+     * Application-scoped fire-and-forget work: DB warm-up, cache maintenance, the
+     * auth-driven lifecycles, and attaching the Sentry user once Koin is up.
      *
      * Backed by a [SupervisorJob] so one failed child doesn't tear down siblings,
      * and pinned to [Dispatchers.IO] since the typical use case is I/O-bound
@@ -105,6 +108,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 onboardingModule,
             )
         }
+        attachSentryUser()
         warmDomainDatabase()
         runCacheMaintenance()
         runNotificationLifecycle()
@@ -231,28 +235,73 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     }
 
     /**
-     * Initialise the Sentry SDK off the Main thread.
+     * Initialise the Sentry SDK as the very first thing in [onCreate], synchronously, so the crash and
+     * ANR handlers are armed before any other startup work can throw. `sentry-android` init is only a few
+     * milliseconds, so the cold-start cost is negligible and worth paying for startup-crash coverage.
      *
-     * The empty-DSN early-return is kept at the top so debug/CI builds stay
-     * zero-cost — we don't even wake [applicationScope] in that case.
-     *
-     * When a DSN is configured, the synchronous `Sentry.init` bootstrap is
-     * dispatched onto [applicationScope] (IO dispatcher) so it doesn't add
-     * cold-start cost to `Application.onCreate`. Fire-and-forget: any failure
-     * inside `Sentry.init` should not crash the app.
+     * Gated to release builds with a configured DSN: debuggable builds early-return (zero cost, and our
+     * own dev/test runs never pollute the production dashboard). The R8 mapping that de-obfuscates these
+     * traces is uploaded by the Sentry Gradle plugin — see app/build.gradle.kts.
      */
     private fun initSentry() {
-        if (SENTRY_DSN.isEmpty()) return
+        if (isDebuggable() || BuildConfig.SENTRY_DSN.isEmpty()) return
+        Sentry.init { options ->
+            options.dsn = BuildConfig.SENTRY_DSN
+            options.environment = "production"
+            options.release = "pm.bam.gamedeals@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
+            options.dist = BuildConfig.VERSION_CODE.toString()
+            // sentry-android-core's automatic activity/app-start transactions ride this. Start at 1.0 to
+            // validate tracing end-to-end, then dial down (~0.2) once production volume is understood.
+            options.tracesSampleRate = TRACES_SAMPLE_RATE
+            options.sendDefaultPii = false
+            options.debug = false
+            // Defence-in-depth: strip query strings off HTTP breadcrumb URLs so an ITAD api key / OAuth
+            // token can never reach Sentry via a `?key=…` query param. (Headers are already excluded by
+            // sendDefaultPii = false.)
+            options.beforeBreadcrumb = { breadcrumb -> scrubBreadcrumb(breadcrumb) }
+        }
+    }
+
+    /** Strips the query string from HTTP breadcrumb URLs; passes every other breadcrumb through untouched. */
+    private fun scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
+        if (breadcrumb.category == "http") {
+            (breadcrumb.getData()?.get("url") as? String)?.let { url ->
+                breadcrumb.setData("url", url.substringBefore('?'))
+            }
+        }
+        return breadcrumb
+    }
+
+    /**
+     * Attaches an anonymised, stable install id as the Sentry user so issues can be grouped by
+     * "users affected" without shipping any PII. The id comes from [SettingsRepository] (so it needs
+     * Koin), hence this runs after [startKoin]; the crash handler is already armed from [initSentry], so
+     * a crash in the gap is still captured, just without the id. No-op when Sentry is disabled (debug /
+     * no DSN). Fire-and-forget on [applicationScope]; failures are logged but never crash the app.
+     */
+    private fun attachSentryUser() {
+        if (!Sentry.isEnabled()) return
         applicationScope.launch {
-            Sentry.init { options ->
-                options.dsn = SENTRY_DSN
-                options.debug = isDebuggable()
+            try {
+                val installId = get<SettingsRepository>().getInstallId()
+                Sentry.setUser(User().apply { id = installId })
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                try {
+                    error(logger, throwable = t) { "Failed to attach Sentry user" }
+                } catch (_: Throwable) {
+                }
             }
         }
     }
 
     private companion object {
-        const val SENTRY_DSN = ""
+        /**
+         * Transaction sampling for performance tracing. Start at 1.0 to confirm transactions flow, then
+         * lower (~0.2) once production volume is understood.
+         */
+        const val TRACES_SAMPLE_RATE = 1.0
     }
 }
 

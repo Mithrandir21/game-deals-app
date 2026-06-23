@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.storage.getNullable
 import pm.bam.gamedeals.common.storage.save
@@ -36,11 +38,19 @@ interface SettingsRepository {
      */
     suspend fun getOnboardingCompleted(): Boolean
     suspend fun setOnboardingCompleted(completed: Boolean)
+
+    /**
+     * A stable, anonymous per-install id (random UUID), generated once on first access and persisted.
+     * Used as the Sentry user id so crashes group by "users affected" without shipping any PII. Survives
+     * across launches; resets only on reinstall / "clear data".
+     */
+    suspend fun getInstallId(): String
 }
 
 internal const val MATURE_OPT_IN_KEY = "mature_opt_in"
 internal const val DEALS_FILTER_KEY = "deals_filter"
 internal const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
+internal const val INSTALL_ID_KEY = "install_id"
 
 internal class SettingsRepositoryImpl(
     private val storage: Storage,
@@ -87,6 +97,14 @@ internal class SettingsRepositoryImpl(
 
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         storage.save(ONBOARDING_COMPLETED_KEY, completed)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override suspend fun getInstallId(): String {
+        runCatching { storage.getNullable<String>(INSTALL_ID_KEY) }.getOrNull()?.let { return it }
+        val id = Uuid.random().toString()
+        storage.save(INSTALL_ID_KEY, id)
+        return id
     }
 
     private suspend fun loadMatureFromStorage(): Boolean =

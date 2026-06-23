@@ -106,7 +106,7 @@ trigger_map:
 | Script — **derive version** | From `$BITRISE_GIT_TAG`: `VERSION_NAME` = tag minus `v`; `VERSION_CODE` = `major*10000+minor*100+patch`. Published via `envman` for later steps. |
 | Script — **run unit tests** | `./gradlew testDebugUnitTest testAndroidHostTest` (app + all KMP modules; `test` alone misses the KMP modules). A failure aborts the release before keystore/build/deploy. Exports JUnit XMLs to `$BITRISE_TEST_RESULT_DIR` (even on failure) so the failing test shows in the Test Reports tab. |
 | Script — **place keystore** | Downloads the keystore from `$BITRISEIO_ANDROID_KEYSTORE_URL` (Code Signing tab) to `upload_keystore.jks` at the repo root, where `app/build.gradle.kts` expects it. |
-| `android-build` | `./gradlew :app:bundleRelease`. Gradle reads `RELEASE_*`, `IGDB_*`, `ITAD_*`, `VERSION_*` from env. Outputs `$BITRISE_AAB_PATH` + `$BITRISE_MAPPING_PATH`. |
+| `android-build` | `./gradlew :app:bundleRelease`. Gradle reads `RELEASE_*`, `IGDB_*`, `ITAD_*`, `SENTRY_*`, `VERSION_*` from env. Outputs `$BITRISE_AAB_PATH` + `$BITRISE_MAPPING_PATH`. When `SENTRY_AUTH_TOKEN` is set, the Sentry Gradle plugin also uploads the R8 mapping to Sentry (readable crash stacks there too). |
 | `google-play-deploy` | Uploads the AAB to the **internal** track (`status: completed`), with the R8 mapping (readable Play crash stacks) and notes from `whatsnew/`. |
 | `deploy-to-bitrise-io` | Archives the AAB + mapping as Bitrise build artifacts (audit trail + source for promotion). |
 
@@ -152,12 +152,16 @@ it's independent of the `local.properties`-vs-env signing branch. Bitrise sets t
 |---|---|---|
 | `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`, `RELEASE_STORE_PASSWORD` | Gradle signing | Bitrise **Secrets** |
 | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `ITAD_API_KEY`, `ITAD_OAUTH_CLIENT_ID` | `buildConfigField` (runtime API access) | Bitrise **Secrets** |
+| `SENTRY_DSN` | `buildConfigField` (runtime crash/telemetry ingest; release builds only) | Bitrise **Secrets** |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Sentry Gradle plugin — R8 mapping upload (build-time). Without the token, the build still produces the mapping but skips the upload. | Bitrise **Secrets** |
 | `$BITRISEIO_ANDROID_KEYSTORE_URL` | Keystore download | Published by Bitrise **Code Signing** tab |
 | `$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL` | Play upload auth | Published by a Bitrise **Generic File Storage** secret |
 | `VERSION_NAME`, `VERSION_CODE` | Gradle version | Computed in the `release-android` derive-version step |
 
-Locally, the same `RELEASE_*` / `IGDB_*` / `ITAD_*` values come from `local.properties` (gitignored),
-and the keystore from `upload_keystore.jks` at the repo root (gitignored). Nothing sensitive is in git.
+Locally, the same `RELEASE_*` / `IGDB_*` / `ITAD_*` values, plus `sentryDsn`, come from `local.properties`
+(gitignored), and the keystore from `upload_keystore.jks` at the repo root (gitignored). Nothing sensitive
+is in git. The `SENTRY_ORG/PROJECT/AUTH_TOKEN` mapping-upload vars are CI-only — local release builds just
+generate the mapping and skip the upload.
 
 ---
 
@@ -165,7 +169,9 @@ and the keystore from `upload_keystore.jks` at the repo root (gitignored). Nothi
 
 ### Bitrise (UI)
 - **Code Signing** tab: upload `upload_keystore.jks` → publishes `$BITRISEIO_ANDROID_KEYSTORE_URL`.
-- **Secrets**: the `RELEASE_*`, `IGDB_*`, `ITAD_*` values from the table above.
+- **Secrets**: the `RELEASE_*`, `IGDB_*`, `ITAD_*`, and `SENTRY_*` values from the table above. The
+  `SENTRY_AUTH_TOKEN` needs `project:releases` (org/project-write) scope; create it at Sentry → Settings
+  → Auth Tokens.
 - **Generic File Storage**: the Play service-account JSON → `$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL`.
 - **Stack**: Linux + Android (no macOS lane while iOS is deferred → lower cost).
 - Connect the GitHub repo. Add the `activate-ssh-key` step's `SSH_RSA_PRIVATE_KEY` only if private.

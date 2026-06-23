@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.gamedeals.android.application)
     // Consumes the :baselineprofile producer and merges its generated profile into release/benchmark variants.
     alias(libs.plugins.androidx.baselineprofile)
+    // Uploads the R8 mapping file so release crash stack traces are de-obfuscated in Sentry (see the sentry {} block).
+    alias(libs.plugins.sentry.android)
 }
 
 android {
@@ -29,6 +31,11 @@ android {
     // ITAD OAuth client id — for the account feature (epic #219, Phase 2). Same sources as the API key.
     var itadOauthClientId = ""
 
+    // Sentry DSN — crash/telemetry ingest endpoint. Same local.properties (dev) / env-var (CI) sources as the
+    // other secrets. It's technically a client-side value (shipped in every build), but routed through the same
+    // pipeline to keep it out of git and let release CI inject it. Blank in debug builds, where Sentry init no-ops.
+    var sentryDsn = ""
+
     // First check if the local.properties file exists, meaning non-CI environment.
     if (File(rootProject.rootDir, "local.properties").exists()) {
         // Loading local properties so that we can use them in the build.gradle.kts file and not expose them in the repository
@@ -51,6 +58,8 @@ android {
 
         itadApiKey = localProperties.getProperty("itadApiKey") ?: ""
         itadOauthClientId = localProperties.getProperty("itadOauthClientId") ?: ""
+
+        sentryDsn = localProperties.getProperty("sentryDsn") ?: ""
     }
     // Check if environment variables are present, meaning CI environment.
     else if (System.getenv("RELEASE_KEY_ALIAS") != null) {
@@ -69,6 +78,9 @@ android {
     // Env-var fallback for the ITAD key (independent of the signing block, like the IGDB creds).
     if (itadApiKey.isEmpty()) itadApiKey = System.getenv("ITAD_API_KEY") ?: ""
     if (itadOauthClientId.isEmpty()) itadOauthClientId = System.getenv("ITAD_OAUTH_CLIENT_ID") ?: ""
+
+    // Env-var fallback for the Sentry DSN (independent of the signing block, like the other creds).
+    if (sentryDsn.isEmpty()) sentryDsn = System.getenv("SENTRY_DSN") ?: ""
 
     // If neither local.properties nor environment variables are present, the release key is not present.
     if(releaseKeyPresent) {
@@ -106,6 +118,7 @@ android {
         buildConfigField("String", "IGDB_CLIENT_SECRET", "\"$igdbClientSecret\"")
         buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
         buildConfigField("String", "ITAD_OAUTH_CLIENT_ID", "\"$itadOauthClientId\"")
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     buildFeatures.buildConfig = true
@@ -124,6 +137,29 @@ android {
             signingConfig = signingConfigs.getByName(releaseSigningKey)
         }
     }
+}
+
+// Sentry Android Gradle plugin — used ONLY to upload the R8 mapping so release crash traces are
+// de-obfuscated. The SDK itself is the Sentry KMP artifact (initialised in GameDealsApplication), so:
+//   - autoInstallation is OFF — we don't want the plugin pulling a second/clashing sentry-android.
+//   - tracingInstrumentation is OFF — its bytecode transform would emit calls into sentry-android-okhttp,
+//     which isn't on the classpath (the KMP SDK only brings sentry-android core/ndk/replay), and Ktor
+//     builds its OkHttpClient internally so it wouldn't be caught anyway. Performance tracing instead
+//     rides sentry-android-core's automatic activity/app-start transactions, gated by the tracesSampleRate
+//     set in GameDealsApplication.
+// org/project/authToken come from CI env. The upload only runs when a token is present, so local
+// `assembleRelease` (no secrets) still generates the mapping and stays green.
+sentry {
+    org.set(System.getenv("SENTRY_ORG") ?: "")
+    projectName.set(System.getenv("SENTRY_PROJECT") ?: "")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN") ?: "")
+
+    autoInstallation { enabled.set(false) }
+    tracingInstrumentation { enabled.set(false) }
+    includeSourceContext.set(false)
+
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(System.getenv("SENTRY_AUTH_TOKEN") != null)
 }
 
 dependencies {
