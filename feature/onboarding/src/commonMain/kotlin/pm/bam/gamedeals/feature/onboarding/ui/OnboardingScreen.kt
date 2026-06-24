@@ -76,6 +76,7 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_privacy_link
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_body
@@ -121,6 +122,9 @@ import pm.bam.gamedeals.feature.onboarding.ui.OnboardingViewModel.OnboardingStat
 private const val ONBOARDING_PAGE_COUNT = 8
 private const val ONBOARDING_SIGN_IN_PAGE = ONBOARDING_PAGE_COUNT - 1
 
+/** Hosted privacy disclosure linked from the analytics-consent step. */
+private const val PRIVACY_POLICY_URL = "https://bam.pm/privacy_policy.txt"
+
 /**
  * First-run welcome carousel (one-time, replayable from the Account hub). Explains the app and walks the
  * three interactive setup steps — region, notifications, sign-in. [onFinish] is invoked once the flow is
@@ -153,6 +157,7 @@ internal fun OnboardingScreen(
         onOpenNotificationSettings = { platformActions.openAppNotificationSettings() },
         analyticsEnabled = state.analyticsEnabled,
         onEnableAnalytics = viewModel::onEnableAnalytics,
+        onOpenPrivacyPolicy = { platformActions.openInApp(PRIVACY_POLICY_URL) },
         onSignIn = { viewModel.signInThenFinish(onFinish) },
         onFinish = { viewModel.finish(onFinish) },
     )
@@ -170,6 +175,7 @@ private fun OnboardingContent(
     onOpenNotificationSettings: () -> Unit,
     analyticsEnabled: Boolean,
     onEnableAnalytics: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
     onSignIn: () -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -207,6 +213,7 @@ private fun OnboardingContent(
                     6 -> AnalyticsConsentSlide(
                         enabled = analyticsEnabled,
                         onEnable = onEnableAnalytics,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
                     )
                     7 -> SignInSlide(
                         loggedIn = state.loggedIn,
@@ -501,6 +508,7 @@ internal fun NotificationsSlide(
 internal fun AnalyticsConsentSlide(
     enabled: Boolean,
     onEnable: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
 ) {
     SlideScaffold(
         icon = Icons.Filled.Insights,
@@ -529,6 +537,10 @@ internal fun AnalyticsConsentSlide(
             Button(onClick = onEnable) {
                 Text(stringResource(Res.string.onboarding_analytics_enable))
             }
+        }
+        // GDPR disclosure: link the full hosted policy from the consent step itself.
+        TextButton(onClick = onOpenPrivacyPolicy) {
+            Text(stringResource(Res.string.onboarding_analytics_privacy_link))
         }
     }
 }

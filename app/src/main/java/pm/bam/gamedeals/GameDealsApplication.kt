@@ -278,14 +278,11 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     }
 
     /**
-     * Initialise the PostHog SDK for product analytics. Currently enabled in ALL variants so event flow can be
-     * verified on real devices; an empty [BuildConfig.POSTHOG_API_KEY] early-returns (and the Koin [Analytics]
-     * binding falls back to NoOp). The SDK is configured (see [configurePostHog]) to emit nothing on its own —
-     * every event flows through our [Analytics] wrapper, which stamps the environment so debug noise stays
-     * filterable in PostHog.
-     *
-     * TODO(analytics): to gate to release-only later (like Sentry), add `if (isDebuggable()) return` here, or
-     * stop emitting POSTHOG_API_KEY for the debug build type in app/build.gradle.kts.
+     * Initialise the PostHog SDK for product analytics. Release-only, like [initSentry]: the debug build type
+     * forces an empty [BuildConfig.POSTHOG_API_KEY] (see app/build.gradle.kts), so this early-returns on debug
+     * and the Koin [Analytics] binding falls back to NoOp — keeping the un-`setup()` SDK off every code path.
+     * The SDK is configured (see [configurePostHog]) to emit nothing on its own — every event flows through our
+     * [Analytics] wrapper, which stamps the environment so any release-debug events stay filterable in PostHog.
      */
     private fun initPostHog() {
         if (BuildConfig.POSTHOG_API_KEY.isEmpty()) return

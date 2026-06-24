@@ -110,6 +110,7 @@ import coil3.request.ImageRequest
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -230,6 +231,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_remo
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_more_actions
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_toolbar_title_loading
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
@@ -808,7 +811,7 @@ private fun PricesTab(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 data.dealDetails.forEach { pair ->
-                    StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+                    StoreGameDealRow(gameId = data.gameId, store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
                 }
             }
         }
@@ -1011,14 +1014,29 @@ private fun RatingPill(label: String, value: Int, count: Long?) {
 
 @Composable
 private fun StoreGameDealRow(
+    gameId: String?,
     store: Store,
     gameInfo: GameDetails.GameInfo,
     deal: GameDetails.GameDeal,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
+    // Records the click-through to a store before the in-app browser opens. The Prices tab opens deals
+    // directly (not via the peek sheet), so this is the deal_store_opened capture point for the game page.
+    val analytics: Analytics = koinInject()
     val rowCd = stringResource(Res.string.game_screen_store_deal_row_description, store.storeName, deal.savings, deal.priceDenominated)
-    Card(onClick = { goToWeb(deal.url, gameInfo.title) }) {
+    Card(onClick = {
+        analytics.capture(
+            AnalyticsEvents.DEAL_STORE_OPENED,
+            mapOf(
+                "game_id" to (gameId ?: ""),
+                "store_id" to store.storeID,
+                "store_name" to store.storeName,
+                "discount_pct" to deal.savings,
+            ),
+        )
+        goToWeb(deal.url, gameInfo.title)
+    }) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically,

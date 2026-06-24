@@ -193,6 +193,7 @@ internal class GamePageViewModel(
         emit(
             GamePageData.Data(
                 title = gameDetails?.info?.title ?: igdbGame?.name ?: titleArg.orEmpty(),
+                gameId = resolvedGameId,
                 deals = dealsState,
                 dealDetails = dealDetails,
                 priceHistory = priceHistoryState,
@@ -506,6 +507,8 @@ internal class GamePageViewModel(
         @Immutable
         data class Data(
             val title: String,
+            /** Resolved ITAD game id (same id space as the peek sheet's), or null on a metadata-only page. Used to tag `deal_store_opened`. */
+            val gameId: String? = null,
             /**
              * ITAD deal side. `Loaded(GameDetails)` when sold somewhere we matched; `Loaded(null)` when there's
              * no ITAD match (metadata-only page); [SectionState.Error] when the fetch failed. Feeds Prices +

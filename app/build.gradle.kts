@@ -139,6 +139,13 @@ android {
             // Pair flag for the KMP-library `enableCoverage = true`; the root `jacocoAndroidTestReport` task folds the resulting `coverage.ec`
             // files into the parallel JaCoCo report alongside Kover's JVM coverage.
             enableAndroidTestCoverage = true
+
+            // Product analytics is release-only (like Sentry's crash reporting). Forcing an empty PostHog key
+            // in debug overrides the defaultConfig value so every code path falls back to NoOp via the existing
+            // "empty key ⇒ NoOp ⇒ safe" invariant: initPostHog() early-returns, the Koin Analytics binding
+            // resolves to NoOpAnalytics, and startAnalytics() early-returns. To smoke-test analytics on a debug
+            // build, temporarily remove this override. The real key (defaultConfig) only reaches release builds.
+            buildConfigField("String", "POSTHOG_API_KEY", "\"\"")
         }
         release {
             isMinifyEnabled = true

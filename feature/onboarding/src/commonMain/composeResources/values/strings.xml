@@ -45,11 +45,12 @@
     <string name="onboarding_notifications_denied">Notifications are blocked. Turn them on for this app in system settings.</string>
     <string name="onboarding_open_settings">Open settings</string>
 
-    <!-- 7. Analytics consent (interactive) — off by default (GDPR opt-out). TODO(privacy): add a policy link. -->
+    <!-- 7. Analytics consent (interactive) — off by default (GDPR opt-out). -->
     <string name="onboarding_analytics_title">Help improve the app</string>
     <string name="onboarding_analytics_body">Share usage data — which games, deals and searches you interact with — so we can see what to improve. It\'s linked to a random anonymous id, EU-hosted, and off unless you turn it on. You can change this any time in Account.</string>
     <string name="onboarding_analytics_enable">Turn on analytics</string>
     <string name="onboarding_analytics_enabled">Analytics on</string>
+    <string name="onboarding_analytics_privacy_link">Privacy policy</string>
 
     <!-- 8. Sign in (interactive, last) -->
     <string name="onboarding_signin_title">Sign in to sync</string>

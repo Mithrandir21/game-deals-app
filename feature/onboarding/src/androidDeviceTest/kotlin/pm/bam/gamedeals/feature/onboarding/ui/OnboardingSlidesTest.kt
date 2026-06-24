@@ -137,7 +137,7 @@ class OnboardingSlidesTest {
 
     @Test
     fun analytics_consent_off_offers_turn_on() {
-        setContent { AnalyticsConsentSlide(enabled = false, onEnable = {}) }
+        setContent { AnalyticsConsentSlide(enabled = false, onEnable = {}, onOpenPrivacyPolicy = {}) }
 
         composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertIsDisplayed()
         composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
@@ -146,7 +146,7 @@ class OnboardingSlidesTest {
     @Test
     fun analytics_consent_on_shows_confirmation_only() {
         var enabled = false
-        setContent { AnalyticsConsentSlide(enabled = true, onEnable = { enabled = true }) }
+        setContent { AnalyticsConsentSlide(enabled = true, onEnable = { enabled = true }, onOpenPrivacyPolicy = {}) }
 
         composeTestRule.onNodeWithText(sem.analyticsOn).assertIsDisplayed()
         composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
