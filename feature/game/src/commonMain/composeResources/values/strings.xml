@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="game_screen_game_image">%1$s Game image</string>
+    <string name="game_screen_store_thumbnail">%1$s Store thumbnail</string>
+    <string name="game_screen_navigation_back_button">Back</string>
+
+    <string name="game_screen_toolbar_title_loading">Loading…</string>
+    <string name="game_screen_loading_indicator">Loading game</string>
+    <string name="game_screen_cheapest_value_label">(%1$s and up)</string>
+    <string name="game_screen_cheapest_ever_label">Cheapest Ever:</string>
+    <string name="game_screen_list_item_savings_label">Save %1$s%</string>
+    <string name="game_screen_price_history_label">Price history</string>
+    <string name="game_screen_price_history_range_3m">3M</string>
+    <string name="game_screen_price_history_range_1y">1Y</string>
+    <string name="game_screen_price_history_range_all">All</string>
+    <string name="game_screen_price_history_msrp">MSRP</string>
+    <string name="game_screen_price_history_empty">No price changes in this range</string>
+    <string name="game_screen_price_history_a11y">Price history. Started at %1$s in %2$s, now %3$s. Lowest in this range: %4$s.</string>
+
+    <string name="game_screen_data_loading_error_msg">Something went wrong. Please try again.</string>
+    <string name="game_screen_data_loading_error_retry">Retry</string>
+
+    <string name="game_screen_favourite_add_action">Add to waitlist</string>
+    <string name="game_screen_favourite_remove_action">Remove from waitlist</string>
+    <string name="game_screen_collection_add_action">Add to collection</string>
+    <string name="game_screen_collection_remove_action">Remove from collection</string>
+    <string name="game_screen_ignore_add_action">Ignore game</string>
+    <string name="game_screen_ignore_remove_action">Stop ignoring game</string>
+    <string name="game_screen_more_actions">More actions</string>
+    <string name="game_screen_share_action">Share %1$s deal</string>
+    <string name="game_screen_store_deal_row_description">%1$s, save %2$s%, %3$s</string>
+
+    <!-- Personal notes (P4.2, #283) -->
+    <string name="game_screen_note_section_title">My note</string>
+    <string name="game_screen_note_add_action">Add a note</string>
+    <string name="game_screen_note_edit_action">Edit note</string>
+    <string name="game_screen_note_delete_action">Delete note</string>
+    <string name="game_screen_note_dialog_title">Your note</string>
+    <string name="game_screen_note_dialog_placeholder">Write a note about this game…</string>
+    <string name="game_screen_note_dialog_label">Note</string>
+    <string name="game_screen_note_dialog_save">Save</string>
+    <string name="game_screen_note_dialog_cancel">Cancel</string>
+
+    <string name="game_screen_summary_read_more">Read more</string>
+    <string name="game_screen_summary_show_less">Show less</string>
+    <string name="game_screen_view_details">Game details</string>
+
+    <string name="game_details_screen_title">Game Details</string>
+    <string name="game_details_loading_indicator">Loading game details</string>
+    <string name="game_details_cover_image_cd">%1$s cover art</string>
+    <string name="game_details_screenshot_image_cd">%1$s screenshot %2$d</string>
+    <string name="game_details_released_label">Released %1$s</string>
+    <string name="game_details_user_rating_label">Players</string>
+    <string name="game_details_critic_rating_label">Critics</string>
+    <string name="game_details_section_description">Description</string>
+    <string name="game_details_section_storyline">Story</string>
+    <string name="game_details_section_screenshots">Screenshots</string>
+    <string name="game_page_deal_quality_all_time_low_title">Lowest price ever</string>
+    <string name="game_page_deal_quality_near_low_title">Great price</string>
+    <string name="game_page_deal_quality_elevated_title">It's been cheaper before</string>
+    <string name="game_page_deal_quality_at_low_detail">Matches its all-time low of %1$s</string>
+    <string name="game_page_deal_quality_above_detail">%1$d% above the all-time low of %2$s</string>
+    <string name="game_page_deal_quality_cd">Deal quality: %1$s. %2$s</string>
+    <string name="game_page_series_section">Series: %1$s</string>
+    <string name="game_page_series_follow">Follow</string>
+    <string name="game_page_series_following">Following</string>
+    <string name="game_page_section_platforms">Platforms</string>
+    <string name="game_page_section_trailers">Trailers</string>
+    <string name="game_page_trailer_thumbnail_cd">Play %4$s — trailer %1$d of %2$d for %3$s</string>
+    <string name="game_page_trailer_title_fallback">Trailer %1$d</string>
+    <string name="game_details_section_companies">Companies</string>
+    <string name="game_details_section_links">Links</string>
+    <string name="game_details_section_similar">You might also like</string>
+    <string name="game_details_similar_game_row_description">View details for %1$s</string>
+    <string name="game_details_company_role_developer">Developer</string>
+    <string name="game_details_company_role_publisher">Publisher</string>
+    <string name="game_details_company_role_porting">Porting</string>
+    <string name="game_details_company_role_supporting">Supporting</string>
+
+    <string name="game_details_screenshot_viewer_close">Close</string>
+    <string name="game_details_screenshot_viewer_page_indicator">%1$d / %2$d</string>
+    <string name="game_details_screenshot_viewer_page_indicator_cd">Screenshot %1$d of %2$d</string>
+
+    <string name="game_details_view_deals_cta">View deals</string>
+    <string name="game_details_search_deals_cta">Search deals</string>
+    <string name="game_details_view_deals_cta_cd">View deals for %1$s</string>
+    <string name="game_details_search_deals_cta_cd">Search deals for %1$s</string>
+
+    <string name="game_details_title_match_warning_cd">Fuzzy match — tap to see alternative games</string>
+    <string name="game_details_title_match_picker_title">Possible matches</string>
+    <string name="game_details_title_match_picker_explanation">This deal didn't carry a precise game ID, so we searched IGDB by name. The result might not be the exact game you expected. Pick a different match if needed.</string>
+    <string name="game_details_title_match_picker_empty">No alternative matches found.</string>
+    <string name="game_details_title_match_picker_loading_cd">Loading possible matches</string>
+    <string name="game_details_title_match_picker_error">Could not load alternative matches.</string>
+    <string name="game_details_title_match_picker_retry">Try again</string>
+    <string name="game_details_title_match_picker_close">Close</string>
+    <string name="game_details_title_match_picker_current_tile_cd">%1$s (currently shown)</string>
+
+    <string name="game_details_no_match_title">Game details unavailable</string>
+    <string name="game_details_no_match_message">We couldn't find game details for "%1$s" in our catalogue. The store may have added edition info to the title that doesn't match. You can search the deal database directly instead.</string>
+    <string name="game_details_no_match_search_button">Search deals</string>
+    <string name="game_details_no_match_back_button">Go back</string>
+
+    <!-- Unified Game Page (epic #291) -->
+    <string name="game_page_tab_overview">Overview</string>
+    <string name="game_page_tab_prices">Prices</string>
+    <string name="game_page_tab_history">History</string>
+    <string name="game_page_tab_stats">Stats</string>
+    <string name="game_page_tab_regions">Regions</string>
+    <string name="game_page_regions_empty">No regional prices available.</string>
+    <string name="game_page_regions_error">Couldn't load regional prices.</string>
+    <string name="game_page_regions_loading_cd">Loading regional prices</string>
+
+    <!-- Per-tab empty / error states -->
+    <string name="game_page_prices_empty">No deals available right now.</string>
+    <string name="game_page_history_empty">No price history yet.</string>
+    <string name="game_page_stats_empty">No stats available.</string>
+    <string name="game_page_overview_empty">No additional details available.</string>
+    <string name="game_page_section_error">Couldn't load. Check your connection and try again.</string>
+    <string name="game_page_section_loading_cd">Loading</string>
+
+    <!-- Game Page sections (Phase 6) -->
+    <string name="game_page_section_reviews">Reviews</string>
+    <string name="game_page_section_players">Players</string>
+    <string name="game_page_section_bundles">Found in bundles</string>
+    <string name="game_page_section_dlcs">DLC &amp; expansions</string>
+    <string name="game_page_section_hltb">How long to beat</string>
+    <string name="game_page_players_recent">%1$s playing recently</string>
+    <string name="game_page_players_peak">%1$s peak</string>
+    <string name="game_page_review_count">%1$s reviews</string>
+    <string name="game_page_bundle_games_count">%1$s games</string>
+    <string name="game_page_hltb_hours">%1$s h</string>
+    <string name="game_page_hltb_hastily">Rushed</string>
+    <string name="game_page_hltb_normally">Main</string>
+    <string name="game_page_hltb_completely">Completionist</string>
+
+</resources>

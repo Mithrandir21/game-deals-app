@@ -25,9 +25,7 @@ The pattern is almost always: opened, used, *missed close on an early return / e
 path*. Kotlin's `use { }` extension makes the fix cheap; this skill finds the places
 where it isn't applied.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
-Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
-Recommended Fix, Confidence Rationale.
+**Output format.** Use the shared Bug Report Format. Read `.claude/skills/android-bug-hunting-dispatcher/references/report-format.md` before writing findings.
 
 ---
 

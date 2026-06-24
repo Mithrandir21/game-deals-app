@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="deal_details_go_to_deal_label">Go to Deal</string>
+    <string name="deal_details_view_game_page_label">Game Details</string>
+
+    <!-- Game-centric peek sheet (row-consolidation work): one quick-peek sheet keyed by game id,
+         opened from every game/deal row across Home and Deals. -->
+    <string name="game_peek_best_price_at_store">%1$s at %2$s</string>
+    <string name="game_peek_other_stores_label">Other stores</string>
+    <string name="game_peek_no_deals_label">No deals yet</string>
+    <string name="game_peek_store_row_description">%1$s at %2$s</string>
+    <string name="deal_share_label">Share</string>
+
+    <string name="deal_favourite_add_action">Add to waitlist</string>
+    <string name="deal_favourite_remove_action">Remove from waitlist</string>
+
+    <string name="deal_collection_add_action">Add to collection</string>
+    <string name="deal_collection_remove_action">Remove from collection</string>
+
+    <string name="deal_ignore_add_action">Ignore game</string>
+    <string name="deal_ignore_remove_action">Stop ignoring game</string>
+
+    <!-- Content description for the peek sheet's overflow menu that holds Share + Ignore. -->
+    <string name="game_peek_more_actions">More actions</string>
+
+    <!-- ITAD-style deal flag badges shown around the discount on tiles/rows (deal-badge work). The
+         single-letter labels mirror the ITAD website ("N" = new historical low, "S" = store low). -->
+    <string name="deal_new_low_badge_label">N</string>
+    <string name="deal_store_low_badge_label">S</string>
+
+    <!-- Spoken-only suffixes appended to a deal's merged content description for each badge shown, so
+         TalkBack announces what the visual badges convey. -->
+    <string name="deal_new_low_content_suffix">, new lowest price ever</string>
+    <string name="deal_store_low_content_suffix">, lowest price at this store</string>
+    <string name="deal_voucher_content_suffix">, voucher available</string>
+
+    <!-- Spoken-only suffixes for the passive waitlist/collection status badges (GameStateBadges) shown
+         over a game's cover art on rows/tiles, now that the interactive heart is gone. -->
+    <string name="deal_waitlisted_content_suffix">, on your waitlist</string>
+    <string name="deal_owned_content_suffix">, in your collection</string>
+
+    <!-- Shown when a logged-out user taps a waitlist/collection action (epic #219, Phase 3/4 follow-up). -->
+    <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>
+
+    <string name="deal_details_game_image">%1$s Game image</string>
+
+    <string name="deal_details_cheapest_ever_label">Cheapest Ever: </string>
+
+    <string name="deal_details_data_loading_error_msg">Something went wrong. Please try again.</string>
+    <string name="deal_details_data_loading_error_retry">Retry</string>
+
+    <string name="deal_details_loading_indicator">Loading deal details</string>
+
+    <!-- App shell / bottom navigation (epic #219, Phase 0) -->
+    <string name="app_shell_title">Game Deals</string>
+    <string name="app_shell_search_action">Search</string>
+    <string name="app_shell_search_placeholder">Search games</string>
+    <string name="app_shell_search_close">Close search</string>
+    <string name="app_shell_more_action">More options</string>
+    <string name="app_shell_overflow_stores">Browse by store</string>
+    <string name="app_shell_tab_home">Home</string>
+    <string name="app_shell_tab_deals">Deals</string>
+    <string name="app_shell_tab_giveaways">Giveaways</string>
+    <string name="app_shell_tab_account">Account</string>
+    <string name="app_shell_account_unread">%1$d unread notifications</string>
+
+    <!-- Shared bundle list row (Bundles tab + Home bundle section) -->
+    <string name="bundle_row_description">%1$s from %2$s</string>
+    <string name="bundle_row_game_count">%1$d games</string>
+    <string name="bundle_row_expiry">Ends %1$s</string>
+    <string name="bundle_row_from_price">From %1$s</string>
+    <string name="bundle_row_overflow">+%1$d</string>
+    <string name="bundle_row_art_strip">Games in this bundle</string>
+
+</resources>

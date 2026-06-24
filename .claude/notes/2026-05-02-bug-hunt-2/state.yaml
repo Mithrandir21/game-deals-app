@@ -1,0 +1,30 @@
+campaign_slug: "2026-05-02-bug-hunt-2"
+labels: ["bug-hunt"]
+created: "2026-05-02"
+completed: "2026-05-02"
+status: "complete"
+current_wave: 1
+note: "Continuation campaign after 2026-05-02-bug-hunt completed (waves 1-2, issues #71-#77). Picks up issues #90 and #91 filed by github-sync after the 2026-05-02-bug-hunt-severity-medium hunt. Slug suffix '-2' to avoid collision with the prior same-day same-label campaign folder."
+issues:
+  - number: 90
+    title: "DealDetailsController.load doesn't cancel prior load — concurrent loads race on _dealDetails"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-2/issue-90-deal-details-viewmodel-cancel"
+    pr: 94
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/94"
+    status: "merged"
+    files:
+      - "feature/deal/src/main/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModel.kt"
+      - "feature/deal/src/test/java/pm/bam/gamedeals/feature/deal/ui/DealDetailsViewModelTest.kt"
+    note: "Controller portion already fixed on dev (b64307b); fix scoped to DealDetailsViewModel only. Pattern: private var loadJob: Job? + loadJob?.cancel() before relaunch (mirrors HomeViewModel.loadTopStoresDeals / PR #33 / b64307b). Flow shape preserved per L-2026-04-30-04. Test: rapid successive loadDealDetails calls only emit the latest deal data."
+  - number: 91
+    title: "withMinimumDuration uses System.currentTimeMillis (breaks test virtual time)"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-2/issue-91-with-minimum-duration-virtual-time"
+    pr: 93
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/93"
+    status: "merged"
+    files:
+      - "common/src/main/java/pm/bam/gamedeals/common/FlowExtensions.kt"
+      - "common/src/test/java/pm/bam/gamedeals/common/FlowExtensionsTest.kt"
+    note: "Mirrored PR #59's mapDelayAtLeast pattern: launch { delay(delayMillis) } pad joined after block(), inside coroutineScope. inline/crossinline preserved. Docstring updated to describe virtual-time guarantee. Two new tests verify pad triggers under runTest virtual time and no over-padding when block exceeds delayMillis."

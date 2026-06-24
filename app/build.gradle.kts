@@ -2,19 +2,15 @@ import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.compose)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.gamedeals.android.application)
+    // Consumes the :baselineprofile producer and merges its generated profile into release/benchmark variants.
+    alias(libs.plugins.androidx.baselineprofile)
+    // Uploads the R8 mapping file so release crash stack traces are de-obfuscated in Sentry (see the sentry {} block).
+    alias(libs.plugins.sentry.android)
 }
 
 android {
     namespace = "pm.bam.gamedeals"
-    compileSdk = 36
-
 
     // START - RELEASE SIGNING CONFIGURATION
     // Create variables to store the release key information
@@ -25,17 +21,52 @@ android {
     var releaseKeyStoreFile = ""
     var releaseKeyStorePassword = ""
 
+    // IGDB credentials — read from the same local.properties (dev) / env-var (CI) sources as the signing keys.
+    var igdbClientId = ""
+    var igdbClientSecret = ""
+
+    // IsThereAnyDeal (ITAD) API key — same local.properties (dev) / env-var (CI) sources (epic #205).
+    var itadApiKey = ""
+
+    // ITAD OAuth client id — for the account feature (epic #219, Phase 2). Same sources as the API key.
+    var itadOauthClientId = ""
+
+    // Sentry DSN — crash/telemetry ingest endpoint. Same local.properties (dev) / env-var (CI) sources as the
+    // other secrets. It's technically a client-side value (shipped in every build), but routed through the same
+    // pipeline to keep it out of git and let release CI inject it. Blank in debug builds, where Sentry init no-ops.
+    var sentryDsn = ""
+
+    // PostHog project key (phc_…) — product analytics. A public client-side key (shipped in every build), routed
+    // through the same secrets pipeline only to keep it out of git. Unlike the Sentry DSN it is populated for BOTH
+    // debug and release for now, so analytics can be verified across variants; an empty value makes init no-op.
+    var posthogApiKey = ""
+
     // First check if the local.properties file exists, meaning non-CI environment.
     if (File(rootProject.rootDir, "local.properties").exists()) {
         // Loading local properties so that we can use them in the build.gradle.kts file and not expose them in the repository
         val localProperties = Properties().apply { load(FileInputStream(File(rootProject.rootDir, "local.properties"))) }
 
-        releaseKeyPresent = true
-        releaseSigningKey = "release"
-        releaseKeyAlias = localProperties.getProperty("keyAlias") ?: "FakeAlias"
-        releaseKeyPassword = localProperties.getProperty("keyPassword") ?: "FakePassword"
-        releaseKeyStoreFile = "../upload_keystore.jks"
-        releaseKeyStorePassword = localProperties.getProperty("storePassword") ?: "FakeStorePassword"
+        // Only use the real upload keystore when it's actually present. On a dev box that has local.properties
+        // (for the IGDB/ITAD creds below) but no keystore, fall back to debug signing so `installRelease` and
+        // Baseline Profile generation (nonMinifiedRelease/benchmarkRelease initWith release) work keystore-free.
+        if (File(rootProject.rootDir, "upload_keystore.jks").exists()) {
+            releaseKeyPresent = true
+            releaseSigningKey = "release"
+            releaseKeyAlias = localProperties.getProperty("keyAlias") ?: "FakeAlias"
+            releaseKeyPassword = localProperties.getProperty("keyPassword") ?: "FakePassword"
+            releaseKeyStoreFile = "../upload_keystore.jks"
+            releaseKeyStorePassword = localProperties.getProperty("storePassword") ?: "FakeStorePassword"
+        }
+
+        igdbClientId = localProperties.getProperty("igdbClientId") ?: ""
+        igdbClientSecret = localProperties.getProperty("igdbClientSecret") ?: ""
+
+        itadApiKey = localProperties.getProperty("itadApiKey") ?: ""
+        itadOauthClientId = localProperties.getProperty("itadOauthClientId") ?: ""
+
+        sentryDsn = localProperties.getProperty("sentryDsn") ?: ""
+
+        posthogApiKey = localProperties.getProperty("posthogApiKey") ?: ""
     }
     // Check if environment variables are present, meaning CI environment.
     else if (System.getenv("RELEASE_KEY_ALIAS") != null) {
@@ -46,6 +77,20 @@ android {
         releaseKeyStoreFile = "../upload_keystore.jks"
         releaseKeyStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
     }
+
+    // Env-var fallback for IGDB creds is independent of the signing block so CI can provide IGDB creds without a release key.
+    if (igdbClientId.isEmpty()) igdbClientId = System.getenv("IGDB_CLIENT_ID") ?: ""
+    if (igdbClientSecret.isEmpty()) igdbClientSecret = System.getenv("IGDB_CLIENT_SECRET") ?: ""
+
+    // Env-var fallback for the ITAD key (independent of the signing block, like the IGDB creds).
+    if (itadApiKey.isEmpty()) itadApiKey = System.getenv("ITAD_API_KEY") ?: ""
+    if (itadOauthClientId.isEmpty()) itadOauthClientId = System.getenv("ITAD_OAUTH_CLIENT_ID") ?: ""
+
+    // Env-var fallback for the Sentry DSN (independent of the signing block, like the other creds).
+    if (sentryDsn.isEmpty()) sentryDsn = System.getenv("SENTRY_DSN") ?: ""
+
+    // Env-var fallback for the PostHog key (independent of the signing block, like the other creds).
+    if (posthogApiKey.isEmpty()) posthogApiKey = System.getenv("POSTHOG_API_KEY") ?: ""
 
     // If neither local.properties nor environment variables are present, the release key is not present.
     if(releaseKeyPresent) {
@@ -63,68 +108,100 @@ android {
 
     defaultConfig {
         applicationId = "pm.bam.gamedeals"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 9
-        versionName = "1.0.6"
+        // API 35 is Google Play's current minimum target; matches compileSdk (36) to avoid a near-term re-bump.
+        // NOTE: targeting 35+ forces edge-to-edge — see enableEdgeToEdge() in MainActivity and per-screen insets.
+        targetSdk = 36
+        // versionCode/versionName default to the last manually-set values for local/dev builds.
+        // Release CI (Bitrise) overrides them via env: VERSION_NAME from the git tag (v1.0.7 -> 1.0.7)
+        // and VERSION_CODE derived deterministically from the tag (major*10000 + minor*100 + patch ->
+        // 10007) so it is reproducible and strictly increasing. Reading env directly here keeps the
+        // override independent of the local.properties-vs-env signing branch above. See bitrise.yml.
+        versionCode = System.getenv("VERSION_CODE")?.toInt() ?: 10
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.7"
 
-        testInstrumentationRunner = "pm.bam.gamedeals.HiltTestRunner"
+        testInstrumentationRunner = "pm.bam.gamedeals.KoinTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "IGDB_CLIENT_ID", "\"$igdbClientId\"")
+        buildConfigField("String", "IGDB_CLIENT_SECRET", "\"$igdbClientSecret\"")
+        buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
+        buildConfigField("String", "ITAD_OAUTH_CLIENT_ID", "\"$itadOauthClientId\"")
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$posthogApiKey\"")
     }
 
+    buildFeatures.buildConfig = true
+
     buildTypes {
+        debug {
+            // Pair flag for the KMP-library `enableCoverage = true`; the root `jacocoAndroidTestReport` task folds the resulting `coverage.ec`
+            // files into the parallel JaCoCo report alongside Kover's JVM coverage.
+            enableAndroidTestCoverage = true
+
+            // Product analytics is release-only (like Sentry's crash reporting). Forcing an empty PostHog key
+            // in debug overrides the defaultConfig value so every code path falls back to NoOp via the existing
+            // "empty key ⇒ NoOp ⇒ safe" invariant: initPostHog() early-returns, the Koin Analytics binding
+            // resolves to NoOpAnalytics, and startAnalytics() early-returns. To smoke-test analytics on a debug
+            // build, temporarily remove this override. The real key (defaultConfig) only reaches release builds.
+            buildConfigField("String", "POSTHOG_API_KEY", "\"\"")
+        }
         release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             signingConfig = signingConfigs.getByName(releaseSigningKey)
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-    kotlin {
-        jvmToolchain(21)
-    }
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
-    }
-    packaging {
-        resources {
+}
 
-            excludes += "/META-INF/LICENSE.md"
-            excludes += "/META-INF/LICENSE-notice.md"
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+// Sentry Android Gradle plugin — used ONLY to upload the R8 mapping so release crash traces are
+// de-obfuscated. The SDK itself is the Sentry KMP artifact (initialised in GameDealsApplication), so:
+//   - autoInstallation is OFF — we don't want the plugin pulling a second/clashing sentry-android.
+//   - tracingInstrumentation is OFF — its bytecode transform would emit calls into sentry-android-okhttp,
+//     which isn't on the classpath (the KMP SDK only brings sentry-android core/ndk/replay), and Ktor
+//     builds its OkHttpClient internally so it wouldn't be caught anyway. Performance tracing instead
+//     rides sentry-android-core's automatic activity/app-start transactions, gated by the tracesSampleRate
+//     set in GameDealsApplication.
+// org/project/authToken come from CI env. The upload only runs when a token is present, so local
+// `assembleRelease` (no secrets) still generates the mapping and stays green.
+sentry {
+    org.set(System.getenv("SENTRY_ORG") ?: "")
+    projectName.set(System.getenv("SENTRY_PROJECT") ?: "")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN") ?: "")
 
-            // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and com.squareup.okhttp3:logging-interceptor:5.2.1
-            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-        }
-    }
-    tasks.withType<Test> {
-        jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
-    }
+    autoInstallation { enabled.set(false) }
+    tracingInstrumentation { enabled.set(false) }
+    includeSourceContext.set(false)
+
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(System.getenv("SENTRY_AUTH_TOKEN") != null)
 }
 
 dependencies {
 
-    implementation(project(":base"))
     implementation(project(":logging"))
     implementation(project(":common"))
     implementation(project(":common:ui"))
     implementation(project(":domain"))
 
+    // Remote source adapters — wired in Koin at the app boundary so :domain stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
+    implementation(project(":remote:gamerpower"))
+    implementation(project(":remote:igdb"))
+    implementation(project(":remote:itad"))
+
     implementation(project(":feature:home"))
     implementation(project(":feature:game"))
     implementation(project(":feature:store"))
-    implementation(project(":feature:search"))
     implementation(project(":feature:webview"))
     implementation(project(":feature:giveaways"))
+    implementation(project(":feature:bundles"))
+    implementation(project(":feature:account"))
+    implementation(project(":feature:deals"))
+    implementation(project(":feature:discover"))
+    implementation(project(":feature:onboarding"))
 
     val composeBom = platform(libs.androidx.compose.bom)
 
@@ -134,17 +211,16 @@ dependencies {
     implementation(libs.androidx.compose.activity)
     implementation(composeBom)
     implementation(libs.androidx.compose.navigation)
-    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.performance)
+    implementation(libs.sentry.kotlin.multiplatform)
+    // PostHog SDK on :app's classpath so GameDealsApplication can call PostHog.setup(...) directly (mirrors Sentry above).
+    implementation(libs.posthog.kmp)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    kapt(libs.hilt.compiler)
-    kapt(libs.hilt.androidx.compiler)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.compose.viewmodel)
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -152,37 +228,35 @@ dependencies {
     implementation(libs.androidx.compose.material3.window)
     implementation(libs.androidx.compose.material3.adaptive)
 
-    implementation(libs.androidx.paging)
-    implementation(libs.androidx.paging.compose)
+    implementation(libs.coil3)
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.network.ktor)
+    implementation(libs.coil3.test)
 
-    implementation(libs.coil)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.test)
+    // Baseline Profile: profileinstaller applies the shipped ART profile on first run (so cold scroll is
+    // AOT-compiled from launch); the baselineProfile config (added by the androidx.baselineprofile plugin)
+    // pulls the profile generated by :baselineprofile into the release/benchmark variants.
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     testImplementation(project(":testing"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.testing)
-    testImplementation(libs.androidx.paging.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.compose.junit4)
-    androidTestImplementation(libs.hilt.testing)
     androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.kotlinx)
-    androidTestImplementation(libs.kotlinx.retrofit)
-    androidTestImplementation(libs.okhttp)
-    androidTestImplementation(libs.retrofit)
-    androidTestImplementation(libs.sandwich)
+    androidTestImplementation(libs.koin.test)
+    androidTestImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.room)
     androidTestImplementation(libs.room.runtime)
-    androidTestImplementation(project(":remote:cheapshark"))
+    androidTestImplementation(project(":remote:itad"))
     androidTestImplementation(project(":remote:gamerpower"))
-    kaptAndroidTest(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.compose.test)

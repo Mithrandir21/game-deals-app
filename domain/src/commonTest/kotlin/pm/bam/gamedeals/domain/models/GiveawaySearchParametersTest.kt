@@ -1,0 +1,46 @@
+package pm.bam.gamedeals.domain.models
+
+import kotlinx.collections.immutable.persistentListOf
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+/**
+ * Regression coverage for the `Properties.encodeToMap` / `decodeFromMap` round-trip on
+ * [GiveawaySearchParameters]. The two `ImmutableList<Pair<…, Boolean>>` fields require a
+ * custom serializer ([pm.bam.gamedeals.domain.utils.ImmutableListSerializer]) registered
+ * via `@file:UseSerializers` on `Giveaway.kt`; without it the round-trip throws
+ * `Serializer for subclass 'SmallPersistentVector' is not found in the polymorphic scope
+ * of 'ImmutableList'`. The `parametersSaver` in `GiveawaysScreen` runs this round-trip
+ * during composition, so the test fires at the unit level much faster than an
+ * instrumented Compose test would.
+ */
+class GiveawaySearchParametersTest {
+
+    @Test
+    fun default_parameters_round_trip_via_asMap_and_from() {
+        val original = GiveawaySearchParameters()
+
+        val restored = GiveawaySearchParameters.from(original.asMap())
+
+        assertEquals(original, restored)
+    }
+
+    @Test
+    fun customised_parameters_round_trip_via_asMap_and_from() {
+        val original = GiveawaySearchParameters(
+            platforms = persistentListOf(
+                GiveawayPlatformSelection(GiveawayPlatform.PC, true),
+                GiveawayPlatformSelection(GiveawayPlatform.STEAM, false),
+            ),
+            types = persistentListOf(
+                GiveawayTypeSelection(GiveawayType.GAME, true),
+                GiveawayTypeSelection(GiveawayType.DLC, false),
+            ),
+            sortBy = GiveawaySortBy.VALUE,
+        )
+
+        val restored = GiveawaySearchParameters.from(original.asMap())
+
+        assertEquals(original, restored)
+    }
+}

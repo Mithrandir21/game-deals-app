@@ -1,0 +1,157 @@
+package pm.bam.gamedeals.domain.repositories.giveaway
+
+import dev.mokkery.MockMode
+import dev.mokkery.answering.returns
+import dev.mokkery.every
+import dev.mokkery.everySuspend
+import dev.mokkery.mock
+import dev.mokkery.verify
+import dev.mokkery.verify.VerifyMode.Companion.exactly
+import dev.mokkery.verifySuspend
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
+import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.domain.models.GiveawayPlatformSelection
+import pm.bam.gamedeals.domain.models.GiveawaySearchParameters
+import pm.bam.gamedeals.domain.models.GiveawaySortBy
+import pm.bam.gamedeals.domain.models.GiveawayType
+import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
+import pm.bam.gamedeals.domain.source.GamerPowerSource
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.fixtures.MAX_DATETIME
+import pm.bam.gamedeals.testing.fixtures.MIN_DATETIME
+import pm.bam.gamedeals.testing.fixtures.giveaway
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class GiveawaysRepositoryTest {
+
+    private val logger: Logger = TestingLoggingListener()
+    private val giveawaysDao: GiveawaysDao = mock(MockMode.autoUnit)
+    private val gamerPowerSource: GamerPowerSource = mock(MockMode.autoUnit)
+
+    private val now = 1_000_000L
+    private val clock = Clock { now }
+
+    private val impl = GiveawaysRepositoryImpl(logger, giveawaysDao, gamerPowerSource, clock)
+
+    @Test
+    fun observe_giveaways_with_descending_publishedDate_order() = runTest {
+        val resultOne = giveaway(id = 1, publishedDate = MIN_DATETIME)
+        val resultTwo = giveaway(id = 2, publishedDate = MAX_DATETIME)
+
+        every { giveawaysDao.observeAllGiveaways() } returns flowOf(listOf(resultOne, resultTwo))
+
+        val result = impl.observeGiveaways().first()
+        assertTrue(result.isNotEmpty())
+        assertEquals(result[0], resultTwo)
+        assertEquals(result[1], resultOne)
+
+        verify(exactly(1)) { giveawaysDao.observeAllGiveaways() }
+    }
+
+    @Test
+    fun refresh_giveaways_unforced_expired_swaps_table_contents_and_stamps_expires() = runTest {
+        val expired = giveaway(id = 99, expires = now - 1)
+        val fetched = giveaway()
+
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(expired)
+        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(fetched)
+
+        impl.refreshGiveaways()
+
+        verifySuspend(exactly(1)) { gamerPowerSource.fetchGiveaways() }
+        verifySuspend(exactly(1)) { giveawaysDao.replaceAll(listOf(fetched.copy(expires = now + GIVEAWAYS_TTL_MILLIS))) }
+    }
+
+    @Test
+    fun refresh_giveaways_unforced_all_fresh_skips_fetch() = runTest {
+        val fresh = giveaway(expires = now + 10_000)
+
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(fresh)
+
+        impl.refreshGiveaways()
+
+        verifySuspend(exactly(0)) { gamerPowerSource.fetchGiveaways() }
+        verifySuspend(exactly(1)) { giveawaysDao.getAllGiveaways() }
+    }
+
+    @Test
+    fun get_giveaway_returns_the_cached_item() = runTest {
+        val cached = giveaway(id = 42)
+        everySuspend { giveawaysDao.getGiveaway(42) } returns cached
+
+        assertEquals(cached, impl.getGiveaway(42))
+        verifySuspend(exactly(1)) { giveawaysDao.getGiveaway(42) }
+    }
+
+    @Test
+    fun get_giveaway_returns_null_when_not_cached() = runTest {
+        everySuspend { giveawaysDao.getGiveaway(99) } returns null
+
+        assertNull(impl.getGiveaway(99))
+    }
+
+    @Test
+    fun observe_giveaways_with_search_parameters() = runTest {
+        val resultOne = giveaway(
+            id = 1,
+            type = GiveawayType.GAME,
+            platforms = persistentListOf(GiveawayPlatform.PC),
+            publishedDate = MIN_DATETIME,
+            users = 1,
+            worth = 1.0,
+        )
+        val resultTwo = giveaway(
+            id = 2,
+            type = GiveawayType.DLC,
+            platforms = persistentListOf(GiveawayPlatform.PS5),
+            publishedDate = MAX_DATETIME,
+            users = 2,
+            worth = 2.0,
+        )
+        val resultThree = giveaway(
+            id = 3,
+            type = GiveawayType.BETA,
+            platforms = persistentListOf(GiveawayPlatform.NINTENDO_SWITCH),
+            publishedDate = MAX_DATETIME,
+            users = 3,
+            worth = 3.0,
+        )
+
+        every { giveawaysDao.observeAllGiveaways() } returns flowOf(listOf(resultOne, resultTwo, resultThree))
+
+        val para = GiveawaySearchParameters(
+            types = persistentListOf(GiveawayTypeSelection(GiveawayType.GAME, true), GiveawayTypeSelection(GiveawayType.BETA, true)),
+            platforms = persistentListOf(GiveawayPlatformSelection(GiveawayPlatform.PC, true), GiveawayPlatformSelection(GiveawayPlatform.NINTENDO_SWITCH, true)),
+            sortBy = GiveawaySortBy.DATE
+        )
+
+        val resultDescendingDate = impl.observeGiveaways(para).first()
+        assertTrue(resultDescendingDate.isNotEmpty())
+        assertEquals(2, resultDescendingDate.size)
+        assertEquals(resultDescendingDate[0], resultThree)
+        assertEquals(resultDescendingDate[1], resultOne)
+
+        val resultDescendingPopularity = impl.observeGiveaways(para.copy(sortBy = GiveawaySortBy.POPULARITY)).first()
+        assertTrue(resultDescendingPopularity.isNotEmpty())
+        assertEquals(2, resultDescendingPopularity.size)
+        assertEquals(resultDescendingPopularity[0], resultThree)
+        assertEquals(resultDescendingPopularity[1], resultOne)
+
+        val resultDescendingWorth = impl.observeGiveaways(para.copy(sortBy = GiveawaySortBy.VALUE)).first()
+        assertTrue(resultDescendingWorth.isNotEmpty())
+        assertEquals(2, resultDescendingWorth.size)
+        assertEquals(resultDescendingWorth[0], resultThree)
+        assertEquals(resultDescendingWorth[1], resultOne)
+
+        verify(exactly(3)) { giveawaysDao.observeAllGiveaways() }
+    }
+}

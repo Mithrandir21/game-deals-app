@@ -23,10 +23,7 @@ Coroutines are where Android apps quietly bleed correctness. The bugs are subtle
 patterns are well-cataloged, and almost all of them are detectable from source. This
 skill encodes those patterns and hunts for them systematically.
 
-**Output format.** Every finding uses the shared Bug Report Format defined by the
-dispatcher (`android-bug-hunting-dispatcher`). If running standalone, use the same format — the
-fields are: Severity, Category, Location, Effort, Confidence, Description, Impact,
-Evidence, Recommended Fix, Confidence Rationale.
+**Output format.** Use the shared Bug Report Format. Read `.claude/skills/android-bug-hunting-dispatcher/references/report-format.md` before writing findings.
 
 ---
 

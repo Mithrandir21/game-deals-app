@@ -1,0 +1,32 @@
+package pm.bam.gamedeals.domain.di
+
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
+import org.koin.dsl.module
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
+import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.repositories.notifications.IosNotificationPresenter
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
+import pm.bam.gamedeals.domain.scheduling.IosNotificationScheduler
+import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
+
+val domainIosModule = module {
+
+    single<NotificationScheduler> { IosNotificationScheduler(get()) }
+    single<NotificationPresenter> { IosNotificationPresenter(get(), get()) }
+
+    single<RoomDatabase.Builder<DomainDatabase>> {
+        val documents = NSSearchPathForDirectoriesInDomains(
+            NSDocumentDirectory, NSUserDomainMask, true
+        ).first() as String
+        Room.databaseBuilder<DomainDatabase>(
+            name = "$documents/DomainDatabase.db"
+        )
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Default)
+    }
+}

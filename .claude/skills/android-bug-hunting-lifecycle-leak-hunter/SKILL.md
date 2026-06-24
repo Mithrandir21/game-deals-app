@@ -21,9 +21,7 @@ Memory leaks on Android almost always come from a small set of patterns: holding
 to something with a short lifecycle from something with a longer one. This skill looks for
 the specific patterns that cause leaks, not for general "code smells."
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
-Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
-Recommended Fix, Confidence Rationale.
+**Output format.** Use the shared Bug Report Format. Read `.claude/skills/android-bug-hunting-dispatcher/references/report-format.md` before writing findings.
 
 ---
 

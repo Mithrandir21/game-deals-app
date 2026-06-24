@@ -1,0 +1,63 @@
+campaign_slug: "2026-05-01-bug-hunt-severity-low"
+labels: ["bug-hunt", "severity:low"]
+created: "2026-05-01"
+status: "complete"
+current_wave: 3
+issues:
+  - number: 43
+    title: "WebView 'loading' state saved across process death with rememberSaveable"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-43-webview-loading"
+    pr: 54
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/54"
+    status: "merged"
+    files:
+      - "feature/webview/src/main/java/pm/bam/gamedeals/feature/webview/ui/WebView.kt"
+  - number: 46
+    title: "StoreViewModel .catch after .cachedIn swallows Paging construction errors"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-46-storeviewmodel-catch"
+    pr: 55
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/55"
+    status: "merged"
+    files:
+      - "feature/store/src/main/java/pm/bam/gamedeals/feature/store/ui/StoreViewModel.kt"
+  - number: 47
+    title: "Coil ImageLoader uses Dispatchers.Default instead of Dispatchers.IO"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-47-coil-dispatcher"
+    pr: 57
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/57"
+    status: "merged"
+    files:
+      - "app/src/main/java/pm/bam/gamedeals/di/AppModule.kt"
+  - number: 48
+    title: "fullscreenSemiTransparentBackground() recomputes on every recomposition"
+    wave: 1
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-48-fullscreen-bg-remember"
+    pr: 56
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/56"
+    status: "merged"
+    files:
+      - "common/ui/src/main/java/pm/bam/gamedeals/common/ui/theme/Theme.kt"
+  - number: 44
+    title: "SideEffect mutates Activity window state on every recomposition"
+    wave: 2
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-44-theme-launchedeffect"
+    pr: 58
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/58"
+    status: "merged"
+    files:
+      - "common/ui/src/main/java/pm/bam/gamedeals/common/ui/theme/Theme.kt"
+  - number: 45
+    title: "*DelayAtLeast Flow operators use System.currentTimeMillis (breaks test virtual time)"
+    wave: 2
+    branch: "wave/2026-05-01-bug-hunt-severity-low/issue-45-delayatleast-virtual-time"
+    pr: 59
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/59"
+    status: "merged"
+    files:
+      - "common/src/main/java/pm/bam/gamedeals/common/FlowExtensions.kt"
+      - "common/src/test/java/pm/bam/gamedeals/common/FlowExtensionsTest.kt"
+      - "common/build.gradle.kts"
+    scope_expansion: "Added testImplementation(libs.coroutines.testing) to build.gradle.kts because module had no prior JVM tests and lacked the dependency."

@@ -5,40 +5,200 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main", "dev" ]
+  workflow_dispatch:
+  schedule:
+    # Nightly release-build (R8) verification on the default branch.
+    - cron: '0 3 * * *'
+
+# Cancel superseded runs for the same ref (e.g. rapid PR pushes) to save runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
     - name: Checking out branch
       uses: actions/checkout@v4
 
-    - name: JDK 17 Setup
+    - name: JDK 21 Setup
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
-        cache: gradle
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
     - run: sdkmanager tools platform-tools
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build with Gradle
       run: ./gradlew --no-daemon build test
+
+    # Compares the live composable stability state against the committed
+    # `<module>/stability/<module>-debug.stability` baselines. Fails the
+    # PR on any drift (e.g. a domain model lost `@Immutable`, a Composable
+    # param flipped from STABLE to UNSTABLE). If the change is intentional,
+    # regenerate the baselines locally with `./gradlew debugStabilityDump`
+    # and commit them alongside the source change.
+    - name: Compose Stability Check
+      run: ./gradlew --no-daemon debugStabilityCheck
+
+  release-verify:
+    name: Release Build Verification (R8)
+    # Exercises R8 / resource shrinking / keep rules on the real release variant so minification
+    # breakage is caught here rather than at release-tag time on Bitrise. Skipped on PRs (R8 is
+    # slow); runs on main pushes, the nightly schedule, and manual dispatch. No keystore in CI, so
+    # the build falls back to debug signing (app/build.gradle.kts) while R8 still runs fully.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+    - name: Checking out branch
+      uses: actions/checkout@v4
+
+    - name: JDK 21 Setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Assemble release bundle (R8)
+      run: ./gradlew --no-daemon :app:bundleRelease
+
+    - name: Upload R8 mapping
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: r8-mapping-${{ github.sha }}
+        path: app/build/outputs/mapping/release/
+        if-no-files-found: ignore
+        retention-days: 90
+
+  instrumented-test:
+    name: Instrumented UI Tests (API ${{ matrix.api-level }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [34]
+
+    steps:
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+          | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - name: Checking out branch
+      uses: actions/checkout@v4
+
+    - name: JDK 21 Setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: AVD cache
+      uses: actions/cache@v5
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.api-level }}
+
+    - name: Create AVD snapshot for caching
+      if: steps.avd-cache.outputs.cache-hit != 'true'
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        arch: x86_64
+        target: google_apis
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim -camera-back none -grpc 8554
+        disable-animations: true
+        script: echo "Generated AVD snapshot."
+
+    - name: Run instrumented tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        arch: x86_64
+        target: google_apis
+        force-avd-creation: false
+        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -grpc 8554
+        disable-animations: true
+        # `adb shell settings put global mdevx.grpc_guest_port` writes the
+        # Settings.Global key that androidx.test.espresso.device 1.1.0 reads
+        # via `DeviceControllerModule.getEmulatorGRPCPortFromSystem` to find
+        # the emulator's gRPC control port. AGP/UTP normally writes this for
+        # Gradle Managed Devices but not for externally-launched emulators
+        # like this one. The `-grpc 8554` emulator flag (above) opens the
+        # port on the emulator side; this line tells the test process where
+        # to find it.
+        #
+        # The `notAnnotation` filter excludes tests carrying
+        # `pm.bam.gamedeals.testing.SkipOnCi` — currently the two `*Wide`
+        # tests that drive `onDevice().setScreenOrientation(LANDSCAPE)`,
+        # which the externally-launched emulator's gRPC server refuses
+        # because it was started without `-grpc-use-token` / `-grpc-use-jwt`
+        # / `-grpc-allowlist`. Revisit if/when CI moves to Gradle Managed
+        # Devices.
+        script: |
+          adb wait-for-device
+          adb shell settings put global mdevx.grpc_guest_port 8554
+          ./gradlew --no-daemon connectedAndroidDeviceTest -Pandroid.testInstrumentationRunnerArguments.notAnnotation=pm.bam.gamedeals.testing.SkipOnCi
+
+    - name: Publish test results
+      if: always()
+      uses: mikepenz/action-junit-report@v4
+      with:
+        report_paths: '**/build/outputs/androidTest-results/connected/**/*.xml'
+        check_name: Instrumented Test Results (API ${{ matrix.api-level }})
+
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: instrumented-test-reports-api${{ matrix.api-level }}
+        path: |
+          **/build/reports/androidTests/connected/**
+          **/build/outputs/androidTest-results/connected/**
+        if-no-files-found: ignore

@@ -19,9 +19,7 @@ ANRs and jank almost always trace to one cause: blocking work on the main thread
 patterns are concrete and pattern-matchable. This skill enumerates them and looks for
 each.
 
-**Output format.** Use the shared Bug Report Format from the dispatcher (`android-bug-hunting-dispatcher`).
-Fields: Severity, Category, Location, Effort, Confidence, Description, Impact, Evidence,
-Recommended Fix, Confidence Rationale.
+**Output format.** Use the shared Bug Report Format. Read `.claude/skills/android-bug-hunting-dispatcher/references/report-format.md` before writing findings.
 
 ---
 

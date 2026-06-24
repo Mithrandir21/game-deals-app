@@ -1,73 +1,71 @@
 plugins {
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.jetbrains.kotlin)
-    alias(libs.plugins.compose)
+    alias(libs.plugins.gamedeals.kmp.library)
+    alias(libs.plugins.gamedeals.kmp.library.compose)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.common.ui"
-    compileSdk = 36
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":logging"))
+            implementation(project(":common"))
+            implementation(project(":domain"))
+            implementation(libs.kotlinx.collections.immutable)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.koin.core)
+            // koinInject() in shared composables (e.g. GamePeekSheet records deal-open analytics).
+            implementation(libs.koin.compose.viewmodel)
 
-    defaultConfig {
-        minSdk = 26
-    }
+            implementation(libs.coil3)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.ktor)
+        }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.androidx.browser)
+            implementation(libs.material)
+            implementation(libs.androidx.compose.activity)
+            implementation(libs.androidx.compose.navigation)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+
+            implementation(libs.androidx.ui)
+            implementation(libs.androidx.ui.graphics)
+            implementation(libs.androidx.ui.tooling.preview)
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.compose.material3.window)
+            implementation(libs.androidx.compose.material3.adaptive)
+        }
+
+        val androidHostTest by getting {
+            dependencies {
+                implementation(project(":testing"))
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.coroutines.testing)
+            }
+        }
+
+        // Compose UI tests for shared components (e.g. GamePeekSheet) run on a device. The library
+        // convention plugin enables `withDeviceTestBuilder` once `src/androidDeviceTest/` exists, but
+        // unlike the feature plugin it doesn't auto-wire the test deps — so they're declared here.
+        val androidDeviceTest by getting {
+            dependencies {
+                implementation(project(":testing"))
+                implementation(libs.mockk.android)
+                implementation(libs.androidx.junit)
+                implementation(libs.androidx.runner)
+                implementation(libs.androidx.espresso.core)
+                implementation(libs.androidx.compose.junit4)
+                implementation(libs.androidx.compose.test)
+            }
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-    kotlin {
-        jvmToolchain(21)
-    }
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
-    }
-    packaging {
-        resources {
-
-            excludes += "/META-INF/LICENSE.md"
-            excludes += "/META-INF/LICENSE-notice.md"
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-
-            // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and com.squareup.okhttp3:logging-interceptor:5.2.1
-            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-        }
-    }
-    tasks.withType<Test> {
-        jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
-    }
 }
 
-dependencies {
-
-    implementation(project(":domain"))
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.compose.navigation)
-
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material3.window)
-    implementation(libs.androidx.compose.material3.adaptive)
-
-    testImplementation(project(":testing"))
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.testing)
-
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-}

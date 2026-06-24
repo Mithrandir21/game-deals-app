@@ -1,17 +1,20 @@
 ---
 name: android-bug-hunting-github-sync
 description: >
-  Reconciles a fresh Android bug-hunt report against existing GitHub issues, then files only
-  the genuinely new findings. Auto-skips findings that clearly match an open issue, surfaces
-  ambiguous matches for human judgment, and flags findings that match a closed issue as
-  potential regressions (without auto-reopening). Use this skill after running the
-  android-bug-hunting-dispatcher (or any skill that produced an `android-bug-hunt-report.md`)
-  whenever the user asks to "file these as issues", "create GitHub issues from the report",
-  "sync bug hunt to GitHub", "open issues for these findings", "dedupe and file", or any
-  phrasing that asks to turn a bug-hunt report into GitHub issues. Trigger on casual
-  phrasings like "open tickets for these", "push these into GitHub", "log these as issues
-  but don't dupe what's already there". This is the entry point for the file-issues phase —
-  do not invoke `gh issue create` directly outside this skill once a bug-hunt report exists.
+  Reconciles a fresh Android bug-hunt report against existing GitHub issues AND against the
+  merge-target branch's actual code, then files only the genuinely new, still-real findings.
+  Auto-skips findings that clearly match an open issue, findings whose cited code is already
+  fixed on the merge target (typical when the bug hunt ran on a wave/feature branch that
+  lags behind `dev`/`main`), surfaces ambiguous matches for human judgment, and flags
+  findings that match a closed issue as potential regressions (without auto-reopening). Use
+  this skill after running the android-bug-hunting-dispatcher (or any skill that produced an
+  `android-bug-hunt-report.md`) whenever the user asks to "file these as issues", "create
+  GitHub issues from the report", "sync bug hunt to GitHub", "open issues for these
+  findings", "dedupe and file", or any phrasing that asks to turn a bug-hunt report into
+  GitHub issues. Trigger on casual phrasings like "open tickets for these", "push these
+  into GitHub", "log these as issues but don't dupe what's already there", "file the ones
+  that aren't already fixed". This is the entry point for the file-issues phase — do not
+  invoke `gh issue create` directly outside this skill once a bug-hunt report exists.
 ---
 
 # Android Bug Hunt — GitHub Sync
@@ -26,9 +29,14 @@ This skill closes the loop. It:
 
 1. Parses the bug-hunt report into structured findings.
 2. Pulls the current open + closed `bug-hunt`-labeled issues via `gh`.
-3. Scores each finding against existing issues to classify as **auto-skip**, **ambiguous**,
-   **regression candidate**, or **new**.
-4. Writes a triage plan, waits for the user to approve (and optionally re-classify),
+3. **Verifies each finding against the merge-target branch's HEAD** — if the cited code is
+   already fixed on `dev`/`main`, the finding is dropped before any matching is done. This
+   matters because bug hunts often run on a wave/feature branch that's behind the merge
+   target; without this step, the skill would file duplicates of bugs already fixed
+   upstream (this exact failure mode dropped 4 false positives on 2026-05-02).
+4. Scores each surviving finding against existing issues to classify as **auto-skip**,
+   **ambiguous**, **regression candidate**, or **new**.
+5. Writes a triage plan, waits for the user to approve (and optionally re-classify),
    then files only the approved items via `gh issue create`.
 
 It is intentionally **standalone** — invoked after the user has reviewed the bug-hunt
@@ -68,6 +76,24 @@ gh label list --limit 200
 
 For an `area:*` label not yet present (a new module surfaced this run), create it with
 color `5319E7` and a one-line description. Never rename existing labels.
+
+Then determine and fetch the **merge target** — the branch that PRs from this hunt's
+fixes will eventually land on. Step 2.5 reads code from this branch's HEAD to decide
+whether each finding is still real:
+
+```bash
+# Default: GitHub's default branch (usually `dev` or `main`).
+MERGE_TARGET=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+
+# If the user has named a different target ("merge into staging", "PR base is release"),
+# use that instead. Confirm in the plan summary.
+
+git fetch --quiet origin "$MERGE_TARGET"
+```
+
+If `git fetch` fails (offline, no `origin`), warn the user and **skip Step 2.5** — fall
+through to Step 3 with a `## Merge-target verification skipped` note in the plan so the
+user knows findings weren't filtered against upstream code.
 
 Last: warn the user if the working tree is dirty in a way that could distort path matching
 (`git status --porcelain` returns non-empty in directories named in the report). Don't
@@ -167,6 +193,101 @@ If `--limit 200` is hit, raise it and re-fetch. The matcher needs the full set.
 
 ---
 
+## Step 2.5 — Verify each finding against the merge target
+
+The bug hunt may have run on a feature/wave branch that is behind the merge target. A
+finding that's real on the wave branch may already be fixed on `origin/$MERGE_TARGET`.
+Filing it would create a duplicate of work already done.
+
+For each parsed finding, decide whether the cited antipattern still exists on the merge
+target. Three outcomes:
+
+- **Still-broken** — the cited code (or close enough) is present on `origin/$MERGE_TARGET`.
+  The finding survives to Step 3.
+- **Already-fixed-on-merge-target** — the cited code is gone or has been refactored.
+  The finding is dropped (with the user's veto in Step 4).
+- **File-missing-on-merge-target** — the file no longer exists at the cited path.
+  Could be a rename/move; surface as ambiguous and let the user decide.
+
+### How to verify
+
+For each finding's primary `Location` path (strip `:LINE`):
+
+```bash
+# Fetch the file from the merge target without checking it out.
+git show "origin/$MERGE_TARGET:<path>" 2>/dev/null
+```
+
+If `git show` exits non-zero, the file is missing → **File-missing-on-merge-target**.
+
+Otherwise, derive a **signature** from the finding's `Evidence` block:
+
+- Take the first 1–3 distinctive non-empty, non-comment, non-fence lines from the
+  Evidence code block (skip `// …`, `# …`, lines that are only braces/parens).
+- Each signature line must be ≥ 12 characters and not a literal language keyword
+  (`else`, `return`, `}`, `)`). If a line is too short or too generic, take the
+  next one.
+- Two signatures are usually plenty; three for noisy patterns.
+
+A finding is **Still-broken** iff at least one signature line appears (substring match,
+whitespace-collapsed) in the merge-target file. If none match, classify as
+**Already-fixed-on-merge-target**.
+
+### When the Evidence block isn't a faithful signature
+
+Some findings cite *absence* of code (e.g. "no `CancellationException` re-throw before
+generic catch"). In that case, the signature should be the *enclosing structure* (e.g.
+the catch block) and the verifier checks whether the fix has been applied — typically
+by searching for a pattern the recommended fix would have introduced (`catch (t:
+CancellationException) { throw t }`). If neither the bug pattern nor the fix pattern is
+unambiguously present, classify as **ambiguous-needs-review** (treat as still-broken
+for Step 3 but call out in the plan's verification notes).
+
+### Multi-location findings
+
+If a finding cites multiple paths, run the verifier per path:
+
+- All paths fixed → **Already-fixed-on-merge-target**.
+- Some fixed, some still broken → **Still-broken (partial fix)**, surface which paths
+  in the plan so the issue body can be narrowed when filed.
+- All paths missing → **File-missing-on-merge-target**.
+
+### Worked example (from 2026-05-02 hunt)
+
+Finding cites `feature/giveaways/.../GiveawaysViewModel.kt:36-66` with Evidence
+referencing `flow { emitAll(giveawaysRepository.observeGiveaways()) }` and three
+separate `viewModelScope.launch { … }` blocks. Verifier runs:
+
+```bash
+git show origin/dev:feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt
+```
+
+The merge-target file uses a single `parametersFlow.flatMapLatest { … }` chain — none
+of the signature lines match. Classified **Already-fixed-on-merge-target**. Without
+this step, Step 3 would have scored highly against an existing open issue (or filed a
+new duplicate).
+
+### Output of this step
+
+Annotate each finding record with:
+
+```jsonc
+{
+  …,
+  "mergeTargetVerification": {
+    "branch": "dev",
+    "verdict": "still-broken" | "already-fixed" | "file-missing" | "ambiguous-needs-review",
+    "checkedPaths": ["feature/giveaways/.../GiveawaysViewModel.kt"],
+    "signatureMatches": [{ "path": "...", "line": "...", "matched": true }],
+    "note": "Optional human-readable rationale, surfaced in the plan."
+  }
+}
+```
+
+Findings with verdict `already-fixed` skip Step 3 entirely. Everything else proceeds.
+
+---
+
 ## Step 3 — Match findings to existing issues
 
 For each finding, score every candidate existing issue. Run **open** and **closed**
@@ -239,16 +360,32 @@ previous plan is no longer the current state):
 # GitHub Sync Plan — <YYYY-MM-DD>
 
 Source report: `.claude/bug-hunt-workspace/android-bug-hunt-report.md`
+Merge target verified against: `origin/<branch>` at <short-sha> (or "skipped — see warnings")
 Existing issues fetched: <N> open, <M> closed (label `bug-hunt`)
 
 ## Summary
 - Findings: N
+- Already fixed on merge target (will be skipped): F
 - Auto-skip (open dup): A
 - Regression candidates (closed match): R
 - Ambiguous (need a call): M
 - New (will be filed on approval): K
+- File-missing on merge target (need a call): X
 - Parse warnings: P
 - Label warnings: L
+
+## Already fixed on merge target (will be skipped)
+- BUG-NNN — <title>
+  - Verified against: `origin/dev:feature/giveaways/.../GiveawaysViewModel.kt`
+  - Signature lines from Evidence not found on merge target — appears fixed.
+  - **Default if you don't override below: skip silently (no issue filed, no log noise beyond "fixed-on-<branch>")**
+  - To file anyway (e.g. you're working on a long-lived branch and want the issue tracked
+    independently), move under `## New` below.
+
+## File missing on merge target (need a call)
+- BUG-NNN — <title>
+  - Cited path `<path>` does not exist on `origin/<branch>`. Possible rename/move.
+  - **Default if you don't override below: file new** (with a `> Note: cited file missing on <branch>; verify path` prefix)
 
 ## Auto-skipped (open duplicates)
 - BUG-001 — WebView never destroyed → #30 (score 7; shared path `feature/webview/.../WebView.kt`, title token `WebView`, area, severity)
@@ -274,6 +411,8 @@ Existing issues fetched: <N> open, <M> closed (label `bug-hunt`)
 - BUG-NNN parsed without effort label (report said `Medium`, not in scheme)
 - BUG-NNN: no `area:*` label inferred — consider creating one
 - BUG-NNN: severity downgraded `Critical` → `severity:high`
+- (if applicable) Merge-target verification skipped: <reason — `git fetch origin <branch>` failed, no remote, etc.>
+  → All findings will proceed to Step 3 unfiltered. Re-run with network access for tighter results.
 
 ---
 
@@ -307,6 +446,14 @@ Build the action list:
   issue with the new evidence; do **not** open a new issue (default action).
 - Anything moved under `## New` from regression → file a new issue with body prefix:
   `> Possible regression of #NN (closed <stateReason>).`
+- Anything under `## File missing on merge target` left in place → file a new issue
+  with body prefix: `> Note: cited path was not found on \`origin/<branch>\` at sync
+  time; verify/relocate before fixing.`
+- Anything under `## Already fixed on merge target` left in place → skip silently
+  (record `fixed-on-<branch>` in the log).
+- Anything moved under `## New` from `## Already fixed on merge target` → file a new
+  issue (the user has explicitly opted in despite the merge-target verifier saying it's
+  fixed; respect their judgment).
 - Anything under `## User-skipped` (or any heading containing "skip") → skip silently.
 - Anything under `## Auto-skipped` → skip silently (already handled in Step 3).
 
@@ -370,9 +517,12 @@ calendar day; multiple invocations same day append to the same file):
 # GitHub Sync Log — <YYYY-MM-DD HH:MM>
 
 Source report: `.claude/bug-hunt-workspace/android-bug-hunt-report.md`
+Merge target: `origin/dev` @ <short-sha>
 
 - BUG-001 → skipped (dup of #30)
 - BUG-002 → skipped (dup of #31)
+- BUG-003 → skipped (fixed on `origin/dev` — Evidence signature lines absent from `feature/giveaways/.../GiveawaysViewModel.kt`)
+- BUG-005 → skipped (file missing on `origin/dev:<path>`; user accepted default)
 - BUG-007 → filed as #50 — https://github.com/owner/repo/issues/50
 - BUG-012 → regression candidate; commented on closed #22
 - BUG-013 → ambiguous; filed new (#51) per user override
@@ -410,7 +560,7 @@ One short message. No prose preamble:
 
 ```
 Filed: K new issues — <urls, one per line>
-Skipped: A duplicates of open issues
+Skipped: A duplicates of open issues, F already fixed on origin/<branch>
 Regression comments: R on closed issues
 Failures: F (see log for resume)
 Log: .claude/bug-hunt-workspace/github-sync-log-<date>.md
@@ -420,6 +570,20 @@ Log: .claude/bug-hunt-workspace/github-sync-log-<date>.md
 
 ## Sharp edges
 
+- **Wave-branch lag**: the bug hunt may have run on a feature/wave branch behind the
+  merge target. Step 2.5 verifies each finding against `origin/$MERGE_TARGET` HEAD
+  before scoring against issues. Without this, four out of seven findings on the
+  2026-05-02 hunt would have been filed as duplicates of bugs already fixed on `dev`.
+- **Signature-line false negatives**: Step 2.5's verifier substring-matches Evidence
+  code lines into the merge-target file. If the fix introduced a token-identical line
+  (e.g. signature line is `viewModelScope.launch {` and the fix kept that line but
+  added structure around it), the verifier will say "still broken". Pick distinctive
+  signature lines, and treat verifier verdicts as advisory — the user's plan-edit veto
+  in Step 4 is the source of truth.
+- **Findings citing absent code**: some findings describe missing patterns rather than
+  present antipatterns ("no `CancellationException` re-throw"). The verifier checks
+  for the *fix pattern* in those cases. If neither bug nor fix pattern matches
+  unambiguously, classify as `ambiguous-needs-review` and surface in the plan.
 - **Line drift**: a finding at `Foo.kt:142` matches an existing issue's `Foo.kt:138`.
   Path matching strips `:line` suffixes — see Step 3.
 - **Consolidation/split**: if one finding overlaps two open issues with similar scores,
@@ -467,3 +631,9 @@ Log: .claude/bug-hunt-workspace/github-sync-log-<date>.md
   `.claude/lessons.md` before filing. Skipping this is how stale recommendations make
   it back into issues we've already rejected (`b41c34d` / `4f20fa5` is the cautionary
   tale).
+- **Skipping merge-target verification because "the dispatcher already ran".** The
+  dispatcher reads only the working tree (often a wave branch). The merge target's
+  HEAD is what the user is trying to land fixes on. Step 2.5 is the only place in
+  this pipeline that compares findings against upstream code. A `git fetch` failure
+  means proceeding *unfiltered* — call this out in the plan summary so the user can
+  re-run with network later rather than discovering 4 duplicate filings the next day.

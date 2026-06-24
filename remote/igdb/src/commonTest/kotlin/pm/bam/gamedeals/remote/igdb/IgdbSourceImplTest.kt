@@ -1,0 +1,658 @@
+package pm.bam.gamedeals.remote.igdb
+
+import io.ktor.client.engine.mock.MockRequestHandleScope
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
+import io.ktor.http.headersOf
+import kotlin.time.Instant
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.Release
+import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildExactNameLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildIgdbIdLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildNewReleasesQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchCandidatesQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSearchLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupDetailsQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildSteamLookupQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.buildTimeToBeatQuery
+import pm.bam.gamedeals.remote.igdb.api.IgdbGamesApi.Companion.escapeApicalypseString
+import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.mockHttpClient
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Source-impl coverage for [IgdbSourceImpl]. The auth chain is already covered by
+ * [IgdbAuthChainTest]; these tests use the plain [mockHttpClient] (no Auth plugin) and focus
+ * on the request shape + unwrap/map pipeline against `/v4/external_games`.
+ */
+class IgdbSourceImplTest {
+
+    private val logger: Logger = TestingLoggingListener()
+
+    @Test
+    fun fetchGameBySteamId_posts_apicalypse_query_to_external_games_and_returns_mapped_domain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameBySteamId(STEAM_ID)
+
+        assertEquals(IgdbGame(id = 1L, name = "Halo Infinite", summary = "Master Chief stuff"), result)
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/external_games", request.url.encodedPath)
+        assertEquals(buildSteamLookupQuery(STEAM_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameBySteamId_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameBySteamId(STEAM_ID)
+
+        assertNull(result, "Empty list response must surface as null IgdbGame")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchGameDetailsBySteamId_posts_rich_query_and_returns_fully_mapped_domain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_DETAILS_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsBySteamId(STEAM_ID)
+
+        val expected = IgdbGame(
+            id = 11140L,
+            name = "Halo Infinite",
+            summary = "Master Chief returns",
+            storyline = "When all hope is lost",
+            coverImageId = "co1n82",
+            screenshotImageIds = persistentListOf("sc1", "sc2"),
+            firstReleaseDate = Instant.fromEpochSeconds(1638921600L),
+            rating = 78.5,
+            ratingCount = 421L,
+            aggregatedRating = 87.0,
+            aggregatedRatingCount = 24L,
+            genres = persistentListOf("Shooter", "Adventure"),
+            themes = persistentListOf("Action", "Science fiction"),
+            involvedCompanies = persistentListOf(
+                IgdbGame.IgdbCompanyRole("343 Industries", IgdbGame.IgdbCompanyRole.Role.Developer),
+                IgdbGame.IgdbCompanyRole("Xbox Game Studios", IgdbGame.IgdbCompanyRole.Role.Publisher),
+                IgdbGame.IgdbCompanyRole("Skybox Labs", IgdbGame.IgdbCompanyRole.Role.Developer),
+                IgdbGame.IgdbCompanyRole("Skybox Labs", IgdbGame.IgdbCompanyRole.Role.Supporting),
+            ),
+            websites = persistentListOf(
+                IgdbGame.IgdbWebsite("https://www.halowaypoint.com", IgdbGame.IgdbWebsite.Category.Official),
+                IgdbGame.IgdbWebsite("https://store.steampowered.com/app/1240440", IgdbGame.IgdbWebsite.Category.Steam),
+                IgdbGame.IgdbWebsite("https://example.com/unknown", IgdbGame.IgdbWebsite.Category.Other),
+                IgdbGame.IgdbWebsite("https://store.playstation.com/en-us/concept/10018646", IgdbGame.IgdbWebsite.Category.PlayStation),
+                IgdbGame.IgdbWebsite("https://www.nintendo.com/store/products/halo", IgdbGame.IgdbWebsite.Category.Nintendo),
+            ),
+            similarGames = persistentListOf(
+                IgdbGame.IgdbSimilarGame(id = 1234L, name = "Halo 5: Guardians", coverImageId = "ha5"),
+                IgdbGame.IgdbSimilarGame(id = 5678L, name = "Destiny 2", coverImageId = null),
+            ),
+            steamAppId = STEAM_ID,
+        )
+        assertEquals(expected, result)
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/external_games", request.url.encodedPath)
+        assertEquals(buildSteamLookupDetailsQuery(STEAM_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsBySteamId_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsBySteamId(STEAM_ID)
+
+        assertNull(result, "Empty list response must surface as null IgdbGame")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchGameDetailsByIgdbId_posts_query_to_games_endpoint_and_returns_mapped_domain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_DIRECT_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByIgdbId(IGDB_ID)
+
+        assertEquals(
+            IgdbGame(
+                id = IGDB_ID,
+                name = "Hollow Knight",
+                summary = "Indie metroidvania",
+                coverImageId = "hkco",
+                similarGames = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 4242L, name = "Ori and the Blind Forest", coverImageId = "oco"),
+                ),
+                dlcs = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 9001L, name = "Hollow Knight: Hidden Dreams", coverImageId = "hdc"),
+                ),
+                expansions = persistentListOf(
+                    IgdbGame.IgdbSimilarGame(id = 9002L, name = "Hollow Knight: Godmaster", coverImageId = "gmc"),
+                ),
+            ),
+            result,
+        )
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(buildIgdbIdLookupDetailsQuery(IGDB_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByIgdbId_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByIgdbId(IGDB_ID)
+
+        assertNull(result, "Empty list response must surface as null IgdbGame")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchGameBySteamId_propagates_http_500_through_the_unwrap_chain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "", status = HttpStatusCode.InternalServerError)
+        }
+
+        assertFailsWith<Throwable> { impl.fetchGameBySteamId(STEAM_ID) }
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_returns_game_on_exact_match_without_firing_search_fallback() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_DIRECT_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(TITLE)
+
+        assertEquals("Hollow Knight", result?.name)
+        assertEquals(1, recorded.size, "Exact-match hit must short-circuit before search fallback")
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(buildExactNameLookupDetailsQuery(TITLE), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_falls_back_to_search_when_exact_match_returns_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            val body = if (recorded.size == 1) "[]" else ONE_GAME_DIRECT_BODY
+            respond(
+                content = body,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(TITLE)
+
+        assertEquals("Hollow Knight", result?.name)
+        assertEquals(2, recorded.size)
+        assertEquals("/v4/games", recorded[0].url.encodedPath)
+        assertEquals(buildExactNameLookupDetailsQuery(TITLE), (recorded[0].body as TextContent).text)
+        assertEquals("/v4/games", recorded[1].url.encodedPath)
+        assertEquals(buildSearchLookupDetailsQuery(TITLE), (recorded[1].body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_returns_null_when_both_passes_return_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = "[]",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(TITLE)
+
+        assertNull(result)
+        assertEquals(2, recorded.size, "Both exact and search must be attempted before giving up")
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_short_circuits_blank_title_with_no_http_call() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        assertNull(impl.fetchGameDetailsByTitle(""))
+        assertNull(impl.fetchGameDetailsByTitle("   "))
+        assertEquals(0, recorded.size, "Blank/whitespace titles must not fire any IGDB request")
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_escapes_double_quotes_in_title() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        impl.fetchGameDetailsByTitle("""Hyper "Quote" Title""")
+
+        val exactBody = (recorded[0].body as TextContent).text
+        assertTrue("""name = "Hyper \"Quote\" Title"""" in exactBody, "Quote must be backslash-escaped in the exact-name body: $exactBody")
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_escapes_backslash_before_quote_in_title() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        impl.fetchGameDetailsByTitle("""Path\Title""")
+
+        val exactBody = (recorded[0].body as TextContent).text
+        assertTrue("""name = "Path\\Title"""" in exactBody, "Backslash must be doubled in the exact-name body: $exactBody")
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_retries_exact_with_normalized_title_when_original_misses() = runTest {
+        // CheapShark deal titles often have "- Digital Deluxe Edition" / "- GOTY" suffixes IGDB
+        // doesn't carry. The cascade should: exact-original → empty, exact-normalized → hit.
+        val decorated = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition"
+        val normalized = "Suicide Squad: Kill the Justice League"
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            val body = if (recorded.size == 1) "[]" else ONE_GAME_DIRECT_BODY
+            respond(
+                content = body,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(decorated)
+
+        assertEquals("Hollow Knight", result?.name, "Fixture name is irrelevant here — assert the lookup resolved.")
+        assertEquals(2, recorded.size, "Exact-normalized hit must short-circuit before the search fallback")
+        assertEquals(buildExactNameLookupDetailsQuery(decorated), (recorded[0].body as TextContent).text)
+        assertEquals(buildExactNameLookupDetailsQuery(normalized), (recorded[1].body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_searches_normalized_title_when_both_exact_passes_miss() = runTest {
+        val decorated = "Suicide Squad: Kill the Justice League - Digital Deluxe Edition"
+        val normalized = "Suicide Squad: Kill the Justice League"
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            // Both exact passes (decorated + normalized) must miss so the search fallback fires: the first
+            // TWO requests return empty, the THIRD (search) returns the game. The guard must be `< 3`, not
+            // `< 2`, or the exact-normalized pass resolves before search.
+            val body = if (recorded.size < 3) "[]" else ONE_GAME_DIRECT_BODY
+            respond(
+                content = body,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByTitle(decorated)
+
+        assertEquals("Hollow Knight", result?.name)
+        assertEquals(3, recorded.size)
+        assertEquals(buildExactNameLookupDetailsQuery(decorated), (recorded[0].body as TextContent).text)
+        assertEquals(buildExactNameLookupDetailsQuery(normalized), (recorded[1].body as TextContent).text)
+        assertEquals(buildSearchLookupDetailsQuery(normalized), (recorded[2].body as TextContent).text)
+    }
+
+    @Test
+    fun fetchGameDetailsByTitle_propagates_http_500_through_the_unwrap_chain() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "", status = HttpStatusCode.InternalServerError)
+        }
+
+        assertFailsWith<Throwable> { impl.fetchGameDetailsByTitle(TITLE) }
+        assertEquals(1, recorded.size, "Exact-match failure must propagate; search fallback only runs on empty success")
+    }
+
+    @Test
+    fun buildExactNameLookupDetailsQuery_contains_full_field_list_and_name_predicate() {
+        val q = buildExactNameLookupDetailsQuery("Halo Infinite")
+        assertTrue("cover.image_id" in q)
+        assertTrue("similar_games.id" in q)
+        assertTrue("involved_companies.company.name" in q)
+        assertTrue("websites.url" in q)
+        assertTrue("""where name = "Halo Infinite"""" in q)
+        assertTrue("limit 1" in q)
+    }
+
+    @Test
+    fun buildSearchLookupDetailsQuery_contains_search_clause_and_full_field_list() {
+        val q = buildSearchLookupDetailsQuery("Halo Infinite")
+        assertTrue("""search "Halo Infinite";""" in q)
+        assertTrue("cover.image_id" in q)
+        assertTrue("similar_games.id" in q)
+        assertTrue("limit 1" in q)
+    }
+
+    @Test
+    fun fetchSearchCandidatesByTitle_posts_query_with_limit_10_and_returns_mapped_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = THREE_CANDIDATES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchSearchCandidatesByTitle("Tomb Raider")
+
+        assertEquals(3, result.size)
+        assertEquals(11L, result[0].id)
+        assertEquals("Tomb Raider", result[0].name)
+        assertEquals("tr1cover", result[0].coverImageId)
+        assertEquals(22L, result[1].id)
+        assertEquals("Tomb Raider II", result[1].name)
+        assertNull(result[1].coverImageId, "Missing cover should map to null, not skip the candidate")
+        assertEquals(33L, result[2].id)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(buildSearchCandidatesQuery("Tomb Raider"), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchSearchCandidatesByTitle_returns_empty_list_when_response_is_empty() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        val result = impl.fetchSearchCandidatesByTitle("Genshin Impact")
+
+        assertTrue(result.isEmpty(), "Empty response must surface as empty list, not null")
+        assertEquals(1, recorded.size)
+    }
+
+    @Test
+    fun fetchSearchCandidatesByTitle_short_circuits_blank_title_with_no_http_call() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        assertTrue(impl.fetchSearchCandidatesByTitle("").isEmpty())
+        assertTrue(impl.fetchSearchCandidatesByTitle("   ").isEmpty())
+        assertEquals(0, recorded.size, "Blank/whitespace titles must not fire any IGDB request")
+    }
+
+    @Test
+    fun buildSearchCandidatesQuery_uses_lean_fields_and_limit_10() {
+        val q = buildSearchCandidatesQuery("Halo Infinite")
+        assertTrue("""search "Halo Infinite";""" in q)
+        assertTrue("fields id, name, cover.image_id;" in q)
+        assertTrue("limit 10;" in q)
+        // Must NOT pull the rich fields used by the details lookup — keeps the picker payload small.
+        assertTrue("summary" !in q, "Candidate query must stay lean: $q")
+        assertTrue("involved_companies" !in q)
+        assertTrue("similar_games" !in q)
+    }
+
+    @Test
+    fun escapeApicalypseString_escapes_backslash_first_then_quote() {
+        assertEquals("""abc""", escapeApicalypseString("abc"))
+        assertEquals("""a\"b""", escapeApicalypseString("""a"b"""))
+        assertEquals("""a\\b""", escapeApicalypseString("""a\b"""))
+        assertEquals("""a\\\"b""", escapeApicalypseString("""a\"b"""))
+    }
+
+    @Test
+    fun fetchNewReleases_posts_recent_releases_query_to_games_and_maps_to_releases() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = NEW_RELEASES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchNewReleases()
+
+        // The cover-less row is dropped by the mapper's mapNotNull; the first maps to a Release with
+        // a CoverBig image URL built from the image_id, and date = first_release_date (Unix seconds).
+        assertEquals(
+            listOf(Release(title = "Some Game", date = 1_700_000_000, image = igdbImageUrl("abc123", IgdbImageSize.CoverBig))),
+            result,
+        )
+        assertEquals(1, recorded.size)
+        val request = recorded.single()
+        assertEquals("/v4/games", request.url.encodedPath)
+        assertEquals(
+            buildNewReleasesQuery(FIXED_NOW_MS / 1000, IgdbSourceImpl.NEW_RELEASES_LIMIT),
+            (request.body as TextContent).text,
+        )
+    }
+
+    @Test
+    fun fetchTimeToBeat_posts_query_to_game_time_to_beats_and_maps_seconds() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = TIME_TO_BEAT_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchTimeToBeat(IGDB_ID)
+
+        assertEquals(
+            IgdbGame.IgdbTimeToBeat(hastily = 3600L, normally = 7200L, completely = 18000L, count = 1500L),
+            result,
+        )
+        val request = recorded.single()
+        assertEquals("/v4/game_time_to_beats", request.url.encodedPath)
+        assertEquals(buildTimeToBeatQuery(IGDB_ID), (request.body as TextContent).text)
+    }
+
+    @Test
+    fun fetchTimeToBeat_returns_null_when_response_is_empty_list() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(content = "[]", status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        assertNull(impl.fetchTimeToBeat(IGDB_ID), "Empty list must surface as null time-to-beat")
+        assertEquals(1, recorded.size)
+    }
+
+    private fun rig(
+        recorded: MutableList<HttpRequestData>,
+        handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+    ): IgdbSourceImpl {
+        val client = mockHttpClient(Json { ignoreUnknownKeys = true }) { request ->
+            recorded += request
+            handler(request)
+        }
+        return IgdbSourceImpl(
+            logger = logger,
+            igdbGamesApi = IgdbGamesApi(client),
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            clock = Clock { FIXED_NOW_MS },
+        )
+    }
+
+    private companion object {
+        const val STEAM_ID = 1240440
+        const val IGDB_ID = 3151L
+        const val TITLE = "Hollow Knight"
+        const val FIXED_NOW_MS = 1_700_000_000_000L
+
+        // language=JSON — IGDB always returns `id` even when not in `fields`. The cover-less second
+        // row exercises the mapper's mapNotNull filter.
+        const val NEW_RELEASES_BODY = """[
+            {"id":501,"name":"Some Game","cover":{"id":7,"image_id":"abc123"},"first_release_date":1700000000},
+            {"id":502,"name":"No Cover Game","first_release_date":1699000000}
+        ]"""
+
+        // language=JSON
+        const val THREE_CANDIDATES_BODY = """[
+            {"id":11,"name":"Tomb Raider","cover":{"id":7,"image_id":"tr1cover"}},
+            {"id":22,"name":"Tomb Raider II"},
+            {"id":33,"name":"Tomb Raider: Anniversary","cover":{"id":8,"image_id":"tracover"}}
+        ]"""
+
+        // language=JSON
+        const val ONE_GAME_BODY = """[
+            {"id":99,"game":{"id":1,"name":"Halo Infinite","summary":"Master Chief stuff"}}
+        ]"""
+
+        // language=JSON — /v4/game_time_to_beats row; times in seconds.
+        const val TIME_TO_BEAT_BODY = """[
+            {"hastily": 3600, "normally": 7200, "completely": 18000, "count": 1500}
+        ]"""
+
+        // Response from `/v4/games where id = N` — flat record, no `external_games` wrapper.
+        // `external_games` has only non-Steam sources here, exercising the source = 1 filter
+        // (Hollow Knight ships on GOG and Itch but not Steam in this fixture, so steamAppId stays null).
+        // language=JSON
+        const val ONE_GAME_DIRECT_BODY = """[
+            {
+                "id": 3151,
+                "name": "Hollow Knight",
+                "summary": "Indie metroidvania",
+                "cover": {"id": 7, "image_id": "hkco"},
+                "similar_games": [
+                    {"id": 4242, "name": "Ori and the Blind Forest", "cover": {"id": 8, "image_id": "oco"}}
+                ],
+                "dlcs": [
+                    {"id": 9001, "name": "Hollow Knight: Hidden Dreams", "cover": {"id": 9, "image_id": "hdc"}}
+                ],
+                "expansions": [
+                    {"id": 9002, "name": "Hollow Knight: Godmaster", "cover": {"id": 10, "image_id": "gmc"}}
+                ],
+                "external_games": [
+                    {"id": 800, "uid": "hollow-knight-gog", "external_game_source": 5},
+                    {"id": 801, "uid": "hollow-knight-itch", "external_game_source": 36}
+                ]
+            }
+        ]"""
+
+        // language=JSON
+        const val ONE_GAME_DETAILS_BODY = """[
+            {
+                "id": 99,
+                "game": {
+                    "id": 11140,
+                    "name": "Halo Infinite",
+                    "summary": "Master Chief returns",
+                    "storyline": "When all hope is lost",
+                    "cover": {"id": 12345, "image_id": "co1n82"},
+                    "screenshots": [
+                        {"id": 1, "image_id": "sc1"},
+                        {"id": 2, "image_id": "sc2"}
+                    ],
+                    "first_release_date": 1638921600,
+                    "rating": 78.5,
+                    "rating_count": 421,
+                    "aggregated_rating": 87.0,
+                    "aggregated_rating_count": 24,
+                    "genres": [
+                        {"id": 5, "name": "Shooter"},
+                        {"id": 31, "name": "Adventure"},
+                        {"id": 99}
+                    ],
+                    "themes": [
+                        {"id": 1, "name": "Action"},
+                        {"id": 18, "name": "Science fiction"}
+                    ],
+                    "involved_companies": [
+                        {"id": 100, "company": {"id": 9, "name": "343 Industries"}, "developer": true, "publisher": false, "porting": false, "supporting": false},
+                        {"id": 101, "company": {"id": 10, "name": "Xbox Game Studios"}, "developer": false, "publisher": true, "porting": false, "supporting": false},
+                        {"id": 102, "company": {"id": 11, "name": "Skybox Labs"}, "developer": true, "publisher": false, "porting": false, "supporting": true},
+                        {"id": 103, "developer": true}
+                    ],
+                    "websites": [
+                        {"id": 1, "url": "https://www.halowaypoint.com", "type": {"id": 1, "type": "Official Website"}},
+                        {"id": 2, "url": "https://store.steampowered.com/app/1240440", "type": {"id": 13, "type": "Steam"}},
+                        {"id": 3, "url": "https://example.com/unknown", "type": {"id": 999, "type": "Unknown"}},
+                        {"id": 4, "type": {"id": 1, "type": "Official Website"}},
+                        {"id": 5, "url": "https://store.playstation.com/en-us/concept/10018646", "type": {"id": 998, "type": "PlayStation Store"}},
+                        {"id": 6, "url": "https://www.nintendo.com/store/products/halo", "type": {"id": 997, "type": "Nintendo"}}
+                    ],
+                    "similar_games": [
+                        {"id": 1234, "name": "Halo 5: Guardians", "cover": {"id": 50, "image_id": "ha5"}},
+                        {"id": 5678, "name": "Destiny 2"},
+                        {"id": 9999}
+                    ],
+                    "external_games": [
+                        {"id": 700, "uid": "1240440", "external_game_source": 1},
+                        {"id": 701, "uid": "halo-gog-id", "external_game_source": 5}
+                    ]
+                }
+            }
+        ]"""
+    }
+}

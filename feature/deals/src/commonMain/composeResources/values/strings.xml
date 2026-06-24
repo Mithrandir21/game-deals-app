@@ -1,0 +1,85 @@
+<resources>
+    <string name="deals_screen_title">Deals</string>
+    <string name="deals_screen_loading_error_msg">Couldn't load deals</string>
+    <string name="deals_screen_loading_error_retry">Retry</string>
+    <string name="deals_screen_load_more_error_msg">Couldn't load more deals</string>
+    <string name="deals_screen_empty_label">No deals right now</string>
+    <string name="deals_screen_game_image">Image for %1$s</string>
+    <string name="deals_screen_deal_row_description">Deal: %1$s, %2$s</string>
+    <string name="deals_screen_deal_row_description_waitlisted">Deal: %1$s, waitlisted, %2$s</string>
+
+    <string name="deals_sort_label">Sort</string>
+    <string name="deals_sort_hottest">Hottest games</string>
+    <string name="deals_sort_newest">Newest deals</string>
+    <string name="deals_sort_price_cut">Highest price cut</string>
+    <string name="deals_sort_lowest_price">Lowest price</string>
+    <string name="deals_sort_expiring">Expiring soon</string>
+    <string name="deals_sort_release_date">Release date</string>
+    <string name="deals_sort_popular">Most popular</string>
+    <string name="deals_sort_waitlisted">Most waitlisted</string>
+    <string name="deals_sort_collected">Most collected</string>
+    <string name="deals_sort_steam_players">Players on Steam</string>
+    <string name="deals_sort_steam_reviews">Steam reviews</string>
+    <string name="deals_sort_steam_reviews_count">Steam reviews count</string>
+    <string name="deals_sort_opencritic">Opencritic score</string>
+    <string name="deals_sort_metacritic">Metacritic score</string>
+    <string name="deals_sort_metacritic_user">Metacritic user score</string>
+    <string name="deals_sort_direction">Direction</string>
+    <string name="deals_sort_direction_desc">Descending</string>
+    <string name="deals_sort_direction_asc">Ascending</string>
+
+    <string name="deals_filter_all_stores">All stores</string>
+
+    <!-- Tag discovery entry (epic #307) -->
+    <string name="deals_discover_by_tag">Discover by tag</string>
+
+    <!-- Filter bottom sheet -->
+    <string name="deals_filter_button">Filter</string>
+    <string name="deals_filter_button_count">Filter (%1$d)</string>
+    <string name="deals_filter_sheet_title">Filters</string>
+    <string name="deals_filter_section_sort">Sort</string>
+    <string name="deals_filter_section_stores">Stores</string>
+
+    <!-- Server-side deal filters -->
+    <string name="deals_filter_reset">Reset all</string>
+    <string name="deals_filter_chip_any">Any</string>
+
+    <string name="deals_filter_section_discount">Minimum discount</string>
+    <string name="deals_filter_discount_tier">%1$d%+</string>
+
+    <string name="deals_filter_section_price">Maximum price</string>
+    <string name="deals_filter_price_free">Free</string>
+    <string name="deals_filter_price_under">Under %1$s</string>
+
+    <string name="deals_filter_section_type">Type</string>
+    <string name="deals_filter_type_game">Games</string>
+    <string name="deals_filter_type_dlc">DLC</string>
+    <string name="deals_filter_type_bundle">Bundles</string>
+
+    <string name="deals_filter_section_drm">DRM</string>
+    <string name="deals_filter_drm_free_label">DRM-free only</string>
+    <string name="deals_filter_drm_free_switch_description">DRM-free only toggle</string>
+
+    <string name="deals_filter_section_flag">Deal type</string>
+    <string name="deals_filter_flag_new_low">New low</string>
+    <string name="deals_filter_flag_historical_low">Historical low</string>
+    <string name="deals_filter_flag_shop_low">Shop low</string>
+
+    <string name="deals_filter_section_reviews">Minimum Steam rating</string>
+    <string name="deals_filter_reviews_tier">%1$d%+</string>
+
+    <string name="deals_filter_section_release">Release</string>
+    <string name="deals_filter_release_new">New</string>
+    <string name="deals_filter_release_this_year">This year</string>
+    <string name="deals_filter_release_older">2+ years old</string>
+
+    <!-- Title search (merged from the former Search screen) -->
+    <string name="deals_search_field_label">Search game title</string>
+    <string name="deals_search_icon">Search icon</string>
+    <string name="deals_search_close">Close search</string>
+    <string name="deals_search_loading_indicator">Searching for games</string>
+    <string name="deals_search_no_results_label">No results found</string>
+    <string name="deals_search_result_count">%1$d deals</string>
+    <string name="deals_search_result_row_description">%1$s, %2$s</string>
+    <string name="deals_search_result_row_description_waitlisted">%1$s, waitlisted, %2$s</string>
+</resources>

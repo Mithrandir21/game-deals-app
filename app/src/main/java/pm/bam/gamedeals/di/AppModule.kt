@@ -1,50 +1,63 @@
 package pm.bam.gamedeals.di
 
-import android.content.Context
-import android.util.Log
-import coil.ImageLoader
-import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.analytics.analytics
-import com.google.firebase.Firebase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.Dispatchers
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
+import coil3.util.Logger as CoilLogger
+import okio.Path.Companion.toPath
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
+import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.toLogLevel
-import javax.inject.Singleton
+import pm.bam.gamedeals.notifications.AndroidNotificationPresenter
 
-@Module
-@InstallIn(SingletonComponent::class)
-class AppModule {
+val appModule = module {
+    single<Clock> { Clock { System.currentTimeMillis() } }
 
-    @Provides
-    @Singleton
-    fun provideFirebase(): FirebaseAnalytics = Firebase.analytics
+    // Background notification presentation — bound here because the tap PendingIntent targets MainActivity.
+    single<NotificationPresenter> { AndroidNotificationPresenter(androidContext(), get()) }
 
-    @Coil
-    @Provides
-    @Singleton
-    fun provideCoilInternalLogger(logger: Logger): coil.util.Logger =
-        object : coil.util.Logger {
-            override var level: Int = Log.DEBUG
-            override fun log(tag: String, priority: Int, message: String?, throwable: Throwable?) {
-                logger.log(priority.toLogLevel(), "CoilLogging", throwable = throwable) { message ?: "Coil Log Message" }
+    single<CoilLogger> {
+        val logger: Logger = get()
+        object : CoilLogger {
+            override var minLevel: CoilLogger.Level = CoilLogger.Level.Debug
+            override fun log(tag: String, level: CoilLogger.Level, message: String?, throwable: Throwable?) {
+                logger.log(level.toAppLogLevel(), "CoilLogging", throwable = throwable) { message ?: "Coil Log Message" }
             }
         }
+    }
 
+    single<ImageLoader> {
+        val context = androidContext()
+        ImageLoader.Builder(context)
+            .crossfade(true)
+            .logger(get())
+            .components { add(KtorNetworkFetcherFactory()) }
+            // Keep decoded bitmaps in memory so fast scrolling re-shows thumbnails without re-decoding/re-uploading.
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            // Persist downloaded images so revisiting Home doesn't re-fetch them over the network.
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache").absolutePath.toPath())
+                    .maxSizeBytes(64L * 1024 * 1024)
+                    .build()
+            }
+            .build()
+    }
+}
 
-    @Provides
-    @Singleton
-    fun provideCoilImageLoader(
-        @ApplicationContext appContext: Context,
-        @Coil coilLogger: coil.util.Logger
-    ): ImageLoader = ImageLoader.Builder(appContext)
-        .crossfade(true)
-        .dispatcher(Dispatchers.Default)
-        .logger(coilLogger)
-        .build()
-
+private fun CoilLogger.Level.toAppLogLevel(): LogLevel = when (this) {
+    CoilLogger.Level.Verbose -> LogLevel.VERBOSE
+    CoilLogger.Level.Debug -> LogLevel.DEBUG
+    CoilLogger.Level.Info -> LogLevel.INFO
+    CoilLogger.Level.Warn -> LogLevel.WARN
+    CoilLogger.Level.Error -> LogLevel.ERROR
 }

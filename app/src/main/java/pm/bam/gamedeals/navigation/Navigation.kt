@@ -2,59 +2,48 @@ package pm.bam.gamedeals.navigation
 
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import pm.bam.gamedeals.navigation.NavigationDestinations.GIVEAWAYS_ROUTE
-import pm.bam.gamedeals.navigation.NavigationDestinations.HOME_SCREEN_ROUTE
-import pm.bam.gamedeals.navigation.NavigationDestinations.SEARCH_ROUTE
-import pm.bam.gamedeals.navigation.NavigationDestinationsArgs.GAME_ID_ARG
-import pm.bam.gamedeals.navigation.NavigationDestinationsArgs.STORE_ID_ARG
-import pm.bam.gamedeals.navigation.NavigationDestinationsArgs.WEB_GAME_TITLE_ARG
-import pm.bam.gamedeals.navigation.NavigationDestinationsArgs.WEB_URL_ARG
-import pm.bam.gamedeals.navigation.NavigationScreens.GAME_SCREEN
-import pm.bam.gamedeals.navigation.NavigationScreens.GIVEAWAYS_SCREEN
-import pm.bam.gamedeals.navigation.NavigationScreens.HOME_SCREEN
-import pm.bam.gamedeals.navigation.NavigationScreens.SEARCH_SCREEN
-import pm.bam.gamedeals.navigation.NavigationScreens.STORE_SCREEN
-import pm.bam.gamedeals.navigation.NavigationScreens.WEBVIEW_SCREEN
-
-
-/** Screens used in [NavigationDestinations]. */
-private object NavigationScreens {
-    const val HOME_SCREEN = "home"
-    const val STORE_SCREEN = "store"
-    const val GAME_SCREEN = "game"
-    const val SEARCH_SCREEN = "search"
-    const val WEBVIEW_SCREEN = "webview"
-    const val GIVEAWAYS_SCREEN = "giveaways"
-}
-
-/** Arguments used in [NavigationDestinations] routes. */
-internal object NavigationDestinationsArgs {
-    const val STORE_ID_ARG = "storeId"
-    const val GAME_ID_ARG = "gameId"
-
-    const val WEB_URL_ARG = "url"
-    const val WEB_GAME_TITLE_ARG = "gameTitle"
-}
-
-
-/** Possible destinations used in this Navigation graph. */
-internal object NavigationDestinations {
-    const val HOME_SCREEN_ROUTE = HOME_SCREEN
-    const val STORE_ROUTE = "$STORE_SCREEN?$STORE_ID_ARG={$STORE_ID_ARG}"
-    const val GAME_ROUTE = "$GAME_SCREEN?$GAME_ID_ARG={$GAME_ID_ARG}"
-    const val SEARCH_ROUTE = SEARCH_SCREEN
-    const val WEBVIEW_ROUTE = "$WEBVIEW_SCREEN?$WEB_URL_ARG={$WEB_URL_ARG}&$WEB_GAME_TITLE_ARG={$WEB_GAME_TITLE_ARG}"
-    const val GIVEAWAYS_ROUTE = GIVEAWAYS_SCREEN
-}
+import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.SearchController
+import pm.bam.gamedeals.domain.models.IgdbTagFilter
 
 
 /**
  * Models the navigation actions in the app.
+ *
+ * All navigation calls use type-safe [Destination] instances rather than string routes,
+ * so that argument types and names are checked at compile time.
  */
 internal class NavigationActions(private val navController: NavHostController) {
 
-    fun navigateHome() {
-        navController.navigate(HOME_SCREEN_ROUTE) {
+    fun navigateHome() = navigateTopLevel(Destination.Home)
+
+    /** Open the onboarding carousel as a pushed screen (the Account hub's "How it works" replay). */
+    fun navigateToOnboarding() {
+        navController.navigate(Destination.Onboarding)
+    }
+
+    /**
+     * Leave the onboarding carousel. On a replay it pops back to wherever it was launched from (e.g. the
+     * Account hub); on first run — where Onboarding is the start destination and nothing is behind it —
+     * it instead opens Home and drops Onboarding from the back stack so a back press exits the app.
+     */
+    fun finishOnboarding() {
+        val popped = navController.popBackStack()
+        if (!popped) {
+            navController.navigate(Destination.Home) {
+                popUpTo(Destination.Onboarding) { inclusive = true }
+            }
+        }
+    }
+
+    /**
+     * Navigate to a top-level (bottom-nav tab) [destination] with the standard tab back-stack
+     * behaviour (epic #219): pop up to the graph's start destination saving state, single-top, and
+     * restore the tab's previously saved state. Used by the [pm.bam.gamedeals.common.ui.shell]
+     * `NavigationBar` so re-selecting a tab restores its scroll/stack rather than stacking copies.
+     */
+    fun navigateTopLevel(destination: Destination) {
+        navController.navigate(destination) {
             // Pop up to the start destination of the graph to avoid building up a large stack of destinations on the back stack as users select items
             popUpTo(navController.graph.findStartDestination().id) {
                 saveState = true
@@ -67,33 +56,99 @@ internal class NavigationActions(private val navController: NavHostController) {
     }
 
     fun navigateToStore(storeId: Int) {
-        navController.navigate("$STORE_SCREEN?$STORE_ID_ARG=${storeId}") {
+        navController.navigate(Destination.Store(storeId)) {
             restoreState = storeId == 0
         }
     }
 
-    fun navigateToGame(gameId: Int) {
-        navController.navigate("$GAME_SCREEN?$GAME_ID_ARG=${gameId}") {
-            restoreState = gameId == 0
+    fun navigateToGame(gameId: String) {
+        navController.navigate(Destination.Game(gameId)) {
+            restoreState = gameId.isEmpty()
         }
     }
 
-    fun navigateToSearch() {
-        navController.navigate(SEARCH_ROUTE) {
-            restoreState = true
-        }
+    /** Open the Account hub's Notifications sub-screen (e.g. from a tapped bundled waitlist alert). */
+    fun navigateToNotifications() {
+        navController.navigate(Destination.Notifications)
     }
 
-    fun navigateToWeb(url: String, gameTitle: String) {
-        navController.navigate("$WEBVIEW_SCREEN?$WEB_URL_ARG=${url}&$WEB_GAME_TITLE_ARG=${gameTitle}") {
-            restoreState = true
-        }
+    /** Open one day's in-app notification detail (the games + deals notified that day). */
+    fun navigateToNotificationDay(date: String) {
+        navController.navigate(Destination.NotificationDay(date))
     }
+
+    /** Open the Followed-series screen (e.g. from a tapped bundled followed-franchise alert). */
+    fun navigateToFollowedSeries() {
+        navController.navigate(Destination.FollowedSeriesList)
+    }
+
+    /** Open the Waitlist list (from the Home account stat card). Registered under the shared NavHost. */
+    fun navigateToWaitlist() {
+        navController.navigate(Destination.WaitlistList)
+    }
+
+    /** Open the Collection list (from the Home account stat card). Registered under the shared NavHost. */
+    fun navigateToCollection() {
+        navController.navigate(Destination.CollectionList)
+    }
+
+    fun navigateToGameDetails(steamAppId: Int, title: String? = null) {
+        navController.navigate(Destination.GameDetails(steamAppId, title))
+    }
+
+    fun navigateToGameDetailsByTitle(title: String) {
+        navController.navigate(Destination.GameDetailsByTitle(title))
+    }
+
+    /**
+     * Search lives on the Deals tab (Search was merged into Deals): switch to the tab with the standard
+     * tab back-stack behaviour, then run [query] there. Used by the app-shell toolbar search submit and
+     * the Game Page's "search by title" deep-link.
+     */
+    fun searchDeals(query: String) {
+        navigateTopLevel(Destination.Deals)
+        SearchController.search(query)
+    }
+
+    /** Clear the active search (the app-shell toolbar search field was closed). */
+    fun clearSearch() = SearchController.clear()
 
     fun navigateToGiveaways() {
-        navController.navigate(GIVEAWAYS_ROUTE) {
+        navController.navigate(Destination.Giveaways) {
             restoreState = true
         }
+    }
+
+    fun navigateToGiveawayDetail(giveawayId: Int) {
+        navController.navigate(Destination.GiveawayDetail(giveawayId))
+    }
+
+    fun navigateToBundles() {
+        navController.navigate(Destination.Bundles) {
+            restoreState = true
+        }
+    }
+
+    fun navigateToBundleDetail(bundleId: Int) {
+        navController.navigate(Destination.BundleDetail(bundleId))
+    }
+
+    /** Open the tag-discovery picker (epic #307), from the Deals tab affordance. */
+    fun navigateToDiscover() {
+        navController.navigate(Destination.Discover)
+    }
+
+    /** Open the tag-discovery results for [filter] — encodes each dimension's ids as a comma-joined arg. */
+    fun navigateToDiscoverResults(filter: IgdbTagFilter) {
+        navController.navigate(
+            Destination.DiscoverResults(
+                genreIds = filter.genreIds.joinToString(","),
+                themeIds = filter.themeIds.joinToString(","),
+                gameModeIds = filter.gameModeIds.joinToString(","),
+                perspectiveIds = filter.perspectiveIds.joinToString(","),
+                keywordIds = filter.keywordIds.joinToString(","),
+            )
+        )
     }
 
 }

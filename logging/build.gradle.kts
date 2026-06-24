@@ -1,54 +1,29 @@
 plugins {
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.jetbrains.kotlin)
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.gamedeals.kmp.library)
 }
 
-android {
-    namespace = "pm.bam.gamedeals.logging"
-    compileSdk = 36
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.koin.core)
+            // Sentry KMP — shared bridge for Android + iOS (SentryLoggingListener / configureSentryOptions).
+            // The iOS klib's cinterop symbols resolve at app-link: iosApp.xcodeproj links Sentry-Cocoa via SPM,
+            // pinned to the cocoa version this KMP release was built against (see gradle/libs.versions.toml).
+            implementation(libs.sentry.kotlin.multiplatform)
+            // PostHog KMP — product-analytics bridge (Analytics / PostHogAnalytics / configurePostHog). Same
+            // app-link story as Sentry on iOS: iosApp links posthog-ios via SPM (see docs/posthog-ios-handoff.md).
+            implementation(libs.posthog.kmp)
+        }
 
-    defaultConfig {
-        minSdk = 26
-    }
+        androidMain.dependencies {
+            implementation(libs.androidx.ktx)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.material)
+        }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-    kotlin {
-        jvmToolchain(21)
-    }
-    packaging {
-        resources {
-
-            excludes += "/META-INF/LICENSE.md"
-            excludes += "/META-INF/LICENSE-notice.md"
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-
-            // Temporary fix for OSGi issue org.jspecify:jspecify:1.0.0 and com.squareup.okhttp3:logging-interceptor:5.2.1
-            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-        }
-    }
-    tasks.withType<Test> {
-        jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
-    }
 }
 
-dependencies {
-
-    implementation(libs.androidx.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    kapt(libs.hilt.compiler)
-    kapt(libs.hilt.androidx.compiler)
-}

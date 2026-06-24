@@ -1,0 +1,81 @@
+campaign_slug: "2026-05-02-bug-hunt"
+labels: ["bug-hunt"]
+created: "2026-05-02"
+completed: "2026-05-02"
+status: "complete"
+current_wave: 2
+issues:
+  - number: 71
+    title: "DealDetailsController.load swallows CancellationException across both catch sites"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt/issue-71-deal-details-cancellation"
+    pr: 84
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/84"
+    status: "merged"
+    files:
+      - "common/ui/src/main/java/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt"
+    note: "Outer + inner fallback both gained `catch (CancellationException) { throw it }` before the existing `catch (Throwable)`. Mirrors DealsMediator.kt:76-81. No tests — :common:ui has no unit-test source set."
+  - number: 72
+    title: "GiveawaysViewModel.loadGiveaway leaks long-lived Room collector"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt/issue-72-giveaways-flatmaplatest"
+    pr: 86
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/86"
+    status: "merged"
+    files:
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+    note: "Source-of-truth refactor: parametersFlow MutableStateFlow + flatMapLatest. loadGiveaway() now a one-line setter (no own .catch — handled by single init collector). New regression test models hot-Room flow via MutableSharedFlow (flowOf completes — wouldn't have reproduced bug)."
+  - number: 73
+    title: "GameViewModel.reloadGameDetails launches parallel collector"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt/issue-73-game-reload-trigger"
+    pr: 87
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/87"
+    status: "merged"
+    files:
+      - "feature/game/src/main/java/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt"
+      - "feature/game/src/test/java/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
+    note: "reloadTrigger MutableSharedFlow combined into source flow via combine(); flatMapLatest cancels prior loads. Public API unchanged. Existing test required virtual-time advance past delayOnStart before reload (old test only worked because parallel-launch bypassed delayOnStart)."
+  - number: 74
+    title: "SingleEventEffect captures collector lambda without rememberUpdatedState"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt/issue-74-single-event-rememberupdated"
+    pr: 85
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/85"
+    status: "merged"
+    files:
+      - "common/src/main/java/pm/bam/gamedeals/common/CommonFlowExtensions.kt"
+    note: "rememberUpdatedState wrapper + LaunchedEffect keys expanded to (sideEffectFlow, lifecycleOwner, lifeCycleState). KDoc updated to document the safety guarantee. No tests — Compose UI test infrastructure not set up for :common."
+  - number: 75
+    title: "GiveawaysViewModel.reloadGiveaways races with init Room collector on _uiState"
+    wave: 2
+    branch: "wave/2026-05-02-bug-hunt/issue-75-77-giveaways-refresh-outcome"
+    pr: 89
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/89"
+    status: "merged"
+    bundled_with: 77
+    files:
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+    note: "Wave-1 PR #86 (issue #72) did not auto-resolve as the issue body predicted — init collector still emits SUCCESS on every Room invalidation, overwriting ERROR set by reloadGiveaways. Wave-2 fix: sealed RefreshOutcome { Idle, Error } MutableStateFlow combined into source-of-truth flow. Mapper produces ERROR when outcome is Error, else SUCCESS. Order in reloadGiveaways: outcome=Idle → uiState=LOADING → refresh; .catch flips outcome=Error. PR closes both #75 and #77 (same architectural fix)."
+  - number: 76
+    title: "SearchParameters.equals overridden to always return false defeats Compose skipping"
+    wave: 2
+    branch: "wave/2026-05-02-bug-hunt/issue-76-search-parameters-equals"
+    pr: 88
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/88"
+    status: "merged"
+    files:
+      - "domain/src/main/java/pm/bam/gamedeals/domain/models/Search.kt"
+      - "feature/search/src/main/java/pm/bam/gamedeals/feature/search/ui/SearchViewModel.kt"
+    note: "Removed equals override (data-class equals restored — all fields scalar/enum, Compose-stable). SearchViewModel: MutableStateFlow<SearchParameters?> → MutableSharedFlow(replay=1, onBufferOverflow=DROP_OLDEST) so identical successive emits still trigger flatMapLatest. No List fields → no ImmutableList migration → no cross-module dep changes. Existing tests pass unchanged. No @Immutable added (planner judgement: all-scalar data class is already inferred-stable)."
+  - number: 77
+    title: "GiveawaysViewModel.reloadGiveaways flow has no SUCCESS emission of its own"
+    wave: 2
+    branch: "wave/2026-05-02-bug-hunt/issue-75-77-giveaways-refresh-outcome"
+    pr: 89
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/89"
+    status: "merged"
+    bundled_with: 75
+    note: "Closed by the same PR as #75 (combined fix — same file, same architectural shape: RefreshOutcome combined into source-of-truth flow)."

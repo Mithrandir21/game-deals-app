@@ -34,7 +34,7 @@ Because each module is separate, it is necessary to carefully consider the data 
 Dependencies that are not direct, but come through another dependency are call Transitive Dependencies. It is important to keep this in mind when working with modules so that a modules dependencies are not forced onto other modules without an explicit need being present.
 
 ###### Dependency Injection
-Using Dagger (Hilt) requires some setup to allow dependency inject to work correctly in a multi-module application. It is by no means impossible and already in use through the software development world. However, it does require a somewhat better understanding of dependency injection than in monolithic app development. Things such as Transitive Dependencies and any tool limitations must be kept in mind to not break the setup.
+Using a multi-module DI framework (this project uses Koin) requires some setup to wire modules together correctly. Koin is KMP-friendly — modules can live in `commonMain` and apply on both Android and iOS. Things such as Transitive Dependencies and any tool limitations must be kept in mind to not break the setup.
 
 ###### External Dependencies
 Dependencies external to the app and its modules must be kept uniform, i.e. same version, to not create any unexpected behaviour. For example, the same exact version of RxJava must be used through all the application.
@@ -50,12 +50,13 @@ Because each module will contain its own Manifest, which is merged into a final 
 <hr />
 
 ### :bomb: Modularisation - Existing Issues
-The following are existing issues with Modularisation with the current tools used in Android.
 
-###### :warning: Hilt & Transitive Dependencies
+> :information_source: **Pending resurvey.** The subsections below describe the pre-2026 Hilt + Navigation-Component + SafeArgs stack. The project has since migrated to **Koin** for DI and the JetBrains KMP-fork **`androidx-compose-navigation`** with type-safe `@Serializable` routes (see `common/src/commonMain/.../navigation/Destination.kt`). Both subsections will be rewritten under the architecture-skill resurvey.
+
+###### :warning: Hilt & Transitive Dependencies _(historical — pre-Koin)_
 Hilt/Dagger needs a specific flag enabled to allow the generated code access to any Transitive Dependencies, i.e. dependencies of dependencies. For example, if Module A depends only on Module B and Module B only depends on Module C, such that A ← B ← C, we need to enable the specific flag to allow Hilt/Dagger to be able to create the dependencies needed in B, namely C.<br>
 See [Suggestion needed for using Hilt in library modules](https://github.com/google/dagger/issues/1991)
 
-###### :warning: SafeArgs, Destinations and Modules
+###### :warning: SafeArgs, Destinations and Modules _(historical — pre-compose-navigation)_
 The tools used to facilitate navigation (with data) between destinations in the app, Navigation Component and SafeArgs, are generating the necessary code in such a way that they need to know about specific destinations and their arguments. This means that if a Destination exists in Feature Module A, the app must know about (include as its dependency) Feature Module A. However, since we need to navigate away from the Destination that exists in Feature Module A to, say, a Destination in the Core, it follows that Feature Module A must know about (include as its dependency) the App Module. This cannot be as it massively breaks separation of concerns and the Feature modules will all end up depending on each other. [See detailed explanation](https://proandroiddev.com/androidx-navigation-building-on-the-wrong-abstraction-1d7c4a64318c).<br>
 This has been resolved by placing the Navigation Graph inside the a common Navigation module and using Fully Qualified names for the destinations and arguments. While this works and provides the desired output, it is nonetheless slightly brittle as Android Studio cannot keep track of names of files and belonging packages, so any changes in destinations and arguments might require manual updates in the Navigation Graph.

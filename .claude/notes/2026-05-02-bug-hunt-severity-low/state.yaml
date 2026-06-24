@@ -1,0 +1,49 @@
+campaign_slug: "2026-05-02-bug-hunt-severity-low"
+labels: ["bug-hunt", "severity:low"]
+created: "2026-05-02"
+completed: "2026-05-02"
+status: "complete"
+current_wave: 2
+issues:
+  - number: 78
+    title: "Several ViewModels read-modify-write _uiState.value.copy(...) instead of update {}"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-severity-low/issue-78-stateflow-update"
+    pr: 81
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/81"
+    status: "merged"
+    files:
+      - "feature/home/src/main/java/pm/bam/gamedeals/feature/home/ui/HomeViewModel.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+    note: "Only LOADING/ERROR transitions converted to update {}; success-path .collect { _uiState.emit(it) } left as full-state replacement (not RMW). reloadGiveaways flow type-pinned to flow<Unit> after LOADING moved out of the chain."
+  - number: 79
+    title: "GiveawaySearchParameters fields are List<Pair<...>> — defeat Compose skipping"
+    wave: 1
+    branch: "wave/2026-05-02-bug-hunt-severity-low/issue-79-giveaway-search-immutable"
+    pr: 82
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/82"
+    status: "merged"
+    files:
+      - "domain/build.gradle.kts"
+      - "domain/src/main/java/pm/bam/gamedeals/domain/models/Giveaway.kt"
+      - "domain/src/test/java/pm/bam/gamedeals/domain/repositories/giveaway/GiveawaysRepositoryTest.kt"
+      - "feature/giveaways/src/main/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysScreen.kt"
+      - "feature/giveaways/src/test/java/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"
+    note: "kotlinx-collections-immutable added to :domain (already in catalog from #38). @Immutable on GiveawaySearchParameters. parametersSaver round-trip works because kotlinx-serialization 1.9.0 supports ImmutableList natively — no custom serializer."
+  - number: 80
+    title: "GameDetails.deals: List<GameDeal> is unstable — defeats CompactGameDetail/WideGameDetail skipping"
+    wave: 2
+    branch: "wave/2026-05-02-bug-hunt-severity-low/issue-80-gamedetails-immutable"
+    pr: 83
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/83"
+    status: "merged"
+    note: "Deferred from wave 1 (conflicted with #79 on domain/build.gradle.kts). Re-queued after PR #82 merged. domain/build.gradle.kts not touched — dep already present from #82."
+    files:
+      - "domain/src/main/java/pm/bam/gamedeals/domain/models/Game.kt"
+      - "remote/cheapshark/src/main/java/pm/bam/gamedeals/remote/cheapshark/mappers/GameMappers.kt"
+      - "remote/cheapshark/build.gradle.kts"
+      - "common/ui/src/main/java/pm/bam/gamedeals/common/ui/PreviewData.kt"
+      - "common/ui/build.gradle.kts"
+      - "feature/game/src/test/java/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
+      - "feature/game/src/androidTest/java/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt"
+    scope_expansion: "remote/cheapshark/build.gradle.kts dep add was not in the planning file list. Required because GameMappers.kt now imports kotlinx.collections.immutable.toImmutableList, and Gradle implementation from :domain does not propagate to consumer modules' compile classpaths. Test files (GameViewModelTest, GameScreenTest) were also touched to switch listOf(...) → persistentListOf(...) for the mocked deals — no behavioural change."
