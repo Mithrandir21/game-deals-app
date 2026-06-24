@@ -2,9 +2,9 @@
 
 **Status:** IMPLEMENTED on `dev` (2026-06-22). All tiers landed in one change set. Verified on the Linux
 dev box: `assembleDebug`, module host tests, app unit tests, and a real R8 `assembleRelease` all green;
-Room schema regenerated to a single `1.json`. Still pending hardware: the iOS Keychain backend
-(`:iosApp:compileKotlinIosSimulatorArm64` on macOS) and the on-device edge-to-edge / OAuth / notification
-smoke tests after the targetSdk-36 bump.
+Room schema regenerated to a single `1.json`. The iOS Keychain backend is now **macOS compile-verified
+(2026-06-24)** (`:iosApp:compileKotlinIosSimulatorArm64` + full Xcode build/boot). Still pending hardware:
+the on-device edge-to-edge / OAuth / notification smoke tests after the targetSdk-36 bump.
 **Audience:** maintainer, pre-1.0.
 **Date:** 2026-06-21 (audit) · 2026-06-22 (implementation).
 
@@ -124,7 +124,7 @@ Shared `Json` (leave as-is): `common/src/commonMain/kotlin/pm/bam/gamedeals/comm
 - **What today:** stored as **plain JSON** in SharedPreferences under key `itad_auth_token` (`domain/.../auth/AuthTokenStore.kt`); shape `StoredAuthToken{ accessToken, refreshToken, expiresAtEpochMs, username, scopeVersion }`. Bearer + refresh tokens in cleartext is an avoidable MASVS (MSTG-STORAGE) finding.
 - **Why in scope now:** cheap to add; technically retrofittable later (the token is refreshable — worst case a user re-logs-in), but doing it before any real token is written avoids a one-time decrypt/re-encrypt migration.
 - **Recommend:** encrypt **only this value** behind the common `Storage` abstraction via an Android `actual` — an Android Keystore-wrapped key encrypting the JSON blob. Note `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is **deprecated / maintenance-mode**; prefer a Keystore-backed approach (or Tink) rather than adopting the deprecated lib. Place the secure backend in `androidMain`; keep the `commonMain` contract unchanged.
-- **iOS:** Keychain `actual` deferred (no Mac available) — consistent with the project's existing Android-first platform split. State this explicitly so it isn't mistaken for an oversight.
+- **iOS:** Keychain backend implemented (`KeychainBackend`, generic-password items, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) and **macOS compile-verified 2026-06-24**. Runtime round-trip pending the live OAuth login (a token is only written on sign-in).
 
 ### 2.3 Match ITAD's network resilience on IGDB & GamerPower — **[decided: in scope]**
 - **What today:**
@@ -161,7 +161,7 @@ Shared `Json` (leave as-is): `common/src/commonMain/kotlin/pm/bam/gamedeals/comm
 
 **Tier 2 — release-readiness (in scope)**
 - [x] Enabled R8 + `isShrinkResources`; added `app/proguard-rules.pro`; `assembleRelease` passes (on-device smoke test still pending).
-- [x] Encrypted `itad_auth_token` via a `SECURE_QUALIFIER` store — Android Keystore AES/GCM **and** iOS Keychain (#239). *(Deviation from the original "iOS deferred": iOS Keychain backend implemented, pending macOS compile.)*
+- [x] Encrypted `itad_auth_token` via a `SECURE_QUALIFIER` store — Android Keystore AES/GCM **and** iOS Keychain (#239). *(iOS Keychain backend implemented and **macOS compile-verified 2026-06-24**; runtime round-trip pending the live OAuth login.)*
 - [x] Added 429 retry to IGDB; added retry + concurrency limiter to GamerPower (shared `GameDealsConcurrencyLimiter`).
 
 **Tier 3 — record, don't change**

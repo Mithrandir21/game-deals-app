@@ -32,6 +32,8 @@
 	<string>$(ITAD_OAUTH_CLIENT_ID)</string>
 	<key>SentryDsn</key>
 	<string>$(SENTRY_DSN)</string>
+	<key>PostHogApiKey</key>
+	<string>$(POSTHOG_API_KEY)</string>
 	<!-- ITAD OAuth redirect scheme (epic #219, Phase 2.2): pm.bam.gamedeals://oauth/itad -->
 	<key>CFBundleURLTypes</key>
 	<array>
