@@ -109,12 +109,18 @@ fun startKoinIfNeeded() = bootstrapKoin()
 
 /**
  * Swift-facing: arm Sentry's crash/perf handlers. Call first in `AppDelegate.didFinishLaunching`, before Koin,
- * so a startup crash is still captured. No-op when no DSN is provisioned (local/dev without `Secrets.xcconfig`),
- * mirroring Android's `initSentry()`. Release/dist come from the bundle; the shared policy lives in [configureSentryOptions].
+ * so a startup crash is still captured. Release/dist come from the bundle; the shared policy lives in
+ * [configureSentryOptions].
+ *
+ * Gated to release builds with a provisioned DSN, mirroring Android's `initSentry()`: debug binaries early-return
+ * (zero cost, and our own dev/test runs never pollute the production dashboard), as does a build with no DSN
+ * (local/dev without `Secrets.xcconfig`).
  *
  * Not named `initSentry`: Kotlin/Native mangles any `init*` top-level function to `doInit*` in the ObjC/Swift API.
  */
+@OptIn(ExperimentalNativeApi::class)
 fun startSentry() {
+    if (Platform.isDebugBinary) return
     val dsn = infoPlistString("SentryDsn")
     if (dsn.isEmpty()) return
     val shortVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: "0"
