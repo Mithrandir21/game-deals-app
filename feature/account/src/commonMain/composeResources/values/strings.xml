@@ -35,6 +35,10 @@
     <string name="account_row_mature">Show adult titles</string>
     <string name="account_row_mature_desc">Include mature-rated games in Deals and Bundles</string>
     <string name="account_row_mature_switch_description">Show adult titles toggle</string>
+    <!-- Analytics consent toggle — off by default (GDPR opt-out). TODO(privacy): add a hosted policy link. -->
+    <string name="account_row_analytics">Share usage data</string>
+    <string name="account_row_analytics_desc">Help improve the app by sharing which games, deals and searches you use, linked to a random anonymous id. EU-hosted, off by default.</string>
+    <string name="account_row_analytics_switch_description">Share usage data toggle</string>
     <string name="account_linked_steam_connected">Steam connected</string>
 
     <!-- Region picker bottom sheet -->

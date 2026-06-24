@@ -53,6 +53,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
+import org.koin.compose.koinInject
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -249,6 +252,18 @@ private fun PeekBody(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewGamePage: (data: GamePeekSheetData.Data) -> Unit,
 ) {
+    // Records the click-through to a store before the in-app browser opens. This is the single peek sheet
+    // shown from Home/Deals/Discover/Bundle, so one capture point covers all those deal opens.
+    val analytics: Analytics = koinInject()
+    fun recordDealOpen(pair: StoreDealPair) = analytics.capture(
+        AnalyticsEvents.DEAL_STORE_OPENED,
+        mapOf(
+            "game_id" to data.gameId,
+            "store_id" to pair.store.storeID,
+            "store_name" to pair.store.storeName,
+            "discount_pct" to pair.deal.savings,
+        ),
+    )
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -262,7 +277,7 @@ private fun PeekBody(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(role = Role.Button) { goToWeb(pair.deal.url, data.gameName) }
+                        .clickable(role = Role.Button) { recordDealOpen(pair); goToWeb(pair.deal.url, data.gameName) }
                         .padding(vertical = GameDealsCustomTheme.spacing.extraSmall)
                         .semantics(mergeDescendants = true) { contentDescription = rowCd },
                     verticalAlignment = Alignment.CenterVertically,
@@ -306,7 +321,7 @@ private fun PeekBody(
             data.bestDeal?.let { best ->
                 Button(
                     modifier = Modifier.weight(1f),
-                    onClick = { goToWeb(best.deal.url, data.gameName) },
+                    onClick = { recordDealOpen(best); goToWeb(best.deal.url, data.gameName) },
                 ) {
                     Text(text = stringResource(Res.string.deal_details_go_to_deal_label))
                 }

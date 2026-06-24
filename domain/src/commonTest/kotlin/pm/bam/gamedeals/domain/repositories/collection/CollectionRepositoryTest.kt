@@ -9,8 +9,10 @@ import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
+import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -23,6 +25,7 @@ class CollectionRepositoryTest {
             FakeAccountSource(collection = listOf(CollectionEntry("a", "A"))),
             FakeAuthTokenStore(access = null),
             FakeCollectionDao(initial = listOf("a")),
+            RecordingAnalytics(),
         )
         assertEquals(emptyList(), repo.getCollection())
         assertEquals(persistentSetOf(), repo.observeCollectionIds().first())
@@ -34,6 +37,7 @@ class CollectionRepositoryTest {
             FakeAccountSource(collection = listOf(CollectionEntry("a", "A"), CollectionEntry("b", "B"))),
             FakeAuthTokenStore(access = "token"),
             FakeCollectionDao(),
+            RecordingAnalytics(),
         )
         assertEquals(2, repo.getCollection().size)
         assertEquals(setOf("a", "b"), repo.observeCollectionIds().first().toSet())
@@ -45,6 +49,7 @@ class CollectionRepositoryTest {
             FakeAccountSource(),
             FakeAuthTokenStore(access = "token"),
             FakeCollectionDao(initial = listOf("a", "b")),
+            RecordingAnalytics(),
         )
         assertEquals(setOf("a", "b"), repo.observeCollectionIds().first().toSet())
     }
@@ -52,24 +57,28 @@ class CollectionRepositoryTest {
     @Test
     fun logged_in_toggle_adds_when_absent() = runTest {
         val source = FakeAccountSource()
-        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeCollectionDao())
+        val analytics = RecordingAnalytics()
+        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeCollectionDao(), analytics)
 
         val result = repo.toggleCollection("a")
 
         assertEquals(RepoUpdateResult.UPDATED, result)
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsCollected("a").first())
+        assertEquals(mapOf("game_id" to "a"), analytics.propsOf(AnalyticsEvents.COLLECTION_ADDED))
     }
 
     @Test
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
-        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeCollectionDao())
+        val analytics = RecordingAnalytics()
+        val repo = CollectionRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeCollectionDao(), analytics)
 
         val result = repo.toggleCollection("a")
 
         assertEquals(RepoUpdateResult.NOT_LOGGED_IN, result)
         assertTrue(source.added.isEmpty())
+        assertTrue(analytics.captured.isEmpty()) // no event when the write is a no-op
     }
 }
 

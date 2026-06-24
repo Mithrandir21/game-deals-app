@@ -10,6 +10,8 @@ import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * The user's selected storefront region (epic #205, Phase 3b — #212), persisted via [Storage] and
@@ -30,6 +32,7 @@ internal const val SELECTED_COUNTRY_KEY = "selected_country_code"
 
 internal class RegionRepositoryImpl(
     private val storage: Storage,
+    private val analytics: Analytics,
 ) : RegionRepository {
 
     override val supportedCountries: List<Country> = SUPPORTED_COUNTRIES
@@ -50,6 +53,7 @@ internal class RegionRepositoryImpl(
     override suspend fun setSelectedCountry(country: Country) {
         storage.save(SELECTED_COUNTRY_KEY, country.code)
         selected.value = country
+        analytics.capture(AnalyticsEvents.REGION_CHANGED, mapOf("country" to country.code))
     }
 
     private suspend fun loadFromStorage(): Country {

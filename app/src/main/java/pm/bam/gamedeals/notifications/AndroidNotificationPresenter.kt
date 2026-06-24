@@ -13,6 +13,8 @@ import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.mergedByGameId
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 internal const val EXTRA_NOTIFICATION_ROUTE = "extra_notification_route"
 internal const val ROUTE_NOTIFICATIONS = "notifications"
@@ -30,7 +32,10 @@ private const val MAX_GAME_LINES = 6
  * This is the de-spam fix: the franchise path used to fan out one tray notification per on-sale game.
  * Lives in `:app` because the tap [PendingIntent] must target [MainActivity].
  */
-internal class AndroidNotificationPresenter(private val context: Context) : NotificationPresenter {
+internal class AndroidNotificationPresenter(
+    private val context: Context,
+    private val analytics: Analytics,
+) : NotificationPresenter {
 
     private val manager = NotificationManagerCompat.from(context)
 
@@ -48,26 +53,30 @@ internal class AndroidNotificationPresenter(private val context: Context) : Noti
         val (franchiseAlerts, waitlistAlerts) = alerts.partition { it.gameId != null }
         try {
             if (waitlistAlerts.isNotEmpty()) {
+                // One line per game — a game that dropped several times this poll is collapsed to its
+                // cheapest deal across all those drops (else it floods the MAX_GAME_LINES budget).
+                val games = waitlistAlerts.flatMap { it.games }.mergedByGameId()
                 notifySummary(
                     id = WAITLIST_SUMMARY_ID,
                     title = context.getString(R.string.notification_waitlist_summary_title),
-                    // One line per game — a game that dropped several times this poll is collapsed to its
-                    // cheapest deal across all those drops (else it floods the MAX_GAME_LINES budget).
-                    lines = waitlistAlerts.flatMap { it.games }.mergedByGameId().map { it.toLine() },
+                    lines = games.map { it.toLine() },
                     fallbackText = context.getString(R.string.notification_summary_text, waitlistAlerts.size),
                     contentIntent = routeIntent(ROUTE_NOTIFICATIONS, WAITLIST_SUMMARY_ID),
                 )
+                analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "waitlist", "count" to games.size))
             }
             if (franchiseAlerts.isNotEmpty()) {
+                // Each franchise alert's title already self-describes ("X is Y% off in Z"). One line per
+                // game — a game followed via two franchises would otherwise produce two lines.
+                val franchiseGames = franchiseAlerts.distinctBy { it.gameId }
                 notifySummary(
                     id = FRANCHISE_SUMMARY_ID,
                     title = context.getString(R.string.notification_franchise_summary_title),
-                    // Each franchise alert's title already self-describes ("X is Y% off in Z"). One line per
-                    // game — a game followed via two franchises would otherwise produce two lines.
-                    lines = franchiseAlerts.distinctBy { it.gameId }.map { it.title },
+                    lines = franchiseGames.map { it.title },
                     fallbackText = context.getString(R.string.notification_summary_text, franchiseAlerts.size),
                     contentIntent = routeIntent(ROUTE_FOLLOWED_SERIES, FRANCHISE_SUMMARY_ID),
                 )
+                analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "franchise", "count" to franchiseGames.size))
             }
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS revoked between the check and notify() — drop silently.

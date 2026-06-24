@@ -16,6 +16,8 @@ import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * The user's ITAD notifications (epic #272, P2 #277). Unlike the waitlist/collection there is **no Room
@@ -58,6 +60,7 @@ internal class NotificationsRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
     private val clock: Clock,
+    private val analytics: Analytics,
 ) : NotificationsRepository {
 
     private val notifications = MutableStateFlow<List<ItadNotification>>(emptyList())
@@ -101,12 +104,14 @@ internal class NotificationsRepositoryImpl(
         // Remote-first: confirm the ITAD write before updating the in-memory state.
         accountSource.markNotificationRead(id)
         notifications.update { list -> list.map { if (it.id == id) it.copy(read = true) else it } }
+        analytics.capture(AnalyticsEvents.NOTIFICATION_MARKED_READ)
     }
 
     override suspend fun markAllRead() {
         if (!loggedIn()) return
         accountSource.markAllNotificationsRead()
         notifications.update { list -> list.map { it.copy(read = true) } }
+        analytics.capture(AnalyticsEvents.NOTIFICATIONS_MARKED_ALL_READ)
     }
 
     override suspend fun getWaitlistGames(notificationId: String): List<NotificationGame> {

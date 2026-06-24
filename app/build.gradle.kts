@@ -36,6 +36,11 @@ android {
     // pipeline to keep it out of git and let release CI inject it. Blank in debug builds, where Sentry init no-ops.
     var sentryDsn = ""
 
+    // PostHog project key (phc_…) — product analytics. A public client-side key (shipped in every build), routed
+    // through the same secrets pipeline only to keep it out of git. Unlike the Sentry DSN it is populated for BOTH
+    // debug and release for now, so analytics can be verified across variants; an empty value makes init no-op.
+    var posthogApiKey = ""
+
     // First check if the local.properties file exists, meaning non-CI environment.
     if (File(rootProject.rootDir, "local.properties").exists()) {
         // Loading local properties so that we can use them in the build.gradle.kts file and not expose them in the repository
@@ -60,6 +65,8 @@ android {
         itadOauthClientId = localProperties.getProperty("itadOauthClientId") ?: ""
 
         sentryDsn = localProperties.getProperty("sentryDsn") ?: ""
+
+        posthogApiKey = localProperties.getProperty("posthogApiKey") ?: ""
     }
     // Check if environment variables are present, meaning CI environment.
     else if (System.getenv("RELEASE_KEY_ALIAS") != null) {
@@ -81,6 +88,9 @@ android {
 
     // Env-var fallback for the Sentry DSN (independent of the signing block, like the other creds).
     if (sentryDsn.isEmpty()) sentryDsn = System.getenv("SENTRY_DSN") ?: ""
+
+    // Env-var fallback for the PostHog key (independent of the signing block, like the other creds).
+    if (posthogApiKey.isEmpty()) posthogApiKey = System.getenv("POSTHOG_API_KEY") ?: ""
 
     // If neither local.properties nor environment variables are present, the release key is not present.
     if(releaseKeyPresent) {
@@ -119,6 +129,7 @@ android {
         buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
         buildConfigField("String", "ITAD_OAUTH_CLIENT_ID", "\"$itadOauthClientId\"")
         buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$posthogApiKey\"")
     }
 
     buildFeatures.buildConfig = true
@@ -196,6 +207,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     implementation(libs.sentry.kotlin.multiplatform)
+    // PostHog SDK on :app's classpath so GameDealsApplication can call PostHog.setup(...) directly (mirrors Sentry above).
+    implementation(libs.posthog.kmp)
 
     implementation(libs.koin.core)
     implementation(libs.koin.android)

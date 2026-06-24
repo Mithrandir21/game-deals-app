@@ -12,6 +12,8 @@ kotlin {
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.koin.core)
+            // koinInject() in shared composables (e.g. GamePeekSheet records deal-open analytics).
+            implementation(libs.koin.compose.viewmodel)
 
             implementation(libs.coil3)
             implementation(libs.coil3.compose)

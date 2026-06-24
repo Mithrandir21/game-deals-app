@@ -6,6 +6,8 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.RecordingAnalytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -30,7 +32,8 @@ class RegionRepositoryTest {
         override suspend fun remove(storageKey: String): Boolean = backing.remove(storageKey) != null
     }
 
-    private val repository = RegionRepositoryImpl(storage)
+    private val analytics = RecordingAnalytics()
+    private val repository = RegionRepositoryImpl(storage, analytics)
 
     @Test
     fun defaults_to_US_when_nothing_stored() = runTest {
@@ -46,6 +49,7 @@ class RegionRepositoryTest {
         assertEquals("DE", repository.getSelectedCountryCode())
         assertEquals(germany, repository.observeSelectedCountry().first())
         assertEquals("DE", backing[SELECTED_COUNTRY_KEY])
+        assertEquals(mapOf("country" to "DE"), analytics.propsOf(AnalyticsEvents.REGION_CHANGED))
     }
 
     @Test

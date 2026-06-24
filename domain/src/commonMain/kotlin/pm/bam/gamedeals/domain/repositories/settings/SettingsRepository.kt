@@ -10,6 +10,8 @@ import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.storage.getNullable
 import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.domain.models.DealsFilter
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * Cross-app user preferences persisted via [Storage] (the same SharedPreferences/NSUserDefaults-backed
@@ -45,19 +47,34 @@ interface SettingsRepository {
      * across launches; resets only on reinstall / "clear data".
      */
     suspend fun getInstallId(): String
+
+    /**
+     * Analytics (PostHog) consent. **Off by default** — EU users must explicitly opt in (GDPR), so nothing
+     * is sent until [setAnalyticsConsent] is called with `true` (via the onboarding consent slide or the
+     * Account toggle). [setAnalyticsConsent] both persists the choice and flips PostHog's native opt-out
+     * (and re-identifies on grant), so there's a single source of truth for the whole app.
+     */
+    fun observeAnalyticsConsent(): Flow<Boolean>
+    suspend fun getAnalyticsConsent(): Boolean
+    suspend fun setAnalyticsConsent(enabled: Boolean)
 }
 
 internal const val MATURE_OPT_IN_KEY = "mature_opt_in"
 internal const val DEALS_FILTER_KEY = "deals_filter"
 internal const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
 internal const val INSTALL_ID_KEY = "install_id"
+internal const val ANALYTICS_CONSENT_KEY = "analytics_consent"
 
 internal class SettingsRepositoryImpl(
     private val storage: Storage,
+    private val analytics: Analytics,
 ) : SettingsRepository {
 
     // Reactive source of truth, lazily seeded from [storage] on first access (null = not yet loaded).
     private val matureOptIn = MutableStateFlow<Boolean?>(null)
+
+    // Analytics-consent source of truth, lazily seeded from [storage] (null = not yet loaded; default off).
+    private val analyticsConsent = MutableStateFlow<Boolean?>(null)
 
     // Deals filter source of truth, lazily seeded from [storage] (null = not yet loaded; absent = empty).
     private val dealsFilter = MutableStateFlow<DealsFilter?>(null)
@@ -75,6 +92,7 @@ internal class SettingsRepositoryImpl(
     override suspend fun setMatureOptIn(enabled: Boolean) {
         storage.save(MATURE_OPT_IN_KEY, enabled)
         matureOptIn.value = enabled
+        analytics.capture(AnalyticsEvents.MATURE_OPT_IN_CHANGED, mapOf("enabled" to enabled))
     }
 
     override fun observeDealsFilter(): Flow<DealsFilter> =
@@ -90,6 +108,16 @@ internal class SettingsRepositoryImpl(
     override suspend fun setDealsFilter(filter: DealsFilter) {
         storage.save(DEALS_FILTER_KEY, filter)
         dealsFilter.value = filter
+        analytics.capture(AnalyticsEvents.DEALS_FILTER_CHANGED, buildMap {
+            put("active_count", filter.activeCount)
+            filter.minCutPercent?.let { put("min_cut", it) }
+            filter.maxPrice?.let { put("max_price", it) }
+            put("drm_free", filter.drmFree)
+            if (filter.types.isNotEmpty()) put("types", filter.types.map { it.name })
+            filter.flag?.let { put("flag", it.name) }
+            filter.minSteamPercent?.let { put("min_steam_pct", it) }
+            filter.release?.let { put("release", it.name) }
+        })
     }
 
     override suspend fun getOnboardingCompleted(): Boolean =
@@ -107,8 +135,31 @@ internal class SettingsRepositoryImpl(
         return id
     }
 
+    override fun observeAnalyticsConsent(): Flow<Boolean> =
+        analyticsConsent
+            .onStart { if (analyticsConsent.value == null) analyticsConsent.value = loadAnalyticsConsentFromStorage() }
+            .filterNotNull()
+
+    override suspend fun getAnalyticsConsent(): Boolean {
+        if (analyticsConsent.value == null) analyticsConsent.value = loadAnalyticsConsentFromStorage()
+        return analyticsConsent.value ?: false
+    }
+
+    override suspend fun setAnalyticsConsent(enabled: Boolean) {
+        storage.save(ANALYTICS_CONSENT_KEY, enabled)
+        analyticsConsent.value = enabled
+        // Single point that flips PostHog's native opt-out. On grant, re-identify so the freshly opted-in
+        // SDK is tied to the same anonymous install id (Sentry↔PostHog correlation). On revoke we just stop
+        // sending — no reset(), so the local id/queue are kept.
+        analytics.setConsent(enabled)
+        if (enabled) analytics.identify(getInstallId())
+    }
+
     private suspend fun loadMatureFromStorage(): Boolean =
         runCatching { storage.getNullable<Boolean>(MATURE_OPT_IN_KEY) }.getOrNull() ?: false
+
+    private suspend fun loadAnalyticsConsentFromStorage(): Boolean =
+        runCatching { storage.getNullable<Boolean>(ANALYTICS_CONSENT_KEY) }.getOrNull() ?: false
 
     private suspend fun loadDealsFilterFromStorage(): DealsFilter =
         runCatching { storage.getNullable<DealsFilter>(DEALS_FILTER_KEY) }.getOrNull() ?: DealsFilter()

@@ -21,6 +21,8 @@ import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_denied
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enable
@@ -131,6 +133,26 @@ class OnboardingSlidesTest {
         composeTestRule.onNodeWithContentDescription(sem.signingIn).assertIsNotEnabled()
     }
 
+    // --- Analytics consent slide --------------------------------------------------------------------
+
+    @Test
+    fun analytics_consent_off_offers_turn_on() {
+        setContent { AnalyticsConsentSlide(enabled = false, onEnable = {}) }
+
+        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
+    }
+
+    @Test
+    fun analytics_consent_on_shows_confirmation_only() {
+        var enabled = false
+        setContent { AnalyticsConsentSlide(enabled = true, onEnable = { enabled = true }) }
+
+        composeTestRule.onNodeWithText(sem.analyticsOn).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
+        assertTrue(!enabled) // already on: no enable affordance to click
+    }
+
     // --- Page indicator -----------------------------------------------------------------------------
 
     @Test
@@ -175,6 +197,8 @@ class OnboardingSlidesTest {
         val off: String,
         val denied: String,
         val openSettings: String,
+        val analyticsTurnOn: String,
+        val analyticsOn: String,
         val signInAction: String,
         val signedInAsBob: String,
         val signingIn: String,
@@ -189,6 +213,8 @@ class OnboardingSlidesTest {
                 off = stringResource(Res.string.onboarding_notifications_off),
                 denied = stringResource(Res.string.onboarding_notifications_denied),
                 openSettings = stringResource(Res.string.onboarding_open_settings),
+                analyticsTurnOn = stringResource(Res.string.onboarding_analytics_enable),
+                analyticsOn = stringResource(Res.string.onboarding_analytics_enabled),
                 signInAction = stringResource(Res.string.onboarding_signin_action),
                 signedInAsBob = stringResource(Res.string.onboarding_signin_signed_in_as, "bob"),
                 signingIn = stringResource(Res.string.onboarding_signing_in),

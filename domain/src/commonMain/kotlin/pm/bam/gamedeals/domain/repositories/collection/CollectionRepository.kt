@@ -13,6 +13,8 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * The user's ITAD collection (epic #219, Phase 2). Backed by [ItadAccountSource] over a Room-persisted
@@ -35,6 +37,7 @@ internal class CollectionRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
     private val collectionDao: CollectionDao,
+    private val analytics: Analytics,
 ) : CollectionRepository {
 
     override fun observeCollectionIds(): Flow<ImmutableSet<String>> =
@@ -63,9 +66,11 @@ internal class CollectionRepositoryImpl(
         if (collectionDao.contains(gameId)) {
             accountSource.removeFromCollection(gameId)
             collectionDao.delete(gameId)
+            analytics.capture(AnalyticsEvents.COLLECTION_REMOVED, mapOf("game_id" to gameId))
         } else {
             accountSource.addToCollection(gameId)
             collectionDao.add(CollectionGameIdEntry(gameId))
+            analytics.capture(AnalyticsEvents.COLLECTION_ADDED, mapOf("game_id" to gameId))
         }
         return RepoUpdateResult.UPDATED
     }

@@ -22,19 +22,23 @@ import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.domain.RecordingAnalytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class NotificationsRepositoryTest {
 
     private val accountSource: ItadAccountSource = mock(MockMode.autoUnit)
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
+    private val analytics = RecordingAnalytics()
 
     // Fixed "now" one day after the sample notifications, so they sit inside the 7-day retention window.
     private val now = Instant.parse("2026-06-13T00:00:00Z").toEpochMilliseconds()
     private val clock = Clock { now }
 
-    private fun repo() = NotificationsRepositoryImpl(accountSource, authTokenStore, clock)
+    private fun repo() = NotificationsRepositoryImpl(accountSource, authTokenStore, clock, analytics)
 
     private fun notification(id: String, read: Boolean) =
         ItadNotification(id = id, type = "waitlist", title = id, timestamp = "2026-06-12T00:00:00+00:00", read = read)
@@ -96,6 +100,7 @@ class NotificationsRepositoryTest {
 
         assertEquals(1, repo.observeUnreadCount().first())
         verifySuspend(exactly(1)) { accountSource.markNotificationRead("n1") }
+        assertTrue(analytics.events.contains(AnalyticsEvents.NOTIFICATION_MARKED_READ))
     }
 
     @Test
@@ -110,6 +115,7 @@ class NotificationsRepositoryTest {
 
         assertEquals(0, repo.observeUnreadCount().first())
         verifySuspend(exactly(1)) { accountSource.markAllNotificationsRead() }
+        assertTrue(analytics.events.contains(AnalyticsEvents.NOTIFICATIONS_MARKED_ALL_READ))
     }
 
     @Test

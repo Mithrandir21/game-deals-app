@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
@@ -36,6 +37,8 @@ import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 @Composable
 internal fun NavGraph(
@@ -47,6 +50,9 @@ internal fun NavGraph(
     // External / website links open in an in-app Custom Tab (Android) / SFSafariViewController (iOS)
     // rather than the standalone system browser, so the user stays in-context.
     val platformActions = LocalPlatformActions.current
+    // Manual product analytics (autocapture is off). Declared here so the notification-tap effect below can
+    // record opens; the per-destination screen() effect further down reuses it.
+    val analytics: Analytics = koinInject()
 
     // Route taps on background (OS-tray) notifications into the nav graph: the bundled waitlist summary opens
     // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen. The bus
@@ -54,8 +60,14 @@ internal fun NavGraph(
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
             when (route) {
-                NotificationRoute.Notifications -> navActions.navigateToNotifications()
-                NotificationRoute.FollowedSeries -> navActions.navigateToFollowedSeries()
+                NotificationRoute.Notifications -> {
+                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "notifications"))
+                    navActions.navigateToNotifications()
+                }
+                NotificationRoute.FollowedSeries -> {
+                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "followed_series"))
+                    navActions.navigateToFollowedSeries()
+                }
             }
         }
     }
@@ -68,6 +80,13 @@ internal fun NavGraph(
     }
     val isTab = selectedTab != null
 
+    // Screen-view analytics: one screen() per destination change. We send the route *template* leaf (e.g. "Game"),
+    // never filled args, so no ids leak via the route. Manual because SDK autocapture can't see Compose destinations.
+    val currentScreenName = currentDestination?.destination?.route?.let(::screenNameOf)
+    LaunchedEffect(currentScreenName) {
+        currentScreenName?.let { analytics.screen(it) }
+    }
+
     // The shared toolbar's search field reflects the active query (null = browse mode), kept in sync via
     // SearchController so a search started anywhere (toolbar submit or a deep-link) is shown there.
     val activeSearchQuery by SearchController.activeQuery.collectAsState()
@@ -79,7 +98,10 @@ internal fun NavGraph(
         showBottomBar = isTab,
         onSelectTab = { navActions.navigateTopLevel(it.destination) },
         activeSearchQuery = activeSearchQuery,
-        onSearchSubmit = { query -> navActions.searchDeals(query) },
+        onSearchSubmit = { query ->
+            analytics.capture(AnalyticsEvents.SEARCH_PERFORMED, mapOf("query" to query))
+            navActions.searchDeals(query)
+        },
         onSearchClosed = { navActions.clearSearch() },
         onBrowseStores = null,
         accountUnreadCount = rememberAccountTabUnreadCount(),
@@ -111,7 +133,21 @@ internal fun NavGraph(
 
             discoverScreen(
                 navController = navController,
-                goToResults = { filter -> navActions.navigateToDiscoverResults(filter) },
+                goToResults = { filter ->
+                    analytics.capture(
+                        AnalyticsEvents.DISCOVER_SEARCH_PERFORMED,
+                        mapOf(
+                            "genre_ids" to filter.genreIds.toList(),
+                            "theme_ids" to filter.themeIds.toList(),
+                            "game_mode_ids" to filter.gameModeIds.toList(),
+                            "perspective_ids" to filter.perspectiveIds.toList(),
+                            "keyword_ids" to filter.keywordIds.toList(),
+                            "tag_count" to (filter.genreIds.size + filter.themeIds.size + filter.gameModeIds.size +
+                                filter.perspectiveIds.size + filter.keywordIds.size),
+                        ),
+                    )
+                    navActions.navigateToDiscoverResults(filter)
+                },
             )
 
             discoverResultsScreen(
@@ -136,7 +172,10 @@ internal fun NavGraph(
                 navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
-                goToSearchByTitle = { title -> navActions.searchDeals(title) },
+                goToSearchByTitle = { title ->
+                    analytics.capture(AnalyticsEvents.SEARCH_PERFORMED, mapOf("query" to title))
+                    navActions.searchDeals(title)
+                },
             )
 
             webViewScreen(
@@ -170,3 +209,11 @@ internal fun NavGraph(
         SignInPromptHost()
     }
 }
+
+/**
+ * Derives a stable, PII-free screen name from a Nav route. Type-safe routes serialize to a fully-qualified
+ * class route like `pm.bam.gamedeals.common.navigation.Destination.Game/{gameId}`; we keep just the leaf
+ * ("Game") and drop any argument template, so no filled ids or query text are ever sent to analytics.
+ */
+private fun screenNameOf(route: String): String =
+    route.substringBefore('/').substringBefore('?').substringAfterLast('.')

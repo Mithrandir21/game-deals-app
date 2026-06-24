@@ -45,7 +45,10 @@ import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.StoreLabel
@@ -75,10 +78,24 @@ internal fun GiveawayDetailScreen(
     viewModel: GiveawayDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val analytics: Analytics = koinInject()
     GiveawayDetailScreenContent(
         state = state,
         onBack = onBack,
-        goToWeb = goToWeb,
+        // The only web link on this screen is the giveaway claim, so wrapping goToWeb records the claim open.
+        goToWeb = { url, gameTitle ->
+            (state as? GiveawayDetailScreenData.Data)?.giveaway?.let { g ->
+                analytics.capture(
+                    AnalyticsEvents.GIVEAWAY_OPENED,
+                    mapOf(
+                        "giveaway_id" to g.id,
+                        "type" to g.type.name,
+                        "platforms" to g.platforms.map { it.name },
+                    ),
+                )
+            }
+            goToWeb(url, gameTitle)
+        },
         onRetry = viewModel::load,
     )
 }

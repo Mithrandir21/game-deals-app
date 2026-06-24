@@ -13,6 +13,8 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * The user's ITAD waitlist (epic #219). Replaces the removed local Favourites (Phase 3); the heart is
@@ -46,6 +48,7 @@ internal class WaitlistRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
     private val waitlistDao: WaitlistDao,
+    private val analytics: Analytics,
 ) : WaitlistRepository {
 
     // Auth-gated so the persisted id set is never surfaced while logged out (it is also cleared on logout,
@@ -76,9 +79,13 @@ internal class WaitlistRepositoryImpl(
         if (waitlistDao.contains(gameId)) {
             accountSource.removeFromWaitlist(gameId)
             waitlistDao.delete(gameId)
+            // Recorded only after the remote+local write succeeds, so failed toggles aren't counted. The base
+            // props (environment/app_version) are merged by the Analytics impl.
+            analytics.capture(AnalyticsEvents.WAITLIST_REMOVED, mapOf("game_id" to gameId))
         } else {
             accountSource.addToWaitlist(gameId)
             waitlistDao.add(WaitlistGameIdEntry(gameId))
+            analytics.capture(AnalyticsEvents.WAITLIST_ADDED, mapOf("game_id" to gameId))
         }
         return RepoUpdateResult.UPDATED
     }

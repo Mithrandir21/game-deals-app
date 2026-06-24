@@ -19,7 +19,7 @@ val appModule = module {
     single<Clock> { Clock { System.currentTimeMillis() } }
 
     // Background notification presentation — bound here because the tap PendingIntent targets MainActivity.
-    single<NotificationPresenter> { AndroidNotificationPresenter(androidContext()) }
+    single<NotificationPresenter> { AndroidNotificationPresenter(androidContext(), get()) }
 
     single<CoilLogger> {
         val logger: Logger = get()

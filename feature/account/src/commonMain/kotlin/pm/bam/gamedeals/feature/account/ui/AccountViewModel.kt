@@ -62,6 +62,14 @@ internal class AccountViewModel(
             }
         }
 
+        // Analytics (PostHog) consent — off by default (GDPR opt-out). The toggle here and the onboarding
+        // consent slide both write through SettingsRepository, which is the single point that flips PostHog.
+        viewModelScope.launch {
+            settingsRepository.observeAnalyticsConsent().collect { consent ->
+                uiState.update { it.copy(analyticsConsent = consent) }
+            }
+        }
+
         // Unread notifications for the hub's Notifications row badge. The app-wide refresh is
         // driven by AccountTabBadgeViewModel at the shell level; here we just observe the shared tally.
         viewModelScope.launch {
@@ -124,6 +132,11 @@ internal class AccountViewModel(
         viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
     }
 
+    /** Toggle analytics consent (persisted; flips PostHog's native opt-out via SettingsRepository). */
+    fun onSetAnalyticsConsent(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAnalyticsConsent(enabled) }
+    }
+
     @Immutable
     data class AccountScreenData(
         val loggedIn: Boolean = false,
@@ -141,5 +154,7 @@ internal class AccountViewModel(
         val selectedCountry: Country? = null,
         /** Whether adult titles are shown app-wide (the single mature opt-in, moved out of the filters). */
         val matureOptIn: Boolean = false,
+        /** Analytics (PostHog) consent — off by default; EU users opt in here or on the onboarding slide. */
+        val analyticsConsent: Boolean = false,
     )
 }

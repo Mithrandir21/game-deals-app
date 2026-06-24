@@ -111,25 +111,25 @@ val domainModule = module {
     // Tag discovery: composes IGDB tag search + the ITAD pricing bridge, with a Room-cached
     // picker vocabulary (logger, igdbRepository, gamesRepository, igdbTagDao, clock).
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
-    single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER)) }
-    single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER)) }
+    single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // ITAD account. AuthTokenStore is Storage-backed (like RegionRepository); Waitlist/Collection are
     // backed by the live ITAD account source, Stats by the live ITAD stats source.
     // Auth token is encrypted at rest — use the SECURE_QUALIFIER store (#239), not the settings store.
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SECURE_QUALIFIER)) }
-    single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
-    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get()) }
-    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get()) }
-    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get()) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get(), get()) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get()) }
+    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSync> { NotificationSyncImpl(get(), get(), get()) }
     // Followed franchises/series (#7) — client-side, Storage-backed.
-    single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
     // Followed-franchise deal alerts: the client-side checker compares each followed franchise's games to
     // live ITAD prices in the same background poll as the ITAD sync, deduped via the seen store. The alert
     // title is built here (domain has no string resources) — concise English copy, consistent with the
@@ -147,8 +147,8 @@ val domainModule = module {
     single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
-    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get()) }
-    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get()) }
+    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get()) }
+    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get()) }
 
     // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.
     single<CacheMaintenance> {

@@ -57,7 +57,10 @@ import kotlinx.collections.immutable.toImmutableMap
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
@@ -261,6 +264,9 @@ private fun BundleDetailBody(
     modifier: Modifier = Modifier,
 ) {
     val bundle = data.bundle
+    // Records the click-through to the bundle's store. goToWeb is also used for in-bundle game peeks (those
+    // are captured as deal_store_opened by the peek sheet), so capture only at the bundle's own button below.
+    val analytics: Analytics = koinInject()
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
@@ -279,7 +285,17 @@ private fun BundleDetailBody(
 
         item {
             Button(
-                onClick = { goToWeb(bundle.url, bundle.title) },
+                onClick = {
+                    analytics.capture(
+                        AnalyticsEvents.BUNDLE_STORE_OPENED,
+                        mapOf(
+                            "bundle_id" to bundle.id,
+                            "store_name" to bundle.storeName,
+                            "game_count" to bundle.gameCount,
+                        ),
+                    )
+                    goToWeb(bundle.url, bundle.title)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(Res.string.bundle_detail_get_bundle))

@@ -17,7 +17,7 @@ import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 val domainIosModule = module {
 
     single<NotificationScheduler> { IosNotificationScheduler(get()) }
-    single<NotificationPresenter> { IosNotificationPresenter(get()) }
+    single<NotificationPresenter> { IosNotificationPresenter(get(), get()) }
 
     single<RoomDatabase.Builder<DomainDatabase>> {
         val documents = NSSearchPathForDirectoriesInDomains(
