@@ -9,8 +9,10 @@ import pm.bam.gamedeals.domain.db.cache.IgnoredGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.IgnoredDao
 import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
+import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -26,6 +28,7 @@ class IgnoredRepositoryTest {
             FakeAccountSource(ignored = listOf(IgnoredEntry("a", "A"))),
             FakeAuthTokenStore(access = null),
             dao,
+            RecordingAnalytics(),
         )
         assertEquals(emptyList(), repo.getIgnored())
         assertEquals(persistentSetOf(), repo.observeIgnoredIds().first())
@@ -34,7 +37,7 @@ class IgnoredRepositoryTest {
     @Test
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeIgnoredDao())
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeIgnoredDao(), RecordingAnalytics())
         assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.toggleIgnored("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
@@ -46,6 +49,7 @@ class IgnoredRepositoryTest {
             FakeAccountSource(ignored = listOf(IgnoredEntry("a", "A"), IgnoredEntry("b", "B"))),
             FakeAuthTokenStore(access = "token"),
             FakeIgnoredDao(),
+            RecordingAnalytics(),
         )
         assertEquals(2, repo.getIgnored().size)
         assertEquals(setOf("a", "b"), repo.observeIgnoredIds().first().toSet())
@@ -58,6 +62,7 @@ class IgnoredRepositoryTest {
             FakeAccountSource(),
             FakeAuthTokenStore(access = "token"),
             FakeIgnoredDao(initial = listOf("a", "b")),
+            RecordingAnalytics(),
         )
         assertEquals(setOf("a", "b"), repo.observeIgnoredIds().first().toSet())
     }
@@ -65,24 +70,28 @@ class IgnoredRepositoryTest {
     @Test
     fun logged_in_toggle_adds_when_absent() = runTest {
         val source = FakeAccountSource()
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao())
+        val analytics = RecordingAnalytics()
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics)
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsIgnored("a").first())
+        assertEquals(mapOf("game_id" to "a"), analytics.propsOf(AnalyticsEvents.IGNORED_ADDED))
     }
 
     @Test
     fun logged_in_toggle_removes_when_present() = runTest {
         val source = FakeAccountSource(ignored = listOf(IgnoredEntry("a", "A")))
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao())
+        val analytics = RecordingAnalytics()
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics)
         repo.getIgnored() // seed cache with "a"
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))
 
         assertEquals(listOf("a"), source.removed)
         assertFalse(repo.observeIsIgnored("a").first())
+        assertEquals(mapOf("game_id" to "a"), analytics.propsOf(AnalyticsEvents.IGNORED_REMOVED))
     }
 }
 

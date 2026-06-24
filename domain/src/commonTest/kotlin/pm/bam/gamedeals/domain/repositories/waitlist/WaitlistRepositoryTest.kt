@@ -19,7 +19,9 @@ import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistEntry
+import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -34,6 +36,7 @@ class WaitlistRepositoryTest {
             FakeAccountSource(waitlist = listOf(WaitlistEntry("a", "A"))),
             FakeAuthTokenStore(access = null),
             dao,
+            RecordingAnalytics(),
         )
         assertEquals(emptyList(), repo.getWaitlist())
         // Logged out: the cached id set is cleared and the observed set is empty (auth-gated).
@@ -43,7 +46,7 @@ class WaitlistRepositoryTest {
     @Test
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
-        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeWaitlistDao())
+        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeWaitlistDao(), RecordingAnalytics())
         assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.toggleWaitlist("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
@@ -55,6 +58,7 @@ class WaitlistRepositoryTest {
             FakeAccountSource(waitlist = listOf(WaitlistEntry("a", "A"), WaitlistEntry("b", "B"))),
             FakeAuthTokenStore(access = "token"),
             FakeWaitlistDao(),
+            RecordingAnalytics(),
         )
         assertEquals(2, repo.getWaitlist().size)
         assertEquals(setOf("a", "b"), repo.observeWaitlistIds().first().toSet())
@@ -67,6 +71,7 @@ class WaitlistRepositoryTest {
             FakeAccountSource(),
             FakeAuthTokenStore(access = "token"),
             FakeWaitlistDao(initial = listOf("a", "b")),
+            RecordingAnalytics(),
         )
         assertEquals(setOf("a", "b"), repo.observeWaitlistIds().first().toSet())
     }
@@ -74,24 +79,28 @@ class WaitlistRepositoryTest {
     @Test
     fun logged_in_toggle_adds_when_absent() = runTest {
         val source = FakeAccountSource()
-        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao())
+        val analytics = RecordingAnalytics()
+        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao(), analytics)
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.added)
         assertTrue(repo.observeIsWaitlisted("a").first())
+        assertEquals(listOf(AnalyticsEvents.WAITLIST_ADDED), analytics.events)
     }
 
     @Test
     fun logged_in_toggle_removes_when_present() = runTest {
         val source = FakeAccountSource(waitlist = listOf(WaitlistEntry("a", "A")))
-        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao())
+        val analytics = RecordingAnalytics()
+        val repo = WaitlistRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao(), analytics)
         repo.getWaitlist() // seed cache with "a"
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleWaitlist("a"))
 
         assertEquals(listOf("a"), source.removed)
         assertFalse(repo.observeIsWaitlisted("a").first())
+        assertEquals(listOf(AnalyticsEvents.WAITLIST_REMOVED), analytics.events)
     }
 }
 

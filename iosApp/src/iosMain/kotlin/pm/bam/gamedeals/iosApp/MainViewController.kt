@@ -21,6 +21,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import io.github.samuolis.posthog.PostHog
+import io.github.samuolis.posthog.PostHogContext
 import io.sentry.kotlin.multiplatform.Sentry
 import io.sentry.kotlin.multiplatform.protocol.User
 import kotlin.experimental.ExperimentalNativeApi
@@ -83,6 +85,10 @@ import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.logging.analytics.configurePostHog
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.logging.error
@@ -136,6 +142,22 @@ fun startSentry() {
     }
 }
 
+/**
+ * Swift-facing: initialise PostHog for product analytics. Call from `AppDelegate.didFinishLaunching` (like
+ * [startSentry]), but enabled in ALL variants for now — only an empty key early-returns, matching Android. Requires
+ * posthog-ios linked via SPM — see docs/posthog-ios-handoff.md. The SDK emits nothing on its own (see
+ * [configurePostHog]); every event flows through our Analytics wrapper, which stamps the environment.
+ */
+@OptIn(ExperimentalNativeApi::class)
+fun startPostHog() {
+    val apiKey = infoPlistString("PostHogApiKey")
+    if (apiKey.isEmpty()) return
+    PostHog.setup(
+        config = configurePostHog(apiKey = apiKey, debug = Platform.isDebugBinary),
+        context = PostHogContext(),
+    )
+}
+
 /** Swift-facing: a tapped notification's `userInfo[route]` → the shared bus the nav host collects. */
 fun deliverNotificationRoute(routeKey: String?) {
     NotificationRoute.fromKey(routeKey)?.let { NotificationRouteBus.deliver(it) }
@@ -150,6 +172,7 @@ private val notificationLifecycleScope = CoroutineScope(SupervisorJob() + Dispat
 private var libraryLifecycleStarted = false
 private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val sentryUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val analyticsUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 private fun bootstrapKoin() {
     if (koinStarted) return
@@ -167,6 +190,16 @@ private fun bootstrapKoin() {
         // ITAD key comes from Info.plist key ITADApiKey (Secrets.xcconfig: ITAD_API_KEY).
         // OAuth client id from ITADOAuthClientId (Secrets.xcconfig: ITAD_OAUTH_CLIENT_ID).
         single { ItadCredentials(infoPlistString("ITADApiKey"), infoPlistString("ITADOAuthClientId")) }
+        // PostHog analytics config — key from Info.plist PostHogApiKey (Secrets.xcconfig: POSTHOG_API_KEY). An empty
+        // key -> NoOp binding, so the shared Koin graph (WaitlistRepository et al.) resolves even before posthog-ios
+        // is linked via SPM. Read by loggingIosModule's Analytics binding.
+        single {
+            AnalyticsConfig(
+                apiKey = infoPlistString("PostHogApiKey"),
+                environment = analyticsEnvironment(),
+                appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: "0",
+            )
+        }
     }
 
     startKoin {
@@ -204,6 +237,7 @@ private fun bootstrapKoin() {
     }
 
     attachSentryUser()
+    startAnalytics()
     startNotificationLifecycle()
     startLibraryLifecycle()
 }
@@ -226,6 +260,36 @@ private fun attachSentryUser() {
         }
     }
 }
+
+/**
+ * Applies the persisted analytics consent at launch — mirrors Android's `startAnalytics`. The SDK is set up
+ * **opted out** ([configurePostHog]); this only opts in, identifies (anonymised install id, correlates with
+ * Sentry, no PII) and emits the launch event when the user has consented (GDPR), otherwise it stays opted out
+ * and sends nothing. Needs Koin (SettingsRepository), so runs after `startKoin`. No-op when analytics is
+ * disabled (the binding is NoOp). Fire-and-forget; failures are logged, never crash.
+ */
+private fun startAnalytics() {
+    analyticsUserScope.launch {
+        try {
+            val koin = KoinPlatform.getKoin()
+            val settings = koin.get<SettingsRepository>()
+            if (settings.getAnalyticsConsent()) {
+                val analytics = koin.get<Analytics>()
+                analytics.setConsent(true) // optIn the freshly-opted-out SDK
+                analytics.identify(settings.getInstallId())
+                analytics.capture(AnalyticsEvents.APP_OPENED)
+            }
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to start analytics." } }
+        }
+    }
+}
+
+/** "debug"/"release" for the analytics environment tag — mirrors Android's isDebuggable() split. */
+@OptIn(ExperimentalNativeApi::class)
+private fun analyticsEnvironment(): String = if (Platform.isDebugBinary) "debug" else "release"
 
 /**
  * Mirrors Android's `GameDealsApplication.runNotificationLifecycle`: reconcile the background poll with auth +

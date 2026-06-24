@@ -65,6 +65,9 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_notification
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notes
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notification_delivery_desc
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_analytics
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_analytics_desc
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_analytics_switch_description
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_desc
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_switch_description
@@ -110,6 +113,7 @@ internal fun AccountScreen(
         onLogout = viewModel::onLogout,
         onCountrySelected = viewModel::onCountrySelected,
         onSetMature = viewModel::onSetMatureOptIn,
+        onSetAnalytics = viewModel::onSetAnalyticsConsent,
         onOpenWaitlist = onOpenWaitlist,
         onOpenCollection = onOpenCollection,
         onOpenNotifications = onOpenNotifications,
@@ -130,6 +134,7 @@ private fun AccountScreenContent(
     onLogout: () -> Unit,
     onCountrySelected: (Country) -> Unit,
     onSetMature: (Boolean) -> Unit,
+    onSetAnalytics: (Boolean) -> Unit,
     onOpenWaitlist: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -153,6 +158,8 @@ private fun AccountScreenContent(
             onOpenRegion = onOpenRegion,
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
+            analyticsConsent = data.analyticsConsent,
+            onSetAnalytics = onSetAnalytics,
             onReplayOnboarding = onReplayOnboarding,
         )
     } else {
@@ -173,6 +180,8 @@ private fun AccountScreenContent(
             regionName = regionName,
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
+            analyticsConsent = data.analyticsConsent,
+            onSetAnalytics = onSetAnalytics,
             onOpenWebsite = { onOpenWebsite(ITAD_SETTINGS_URL) },
             onReplayOnboarding = onReplayOnboarding,
         )
@@ -197,6 +206,8 @@ private fun LoggedOutContent(
     onOpenRegion: () -> Unit,
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
+    analyticsConsent: Boolean,
+    onSetAnalytics: (Boolean) -> Unit,
     onReplayOnboarding: () -> Unit,
 ) {
     LazyColumn(
@@ -211,6 +222,7 @@ private fun LoggedOutContent(
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
+        item { AnalyticsConsentRow(checked = analyticsConsent, onCheckedChange = onSetAnalytics) }
         item { HubRow(label = stringResource(Res.string.account_row_how_it_works), onClick = onReplayOnboarding) }
     }
 }
@@ -256,6 +268,8 @@ private fun LoggedInContent(
     regionName: String?,
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
+    analyticsConsent: Boolean,
+    onSetAnalytics: (Boolean) -> Unit,
     onOpenWebsite: () -> Unit,
     onReplayOnboarding: () -> Unit,
 ) {
@@ -309,6 +323,7 @@ private fun LoggedInContent(
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
+        item { AnalyticsConsentRow(checked = analyticsConsent, onCheckedChange = onSetAnalytics) }
         item { HubRow(label = stringResource(Res.string.account_row_how_it_works), onClick = onReplayOnboarding) }
 
         item { SectionHeader(stringResource(Res.string.account_section_website)) }
@@ -473,6 +488,27 @@ private fun MatureContentRow(checked: Boolean, onCheckedChange: (Boolean) -> Uni
     )
 }
 
+/**
+ * Analytics consent toggle — **off by default** (GDPR opt-out). Flipping it persists via
+ * [AccountViewModel.onSetAnalyticsConsent], which flips PostHog's native opt-out app-wide. The supporting
+ * copy is the disclosure (anonymous, EU-hosted, no PII); TODO(privacy): add a hosted policy link here.
+ */
+@Composable
+private fun AnalyticsConsentRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val switchCd = stringResource(Res.string.account_row_analytics_switch_description)
+    ListItem(
+        headlineContent = { Text(stringResource(Res.string.account_row_analytics)) },
+        supportingContent = { Text(stringResource(Res.string.account_row_analytics_desc)) },
+        trailingContent = {
+            Switch(
+                modifier = Modifier.semantics { contentDescription = switchCd },
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    )
+}
+
 @Composable
 private fun HubRow(
     label: String,
@@ -504,6 +540,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
             onLogout = {},
             onCountrySelected = {},
             onSetMature = {},
+            onSetAnalytics = {},
             onOpenWaitlist = {},
             onOpenCollection = {},
             onOpenNotifications = {},

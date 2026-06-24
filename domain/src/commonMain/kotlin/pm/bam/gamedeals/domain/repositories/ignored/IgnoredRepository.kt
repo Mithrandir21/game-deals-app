@@ -13,6 +13,8 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
 /**
  * The user's ITAD ignore list (epic #272, P3 #279). A 1:1 mirror of
@@ -42,6 +44,7 @@ internal class IgnoredRepositoryImpl(
     private val accountSource: ItadAccountSource,
     private val authTokenStore: AuthTokenStore,
     private val ignoredDao: IgnoredDao,
+    private val analytics: Analytics,
 ) : IgnoredRepository {
 
     override fun observeIgnoredIds(): Flow<ImmutableSet<String>> =
@@ -70,9 +73,11 @@ internal class IgnoredRepositoryImpl(
         if (ignoredDao.contains(gameId)) {
             accountSource.removeFromIgnored(gameId)
             ignoredDao.delete(gameId)
+            analytics.capture(AnalyticsEvents.IGNORED_REMOVED, mapOf("game_id" to gameId))
         } else {
             accountSource.addToIgnored(gameId)
             ignoredDao.add(IgnoredGameIdEntry(gameId))
+            analytics.capture(AnalyticsEvents.IGNORED_ADDED, mapOf("game_id" to gameId))
         }
         return RepoUpdateResult.UPDATED
     }

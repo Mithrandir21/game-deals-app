@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
@@ -72,6 +73,10 @@ import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequest
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_body
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_title
@@ -113,7 +118,7 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_welcom
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_welcome_title
 import pm.bam.gamedeals.feature.onboarding.ui.OnboardingViewModel.OnboardingState
 
-private const val ONBOARDING_PAGE_COUNT = 7
+private const val ONBOARDING_PAGE_COUNT = 8
 private const val ONBOARDING_SIGN_IN_PAGE = ONBOARDING_PAGE_COUNT - 1
 
 /**
@@ -146,6 +151,8 @@ internal fun OnboardingScreen(
             }
         },
         onOpenNotificationSettings = { platformActions.openAppNotificationSettings() },
+        analyticsEnabled = state.analyticsEnabled,
+        onEnableAnalytics = viewModel::onEnableAnalytics,
         onSignIn = { viewModel.signInThenFinish(onFinish) },
         onFinish = { viewModel.finish(onFinish) },
     )
@@ -161,6 +168,8 @@ private fun OnboardingContent(
     notificationsDenied: Boolean,
     onEnableNotifications: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    analyticsEnabled: Boolean,
+    onEnableAnalytics: () -> Unit,
     onSignIn: () -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -195,7 +204,11 @@ private fun OnboardingContent(
                         onEnable = onEnableNotifications,
                         onOpenSettings = onOpenNotificationSettings,
                     )
-                    6 -> SignInSlide(
+                    6 -> AnalyticsConsentSlide(
+                        enabled = analyticsEnabled,
+                        onEnable = onEnableAnalytics,
+                    )
+                    7 -> SignInSlide(
                         loggedIn = state.loggedIn,
                         username = state.username,
                         signingIn = state.signingIn,
@@ -474,6 +487,47 @@ internal fun NotificationsSlide(
                 Button(onClick = onOpenSettings) {
                     Text(stringResource(Res.string.onboarding_open_settings))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Analytics-consent step (GDPR opt-out). Positively framed; analytics stays **off** unless the user taps
+ * "Turn on analytics" (swiping past leaves it off). Mirrors [NotificationsSlide]'s Enable → confirmed shape.
+ * Tapping persists immediately via [OnboardingViewModel.onEnableAnalytics] (flips PostHog app-wide).
+ */
+@Composable
+internal fun AnalyticsConsentSlide(
+    enabled: Boolean,
+    onEnable: () -> Unit,
+) {
+    SlideScaffold(
+        icon = Icons.Filled.Insights,
+        title = Res.string.onboarding_analytics_title,
+        body = Res.string.onboarding_analytics_body,
+    ) {
+        Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
+        if (enabled) {
+            Row(
+                // Announce the success the moment the button flips to the confirmation, as in NotificationsSlide.
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(Res.string.onboarding_analytics_enabled),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        } else {
+            Button(onClick = onEnable) {
+                Text(stringResource(Res.string.onboarding_analytics_enable))
             }
         }
     }

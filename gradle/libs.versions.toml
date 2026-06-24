@@ -15,6 +15,10 @@ koin-compose = "4.1.0"
 sentry-kmp = "0.26.0"
 # Sentry Android Gradle plugin — applied to :app for R8 mapping upload (symbolication). 6.12.0 supports AGP 9.x.
 sentry-android-gradle = "6.12.0"
+# PostHog product analytics — community KMP wrapper (samuolis/posthog-kmp) binding the official PostHog
+# Android/iOS SDKs. Pre-1.0 micro-dependency: hidden behind our own :logging `Analytics` interface so it's
+# swappable. The iOS klib needs posthog-ios linked via SPM at app-link (Mac-gated) — see docs/posthog-ios-handoff.md.
+posthog-kmp = "0.1.4"
 kotlinx-datetime = "0.7.0"
 coil3 = "3.0.4"
 zoomable = "2.12.0"
@@ -124,6 +128,9 @@ koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin"
 
 # Sentry — crash + perf telemetry (KMP; replaced Firebase Crashlytics + Performance).
 sentry-kotlin-multiplatform = { group = "io.sentry", name = "sentry-kotlin-multiplatform", version.ref = "sentry-kmp" }
+
+# PostHog — product analytics (KMP community wrapper; manual events + screen tracking, hidden behind :logging Analytics).
+posthog-kmp = { group = "io.github.samuolis", name = "posthog-kmp", version.ref = "posthog-kmp" }
 
 # kotlinx-datetime — date/time (KMP; replaced java.time).
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }

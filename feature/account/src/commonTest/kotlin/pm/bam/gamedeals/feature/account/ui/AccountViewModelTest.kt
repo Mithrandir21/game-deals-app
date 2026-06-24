@@ -52,6 +52,7 @@ class AccountViewModelTest : MainDispatcherTest() {
         every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
         every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
+        every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)
         every { notificationsRepository.observeUnreadCount() } returns flowOf(0)
     }
 
@@ -143,5 +144,28 @@ class AccountViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         verifySuspend(exactly(1)) { settingsRepository.setMatureOptIn(true) }
+    }
+
+    @Test
+    fun analytics_consent_is_observed_into_state() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
+        every { settingsRepository.observeAnalyticsConsent() } returns flowOf(true)
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.analyticsConsent)
+    }
+
+    @Test
+    fun onSetAnalyticsConsent_persists_to_settings_repository() = runTest {
+        every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
+
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.onSetAnalyticsConsent(true)
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { settingsRepository.setAnalyticsConsent(true) }
     }
 }

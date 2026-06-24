@@ -55,7 +55,10 @@ import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewRelease
 import pm.bam.gamedeals.common.ui.PreviewStore
@@ -283,6 +286,7 @@ private fun HomeFeed(
     onViewBundle: (bundleId: Int) -> Unit,
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
+    val analytics: Analytics = koinInject()
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         // Track whether we've already emitted a section so each subsequent section is preceded by a
         // separator + spacing, while the first one stays flush to the top (no stray divider).
@@ -439,7 +443,13 @@ private fun HomeFeed(
                 DealListRow(
                     title = rec.name,
                     contentDescription = stringResource(Res.string.home_screen_recommendation_row_description, rec.name),
-                    onClick = { onPeekRelease(rec.name, image) },
+                    onClick = {
+                        analytics.capture(
+                            AnalyticsEvents.RECOMMENDATION_OPENED,
+                            mapOf("game_id" to rec.id, "source" to "for_you"),
+                        )
+                        onPeekRelease(rec.name, image)
+                    },
                     imageUrl = image,
                 )
             }

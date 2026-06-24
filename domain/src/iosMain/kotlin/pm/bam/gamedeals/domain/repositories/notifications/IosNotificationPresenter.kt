@@ -8,6 +8,8 @@ import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.mergedByGameId
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.logging.error
 
 /**
@@ -16,7 +18,10 @@ import pm.bam.gamedeals.logging.error
  * each with its [NotificationRoute] key in `userInfo` so the app delegate can route a tap back into the nav
  * graph via `NotificationRouteBus`. iOS has no `InboxStyle`, so the per-game lines are joined into the body.
  */
-internal class IosNotificationPresenter(private val logger: Logger) : NotificationPresenter {
+internal class IosNotificationPresenter(
+    private val logger: Logger,
+    private val analytics: Analytics,
+) : NotificationPresenter {
 
     override suspend fun present(alerts: List<PendingNotificationAlert>) {
         if (alerts.isEmpty()) return
@@ -24,24 +29,28 @@ internal class IosNotificationPresenter(private val logger: Logger) : Notificati
         val (franchiseAlerts, waitlistAlerts) = alerts.partition { it.gameId != null }
 
         if (waitlistAlerts.isNotEmpty()) {
+            // One line per game — a game that dropped several times this poll collapses to its cheapest deal.
+            val games = waitlistAlerts.flatMap { it.games }.mergedByGameId()
             post(
                 identifier = WAITLIST_SUMMARY_ID,
                 title = "Waitlist price drops",
-                // One line per game — a game that dropped several times this poll collapses to its cheapest deal.
-                lines = waitlistAlerts.flatMap { it.games }.mergedByGameId().map { it.toLine() },
+                lines = games.map { it.toLine() },
                 fallback = "${waitlistAlerts.size} new deals",
                 route = NotificationRoute.Notifications,
             )
+            analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "waitlist", "count" to games.size))
         }
         if (franchiseAlerts.isNotEmpty()) {
+            // Each franchise alert's title already self-describes ("X is Y% off in Z"); one line per game.
+            val franchiseGames = franchiseAlerts.distinctBy { it.gameId }
             post(
                 identifier = FRANCHISE_SUMMARY_ID,
                 title = "Followed-series deals",
-                // Each franchise alert's title already self-describes ("X is Y% off in Z"); one line per game.
-                lines = franchiseAlerts.distinctBy { it.gameId }.map { it.title },
+                lines = franchiseGames.map { it.title },
                 fallback = "${franchiseAlerts.size} new deals",
                 route = NotificationRoute.FollowedSeries,
             )
+            analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "franchise", "count" to franchiseGames.size))
         }
     }
 

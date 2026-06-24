@@ -76,6 +76,12 @@ internal class OnboardingViewModel(
             }
         }
 
+        viewModelScope.launch {
+            settingsRepository.observeAnalyticsConsent().collect { enabled ->
+                uiState.update { it.copy(analyticsEnabled = enabled) }
+            }
+        }
+
         // Reflect the current session so a replay (from the Account hub) doesn't tell an already
         // signed-in user to sign in again.
         viewModelScope.launch {
@@ -100,6 +106,11 @@ internal class OnboardingViewModel(
             notificationSettings.setEnabled(true)
             notificationScheduler.schedule()
         }
+    }
+
+    /** Grant analytics consent from the onboarding slide (persists + flips PostHog via SettingsRepository). */
+    fun onEnableAnalytics() {
+        viewModelScope.launch { settingsRepository.setAnalyticsConsent(true) }
     }
 
     /** Finish onboarding without signing in (Skip, or the final "Maybe later"). */
@@ -138,6 +149,8 @@ internal class OnboardingViewModel(
         val selectedCountry: Country? = null,
         /** Whether background sale alerts are enabled (reflects the persisted opt-in). */
         val notificationsEnabled: Boolean = false,
+        /** Whether analytics consent has been granted (reflects the persisted opt-in; off by default). */
+        val analyticsEnabled: Boolean = false,
         /** True while the OAuth browser round-trip is in flight. */
         val signingIn: Boolean = false,
         /** Whether an ITAD session is already active (the sign-in step becomes a confirmation). */

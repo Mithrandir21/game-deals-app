@@ -19,6 +19,8 @@ import pm.bam.gamedeals.domain.models.NotedGame
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.domain.RecordingAnalytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.testing.fixtures.game
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,8 +31,9 @@ class NotesRepositoryTest {
     private val accountSource: ItadAccountSource = mock(MockMode.autoUnit)
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
+    private val analytics = RecordingAnalytics()
 
-    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore, dealsSource)
+    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore, dealsSource, analytics)
 
     private fun loggedIn(loggedIn: Boolean) {
         every { authTokenStore.observeAuthState() } returns
@@ -65,6 +68,7 @@ class NotesRepositoryTest {
         assertEquals(RepoUpdateResult.UPDATED, result)
         assertEquals("Buy under $20", repo.observeNote("g1").first())
         verifySuspend(exactly(1)) { accountSource.setNote("g1", "Buy under $20") }
+        assertEquals(mapOf("game_id" to "g1"), analytics.propsOf(AnalyticsEvents.NOTE_SAVED))
     }
 
     @Test
@@ -79,6 +83,7 @@ class NotesRepositoryTest {
         assertEquals(RepoUpdateResult.UPDATED, result)
         assertNull(repo.observeNote("g1").first())
         verifySuspend(exactly(1)) { accountSource.removeNote("g1") }
+        assertEquals(mapOf("game_id" to "g1"), analytics.propsOf(AnalyticsEvents.NOTE_DELETED))
     }
 
     @Test

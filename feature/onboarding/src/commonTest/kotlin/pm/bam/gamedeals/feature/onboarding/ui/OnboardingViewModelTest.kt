@@ -55,6 +55,7 @@ class OnboardingViewModelTest : MainDispatcherTest() {
         every { regionRepository.supportedCountries } returns listOf(us, gb)
         every { regionRepository.observeSelectedCountry() } returns flowOf(us)
         every { notificationSettings.observeEnabled() } returns flowOf(false)
+        every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedOut)
         // Default: a genuine first run (onboarding not yet completed).
         everySuspend { settingsRepository.getOnboardingCompleted() } returns false
@@ -163,6 +164,27 @@ class OnboardingViewModelTest : MainDispatcherTest() {
 
         verifySuspend(exactly(1)) { notificationSettings.setEnabled(true) }
         verify(exactly(1)) { notificationScheduler.schedule() }
+    }
+
+    @Test
+    fun onEnableAnalytics_grants_consent() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.onEnableAnalytics()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { settingsRepository.setAnalyticsConsent(true) }
+    }
+
+    @Test
+    fun analytics_consent_is_reflected_in_state() = runTest {
+        every { settingsRepository.observeAnalyticsConsent() } returns flowOf(true)
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.analyticsEnabled)
     }
 
     @Test
