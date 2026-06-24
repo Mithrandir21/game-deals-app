@@ -137,71 +137,184 @@ internal class GamePageViewModel(
             return@flow
         }
 
+        // Each facet captures its own outcome: Loaded(value | null | empty) when the fetch ran (even if it
+        // returned nothing), Error when it threw — so the tabs can tell "no data" apart from "load failed".
         var gameId: String? = gameIdArg
-        var gameDetails: GameDetails? = null
-        var igdbGame: IgdbGame? = null
-        var resolvedByTitle = false
+        val dealsState: SectionState<GameDetails?>
+        val igdbResolution: IgdbResolution
 
         if (gameIdArg != null) {
             // Deal entry: ITAD details anchor the page; IGDB is enrichment off the resolved Steam-appid/title.
-            gameDetails = fetchOrNull { gamesRepository.getGameDetails(gameIdArg) }
-            val steamAppId = gameDetails?.info?.steamAppID
-            val lookupTitle = titleArg ?: gameDetails?.info?.title
-            igdbGame = (steamAppId?.let { fetchOrNull { igdbRepository.fetchGameDetailsBySteamId(it) } })
-                ?: lookupTitle?.let { t -> fetchOrNull { igdbRepository.fetchGameDetailsByTitle(t) } }?.also { resolvedByTitle = true }
+            dealsState = fetchSection { gamesRepository.getGameDetails(gameIdArg) }
+            igdbResolution = resolveIgdbForCurrentArgs(gameDetails = (dealsState as? SectionState.Loaded)?.value)
         } else {
             // Metadata entry: IGDB anchors; resolve the ITAD id from the Steam-appid so deals can load.
-            igdbGame = when {
-                igdbGameIdArg != null -> fetchOrNull { igdbRepository.fetchGameDetailsByIgdbId(igdbGameIdArg) }
-                steamAppIdArg != null ->
-                    fetchOrNull { igdbRepository.fetchGameDetailsBySteamId(steamAppIdArg) }
-                        ?: titleArg?.let { t -> fetchOrNull { igdbRepository.fetchGameDetailsByTitle(t) } }?.also { resolvedByTitle = true }
-                titleArg != null -> fetchOrNull { igdbRepository.fetchGameDetailsByTitle(titleArg) }?.also { resolvedByTitle = true }
-                else -> null
-            }
+            igdbResolution = resolveIgdbForCurrentArgs(gameDetails = null)
+            val igdbGame = (igdbResolution.state as? SectionState.Loaded)?.value
             val steamForLookup = igdbGame?.steamAppId ?: steamAppIdArg
             val lookupTitle = titleArg ?: igdbGame?.name
             gameId = if (steamForLookup != null && lookupTitle != null) {
                 fetchOrNull { gamesRepository.findGameIdBySteamAppId(steamForLookup, lookupTitle) }
             } else null
-            gameDetails = gameId?.let { id -> fetchOrNull { gamesRepository.getGameDetails(id) } }
+            dealsState = if (gameId != null) fetchSection { gamesRepository.getGameDetails(gameId) } else SectionState.Loaded(null)
         }
 
+        val gameDetails = (dealsState as? SectionState.Loaded)?.value
+        val igdbGame = (igdbResolution.state as? SectionState.Loaded)?.value
+
         if (gameDetails == null && igdbGame == null) {
-            val displayTitle = titleArg
-            emit(if (displayTitle != null) GamePageData.NoMatch(displayTitle) else GamePageData.Error)
+            // No usable data on either side. A thrown fetch → retryable Error; otherwise it's a genuine miss.
+            val errored = dealsState is SectionState.Error || igdbResolution.state is SectionState.Error
+            emit(
+                when {
+                    errored -> GamePageData.Error
+                    titleArg != null -> GamePageData.NoMatch(titleArg)
+                    else -> GamePageData.Error
+                }
+            )
             return@flow
         }
 
         // Publish the resolved ITAD id so waitlist/ignore/note observe it (no-op when null).
         gameIdFlow.value = gameId
 
-        val dealDetails = gameDetails?.deals
-            ?.map { deal -> StoreDealPair(store = storesRepository.getStore(deal.storeID), deal = deal) }
-            ?.toImmutableList()
-            ?: persistentListOf()
-        val priceHistory = gameId?.let { id -> fetchOrNull { gamesRepository.getPriceHistory(id) } }
-            ?: PriceHistory(gameID = gameId.orEmpty(), points = persistentListOf())
-        val gameMeta = gameId?.let { id -> fetchOrNull { gamesRepository.getGameMeta(id) } }
-        val bundles = (gameId?.let { id -> fetchOrNull { gamesRepository.getBundlesForGame(id) } } ?: emptyList()).toImmutableList()
-        // HowLongToBeat is a separate IGDB endpoint; merge it onto the game (best-effort).
-        val enrichedIgdb = igdbGame?.let { g -> g.copy(timeToBeat = fetchOrNull { igdbRepository.fetchTimeToBeat(g.id) }) }
-        val websites = enrichedIgdb?.websites?.map { it.toUi() }?.toImmutableList() ?: persistentListOf()
+        val dealDetails = mapDealDetails(gameDetails)
+        val resolvedGameId = gameId
+        val priceHistoryState: SectionState<PriceHistory> =
+            if (resolvedGameId != null) fetchSection { gamesRepository.getPriceHistory(resolvedGameId) }
+            else SectionState.Loaded(PriceHistory(gameID = "", points = persistentListOf()))
+        val gameMetaState: SectionState<GameMeta?> =
+            if (resolvedGameId != null) fetchSection { gamesRepository.getGameMeta(resolvedGameId) }
+            else SectionState.Loaded(null)
+        // Bundles + links stay best-effort: a failure silently hides the section (Overview is IGDB-primary).
+        val bundles = (resolvedGameId?.let { id -> fetchOrNull { gamesRepository.getBundlesForGame(id) } } ?: emptyList()).toImmutableList()
+        val websites = igdbGame?.websites?.map { it.toUi() }?.toImmutableList() ?: persistentListOf()
 
         emit(
             GamePageData.Data(
-                title = gameDetails?.info?.title ?: enrichedIgdb?.name ?: titleArg.orEmpty(),
-                gameDetails = gameDetails,
+                title = gameDetails?.info?.title ?: igdbGame?.name ?: titleArg.orEmpty(),
+                deals = dealsState,
                 dealDetails = dealDetails,
-                priceHistory = priceHistory,
-                gameMeta = gameMeta,
+                priceHistory = priceHistoryState,
+                gameMeta = gameMetaState,
                 bundles = bundles,
-                igdbGame = enrichedIgdb,
+                igdb = igdbResolution.state,
                 websites = websites,
-                resolvedByTitle = resolvedByTitle,
+                resolvedByTitle = igdbResolution.resolvedByTitle,
             )
         )
     }.catch { emit(GamePageData.Error) }
+
+    /** Maps a game's deals onto their stores for the Prices tab (no-op when there's no deal side). */
+    private suspend fun mapDealDetails(gameDetails: GameDetails?): ImmutableList<StoreDealPair> =
+        gameDetails?.deals
+            ?.map { deal -> StoreDealPair(store = storesRepository.getStore(deal.storeID), deal = deal) }
+            ?.toImmutableList()
+            ?: persistentListOf()
+
+    /** A captured fetch outcome wrapped for the UI: [SectionState.Loaded] on success (value may be null/empty), [SectionState.Error] when it threw. */
+    private suspend fun <T> fetchSection(block: suspend () -> T): SectionState<T> = try {
+        SectionState.Loaded(block())
+    } catch (ce: CancellationException) {
+        throw ce
+    } catch (_: Throwable) {
+        SectionState.Error
+    }
+
+    private data class IgdbResolution(val state: SectionState<IgdbGame?>, val resolvedByTitle: Boolean)
+
+    /**
+     * Resolves (and HowLongToBeat-enriches) the IGDB side for the current navigation args, capturing the
+     * outcome as a [SectionState]. Shared by the initial load and [retryIgdb]. For a deal entry the lookup
+     * keys off the resolved [gameDetails] (Steam-appid then title); for a metadata entry it keys off the
+     * args directly. A network failure yields [SectionState.Error]; a clean no-match yields `Loaded(null)`.
+     */
+    private suspend fun resolveIgdbForCurrentArgs(gameDetails: GameDetails?): IgdbResolution {
+        val gameIdArg = savedStateHandle.get<String>("gameId")
+        val steamAppIdArg = savedStateHandle.get<Int>("steamAppId")
+        val igdbGameIdArg = savedStateHandle.get<Long>("igdbGameId")
+        val titleArg = savedStateHandle.get<String>("title")?.takeIf { it.isNotBlank() }
+        return resolveIgdb {
+            if (gameIdArg != null) {
+                val steamAppId = gameDetails?.info?.steamAppID
+                val lookupTitle = titleArg ?: gameDetails?.info?.title
+                val bySteam = steamAppId?.let { igdbRepository.fetchGameDetailsBySteamId(it) }
+                if (bySteam != null) bySteam to false
+                else lookupTitle?.let { t -> igdbRepository.fetchGameDetailsByTitle(t) }?.let { it to true } ?: (null to false)
+            } else when {
+                igdbGameIdArg != null -> igdbRepository.fetchGameDetailsByIgdbId(igdbGameIdArg) to false
+                steamAppIdArg != null -> {
+                    val bySteam = igdbRepository.fetchGameDetailsBySteamId(steamAppIdArg)
+                    if (bySteam != null) bySteam to false
+                    else titleArg?.let { t -> igdbRepository.fetchGameDetailsByTitle(t) }?.let { it to true } ?: (null to false)
+                }
+                titleArg != null -> igdbRepository.fetchGameDetailsByTitle(titleArg)?.let { it to true } ?: (null to false)
+                else -> null to false
+            }
+        }
+    }
+
+    /** Runs an IGDB [resolve] (returning `game to resolvedByTitle`), merges HowLongToBeat, and captures Error-on-throw. */
+    private suspend fun resolveIgdb(resolve: suspend () -> Pair<IgdbGame?, Boolean>): IgdbResolution = try {
+        val (game, byTitle) = resolve()
+        // HowLongToBeat is a separate IGDB endpoint; merge it onto the game (best-effort).
+        val enriched = game?.let { g -> g.copy(timeToBeat = fetchOrNull { igdbRepository.fetchTimeToBeat(g.id) }) }
+        IgdbResolution(SectionState.Loaded(enriched), resolvedByTitle = byTitle && enriched != null)
+    } catch (ce: CancellationException) {
+        throw ce
+    } catch (_: Throwable) {
+        IgdbResolution(SectionState.Error, resolvedByTitle = false)
+    }
+
+    /** Re-fetch only the deal side (Prices + History's cheapest-ever) after a failure. */
+    fun retryDeals() {
+        val current = uiState.value as? GamePageData.Data ?: return
+        val id = gameIdFlow.value ?: return
+        uiState.value = current.copy(deals = SectionState.Loading, dealDetails = persistentListOf())
+        viewModelScope.launch {
+            val state = fetchSection { gamesRepository.getGameDetails(id) }
+            val dealDetails = mapDealDetails((state as? SectionState.Loaded)?.value)
+            val after = uiState.value as? GamePageData.Data ?: return@launch
+            uiState.value = after.copy(deals = state, dealDetails = dealDetails)
+        }
+    }
+
+    /** Re-fetch only the price-history chart (History tab) after a failure. */
+    fun retryPriceHistory() {
+        val current = uiState.value as? GamePageData.Data ?: return
+        val id = gameIdFlow.value ?: return
+        uiState.value = current.copy(priceHistory = SectionState.Loading)
+        viewModelScope.launch {
+            val state = fetchSection { gamesRepository.getPriceHistory(id) }
+            val after = uiState.value as? GamePageData.Data ?: return@launch
+            uiState.value = after.copy(priceHistory = state)
+        }
+    }
+
+    /** Re-fetch only the live-signal metadata (Stats tab) after a failure. */
+    fun retryGameMeta() {
+        val current = uiState.value as? GamePageData.Data ?: return
+        val id = gameIdFlow.value ?: return
+        uiState.value = current.copy(gameMeta = SectionState.Loading)
+        viewModelScope.launch {
+            val state = fetchSection { gamesRepository.getGameMeta(id) }
+            val after = uiState.value as? GamePageData.Data ?: return@launch
+            uiState.value = after.copy(gameMeta = state)
+        }
+    }
+
+    /** Re-fetch only the IGDB metadata (Overview tab + hero) after a failure. */
+    fun retryIgdb() {
+        val current = uiState.value as? GamePageData.Data ?: return
+        uiState.value = current.copy(igdb = SectionState.Loading)
+        viewModelScope.launch {
+            val resolution = resolveIgdbForCurrentArgs((current.deals as? SectionState.Loaded)?.value)
+            val igdbGame = (resolution.state as? SectionState.Loaded)?.value
+            val websites = igdbGame?.websites?.map { it.toUi() }?.toImmutableList() ?: persistentListOf()
+            val after = uiState.value as? GamePageData.Data ?: return@launch
+            uiState.value = after.copy(igdb = resolution.state, websites = websites, resolvedByTitle = resolution.resolvedByTitle)
+        }
+    }
 
     fun toggleWaitlist() {
         if (uiState.value !is GamePageData.Data) return
@@ -331,7 +444,7 @@ internal class GamePageViewModel(
     /** Swap only the IGDB metadata side to the picked match; the ITAD deal side (gameId) is unchanged. */
     fun onCandidatePicked(igdbGameId: Long) {
         val current = uiState.value as? GamePageData.Data ?: return
-        if (current.igdbGame?.id == igdbGameId) {
+        if (current.igdbGameOrNull?.id == igdbGameId) {
             uiState.value = current.copy(showPicker = false)
             return
         }
@@ -343,7 +456,7 @@ internal class GamePageViewModel(
             val base = uiState.value as? GamePageData.Data ?: return@launch
             uiState.value = if (swapped != null) {
                 base.copy(
-                    igdbGame = swapped,
+                    igdb = SectionState.Loaded(swapped),
                     websites = swapped.websites.map { it.toUi() }.toImmutableList(),
                     showPicker = false,
                 )
@@ -393,19 +506,30 @@ internal class GamePageViewModel(
         @Immutable
         data class Data(
             val title: String,
-            /** ITAD deal side — null when the game isn't sold anywhere we matched (metadata-only page). */
-            val gameDetails: GameDetails? = null,
+            /**
+             * ITAD deal side. `Loaded(GameDetails)` when sold somewhere we matched; `Loaded(null)` when there's
+             * no ITAD match (metadata-only page); [SectionState.Error] when the fetch failed. Feeds Prices +
+             * History's cheapest-ever.
+             */
+            val deals: SectionState<GameDetails?> = SectionState.Loaded(null),
             val dealDetails: ImmutableList<StoreDealPair> = persistentListOf(),
-            val priceHistory: PriceHistory = PriceHistory(gameID = "", points = persistentListOf()),
-            val gameMeta: GameMeta? = null,
+            val priceHistory: SectionState<PriceHistory> = SectionState.Loaded(PriceHistory(gameID = "", points = persistentListOf())),
+            val gameMeta: SectionState<GameMeta?> = SectionState.Loaded(null),
             val bundles: ImmutableList<Bundle> = persistentListOf(),
-            /** IGDB metadata side — null when no IGDB record matched (deals-only page). */
-            val igdbGame: IgdbGame? = null,
+            /** IGDB metadata side. `Loaded(null)` when no IGDB record matched (deals-only page); [SectionState.Error] on failure. */
+            val igdb: SectionState<IgdbGame?> = SectionState.Loaded(null),
             val websites: ImmutableList<WebsiteUiModel> = persistentListOf(),
             val resolvedByTitle: Boolean = false,
             val candidatesState: CandidatesState = CandidatesState.Idle,
             val showPicker: Boolean = false,
             val regionalPricesState: RegionalPricesState = RegionalPricesState.Idle,
-        ) : GamePageData()
+        ) : GamePageData() {
+            /** The loaded ITAD details, or null when absent/loading/errored — for callers that only need the value. */
+            val gameDetailsOrNull: GameDetails? get() = (deals as? SectionState.Loaded)?.value
+            /** The loaded live-signal metadata, or null when absent/loading/errored. */
+            val gameMetaOrNull: GameMeta? get() = (gameMeta as? SectionState.Loaded)?.value
+            /** The loaded IGDB record, or null when absent/loading/errored — for the hero/picker. */
+            val igdbGameOrNull: IgdbGame? get() = (igdb as? SectionState.Loaded)?.value
+        }
     }
 }

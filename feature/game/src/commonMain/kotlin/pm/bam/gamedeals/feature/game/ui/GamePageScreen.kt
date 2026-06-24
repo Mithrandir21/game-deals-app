@@ -115,6 +115,7 @@ import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -185,9 +186,15 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_dlcs
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_hltb
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_players
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_reviews
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_history_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_overview_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_prices_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_error
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_loading_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_loading_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_stats_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_overview
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
@@ -237,6 +244,9 @@ private const val COVER_ASPECT_RATIO = 0.75f
 private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
 private val TRAILER_TILE_WIDTH = 320.dp // 180.dp tall × 16:9
 private const val COLLAPSED_LINES = 5
+
+/** Which facet a tab's "Retry" re-fetches — threaded down to the tabs and dispatched to the VM at the top. */
+private enum class RetrySection { Deals, PriceHistory, GameMeta, Igdb }
 
 /**
  * The unified Game Page (epic #291). Renders [GamePageViewModel]'s aggregate state: an ITAD deal side and
@@ -293,6 +303,14 @@ internal fun GamePageScreen(
         onCandidatePicked = viewModel::onCandidatePicked,
         onBundleClick = onBundleClick,
         onRegionsSelected = viewModel::onRegionsSelected,
+        onRetrySection = { section ->
+            when (section) {
+                RetrySection.Deals -> viewModel.retryDeals()
+                RetrySection.PriceHistory -> viewModel.retryPriceHistory()
+                RetrySection.GameMeta -> viewModel.retryGameMeta()
+                RetrySection.Igdb -> viewModel.retryIgdb()
+            }
+        },
         snackbarHostState = snackbarHostState,
     )
 }
@@ -323,6 +341,7 @@ private fun GamePageContent(
     onCandidatePicked: (igdbGameId: Long) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
+    onRetrySection: (RetrySection) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -464,6 +483,7 @@ private fun GamePageContent(
                     onToggleFollowFranchise = onToggleFollowFranchise,
                     onBundleClick = onBundleClick,
                     onRegionsSelected = onRegionsSelected,
+                    onRetrySection = onRetrySection,
                 )
             }
         }
@@ -488,6 +508,7 @@ private fun GamePageBody(
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
+    onRetrySection: (RetrySection) -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -511,14 +532,15 @@ private fun GamePageBody(
             onToggleFollowFranchise = onToggleFollowFranchise,
             onBundleClick = onBundleClick,
             onRegionsSelected = onRegionsSelected,
+            onRetrySection = onRetrySection,
         )
     }
 }
 
 @Composable
 private fun HeroSection(data: GamePageData.Data) {
-    val igdb = data.igdbGame
-    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetails?.info?.artwork?.portrait
+    val igdb = data.igdbGameOrNull
+    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetailsOrNull?.info?.artwork?.portrait
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
         verticalAlignment = Alignment.Top,
@@ -564,6 +586,7 @@ private fun GameTabs(
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
+    onRetrySection: (RetrySection) -> Unit,
 ) {
     var selected by rememberSaveable { mutableStateOf(0) }
     val tabs = listOf(
@@ -596,16 +619,25 @@ private fun GameTabs(
                 onDeleteNote = onDeleteNote,
                 onToggleFollowFranchise = onToggleFollowFranchise,
                 onBundleClick = onBundleClick,
+                onRetryIgdb = { onRetrySection(RetrySection.Igdb) },
             )
             1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                PricesTab(data, goToWeb, onShareDeal)
+                PricesTab(data, goToWeb, onShareDeal, onRetry = { onRetrySection(RetrySection.Deals) })
             }
             2 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                data.gameDetails?.let { CheapestEverBlock(it) }
-                PriceHistoryChart(priceHistory = data.priceHistory, modifier = Modifier.fillMaxWidth())
+                // Cheapest-ever rides the deal side (shown when present); deal-side errors surface on Prices,
+                // so History keys its empty/error on the price-history chart alone.
+                data.gameDetailsOrNull?.let { CheapestEverBlock(it) }
+                when (val priceHistory = data.priceHistory) {
+                    SectionState.Loading -> TabLoading()
+                    SectionState.Error -> TabError(onRetry = { onRetrySection(RetrySection.PriceHistory) })
+                    is SectionState.Loaded ->
+                        if (priceHistory.value.points.isEmpty()) TabEmpty(stringResource(Res.string.game_page_history_empty))
+                        else PriceHistoryChart(priceHistory = priceHistory.value, modifier = Modifier.fillMaxWidth())
+                }
             }
             3 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                StatsTab(data)
+                StatsTab(data, onRetry = { onRetrySection(RetrySection.GameMeta) })
             }
             else -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
                 RegionsTab(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb)
@@ -630,34 +662,47 @@ private fun OverviewTab(
     onDeleteNote: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
+    onRetryIgdb: () -> Unit,
 ) {
+    val inset = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large)
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large)) {
         NotesSection(
             note = note,
             onSaveNote = onSaveNote,
             onDeleteNote = onDeleteNote,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+            modifier = Modifier.fillMaxWidth().then(inset),
         )
         if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
-        data.igdbGame?.let { igdb ->
-            if (!igdb.summary.isNullOrBlank() || !igdb.storyline.isNullOrBlank()) DescriptionSection(igdb)
-            if (igdb.genres.isNotEmpty() || igdb.themes.isNotEmpty()) ChipsSection(igdb.genres + igdb.themes)
-            if (igdb.platforms.isNotEmpty()) PlatformsSection(igdb.platforms)
-            if (igdb.videos.isNotEmpty()) TrailersSection(igdb, goToWeb)
-            igdb.franchises.forEach { franchise ->
-                SeriesSection(
-                    franchise = franchise,
-                    isFollowed = franchise.id in followedFranchiseIds,
-                    onToggleFollow = { onToggleFollowFranchise(franchise.id, franchise.name) },
-                    onGameClick = onSimilarGameClick,
-                )
+        // Overview is IGDB-primary: the IGDB side drives the empty/error message; bundles + links are
+        // best-effort extras that simply don't appear when absent or failed.
+        when (val igdb = data.igdb) {
+            SectionState.Loading -> TabLoading(inset)
+            SectionState.Error -> TabError(onRetry = onRetryIgdb, modifier = inset)
+            is SectionState.Loaded -> {
+                val game = igdb.value
+                if (game != null) {
+                    if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
+                    if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
+                    if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
+                    if (game.videos.isNotEmpty()) TrailersSection(game, goToWeb)
+                    game.franchises.forEach { franchise ->
+                        SeriesSection(
+                            franchise = franchise,
+                            isFollowed = franchise.id in followedFranchiseIds,
+                            onToggleFollow = { onToggleFollowFranchise(franchise.id, franchise.name) },
+                            onGameClick = onSimilarGameClick,
+                        )
+                    }
+                    if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game)
+                    game.timeToBeat?.let { HltbSection(it) }
+                    val dlcs = game.dlcs + game.expansions
+                    if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
+                    if (game.similarGames.isNotEmpty()) SimilarGamesSection(game.similarGames, onSimilarGameClick)
+                    if (game.involvedCompanies.isNotEmpty()) CompaniesSection(game.involvedCompanies)
+                } else if (data.bundles.isEmpty() && data.websites.isEmpty()) {
+                    TabEmpty(stringResource(Res.string.game_page_overview_empty), inset)
+                }
             }
-            if (igdb.screenshotImageIds.isNotEmpty()) ScreenshotsSection(igdb)
-            igdb.timeToBeat?.let { HltbSection(it) }
-            val dlcs = igdb.dlcs + igdb.expansions
-            if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
-            if (igdb.similarGames.isNotEmpty()) SimilarGamesSection(igdb.similarGames, onSimilarGameClick)
-            if (igdb.involvedCompanies.isNotEmpty()) CompaniesSection(igdb.involvedCompanies)
         }
         if (data.websites.isNotEmpty()) LinksSection(data.websites)
     }
@@ -747,19 +792,26 @@ private fun PricesTab(
     data: GamePageData.Data,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
+    onRetry: () -> Unit,
 ) {
-    val gameDetails = data.gameDetails
-    if (gameDetails == null || data.dealDetails.isEmpty()) {
-        Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.bodyMedium)
-        return
-    }
-    gameDetails.dealQuality()?.let { DealQualityCallout(it) }
-    Text(
-        text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
-        style = MaterialTheme.typography.titleMedium,
-    )
-    data.dealDetails.forEach { pair ->
-        StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+    when (val deals = data.deals) {
+        SectionState.Loading -> TabLoading()
+        SectionState.Error -> TabError(onRetry = onRetry)
+        is SectionState.Loaded -> {
+            val gameDetails = deals.value
+            if (gameDetails == null || data.dealDetails.isEmpty()) {
+                TabEmpty(stringResource(Res.string.game_page_prices_empty))
+            } else {
+                gameDetails.dealQuality()?.let { DealQualityCallout(it) }
+                Text(
+                    text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                data.dealDetails.forEach { pair ->
+                    StoreGameDealRow(store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+                }
+            }
+        }
     }
 }
 
@@ -811,12 +863,25 @@ private fun DealQualityCallout(quality: DealQuality) {
 }
 
 @Composable
-private fun StatsTab(data: GamePageData.Data) {
+private fun StatsTab(data: GamePageData.Data, onRetry: () -> Unit) {
     // The Players/Critics rating pills (RatingsRow) live in the hero header — not repeated here. Stats
     // shows the ITAD-only signals: current player counts + storefront/critic review scores.
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        data.gameMeta?.players?.let { PlayersBlock(it) }
-        data.gameMeta?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
+        when (val meta = data.gameMeta) {
+            SectionState.Loading -> TabLoading()
+            SectionState.Error -> TabError(onRetry = onRetry)
+            is SectionState.Loaded -> {
+                val value = meta.value
+                val hasPlayers = value?.players?.let { it.recent != null || it.peak != null } == true
+                val hasReviews = value?.reviews?.isNotEmpty() == true
+                if (!hasPlayers && !hasReviews) {
+                    TabEmpty(stringResource(Res.string.game_page_stats_empty))
+                } else {
+                    value?.players?.let { PlayersBlock(it) }
+                    value?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
+                }
+            }
+        }
     }
 }
 
@@ -1437,7 +1502,7 @@ private fun CandidatePickerSheet(
                             modifier = Modifier.fillMaxWidth().height(420.dp),
                         ) {
                             gridItems(state.items, key = { it.id }) { candidate ->
-                                IgdbGameTile(game = candidate, onClick = onCandidatePicked, isCurrent = candidate.id == data.igdbGame?.id)
+                                IgdbGameTile(game = candidate, onClick = onCandidatePicked, isCurrent = candidate.id == data.igdbGameOrNull?.id)
                             }
                         }
                     }
@@ -1457,6 +1522,42 @@ private fun CandidatePickerSheet(
 @Composable
 private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(modifier = modifier.semantics { heading() }, text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+}
+
+/** Short "nothing here" line for an empty tab/section — matches the Regions tab's empty state. */
+@Composable
+private fun TabEmpty(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.politeLiveRegion(),
+    )
+}
+
+/** "Couldn't load" line + a Retry button for a tab/section whose fetch failed (re-fetches that facet only). */
+@Composable
+private fun TabError(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        Text(
+            text = stringResource(Res.string.game_page_section_error),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.politeLiveRegion(),
+        )
+        TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
+            Text(stringResource(Res.string.game_screen_data_loading_error_retry))
+        }
+    }
+}
+
+/** Spinner shown while a tab/section is re-fetching after a Retry (initial load resolves before the tab renders). */
+@Composable
+private fun TabLoading(modifier: Modifier = Modifier) {
+    val loadingCd = stringResource(Res.string.game_page_section_loading_cd)
+    Box(modifier = modifier.fillMaxWidth().height(120.dp)) {
+        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
+    }
 }
 
 private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -1493,6 +1594,7 @@ private fun GamePagePreview(data: GamePageData) {
             onCandidatePicked = {},
             onBundleClick = {},
             onRegionsSelected = {},
+            onRetrySection = {},
         )
     }
 }

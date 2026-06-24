@@ -139,11 +139,11 @@ class GamePageViewModelTest : MainDispatcherTest() {
 
         assertTrue(state is GamePageViewModel.GamePageData.Data)
         assertEquals("Halo Infinite", state.title)
-        assertEquals(details, state.gameDetails)
+        assertEquals(details, state.gameDetailsOrNull)
         assertEquals(1, state.dealDetails.size)
-        assertEquals(meta, state.gameMeta)
+        assertEquals(meta, state.gameMetaOrNull)
         assertEquals(listOf(bundle), state.bundles)
-        assertNotNull(state.igdbGame)
+        assertNotNull(state.igdbGameOrNull)
         // IGDB enrichment came via Steam-appid, not title → no fuzzy-match warning.
         assertEquals(false, state.resolvedByTitle)
     }
@@ -157,8 +157,9 @@ class GamePageViewModelTest : MainDispatcherTest() {
         val state = loadState(mapOf("gameId" to "g1"))
 
         assertTrue(state is GamePageViewModel.GamePageData.Data)
-        assertEquals(details, state.gameDetails)
-        assertNull(state.igdbGame, "IGDB enrichment failure must not hide the deal side")
+        assertEquals(details, state.gameDetailsOrNull)
+        assertNull(state.igdbGameOrNull, "IGDB enrichment failure must not hide the deal side")
+        assertTrue(state.igdb is SectionState.Error, "a thrown IGDB fetch must surface as Error, not silent empty")
     }
 
     @Test
@@ -170,8 +171,8 @@ class GamePageViewModelTest : MainDispatcherTest() {
         val state = loadState(mapOf("igdbGameId" to 100L))
 
         assertTrue(state is GamePageViewModel.GamePageData.Data)
-        assertNotNull(state.igdbGame)
-        assertNotNull(state.gameDetails)
+        assertNotNull(state.igdbGameOrNull)
+        assertNotNull(state.gameDetailsOrNull)
         assertEquals(1, state.dealDetails.size)
         // The resolved ITAD id drives the enrichment fetches.
         verifySuspend(exactly(1)) { gamesRepository.getGameMeta("g1") }
@@ -186,9 +187,12 @@ class GamePageViewModelTest : MainDispatcherTest() {
         val state = loadState(mapOf("igdbGameId" to 100L))
 
         assertTrue(state is GamePageViewModel.GamePageData.Data)
-        assertNotNull(state.igdbGame)
-        assertNull(state.gameDetails)
+        assertNotNull(state.igdbGameOrNull)
+        assertNull(state.gameDetailsOrNull)
         assertTrue(state.dealDetails.isEmpty())
+        // No ITAD id to fetch → the deal/meta facets are a clean Loaded(null), not an Error.
+        assertTrue(state.deals is SectionState.Loaded)
+        assertTrue(state.gameMeta is SectionState.Loaded)
         verifySuspend(exactly(0)) { gamesRepository.findGameIdBySteamAppId(any(), any()) }
     }
 
@@ -258,5 +262,74 @@ class GamePageViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(listOf(GamePageViewModel.GameUiEvent.SignInRequired), events)
+    }
+
+    @Test
+    fun deal_fetch_failure_surfaces_error_on_deals_facet_but_page_still_renders() = runTest {
+        // Deals throw, but a title resolves IGDB → the page is still Data with the deal side in Error.
+        everySuspend { gamesRepository.getGameDetails("g1") } calls { throw Exception("deals down") }
+        everySuspend { igdbRepository.fetchGameDetailsByTitle("Halo Infinite") } returns igdb()
+
+        val state = loadState(mapOf("gameId" to "g1", "title" to "Halo Infinite"))
+
+        assertTrue(state is GamePageViewModel.GamePageData.Data)
+        assertTrue(state.deals is SectionState.Error)
+        assertNotNull(state.igdbGameOrNull)
+    }
+
+    @Test
+    fun gameMeta_empty_is_loaded_not_error() = runTest {
+        // The repo returns an empty GameMeta (no players/reviews) → genuine-empty, must be Loaded not Error.
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        everySuspend { gamesRepository.getGameMeta("g1") } returns GameMeta(gameId = "g1")
+
+        val state = loadState(mapOf("gameId" to "g1"))
+
+        assertTrue(state is GamePageViewModel.GamePageData.Data)
+        assertTrue(state.gameMeta is SectionState.Loaded)
+    }
+
+    @Test
+    fun retryGameMeta_recovers_after_error() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        everySuspend { gamesRepository.getGameMeta("g1") } calls { throw Exception("meta down") }
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertTrue((emissions.last() as GamePageViewModel.GamePageData.Data).gameMeta is SectionState.Error)
+
+        val meta = GameMeta(gameId = "g1", players = GameMeta.Players(recent = 1000))
+        everySuspend { gamesRepository.getGameMeta("g1") } returns meta
+        vm.retryGameMeta()
+        runCurrent()
+
+        val recovered = emissions.last() as GamePageViewModel.GamePageData.Data
+        assertTrue(recovered.gameMeta is SectionState.Loaded)
+        assertEquals(meta, recovered.gameMetaOrNull)
+    }
+
+    @Test
+    fun retryDeals_recovers_and_remaps_deal_details() = runTest {
+        everySuspend { gamesRepository.getGameDetails("g1") } calls { throw Exception("deals down") }
+        // A title keeps the page alive (IGDB side) while deals are in Error.
+        everySuspend { igdbRepository.fetchGameDetailsByTitle("Halo Infinite") } returns igdb()
+        val vm = viewModel(mapOf("gameId" to "g1", "title" to "Halo Infinite"))
+        val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
+        runCurrent()
+
+        assertTrue((emissions.last() as GamePageViewModel.GamePageData.Data).deals is SectionState.Error)
+
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal(storeID = 61)))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        vm.retryDeals()
+        runCurrent()
+
+        val recovered = emissions.last() as GamePageViewModel.GamePageData.Data
+        assertTrue(recovered.deals is SectionState.Loaded)
+        assertEquals(details, recovered.gameDetailsOrNull)
+        assertEquals(1, recovered.dealDetails.size)
     }
 }

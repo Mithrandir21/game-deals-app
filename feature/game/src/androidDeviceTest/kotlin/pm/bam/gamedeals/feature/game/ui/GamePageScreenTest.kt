@@ -34,6 +34,10 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_ignore_add_
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_more_actions
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_stats_empty
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 
 /**
@@ -67,10 +71,12 @@ class GamePageScreenTest {
 
     private fun dataState(title: String = TITLE) = GamePageData.Data(
         title = title,
-        gameDetails = GameDetails(
-            info = GameDetails.GameInfo(title = title, steamAppID = null, artwork = GameArtwork(banner300 = "t")),
-            cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = 0.0, priceDenominated = "$0", date = "2026-01-01"),
-            deals = persistentListOf(),
+        deals = SectionState.Loaded(
+            GameDetails(
+                info = GameDetails.GameInfo(title = title, steamAppID = null, artwork = GameArtwork(banner300 = "t")),
+                cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = 0.0, priceDenominated = "$0", date = "2026-01-01"),
+                deals = persistentListOf(),
+            )
         ),
     )
 
@@ -158,6 +164,28 @@ class GamePageScreenTest {
         verify(exactly = 1) { onSearchByTitle(TITLE) }
     }
 
+    @Test
+    fun statsTabShowsEmptyMessageWhenNoMeta() {
+        // Default dataState has no game meta (gameMeta = Loaded(null)) → Stats tab is genuinely empty.
+        setContent(dataState())
+
+        composeTestRule.onNodeWithText(labels.statsTab).performClick()
+
+        composeTestRule.onNodeWithText(labels.statsEmpty).assertIsDisplayed()
+    }
+
+    @Test
+    fun statsTabErrorShowsRetryAndDispatches() {
+        setContent(dataState().copy(gameMeta = SectionState.Error))
+
+        composeTestRule.onNodeWithText(labels.statsTab).performClick()
+
+        composeTestRule.onNodeWithText(labels.sectionError).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.retry).performClick()
+
+        verify(exactly = 1) { viewModel.retryGameMeta() }
+    }
+
     private data class Labels(
         val loading: String,
         val errorMsg: String,
@@ -168,6 +196,10 @@ class GamePageScreenTest {
         val ignoreAdd: String,
         val searchButton: String,
         val noMatchMessage: String,
+        val statsTab: String,
+        val statsEmpty: String,
+        val sectionError: String,
+        val retry: String,
     ) {
         companion object {
             @Composable
@@ -181,6 +213,10 @@ class GamePageScreenTest {
                 ignoreAdd = stringResource(Res.string.game_screen_ignore_add_action),
                 searchButton = stringResource(Res.string.game_details_no_match_search_button),
                 noMatchMessage = stringResource(Res.string.game_details_no_match_message, TITLE),
+                statsTab = stringResource(Res.string.game_page_tab_stats),
+                statsEmpty = stringResource(Res.string.game_page_stats_empty),
+                sectionError = stringResource(Res.string.game_page_section_error),
+                retry = stringResource(Res.string.game_screen_data_loading_error_retry),
             )
         }
     }

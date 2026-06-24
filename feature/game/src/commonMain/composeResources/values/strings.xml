@@ -112,6 +112,14 @@
     <string name="game_page_regions_error">Couldn't load regional prices.</string>
     <string name="game_page_regions_loading_cd">Loading regional prices</string>
 
+    <!-- Per-tab empty / error states -->
+    <string name="game_page_prices_empty">No deals available right now.</string>
+    <string name="game_page_history_empty">No price history yet.</string>
+    <string name="game_page_stats_empty">No stats available.</string>
+    <string name="game_page_overview_empty">No additional details available.</string>
+    <string name="game_page_section_error">Couldn't load. Check your connection and try again.</string>
+    <string name="game_page_section_loading_cd">Loading</string>
+
     <!-- Game Page sections (Phase 6) -->
     <string name="game_page_section_reviews">Reviews</string>
     <string name="game_page_section_players">Players</string>
