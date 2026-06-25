@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Backs the Collection sub-screen (#274/#275). Observes the auth-gated, Room-backed collection id set so the
@@ -43,7 +43,7 @@ internal class CollectionListViewModel(
                 if (!entries.keys.containsAll(ids)) {
                     if (entries.isEmpty()) uiState.update { it.copy(loading = true) }
                     entries = runCatching { collectionRepository.getCollection() }
-                        .getOrElse { fatal(logger, it); emptyList() }
+                        .getOrElse { error(logger, it); emptyList() }
                         .associate { it.gameId to GameListItem(it.gameId, it.title, it.artwork.thumbnail) }
                 }
                 uiState.update {

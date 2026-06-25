@@ -18,7 +18,7 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositor
 import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * One game inside a followed series — its IGDB id (for navigation) + cover (for the tile). When the game is
@@ -109,7 +109,7 @@ internal class FollowedSeriesViewModel(
     fun refresh() {
         viewModelScope.launch {
             uiState.update { it.copy(refreshing = true) }
-            val onSale = runCatching { franchiseChecker.currentOnSale() }.getOrElse { fatal(logger, it); null }
+            val onSale = runCatching { franchiseChecker.currentOnSale() }.getOrElse { error(logger, it); null }
             if (onSale != null) {
                 runCatching { snapshotStore.replace(onSale) }
                 snapshot.value = onSale.associate { it.igdbGameId to (it.cutPercent to it.priceDenominated) }
@@ -125,7 +125,7 @@ internal class FollowedSeriesViewModel(
     private suspend fun gamesFor(franchiseId: Long): List<FollowedSeriesGame> =
         gamesCache.getOrElse(franchiseId) {
             runCatching { igdbRepository.fetchFranchiseGames(franchiseId, GAMES_PER_FRANCHISE) }
-                .getOrElse { fatal(logger, it); emptyList() }
+                .getOrElse { error(logger, it); emptyList() }
                 .map { game ->
                     FollowedSeriesGame(
                         igdbGameId = game.id,

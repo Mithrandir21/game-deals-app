@@ -19,7 +19,7 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.feature.onboarding.platform.RegionDetector
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Drives the first-run onboarding carousel. Three of the slides are interactive setup steps:
@@ -135,7 +135,7 @@ internal class OnboardingViewModel(
             } catch (ce: CancellationException) {
                 throw ce
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
             } finally {
                 uiState.update { it.copy(signingIn = false) }
             }

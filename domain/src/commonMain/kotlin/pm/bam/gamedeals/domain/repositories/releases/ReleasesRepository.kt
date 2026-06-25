@@ -11,7 +11,7 @@ import pm.bam.gamedeals.domain.source.IgdbSource
 import pm.bam.gamedeals.domain.utils.millisInDay
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /** New releases are a slow-moving feed (24-hour tier — ITAD caching strategy, Phase 1). */
 internal const val RELEASES_TTL_MILLIS = millisInDay
@@ -41,7 +41,7 @@ internal class ReleasesRepositoryImpl(
     override fun observeReleases(): Flow<List<Release>> =
         releasesDao.observeAllReleases()
             .onStart { refreshReleases() }
-            .onError { fatal(logger, it) }
+            .onError { error(logger, it) }
 
     override suspend fun refreshReleases() {
         val refreshed = cache.refreshIfNeeded()

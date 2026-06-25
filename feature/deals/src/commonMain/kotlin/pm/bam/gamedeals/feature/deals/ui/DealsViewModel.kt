@@ -57,7 +57,7 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
 /** Minimum time the search spinner stays up so a fast result doesn't flash (ported from the Search screen). */
@@ -287,7 +287,7 @@ internal class DealsViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
-            fatal(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
+            error(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
             uiState.update {
                 DealsScreenData(status = DealsScreenData.Status.ERROR, sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
             }
@@ -312,7 +312,7 @@ internal class DealsViewModel(
             } catch (c: CancellationException) {
                 throw c
             } catch (t: Throwable) {
-                fatal(logger, t) { "Failed to load more deals" }
+                error(logger, t) { "Failed to load more deals" }
                 uiState.update { it.copy(appending = false) }
                 events.tryEmit(DealsUiEvent.LoadMoreError)
             }

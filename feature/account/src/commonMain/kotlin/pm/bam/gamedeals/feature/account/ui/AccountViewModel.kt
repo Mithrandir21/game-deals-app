@@ -20,7 +20,7 @@ import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Drives the Account hub (epic #272, P1.2): observes the ITAD auth state and exposes the data the hub
@@ -112,7 +112,7 @@ internal class AccountViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
             } finally {
                 uiState.update { it.copy(loggingIn = false) }
             }

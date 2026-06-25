@@ -35,7 +35,7 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
 /**
@@ -126,7 +126,7 @@ internal class DiscoverResultsViewModel(
             } catch (c: CancellationException) {
                 throw c
             } catch (t: Throwable) {
-                fatal(logger, t) { "Failed to load tag-discovery results (filter=$filter)" }
+                error(logger, t) { "Failed to load tag-discovery results (filter=$filter)" }
                 uiState.update { ResultsScreenData(status = ResultsScreenData.Status.ERROR) }
             }
         }
@@ -151,7 +151,7 @@ internal class DiscoverResultsViewModel(
             } catch (c: CancellationException) {
                 throw c
             } catch (t: Throwable) {
-                fatal(logger, t) { "Failed to load more tag-discovery results" }
+                error(logger, t) { "Failed to load more tag-discovery results" }
                 uiState.update { it.copy(appending = false) }
                 events.tryEmit(DiscoverResultsUiEvent.LoadMoreError)
             }

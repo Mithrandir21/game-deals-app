@@ -58,7 +58,7 @@ import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
 internal const val LIMIT_HERO = 6
@@ -285,7 +285,7 @@ internal class HomeViewModel(
     /** Runs a section's fetch best-effort: failures are logged and yield an empty (hidden) section. */
     private suspend fun <T> section(block: suspend () -> List<T>): ImmutableList<T> =
         runCatching { block() }
-            .onFailure { fatal(logger, it) { "Home section failed" } }
+            .onFailure { error(logger, it) { "Home section failed" } }
             .getOrElse { emptyList() }
             .toImmutableList()
 

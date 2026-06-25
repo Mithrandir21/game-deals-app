@@ -4,6 +4,7 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.Logger
 
 /**
@@ -24,15 +25,15 @@ suspend fun applyLibraryLifecycle(
     logger: Logger,
 ) = when (state) {
     is AuthState.LoggedIn -> {
-        runCatching { waitlist.getWaitlist() }.onFailure { logger.fatalThrowable(it) }
-        runCatching { collection.getCollection() }.onFailure { logger.fatalThrowable(it) }
-        runCatching { ignored.getIgnored() }.onFailure { logger.fatalThrowable(it) }
+        runCatching { waitlist.getWaitlist() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Waitlist sync failed" } }
+        runCatching { collection.getCollection() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Collection sync failed" } }
+        runCatching { ignored.getIgnored() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Ignored sync failed" } }
         Unit
     }
     AuthState.LoggedOut -> {
-        runCatching { waitlist.clearLocal() }.onFailure { logger.fatalThrowable(it) }
-        runCatching { collection.clearLocal() }.onFailure { logger.fatalThrowable(it) }
-        runCatching { ignored.clearLocal() }.onFailure { logger.fatalThrowable(it) }
+        runCatching { waitlist.clearLocal() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Waitlist clear-local failed" } }
+        runCatching { collection.clearLocal() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Collection clear-local failed" } }
+        runCatching { ignored.clearLocal() }.onFailure { logger.log(LogLevel.ERROR, tag = "LibraryLifecycle", throwable = it) { "Ignored clear-local failed" } }
         Unit
     }
 }
