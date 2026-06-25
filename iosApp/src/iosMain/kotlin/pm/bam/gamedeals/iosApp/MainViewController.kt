@@ -42,6 +42,7 @@ import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.common.imaging.appCoilLogger
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
@@ -182,6 +183,7 @@ private fun bootstrapKoin() {
         single<ImageLoader> {
             ImageLoader.Builder(PlatformContext.INSTANCE)
                 .crossfade(true)
+                .logger(appCoilLogger(get(), debug = Platform.isDebugBinary))
                 .components { add(KtorNetworkFetcherFactory()) }
                 .build()
         }

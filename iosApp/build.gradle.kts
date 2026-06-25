@@ -41,6 +41,7 @@ kotlin {
             api(project(":domain"))
             implementation(project(":common"))
             implementation(project(":common:ui"))
+            implementation(project(":common:imaging"))
             implementation(project(":logging"))
             implementation(project(":remote"))
             implementation(project(":remote:gamerpower"))
