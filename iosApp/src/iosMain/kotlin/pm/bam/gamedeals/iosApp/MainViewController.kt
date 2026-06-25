@@ -175,6 +175,7 @@ private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers
 private val sentryUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val analyticsUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+@OptIn(ExperimentalNativeApi::class)
 private fun bootstrapKoin() {
     if (koinStarted) return
     koinStarted = true

@@ -70,7 +70,7 @@ class IosAuthBrowserLauncher : AuthBrowserLauncher {
         // ASWebAuthenticationSessionErrorCodeCanceledLogin == 1
         error != null -> if (error.code == 1L) AuthRedirectResult.Cancelled else AuthRedirectResult.Failed(error.localizedDescription)
         callbackURL != null -> {
-            val items = NSURLComponents(uRL = callbackURL, resolvingAgainstBaseURL = false)?.queryItems.orEmpty()
+            val items = NSURLComponents(uRL = callbackURL, resolvingAgainstBaseURL = false).queryItems.orEmpty()
             val code = items.value("code")
             val errorParam = items.value("error")
             when {

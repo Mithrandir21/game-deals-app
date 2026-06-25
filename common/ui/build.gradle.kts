@@ -3,6 +3,13 @@ plugins {
     alias(libs.plugins.gamedeals.kmp.library.compose)
 }
 
+// This module's Gradle name is "ui", which collides with org.jetbrains.compose.ui:ui — both produce a
+// klib whose unique_name is "ui_commonMain", triggering a KLIB resolver duplicate warning during the iOS
+// metadata compile. A distinct archives name disambiguates the klib without renaming the module path.
+base {
+    archivesName.set("common-ui")
+}
+
 kotlin {
     sourceSets {
         commonMain.dependencies {
