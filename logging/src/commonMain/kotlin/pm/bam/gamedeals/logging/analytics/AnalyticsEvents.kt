@@ -44,6 +44,11 @@ object AnalyticsEvents {
     const val MATURE_OPT_IN_CHANGED = "mature_opt_in_changed"
     /** Deals-tab filter applied. Carries a summary (active_count + the set dimensions). */
     const val DEALS_FILTER_CHANGED = "deals_filter_changed"
+    /** App theme preference changed. Carries `mode` (LIGHT/DARK/SYSTEM). */
+    const val THEME_MODE_CHANGED = "theme_mode_changed"
+
+    /** Recently-viewed history cleared (`scope` = all/one). */
+    const val RECENTLY_VIEWED_CLEARED = "recently_viewed_cleared"
 
     // --- Click-throughs to external stores / claims. ---
     /** User opened a deal's store link. Carries `game_id`, `store_id`, `store_name`, `discount_pct`. */

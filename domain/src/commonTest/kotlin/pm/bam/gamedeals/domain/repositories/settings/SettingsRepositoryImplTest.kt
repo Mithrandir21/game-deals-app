@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import pm.bam.gamedeals.common.storage.Storage
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.logging.analytics.Analytics
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -113,5 +114,34 @@ class SettingsRepositoryImplTest {
         assertEquals(false, analytics.consent)
         // Revoke just stops sending — we keep the local id/queue, so reset() is never called.
         assertEquals(0, analytics.resetCount)
+    }
+
+    @Test
+    fun theme_mode_defaults_to_system() = runTest {
+        assertEquals(ThemeMode.SYSTEM, repository.getThemeMode())
+        assertEquals(ThemeMode.SYSTEM, repository.observeThemeMode().first())
+    }
+
+    @Test
+    fun setting_theme_mode_persists_as_name_and_emits() = runTest {
+        repository.setThemeMode(ThemeMode.DARK)
+
+        assertEquals(ThemeMode.DARK.name, backing[THEME_MODE_KEY])
+        assertEquals(ThemeMode.DARK, repository.getThemeMode())
+        assertEquals(ThemeMode.DARK, repository.observeThemeMode().first())
+    }
+
+    @Test
+    fun a_persisted_theme_mode_is_loaded_on_first_access() = runTest {
+        backing[THEME_MODE_KEY] = ThemeMode.LIGHT.name
+
+        assertEquals(ThemeMode.LIGHT, repository.getThemeMode())
+    }
+
+    @Test
+    fun an_unrecognised_stored_theme_mode_falls_back_to_system() = runTest {
+        backing[THEME_MODE_KEY] = "PLAID"
+
+        assertEquals(ThemeMode.SYSTEM, repository.getThemeMode())
     }
 }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
@@ -67,6 +68,13 @@ internal class AccountViewModel(
         viewModelScope.launch {
             settingsRepository.observeAnalyticsConsent().collect { consent ->
                 uiState.update { it.copy(analyticsConsent = consent) }
+            }
+        }
+
+        // App theme preference (#193) — drives the app root's dark/light scheme; defaults to SYSTEM.
+        viewModelScope.launch {
+            settingsRepository.observeThemeMode().collect { mode ->
+                uiState.update { it.copy(themeMode = mode) }
             }
         }
 
@@ -137,6 +145,11 @@ internal class AccountViewModel(
         viewModelScope.launch { settingsRepository.setAnalyticsConsent(enabled) }
     }
 
+    /** Set the app theme preference (persisted; the app root re-themes live). */
+    fun onSetThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settingsRepository.setThemeMode(mode) }
+    }
+
     @Immutable
     data class AccountScreenData(
         val loggedIn: Boolean = false,
@@ -156,5 +169,7 @@ internal class AccountViewModel(
         val matureOptIn: Boolean = false,
         /** Analytics (PostHog) consent — off by default; EU users opt in here or on the onboarding slide. */
         val analyticsConsent: Boolean = false,
+        /** App theme preference (#193) — defaults to SYSTEM (follow the OS). */
+        val themeMode: ThemeMode = ThemeMode.SYSTEM,
     )
 }

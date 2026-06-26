@@ -1,12 +1,14 @@
 package pm.bam.gamedeals.iosApp
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
@@ -58,6 +60,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
@@ -366,12 +369,19 @@ private fun startLibraryLifecycle() {
 
 @Composable
 private fun App() {
-    GameDealsTheme {
+    val settings = remember { KoinPlatform.getKoin().get<SettingsRepository>() }
+    // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the Storage read lands.
+    val themeMode by settings.observeThemeMode().collectAsState(initial = ThemeMode.SYSTEM)
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    GameDealsTheme(darkTheme = darkTheme) {
         CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
             // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast) Storage read
             // is in flight — render nothing rather than flashing Home and bouncing into onboarding.
             val startDestination by produceState<Destination?>(initialValue = null) {
-                val settings = KoinPlatform.getKoin().get<SettingsRepository>()
                 value = if (settings.getOnboardingCompleted()) Destination.Home else Destination.Onboarding
             }
             startDestination?.let { AppNavHost(startDestination = it) }

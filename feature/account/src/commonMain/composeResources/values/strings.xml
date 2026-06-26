@@ -31,6 +31,7 @@
     <string name="account_row_notes">My notes</string>
     <string name="account_row_linked">Linked accounts</string>
     <string name="account_row_region">Region</string>
+    <string name="account_row_theme">Theme</string>
     <string name="account_row_how_it_works">How it works</string>
     <string name="account_row_mature">Show adult titles</string>
     <string name="account_row_mature_desc">Include mature-rated games in Deals and Bundles</string>
@@ -44,6 +45,12 @@
 
     <!-- Region picker bottom sheet -->
     <string name="account_region_picker_title">Select region</string>
+
+    <!-- Theme picker bottom sheet (#193) -->
+    <string name="account_theme_picker_title">Theme</string>
+    <string name="account_theme_light">Light</string>
+    <string name="account_theme_dark">Dark</string>
+    <string name="account_theme_system">System default</string>
 
     <!-- Website-only settings (P1.4, #276) — opened on isthereanydeal.com -->
     <string name="account_section_website">On IsThereAnyDeal.com</string>

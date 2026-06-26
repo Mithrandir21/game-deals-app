@@ -51,6 +51,7 @@ import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequest
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
 import pm.bam.gamedeals.feature.account.generated.resources.account_reconnect_action
@@ -74,6 +75,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_d
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_mature_switch_description
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_notifications
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_region
+import pm.bam.gamedeals.feature.account.generated.resources.account_row_theme
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_website_settings_desc
 import pm.bam.gamedeals.feature.account.generated.resources.account_section_app
@@ -116,6 +118,7 @@ internal fun AccountScreen(
         onCountrySelected = viewModel::onCountrySelected,
         onSetMature = viewModel::onSetMatureOptIn,
         onSetAnalytics = viewModel::onSetAnalyticsConsent,
+        onSetTheme = viewModel::onSetThemeMode,
         onOpenWaitlist = onOpenWaitlist,
         onOpenCollection = onOpenCollection,
         onOpenNotifications = onOpenNotifications,
@@ -137,6 +140,7 @@ private fun AccountScreenContent(
     onCountrySelected: (Country) -> Unit,
     onSetMature: (Boolean) -> Unit,
     onSetAnalytics: (Boolean) -> Unit,
+    onSetTheme: (ThemeMode) -> Unit,
     onOpenWaitlist: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -148,9 +152,12 @@ private fun AccountScreenContent(
     onReplayOnboarding: () -> Unit,
 ) {
     var showRegionPicker by rememberSaveable { mutableStateOf(false) }
+    var showThemePicker by rememberSaveable { mutableStateOf(false) }
     val onOpenRegion = { showRegionPicker = true }
+    val onOpenTheme = { showThemePicker = true }
     val onOpenPrivacyPolicy = { onOpenWebsite(PRIVACY_POLICY_URL) }
     val regionName = data.selectedCountry?.name
+    val themeName = themeModeLabel(data.themeMode)
 
     if (!data.loggedIn) {
         LoggedOutContent(
@@ -159,6 +166,8 @@ private fun AccountScreenContent(
             onOpenFollowedSeries = onOpenFollowedSeries,
             regionName = regionName,
             onOpenRegion = onOpenRegion,
+            themeName = themeName,
+            onOpenTheme = onOpenTheme,
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
             analyticsConsent = data.analyticsConsent,
@@ -182,6 +191,8 @@ private fun AccountScreenContent(
             onOpenLinkedAccounts = onOpenLinkedAccounts,
             onOpenRegion = onOpenRegion,
             regionName = regionName,
+            themeName = themeName,
+            onOpenTheme = onOpenTheme,
             matureOptIn = data.matureOptIn,
             onSetMature = onSetMature,
             analyticsConsent = data.analyticsConsent,
@@ -200,6 +211,14 @@ private fun AccountScreenContent(
             onDismiss = { showRegionPicker = false },
         )
     }
+
+    if (showThemePicker) {
+        ThemePickerSheet(
+            selected = data.themeMode,
+            onSelect = { onSetTheme(it); showThemePicker = false },
+            onDismiss = { showThemePicker = false },
+        )
+    }
 }
 
 @Composable
@@ -209,6 +228,8 @@ private fun LoggedOutContent(
     onOpenFollowedSeries: () -> Unit,
     regionName: String?,
     onOpenRegion: () -> Unit,
+    themeName: String,
+    onOpenTheme: () -> Unit,
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
     analyticsConsent: Boolean,
@@ -226,6 +247,7 @@ private fun LoggedOutContent(
         item { SectionHeader(stringResource(Res.string.account_section_discovery)) }
         item { HubRow(label = stringResource(Res.string.account_row_followed_series), onClick = onOpenFollowedSeries) }
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
+        item { HubRow(label = stringResource(Res.string.account_row_theme), subtitle = themeName, onClick = onOpenTheme) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
         item { AnalyticsConsentRow(checked = analyticsConsent, onCheckedChange = onSetAnalytics, onOpenPrivacyPolicy = onOpenPrivacyPolicy) }
@@ -272,6 +294,8 @@ private fun LoggedInContent(
     onOpenLinkedAccounts: () -> Unit,
     onOpenRegion: () -> Unit,
     regionName: String?,
+    themeName: String,
+    onOpenTheme: () -> Unit,
     matureOptIn: Boolean,
     onSetMature: (Boolean) -> Unit,
     analyticsConsent: Boolean,
@@ -328,6 +352,7 @@ private fun LoggedInContent(
         }
 
         item { SectionHeader(stringResource(Res.string.account_section_app)) }
+        item { HubRow(label = stringResource(Res.string.account_row_theme), subtitle = themeName, onClick = onOpenTheme) }
         item { HubRow(label = stringResource(Res.string.account_row_region), subtitle = regionName, onClick = onOpenRegion) }
         item { MatureContentRow(checked = matureOptIn, onCheckedChange = onSetMature) }
         item { AnalyticsConsentRow(checked = analyticsConsent, onCheckedChange = onSetAnalytics, onOpenPrivacyPolicy = onOpenPrivacyPolicy) }
@@ -559,6 +584,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
             onCountrySelected = {},
             onSetMature = {},
             onSetAnalytics = {},
+            onSetTheme = {},
             onOpenWaitlist = {},
             onOpenCollection = {},
             onOpenNotifications = {},
