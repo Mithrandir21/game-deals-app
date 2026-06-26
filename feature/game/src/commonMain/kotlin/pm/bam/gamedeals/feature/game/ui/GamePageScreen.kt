@@ -1233,7 +1233,7 @@ private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
     }
 }
 
-private val RATING_ICON_HEIGHT = 56.dp
+private val RATING_ICON_HEIGHT = 40.dp
 
 /** The bundled official badge for a rating, or null when we don't ship that one (e.g. ESRB Rating Pending). */
 private fun ageRatingArt(rating: IgdbGame.IgdbAgeRating): DrawableResource? = when (rating.board) {
