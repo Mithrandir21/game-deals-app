@@ -295,7 +295,7 @@ class IgdbGamesApi(
                 game.platforms.name, game.platforms.abbreviation,
                 game.videos.name, game.videos.video_id,
                 game.franchises.id, game.franchises.name, game.franchises.games.id, game.franchises.games.name, game.franchises.games.cover.image_id,
-                game.age_ratings.rating, game.age_ratings.category,
+                game.age_ratings.organization, game.age_ratings.rating_category,
                 game.game_modes.name,
                 game.external_games.uid, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
@@ -319,7 +319,7 @@ class IgdbGamesApi(
                 platforms.name, platforms.abbreviation,
                 videos.name, videos.video_id,
                 franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
-                age_ratings.rating, age_ratings.category,
+                age_ratings.organization, age_ratings.rating_category,
                 game_modes.name,
                 external_games.uid, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
@@ -353,7 +353,7 @@ class IgdbGamesApi(
                     platforms.name, platforms.abbreviation,
                     videos.name, videos.video_id,
                     franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
-                    age_ratings.rating, age_ratings.category,
+                    age_ratings.organization, age_ratings.rating_category,
                     game_modes.name;
                 where name = "$escaped"; limit 1;
             """.trimIndent()
@@ -378,7 +378,7 @@ class IgdbGamesApi(
                     platforms.name, platforms.abbreviation,
                     videos.name, videos.video_id,
                     franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
-                    age_ratings.rating, age_ratings.category,
+                    age_ratings.organization, age_ratings.rating_category,
                     game_modes.name;
                 limit 1;
             """.trimIndent()

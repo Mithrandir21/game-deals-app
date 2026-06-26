@@ -128,40 +128,40 @@ private fun RemoteIgdbSimilarGame.toIgdbSimilarGameOrNull(): IgdbGame.IgdbSimila
     return IgdbGame.IgdbSimilarGame(id = id, name = n, coverImageId = cover?.imageId)
 }
 
-// IGDB age-rating organisation (`category`) ids we surface; everything else (CERO/USK/GRAC/…) is dropped.
-private const val ESRB_CATEGORY = 1
-private const val PEGI_CATEGORY = 2
+// IGDB age-rating `organization` ids we surface; everything else (CERO/USK/GRAC/…) is dropped.
+private const val ESRB_ORG = 1
+private const val PEGI_ORG = 2
 
 /**
  * Maps an IGDB `age_ratings` row to an ESRB/PEGI [IgdbGame.IgdbAgeRating], or null for other boards /
- * unknown codes. `rating` is a flat enum spanning all organisations; we only translate the values that
- * belong to the row's [RemoteIgdbAgeRating.category]. NB: IGDB has a deprecation in flight on these
- * integer fields (the newer shape is `organization`/`rating_category`) — if the live query stops
- * returning data, switch the query + this mapping to the new fields.
+ * unknown codes. `rating_category` ids are board-specific; values verified live against IGDB's
+ * `/v4/age_rating_categories` table (2026-06-26).
  */
-private fun RemoteIgdbAgeRating.toIgdbAgeRatingOrNull(): IgdbGame.IgdbAgeRating? = when (category) {
-    ESRB_CATEGORY -> esrbCode(rating)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.ESRB, it) }
-    PEGI_CATEGORY -> pegiCode(rating)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.PEGI, it) }
+private fun RemoteIgdbAgeRating.toIgdbAgeRatingOrNull(): IgdbGame.IgdbAgeRating? = when (organization) {
+    ESRB_ORG -> esrbCode(ratingCategory)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.ESRB, it) }
+    PEGI_ORG -> pegiCode(ratingCategory)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.PEGI, it) }
     else -> null
 }
 
-private fun esrbCode(rating: Int?): String? = when (rating) {
-    6 -> "RP"   // Rating Pending
-    7 -> "EC"   // Early Childhood
-    8 -> "E"    // Everyone
-    9 -> "E10"  // Everyone 10+
-    10 -> "T"   // Teen
-    11 -> "M"   // Mature
-    12 -> "AO"  // Adults Only
+// /v4/age_rating_categories ids for organization = ESRB (1).
+private fun esrbCode(ratingCategory: Int?): String? = when (ratingCategory) {
+    1 -> "RP"   // Rating Pending
+    2 -> "EC"   // Early Childhood
+    3 -> "E"    // Everyone
+    4 -> "E10+" // Everyone 10+
+    5 -> "T"    // Teen
+    6 -> "M"    // Mature
+    7 -> "AO"   // Adults Only
     else -> null
 }
 
-private fun pegiCode(rating: Int?): String? = when (rating) {
-    1 -> "3"
-    2 -> "7"
-    3 -> "12"
-    4 -> "16"
-    5 -> "18"
+// /v4/age_rating_categories ids for organization = PEGI (2).
+private fun pegiCode(ratingCategory: Int?): String? = when (ratingCategory) {
+    8 -> "3"
+    9 -> "7"
+    10 -> "12"
+    11 -> "16"
+    12 -> "18"
     else -> null
 }
 

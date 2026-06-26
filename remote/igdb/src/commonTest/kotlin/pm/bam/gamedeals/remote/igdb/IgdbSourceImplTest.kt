@@ -624,8 +624,8 @@ class IgdbSourceImplTest {
             }
         ]"""
 
-        // age_ratings: ESRB M (cat 1 / rating 11), PEGI 18 (cat 2 / rating 5), a CERO row (cat 3 — dropped),
-        // and a duplicate ESRB M (deduped). game_modes includes a nameless row (dropped).
+        // age_ratings (current IGDB shape): ESRB M (org 1 / cat 6), PEGI 18 (org 2 / cat 12), a CERO row
+        // (org 3 — dropped), and a duplicate ESRB M (deduped). game_modes includes a nameless row (dropped).
         // language=JSON
         const val ONE_GAME_RATINGS_BODY = """[
             {
@@ -633,10 +633,10 @@ class IgdbSourceImplTest {
                 "name": "DOOM Eternal",
                 "summary": "Rip and tear",
                 "age_ratings": [
-                    {"id": 1, "category": 1, "rating": 11},
-                    {"id": 2, "category": 2, "rating": 5},
-                    {"id": 3, "category": 3, "rating": 13},
-                    {"id": 4, "category": 1, "rating": 11}
+                    {"id": 1, "organization": 1, "rating_category": 6},
+                    {"id": 2, "organization": 2, "rating_category": 12},
+                    {"id": 3, "organization": 3, "rating_category": 17},
+                    {"id": 4, "organization": 1, "rating_category": 6}
                 ],
                 "game_modes": [
                     {"id": 1, "name": "Single player"},

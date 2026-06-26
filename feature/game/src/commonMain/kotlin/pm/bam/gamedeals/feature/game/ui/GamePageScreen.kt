@@ -1192,7 +1192,7 @@ private fun GameModesSection(modes: List<String>) {
     }
 }
 
-/** ESRB/PEGI age ratings (IGDB `age_ratings`) rendered as board-styled badges ("ESRB M", "PEGI 18") (#199). */
+/** ESRB/PEGI age ratings (IGDB `age_ratings`) as plain, readable text chips — "ESRB M", "PEGI 18" (#199). */
 @Composable
 private fun AgeRatingsSection(ratings: List<IgdbGame.IgdbAgeRating>) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
@@ -1200,48 +1200,16 @@ private fun AgeRatingsSection(ratings: List<IgdbGame.IgdbAgeRating>) {
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
-            items(ratings) { rating -> AgeRatingBadge(rating) }
+            items(ratings) { rating ->
+                val label = when (rating.board) {
+                    IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
+                    IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
+                }
+                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+            }
         }
-    }
-}
-
-/**
- * A single rating badge: a board-coloured rounded square with the rating code, captioned with the board.
- * PEGI is colour-coded by age (green → amber → red); ESRB uses a neutral container. (Stand-in for the
- * official trademarked artwork, which can be dropped in later.)
- */
-@Composable
-private fun AgeRatingBadge(rating: IgdbGame.IgdbAgeRating) {
-    val boardLabel = when (rating.board) {
-        IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB"
-        IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI"
-    }
-    val pegiColor = when (rating.code) {
-        "3", "7" -> Color(0xFF4CAF50)
-        "12", "16" -> Color(0xFFFF9800)
-        "18" -> Color(0xFFF44336)
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val container = if (rating.board == IgdbGame.IgdbAgeRating.Board.PEGI) pegiColor else MaterialTheme.colorScheme.surfaceVariant
-    val onContainer = if (rating.board == IgdbGame.IgdbAgeRating.Board.PEGI) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        modifier = Modifier.clearAndSetSemantics { contentDescription = "$boardLabel ${rating.code}" },
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                .background(container)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
-        ) {
-            Text(text = rating.code, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = onContainer)
-        }
-        Text(text = boardLabel, style = MaterialTheme.typography.labelSmall)
     }
 }
 
