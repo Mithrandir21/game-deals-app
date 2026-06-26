@@ -64,6 +64,7 @@ class DealsScreenTest {
         every { viewModel.searchQuery } returns MutableStateFlow("")
         every { viewModel.searchResults } returns MutableStateFlow<SearchResultsState>(SearchResultsState.Idle)
         every { viewModel.gamePeek } returns MutableStateFlow<GamePeekSheetData?>(null)
+        every { viewModel.discoverEnabled } returns MutableStateFlow(false)
         every { viewModel.events } returns MutableSharedFlow()
     }
 
@@ -130,6 +131,8 @@ class DealsScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             DealsScreenData(status = DealsScreenData.Status.DATA, deals = persistentListOf())
         )
+        // The Discover entry point is feature-flagged off by default; enable it so the button renders.
+        every { viewModel.discoverEnabled } returns MutableStateFlow(true)
         val goToDiscover = mockk<() -> Unit>(relaxed = true)
 
         setContent(goToDiscover = goToDiscover)

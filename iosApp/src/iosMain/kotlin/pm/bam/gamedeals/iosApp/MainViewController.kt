@@ -93,6 +93,7 @@ import pm.bam.gamedeals.logging.analytics.configurePostHog
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -174,6 +175,7 @@ private var libraryLifecycleStarted = false
 private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val sentryUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val analyticsUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val featureFlagsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 @OptIn(ExperimentalNativeApi::class)
 private fun bootstrapKoin() {
@@ -241,8 +243,28 @@ private fun bootstrapKoin() {
 
     attachSentryUser()
     startAnalytics()
+    startFeatureFlags()
     startNotificationLifecycle()
     startLibraryLifecycle()
+}
+
+/**
+ * Kicks an initial feature-flag load once Koin is up — mirrors Android's `startFeatureFlags`. Deliberately **not**
+ * gated on analytics consent: flag-fetch is remote config, not tracking (the SDK is set up
+ * `sendFeatureFlagEvent = false`, so a flag read emits nothing), so a gated feature can roll out to users who
+ * haven't opted into analytics. No-op when analytics is disabled (the binding is NoOp). Fire-and-forget; failures
+ * are logged, never crash.
+ */
+private fun startFeatureFlags() {
+    featureFlagsScope.launch {
+        try {
+            KoinPlatform.getKoin().get<FeatureFlags>().refresh()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to refresh feature flags." } }
+        }
+    }
 }
 
 /**

@@ -180,6 +180,7 @@ internal fun DealsScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
+    val discoverEnabled by viewModel.discoverEnabled.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
 
@@ -212,6 +213,7 @@ internal fun DealsScreen(
         searchResults = searchResults,
         showFilters = showFilters,
         gamePeek = gamePeek,
+        discoverEnabled = discoverEnabled,
         snackbarHostState = snackbarHostState,
         onSelectSortField = { viewModel.setSortField(it) },
         onSelectSortDirection = { viewModel.setSortDirection(it) },
@@ -257,6 +259,7 @@ private fun DealsContent(
     searchResults: SearchResultsState = SearchResultsState.Idle,
     showFilters: Boolean = false,
     gamePeek: GamePeekSheetData? = null,
+    discoverEnabled: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSelectSortField: (DealsSortField) -> Unit,
     onSelectSortDirection: (DealsSortDirection) -> Unit = {},
@@ -334,6 +337,7 @@ private fun DealsContent(
                         activeCount = selectedShops.size + filter.activeCount,
                         onClick = { onShowFiltersChange(true) },
                         onDiscover = onDiscover,
+                        showDiscover = discoverEnabled,
                     )
                 }
 
@@ -564,6 +568,7 @@ private fun FilterBar(
     activeCount: Int,
     onClick: () -> Unit,
     onDiscover: () -> Unit,
+    showDiscover: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -581,9 +586,12 @@ private fun FilterBar(
                 else stringResource(Res.string.deals_filter_button),
             )
         }
-        // Catalogue-wide tag discovery — distinct from the deal-feed filters above.
-        OutlinedButton(onClick = onDiscover) {
-            Text(stringResource(Res.string.deals_discover_by_tag))
+        // Catalogue-wide tag discovery — distinct from the deal-feed filters above. Feature-flagged
+        // (FeatureFlag.DiscoverByTag): hidden until the flag provider enables it (staged rollout).
+        if (showDiscover) {
+            OutlinedButton(onClick = onDiscover) {
+                Text(stringResource(Res.string.deals_discover_by_tag))
+            }
         }
     }
 }

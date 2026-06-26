@@ -51,6 +51,7 @@ import pm.bam.gamedeals.logging.analytics.configurePostHog
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -128,6 +129,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         }
         attachSentryUser()
         startAnalytics()
+        startFeatureFlags()
         warmDomainDatabase()
         runCacheMaintenance()
         runNotificationLifecycle()
@@ -316,6 +318,30 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             } catch (t: Throwable) {
                 try {
                     error(logger, throwable = t) { "Failed to start analytics" }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Kicks an initial feature-flag load once Koin is up. Deliberately **not** gated on analytics consent:
+     * flag-fetch is remote config, not tracking (the SDK is configured `sendFeatureFlagEvent = false`, so a flag
+     * read emits nothing), so a gated feature can roll out to users who haven't opted into analytics. Needs the
+     * [FeatureFlags] binding from Koin, so it runs after [startKoin]. No-op when analytics is disabled (the binding
+     * is NoOp) — also guarded on the key so we don't touch an un-`setup()` SDK. Fire-and-forget on
+     * [applicationScope]; failures are logged, never crash.
+     */
+    private fun startFeatureFlags() {
+        if (BuildConfig.POSTHOG_API_KEY.isEmpty()) return
+        applicationScope.launch {
+            try {
+                get<FeatureFlags>().refresh()
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                try {
+                    error(logger, throwable = t) { "Failed to refresh feature flags" }
                 } catch (_: Throwable) {
                 }
             }
