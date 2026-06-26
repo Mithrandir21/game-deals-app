@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -104,11 +103,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -134,6 +133,17 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.portrait
 import pm.bam.gamedeals.feature.game.generated.resources.Res
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_ao
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_e
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_e10
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_ec
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_m
+import pm.bam.gamedeals.feature.game.generated.resources.esrb_t
+import pm.bam.gamedeals.feature.game.generated.resources.pegi_12
+import pm.bam.gamedeals.feature.game.generated.resources.pegi_16
+import pm.bam.gamedeals.feature.game.generated.resources.pegi_18
+import pm.bam.gamedeals.feature.game.generated.resources.pegi_3
+import pm.bam.gamedeals.feature.game.generated.resources.pegi_7
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_developer
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_porting
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_publisher
@@ -574,6 +584,8 @@ private fun HeroSection(data: GamePageData.Data) {
                 Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
             }
             if (igdb != null) RatingsRow(igdb)
+            // Age-rating badges sit just under the Players/Critics ratings in the header (#199).
+            if (igdb != null && igdb.ageRatings.isNotEmpty()) AgeRatingsRow(igdb.ageRatings)
         }
     }
 }
@@ -688,8 +700,6 @@ private fun OverviewTab(
             is SectionState.Loaded -> {
                 val game = igdb.value
                 if (game != null) {
-                    // Age ratings lead the card, label-free (the ESRB/PEGI tiles are self-explanatory).
-                    if (game.ageRatings.isNotEmpty()) AgeRatingsRow(game.ageRatings)
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
                     if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
                     if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
@@ -1197,87 +1207,52 @@ private fun GameModesSection(modes: List<String>) {
 }
 
 /**
- * ESRB/PEGI age ratings (IGDB `age_ratings`) drawn as compact rating tiles that resemble the official
- * badges, shown in the title header under the review numbers (#199). No bundled artwork — each tile is
- * rendered from the [IgdbGame.IgdbAgeRating.code], so it stays crisp at any size and themes cleanly. Wraps
- * to a second line if both boards are present and the header is narrow.
+ * ESRB/PEGI age ratings (IGDB `age_ratings`) shown as the official rating badges — bundled vector drawables
+ * traced from Wikimedia Commons — in the title header, under the review numbers (#199). Ratings we don't
+ * ship an asset for (e.g. ESRB "Rating Pending") are simply omitted. Wraps if the header is narrow.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
-        // Two-arg spacedBy: keeps the gap between tiles AND centres the whole group across the page.
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
     ) {
         ratings.forEach { rating ->
-            when (rating.board) {
-                IgdbGame.IgdbAgeRating.Board.ESRB -> EsrbRatingTile(rating.code)
-                IgdbGame.IgdbAgeRating.Board.PEGI -> PegiRatingTile(rating.code)
+            val art = ageRatingArt(rating) ?: return@forEach
+            val cd = when (rating.board) {
+                IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
+                IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
             }
+            Image(
+                painter = painterResource(art),
+                contentDescription = cd,
+                modifier = Modifier.height(RATING_ICON_HEIGHT),
+            )
         }
     }
 }
 
-private val RATING_TILE_HEIGHT = 64.dp
-private val RATING_TILE_SHAPE = RoundedCornerShape(6.dp)
-private val RATING_TILE_INK = Color(0xFF1A1A1A)
+private val RATING_ICON_HEIGHT = 56.dp
 
-/** ESRB tile: white card with a black border, the big black rating code, and a black "ESRB" footer. */
-@Composable
-private fun EsrbRatingTile(code: String) {
-    Column(
-        modifier = Modifier
-            .height(RATING_TILE_HEIGHT)
-            .width(IntrinsicSize.Max)
-            .clip(RATING_TILE_SHAPE)
-            .background(Color.White)
-            .border(1.5.dp, RATING_TILE_INK, RATING_TILE_SHAPE)
-            .clearAndSetSemantics { contentDescription = "ESRB $code" },
-    ) {
-        Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 28.sp, maxLines = 1)
-        }
-        RatingTileFooter(label = "ESRB", background = RATING_TILE_INK)
+/** The bundled official badge for a rating, or null when we don't ship that one (e.g. ESRB Rating Pending). */
+private fun ageRatingArt(rating: IgdbGame.IgdbAgeRating): DrawableResource? = when (rating.board) {
+    IgdbGame.IgdbAgeRating.Board.ESRB -> when (rating.code) {
+        "EC" -> Res.drawable.esrb_ec
+        "E" -> Res.drawable.esrb_e
+        "E10+" -> Res.drawable.esrb_e10
+        "T" -> Res.drawable.esrb_t
+        "M" -> Res.drawable.esrb_m
+        "AO" -> Res.drawable.esrb_ao
+        else -> null
     }
-}
-
-/** PEGI tile: colour-by-age top band with the big white number, over a black "PEGI" footer. */
-@Composable
-private fun PegiRatingTile(code: String) {
-    val ageColor = when (code) {
-        "3", "7" -> Color(0xFF4E9A06)   // green
-        "12", "16" -> Color(0xFFF57F17) // amber
-        "18" -> Color(0xFFC62828)       // red
-        else -> Color(0xFF424242)
-    }
-    Column(
-        modifier = Modifier
-            .height(RATING_TILE_HEIGHT)
-            .width(IntrinsicSize.Max)
-            .clip(RATING_TILE_SHAPE)
-            .background(RATING_TILE_INK)
-            .clearAndSetSemantics { contentDescription = "PEGI $code" },
-    ) {
-        Box(
-            modifier = Modifier.weight(1f).fillMaxWidth().background(ageColor).padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 28.sp, maxLines = 1)
-        }
-        RatingTileFooter(label = "PEGI", background = RATING_TILE_INK)
-    }
-}
-
-/** The board wordmark strip at the bottom of a rating tile (spans the tile's content width). */
-@Composable
-private fun RatingTileFooter(label: String, background: Color) {
-    Box(
-        modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 8.dp, vertical = 1.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 8.sp, maxLines = 1)
+    IgdbGame.IgdbAgeRating.Board.PEGI -> when (rating.code) {
+        "3" -> Res.drawable.pegi_3
+        "7" -> Res.drawable.pegi_7
+        "12" -> Res.drawable.pegi_12
+        "16" -> Res.drawable.pegi_16
+        "18" -> Res.drawable.pegi_18
+        else -> null
     }
 }
 
