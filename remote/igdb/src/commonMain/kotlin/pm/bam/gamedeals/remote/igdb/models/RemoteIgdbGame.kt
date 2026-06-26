@@ -28,7 +28,27 @@ data class RemoteIgdbGame(
     val platforms: List<RemoteIgdbPlatform> = emptyList(),
     val videos: List<RemoteIgdbVideo> = emptyList(),
     val franchises: List<RemoteIgdbFranchise> = emptyList(),
+    @SerialName("age_ratings") val ageRatings: List<RemoteIgdbAgeRating> = emptyList(),
+    @SerialName("game_modes") val gameModes: List<RemoteIgdbGameMode> = emptyList(),
     @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+/**
+ * IGDB `age_ratings` row. `category` is the rating organisation (1=ESRB, 2=PEGI, …) and `rating` the
+ * specific rating within it (a flat enum across organisations). Both are nullable so unknown/absent rows
+ * map to nothing rather than failing.
+ */
+@Serializable
+data class RemoteIgdbAgeRating(
+    val id: Long,
+    val rating: Int? = null,
+    val category: Int? = null,
+)
+
+@Serializable
+data class RemoteIgdbGameMode(
+    val id: Long,
+    val name: String? = null,
 )
 
 @Serializable

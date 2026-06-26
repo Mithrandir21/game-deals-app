@@ -155,6 +155,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_near_low_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_age_ratings
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_game_modes
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_follow
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_following
@@ -687,6 +689,8 @@ private fun OverviewTab(
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
                     if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
                     if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
+                    if (game.gameModes.isNotEmpty()) GameModesSection(game.gameModes)
+                    if (game.ageRatings.isNotEmpty()) AgeRatingsSection(game.ageRatings)
                     if (game.videos.isNotEmpty()) TrailersSection(game, goToWeb)
                     game.franchises.forEach { franchise ->
                         SeriesSection(
@@ -1167,6 +1171,76 @@ private fun PlatformsSection(platforms: List<String>) {
                 AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
             }
         }
+    }
+}
+
+/** Game modes (IGDB `game_modes`) — display-only chips ("Single player", "Co-operative", …) (#200). */
+@Composable
+private fun GameModesSection(modes: List<String>) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_game_modes), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            items(modes) { label ->
+                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+            }
+        }
+    }
+}
+
+/** ESRB/PEGI age ratings (IGDB `age_ratings`) rendered as board-styled badges ("ESRB M", "PEGI 18") (#199). */
+@Composable
+private fun AgeRatingsSection(ratings: List<IgdbGame.IgdbAgeRating>) {
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_age_ratings), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            items(ratings) { rating -> AgeRatingBadge(rating) }
+        }
+    }
+}
+
+/**
+ * A single rating badge: a board-coloured rounded square with the rating code, captioned with the board.
+ * PEGI is colour-coded by age (green → amber → red); ESRB uses a neutral container. (Stand-in for the
+ * official trademarked artwork, which can be dropped in later.)
+ */
+@Composable
+private fun AgeRatingBadge(rating: IgdbGame.IgdbAgeRating) {
+    val boardLabel = when (rating.board) {
+        IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB"
+        IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI"
+    }
+    val pegiColor = when (rating.code) {
+        "3", "7" -> Color(0xFF4CAF50)
+        "12", "16" -> Color(0xFFFF9800)
+        "18" -> Color(0xFFF44336)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val container = if (rating.board == IgdbGame.IgdbAgeRating.Board.PEGI) pegiColor else MaterialTheme.colorScheme.surfaceVariant
+    val onContainer = if (rating.board == IgdbGame.IgdbAgeRating.Board.PEGI) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+        modifier = Modifier.clearAndSetSemantics { contentDescription = "$boardLabel ${rating.code}" },
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                .background(container)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+        ) {
+            Text(text = rating.code, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = onContainer)
+        }
+        Text(text = boardLabel, style = MaterialTheme.typography.labelSmall)
     }
 }
 

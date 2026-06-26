@@ -66,6 +66,8 @@
     <string name="game_page_series_follow">Follow</string>
     <string name="game_page_series_following">Following</string>
     <string name="game_page_section_platforms">Platforms</string>
+    <string name="game_page_section_game_modes">Game modes</string>
+    <string name="game_page_section_age_ratings">Age ratings</string>
     <string name="game_page_section_trailers">Trailers</string>
     <string name="game_page_trailer_thumbnail_cd">Play %4$s — trailer %1$d of %2$d for %3$s</string>
     <string name="game_page_trailer_title_fallback">Trailer %1$d</string>

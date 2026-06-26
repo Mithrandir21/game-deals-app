@@ -6,6 +6,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbAgeRating
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbInvolvedCompany
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbSimilarGame
@@ -46,6 +47,9 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
             games = f.games.filter { it.id != id }.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
         )
     }.toImmutableList(),
+    // ESRB/PEGI only; other boards (CERO/USK/…) drop out. De-duped (IGDB can list the same rating twice).
+    ageRatings = ageRatings.mapNotNull { it.toIgdbAgeRatingOrNull() }.distinct().toImmutableList(),
+    gameModes = gameModes.mapNotNull { it.name?.takeIf(String::isNotBlank) }.distinct().toImmutableList(),
     // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
     steamAppId = externalGames
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
@@ -122,6 +126,43 @@ private fun mapWebsiteType(typeId: Long?, typeName: String?): IgdbGame.IgdbWebsi
 private fun RemoteIgdbSimilarGame.toIgdbSimilarGameOrNull(): IgdbGame.IgdbSimilarGame? {
     val n = name ?: return null
     return IgdbGame.IgdbSimilarGame(id = id, name = n, coverImageId = cover?.imageId)
+}
+
+// IGDB age-rating organisation (`category`) ids we surface; everything else (CERO/USK/GRAC/…) is dropped.
+private const val ESRB_CATEGORY = 1
+private const val PEGI_CATEGORY = 2
+
+/**
+ * Maps an IGDB `age_ratings` row to an ESRB/PEGI [IgdbGame.IgdbAgeRating], or null for other boards /
+ * unknown codes. `rating` is a flat enum spanning all organisations; we only translate the values that
+ * belong to the row's [RemoteIgdbAgeRating.category]. NB: IGDB has a deprecation in flight on these
+ * integer fields (the newer shape is `organization`/`rating_category`) — if the live query stops
+ * returning data, switch the query + this mapping to the new fields.
+ */
+private fun RemoteIgdbAgeRating.toIgdbAgeRatingOrNull(): IgdbGame.IgdbAgeRating? = when (category) {
+    ESRB_CATEGORY -> esrbCode(rating)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.ESRB, it) }
+    PEGI_CATEGORY -> pegiCode(rating)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.PEGI, it) }
+    else -> null
+}
+
+private fun esrbCode(rating: Int?): String? = when (rating) {
+    6 -> "RP"   // Rating Pending
+    7 -> "EC"   // Early Childhood
+    8 -> "E"    // Everyone
+    9 -> "E10"  // Everyone 10+
+    10 -> "T"   // Teen
+    11 -> "M"   // Mature
+    12 -> "AO"  // Adults Only
+    else -> null
+}
+
+private fun pegiCode(rating: Int?): String? = when (rating) {
+    1 -> "3"
+    2 -> "7"
+    3 -> "12"
+    4 -> "16"
+    5 -> "18"
+    else -> null
 }
 
 internal fun RemoteIgdbTimeToBeat.toIgdbTimeToBeat(): IgdbGame.IgdbTimeToBeat =

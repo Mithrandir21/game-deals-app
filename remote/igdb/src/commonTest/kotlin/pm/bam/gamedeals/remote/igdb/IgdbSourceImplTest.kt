@@ -191,6 +191,30 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun fetchGameDetailsByIgdbId_maps_esrb_pegi_age_ratings_and_game_modes() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = ONE_GAME_RATINGS_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchGameDetailsByIgdbId(4242L)
+
+        // CERO (category 3) dropped; the duplicate ESRB M deduped; the nameless game mode dropped.
+        assertEquals(
+            persistentListOf(
+                IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.ESRB, "M"),
+                IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.PEGI, "18"),
+            ),
+            result?.ageRatings,
+        )
+        assertEquals(persistentListOf("Single player", "Multiplayer"), result?.gameModes)
+    }
+
+    @Test
     fun fetchGameDetailsByIgdbId_returns_null_when_response_is_empty_list() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -596,6 +620,28 @@ class IgdbSourceImplTest {
                 "external_games": [
                     {"id": 800, "uid": "hollow-knight-gog", "external_game_source": 5},
                     {"id": 801, "uid": "hollow-knight-itch", "external_game_source": 36}
+                ]
+            }
+        ]"""
+
+        // age_ratings: ESRB M (cat 1 / rating 11), PEGI 18 (cat 2 / rating 5), a CERO row (cat 3 — dropped),
+        // and a duplicate ESRB M (deduped). game_modes includes a nameless row (dropped).
+        // language=JSON
+        const val ONE_GAME_RATINGS_BODY = """[
+            {
+                "id": 4242,
+                "name": "DOOM Eternal",
+                "summary": "Rip and tear",
+                "age_ratings": [
+                    {"id": 1, "category": 1, "rating": 11},
+                    {"id": 2, "category": 2, "rating": 5},
+                    {"id": 3, "category": 3, "rating": 13},
+                    {"id": 4, "category": 1, "rating": 11}
+                ],
+                "game_modes": [
+                    {"id": 1, "name": "Single player"},
+                    {"id": 2, "name": "Multiplayer"},
+                    {"id": 3}
                 ]
             }
         ]"""
