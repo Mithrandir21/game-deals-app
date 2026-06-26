@@ -1206,7 +1206,9 @@ private fun GameModesSection(modes: List<String>) {
 @Composable
 private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+        // Two-arg spacedBy: keeps the gap between tiles AND centres the whole group across the page.
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
     ) {
         ratings.forEach { rating ->
@@ -1218,7 +1220,7 @@ private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
     }
 }
 
-private val RATING_TILE_HEIGHT = 50.dp
+private val RATING_TILE_HEIGHT = 64.dp
 private val RATING_TILE_SHAPE = RoundedCornerShape(6.dp)
 private val RATING_TILE_INK = Color(0xFF1A1A1A)
 
@@ -1235,7 +1237,7 @@ private fun EsrbRatingTile(code: String) {
             .clearAndSetSemantics { contentDescription = "ESRB $code" },
     ) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1)
+            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 28.sp, maxLines = 1)
         }
         RatingTileFooter(label = "ESRB", background = RATING_TILE_INK)
     }
@@ -1262,7 +1264,7 @@ private fun PegiRatingTile(code: String) {
             modifier = Modifier.weight(1f).fillMaxWidth().background(ageColor).padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1)
+            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 28.sp, maxLines = 1)
         }
         RatingTileFooter(label = "PEGI", background = RATING_TILE_INK)
     }
