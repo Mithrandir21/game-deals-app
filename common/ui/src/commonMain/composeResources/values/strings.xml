@@ -73,4 +73,10 @@
     <string name="bundle_row_overflow">+%1$d</string>
     <string name="bundle_row_art_strip">Games in this bundle</string>
 
+    <!-- Recently-viewed games carousel (#211) -->
+    <string name="recently_viewed_title">Recently viewed</string>
+    <string name="recently_viewed_clear">Clear</string>
+    <string name="recently_viewed_open_cd">Open %1$s</string>
+    <string name="recently_viewed_remove_cd">Remove %1$s from recently viewed</string>
+
 </resources>

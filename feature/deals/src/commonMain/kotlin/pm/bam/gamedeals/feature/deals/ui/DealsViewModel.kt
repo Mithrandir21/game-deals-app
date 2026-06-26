@@ -47,10 +47,12 @@ import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.SearchParameters
+import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -92,6 +94,7 @@ internal class DealsViewModel(
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
     private val settingsRepository: SettingsRepository,
+    private val recentlyViewedRepository: RecentlyViewedRepository,
     featureFlags: FeatureFlags,
 ) : ViewModel() {
 
@@ -158,6 +161,12 @@ internal class DealsViewModel(
 
     private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger)
     val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
+
+    /** Recently-viewed games (#211) — shown as a header carousel in browse mode (no search/filter active). */
+    val recentlyViewed: StateFlow<ImmutableList<RecentlyViewedGame>> = recentlyViewedRepository.observeRecentlyViewed()
+        .onStart { emit(persistentListOf()) }
+        .catch { emit(persistentListOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
     val events: SharedFlow<DealsUiEvent>
         field = MutableSharedFlow<DealsUiEvent>(
@@ -337,6 +346,16 @@ internal class DealsViewModel(
 
     fun dismissPeek() {
         gamePeekController.dismiss(viewModelScope)
+    }
+
+    /** Remove one game from the recently-viewed history (long-press on its tile). */
+    fun onRemoveRecentlyViewed(gameId: String) {
+        viewModelScope.launch { recentlyViewedRepository.remove(gameId) }
+    }
+
+    /** Clear the whole recently-viewed history (carousel "Clear"). */
+    fun onClearRecentlyViewed() {
+        viewModelScope.launch { recentlyViewedRepository.clear() }
     }
 
     /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */

@@ -41,6 +41,7 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
@@ -77,6 +78,7 @@ internal class GamePageViewModel(
     private val faviconResolver: FaviconResolver,
     private val followedFranchiseRepository: FollowedFranchiseRepository,
     private val franchiseFollowSeeder: FranchiseFollowSeeder,
+    private val recentlyViewedRepository: RecentlyViewedRepository,
 ) : ViewModel() {
 
     // The ITAD game UUID. Seeded from the deal-entry arg and *updated* once an IGDB-only entry resolves its
@@ -177,6 +179,13 @@ internal class GamePageViewModel(
 
         // Publish the resolved ITAD id so waitlist/ignore/note observe it (no-op when null).
         gameIdFlow.value = gameId
+
+        // Record this view for the recently-viewed carousel (#211) — only when we have an ITAD id (the
+        // peek/open path needs it). Upsert de-dupes and moves the game back to the top.
+        gameId?.let { id ->
+            val viewedTitle = gameDetails?.info?.title ?: igdbGame?.name ?: titleArg.orEmpty()
+            recentlyViewedRepository.recordView(id, viewedTitle, gameDetails?.info?.artwork?.boxart)
+        }
 
         val dealDetails = mapDealDetails(gameDetails)
         val resolvedGameId = gameId

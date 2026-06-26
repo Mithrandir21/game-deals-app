@@ -41,6 +41,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.RankedGame
+import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
@@ -51,6 +52,7 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
 import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -98,6 +100,7 @@ internal class HomeViewModel(
     private val gamesRepository: GamesRepository,
     private val igdbRepository: IgdbRepository,
     private val recommendationsRepository: RecommendationsRepository,
+    private val recentlyViewedRepository: RecentlyViewedRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -146,6 +149,12 @@ internal class HomeViewModel(
 
     private val gamePeekController = GamePeekController(gamesRepository, storesRepository, logger, igdbRepository)
     val gamePeek: StateFlow<GamePeekSheetData?> = gamePeekController.data
+
+    /** Recently-viewed games (#211) — a device-local carousel shown after Trending; empty until something is viewed. */
+    val recentlyViewed: StateFlow<ImmutableList<RecentlyViewedGame>> = recentlyViewedRepository.observeRecentlyViewed()
+        .onStart { emit(persistentListOf()) }
+        .catch { emit(persistentListOf()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
     val events: SharedFlow<HomeUiEvent>
         field = MutableSharedFlow<HomeUiEvent>(
@@ -242,6 +251,16 @@ internal class HomeViewModel(
 
     fun dismissPeek() {
         gamePeekController.dismiss(viewModelScope)
+    }
+
+    /** Remove one game from the recently-viewed history (long-press on its tile). */
+    fun onRemoveRecentlyViewed(gameId: String) {
+        viewModelScope.launch { recentlyViewedRepository.remove(gameId) }
+    }
+
+    /** Clear the whole recently-viewed history (carousel "Clear"). */
+    fun onClearRecentlyViewed() {
+        viewModelScope.launch { recentlyViewedRepository.clear() }
     }
 
     fun onShareClicked(data: GamePeekSheetData.Data) {

@@ -73,6 +73,7 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.components.RecentlyViewedCarousel
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -85,6 +86,7 @@ import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
 import pm.bam.gamedeals.domain.models.ReleaseWindow
+import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
@@ -181,6 +183,7 @@ internal fun DealsScreen(
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val discoverEnabled by viewModel.discoverEnabled.collectAsStateWithLifecycle()
+    val recentlyViewed by viewModel.recentlyViewed.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
 
@@ -214,6 +217,9 @@ internal fun DealsScreen(
         showFilters = showFilters,
         gamePeek = gamePeek,
         discoverEnabled = discoverEnabled,
+        recentlyViewed = recentlyViewed,
+        onRemoveRecentlyViewed = { gameId -> viewModel.onRemoveRecentlyViewed(gameId) },
+        onClearRecentlyViewed = { viewModel.onClearRecentlyViewed() },
         snackbarHostState = snackbarHostState,
         onSelectSortField = { viewModel.setSortField(it) },
         onSelectSortDirection = { viewModel.setSortDirection(it) },
@@ -260,6 +266,9 @@ private fun DealsContent(
     showFilters: Boolean = false,
     gamePeek: GamePeekSheetData? = null,
     discoverEnabled: Boolean = false,
+    recentlyViewed: ImmutableList<RecentlyViewedGame> = persistentListOf(),
+    onRemoveRecentlyViewed: (gameId: String) -> Unit = {},
+    onClearRecentlyViewed: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSelectSortField: (DealsSortField) -> Unit,
     onSelectSortDirection: (DealsSortDirection) -> Unit = {},
@@ -367,6 +376,19 @@ private fun DealsContent(
                             state = listState,
                             contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         ) {
+                            // Recently-viewed carousel (#211) as a list header — only in unfiltered browse
+                            // mode (no shop/filter active), so it doesn't mix with a filtered result set.
+                            if (recentlyViewed.isNotEmpty() && filter.activeCount == 0 && selectedShops.isEmpty()) {
+                                item(key = "deals-recently-viewed") {
+                                    RecentlyViewedCarousel(
+                                        games = recentlyViewed,
+                                        onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
+                                        onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
+                                        onClearAll = onClearRecentlyViewed,
+                                        modifier = Modifier.padding(bottom = GameDealsCustomTheme.spacing.small),
+                                    )
+                                }
+                            }
                             items(items = visibleDeals, key = { it.dealID }) { deal ->
                                 val store = storesById[deal.storeID]
                                 val isWaitlisted = deal.gameID in waitlistIds
