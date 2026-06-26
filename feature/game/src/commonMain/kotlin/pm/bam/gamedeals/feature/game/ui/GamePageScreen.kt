@@ -574,8 +574,6 @@ private fun HeroSection(data: GamePageData.Data) {
                 Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
             }
             if (igdb != null) RatingsRow(igdb)
-            // Age ratings sit just under the review numbers in the header, label-free (e.g. "ESRB M  PEGI 18").
-            if (igdb != null && igdb.ageRatings.isNotEmpty()) AgeRatingsRow(igdb.ageRatings)
         }
     }
 }
@@ -673,13 +671,14 @@ private fun OverviewTab(
     onRetryIgdb: () -> Unit,
 ) {
     val inset = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large)
+    val loadedGame = (data.igdb as? SectionState.Loaded)?.value
+    val noteModifier = Modifier.fillMaxWidth().then(inset)
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large)) {
-        NotesSection(
-            note = note,
-            onSaveNote = onSaveNote,
-            onDeleteNote = onDeleteNote,
-            modifier = Modifier.fillMaxWidth().then(inset),
-        )
+        // "My note" normally lives lower (just above DLC & Expansions, see below). But when there's no game
+        // info to host it, fall back to the top so the user can always add/edit a note (#291 follow-up).
+        if (loadedGame == null) {
+            NotesSection(note = note, onSaveNote = onSaveNote, onDeleteNote = onDeleteNote, modifier = noteModifier)
+        }
         if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
         // Overview is IGDB-primary: the IGDB side drives the empty/error message; bundles + links are
         // best-effort extras that simply don't appear when absent or failed.
@@ -689,6 +688,8 @@ private fun OverviewTab(
             is SectionState.Loaded -> {
                 val game = igdb.value
                 if (game != null) {
+                    // Age ratings lead the card, label-free (the ESRB/PEGI tiles are self-explanatory).
+                    if (game.ageRatings.isNotEmpty()) AgeRatingsRow(game.ageRatings)
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
                     if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
                     if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
@@ -704,6 +705,8 @@ private fun OverviewTab(
                     }
                     if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game)
                     game.timeToBeat?.let { HltbSection(it) }
+                    // My note sits here — further down the Overview, just above DLC & Expansions.
+                    NotesSection(note = note, onSaveNote = onSaveNote, onDeleteNote = onDeleteNote, modifier = noteModifier)
                     val dlcs = game.dlcs + game.expansions
                     if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
                     if (game.similarGames.isNotEmpty()) SimilarGamesSection(game.similarGames, onSimilarGameClick)
@@ -1215,7 +1218,7 @@ private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
     }
 }
 
-private val RATING_TILE_HEIGHT = 40.dp
+private val RATING_TILE_HEIGHT = 50.dp
 private val RATING_TILE_SHAPE = RoundedCornerShape(6.dp)
 private val RATING_TILE_INK = Color(0xFF1A1A1A)
 
@@ -1232,7 +1235,7 @@ private fun EsrbRatingTile(code: String) {
             .clearAndSetSemantics { contentDescription = "ESRB $code" },
     ) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1)
         }
         RatingTileFooter(label = "ESRB", background = RATING_TILE_INK)
     }
@@ -1259,7 +1262,7 @@ private fun PegiRatingTile(code: String) {
             modifier = Modifier.weight(1f).fillMaxWidth().background(ageColor).padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1)
         }
         RatingTileFooter(label = "PEGI", background = RATING_TILE_INK)
     }
