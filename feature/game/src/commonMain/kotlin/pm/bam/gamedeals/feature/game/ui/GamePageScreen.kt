@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -103,6 +104,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
@@ -1192,21 +1194,85 @@ private fun GameModesSection(modes: List<String>) {
 }
 
 /**
- * ESRB/PEGI age ratings (IGDB `age_ratings`) as compact, label-free text chips ("ESRB M", "PEGI 18"),
- * shown in the title header under the review numbers (#199). Wraps to a second line if both boards are
- * present and the header is narrow.
+ * ESRB/PEGI age ratings (IGDB `age_ratings`) drawn as compact rating tiles that resemble the official
+ * badges, shown in the title header under the review numbers (#199). No bundled artwork — each tile is
+ * rendered from the [IgdbGame.IgdbAgeRating.code], so it stays crisp at any size and themes cleanly. Wraps
+ * to a second line if both boards are present and the header is narrow.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+    ) {
         ratings.forEach { rating ->
-            val label = when (rating.board) {
-                IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
-                IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
+            when (rating.board) {
+                IgdbGame.IgdbAgeRating.Board.ESRB -> EsrbRatingTile(rating.code)
+                IgdbGame.IgdbAgeRating.Board.PEGI -> PegiRatingTile(rating.code)
             }
-            AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
         }
+    }
+}
+
+private val RATING_TILE_HEIGHT = 40.dp
+private val RATING_TILE_SHAPE = RoundedCornerShape(6.dp)
+private val RATING_TILE_INK = Color(0xFF1A1A1A)
+
+/** ESRB tile: white card with a black border, the big black rating code, and a black "ESRB" footer. */
+@Composable
+private fun EsrbRatingTile(code: String) {
+    Column(
+        modifier = Modifier
+            .height(RATING_TILE_HEIGHT)
+            .width(IntrinsicSize.Max)
+            .clip(RATING_TILE_SHAPE)
+            .background(Color.White)
+            .border(1.5.dp, RATING_TILE_INK, RATING_TILE_SHAPE)
+            .clearAndSetSemantics { contentDescription = "ESRB $code" },
+    ) {
+        Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+            Text(text = code, color = RATING_TILE_INK, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+        }
+        RatingTileFooter(label = "ESRB", background = RATING_TILE_INK)
+    }
+}
+
+/** PEGI tile: colour-by-age top band with the big white number, over a black "PEGI" footer. */
+@Composable
+private fun PegiRatingTile(code: String) {
+    val ageColor = when (code) {
+        "3", "7" -> Color(0xFF4E9A06)   // green
+        "12", "16" -> Color(0xFFF57F17) // amber
+        "18" -> Color(0xFFC62828)       // red
+        else -> Color(0xFF424242)
+    }
+    Column(
+        modifier = Modifier
+            .height(RATING_TILE_HEIGHT)
+            .width(IntrinsicSize.Max)
+            .clip(RATING_TILE_SHAPE)
+            .background(RATING_TILE_INK)
+            .clearAndSetSemantics { contentDescription = "PEGI $code" },
+    ) {
+        Box(
+            modifier = Modifier.weight(1f).fillMaxWidth().background(ageColor).padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+        }
+        RatingTileFooter(label = "PEGI", background = RATING_TILE_INK)
+    }
+}
+
+/** The board wordmark strip at the bottom of a rating tile (spans the tile's content width). */
+@Composable
+private fun RatingTileFooter(label: String, background: Color) {
+    Box(
+        modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 8.dp, vertical = 1.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 8.sp, maxLines = 1)
     }
 }
 
