@@ -155,7 +155,6 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_near_low_title
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_age_ratings
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_game_modes
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platforms
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_follow
@@ -573,6 +572,8 @@ private fun HeroSection(data: GamePageData.Data) {
                 Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
             }
             if (igdb != null) RatingsRow(igdb)
+            // Age ratings sit just under the review numbers in the header, label-free (e.g. "ESRB M  PEGI 18").
+            if (igdb != null && igdb.ageRatings.isNotEmpty()) AgeRatingsRow(igdb.ageRatings)
         }
     }
 }
@@ -686,8 +687,6 @@ private fun OverviewTab(
             is SectionState.Loaded -> {
                 val game = igdb.value
                 if (game != null) {
-                    // Age ratings lead the card for visibility (parental guidance up front).
-                    if (game.ageRatings.isNotEmpty()) AgeRatingsSection(game.ageRatings)
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
                     if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
                     if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
@@ -1192,23 +1191,21 @@ private fun GameModesSection(modes: List<String>) {
     }
 }
 
-/** ESRB/PEGI age ratings (IGDB `age_ratings`) as plain, readable text chips — "ESRB M", "PEGI 18" (#199). */
+/**
+ * ESRB/PEGI age ratings (IGDB `age_ratings`) as compact, label-free text chips ("ESRB M", "PEGI 18"),
+ * shown in the title header under the review numbers (#199). Wraps to a second line if both boards are
+ * present and the header is narrow.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AgeRatingsSection(ratings: List<IgdbGame.IgdbAgeRating>) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-        SectionHeader(stringResource(Res.string.game_page_section_age_ratings), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            items(ratings) { rating ->
-                val label = when (rating.board) {
-                    IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
-                    IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
-                }
-                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
+private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        ratings.forEach { rating ->
+            val label = when (rating.board) {
+                IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
+                IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
             }
+            AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
         }
     }
 }
