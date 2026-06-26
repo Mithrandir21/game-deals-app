@@ -686,11 +686,12 @@ private fun OverviewTab(
             is SectionState.Loaded -> {
                 val game = igdb.value
                 if (game != null) {
+                    // Age ratings lead the card for visibility (parental guidance up front).
+                    if (game.ageRatings.isNotEmpty()) AgeRatingsSection(game.ageRatings)
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
                     if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
                     if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
                     if (game.gameModes.isNotEmpty()) GameModesSection(game.gameModes)
-                    if (game.ageRatings.isNotEmpty()) AgeRatingsSection(game.ageRatings)
                     if (game.videos.isNotEmpty()) TrailersSection(game, goToWeb)
                     game.franchises.forEach { franchise ->
                         SeriesSection(

@@ -339,6 +339,18 @@ private fun DealsContent(
                 .fillMaxSize(),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Recently-viewed carousel (#211) sits above the filter bar, only in unfiltered browse mode
+                // (no search, no shop/filter active), so it doesn't mix with a filtered result set.
+                if (!searching && recentlyViewed.isNotEmpty() && filter.activeCount == 0 && selectedShops.isEmpty()) {
+                    RecentlyViewedCarousel(
+                        games = recentlyViewed,
+                        onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
+                        onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
+                        onClearAll = onClearRecentlyViewed,
+                        modifier = Modifier.padding(vertical = GameDealsCustomTheme.spacing.small),
+                    )
+                }
+
                 // The search input lives in the app-shell toolbar; show the Filter bar only in browse
                 // mode (during a search the results fill the screen).
                 if (!searching) {
@@ -376,19 +388,6 @@ private fun DealsContent(
                             state = listState,
                             contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
                         ) {
-                            // Recently-viewed carousel (#211) as a list header — only in unfiltered browse
-                            // mode (no shop/filter active), so it doesn't mix with a filtered result set.
-                            if (recentlyViewed.isNotEmpty() && filter.activeCount == 0 && selectedShops.isEmpty()) {
-                                item(key = "deals-recently-viewed") {
-                                    RecentlyViewedCarousel(
-                                        games = recentlyViewed,
-                                        onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
-                                        onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
-                                        onClearAll = onClearRecentlyViewed,
-                                        modifier = Modifier.padding(bottom = GameDealsCustomTheme.spacing.small),
-                                    )
-                                }
-                            }
                             items(items = visibleDeals, key = { it.dealID }) { deal ->
                                 val store = storesById[deal.storeID]
                                 val isWaitlisted = deal.gameID in waitlistIds

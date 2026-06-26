@@ -78,5 +78,9 @@
     <string name="recently_viewed_clear">Clear</string>
     <string name="recently_viewed_open_cd">Open %1$s</string>
     <string name="recently_viewed_remove_cd">Remove %1$s from recently viewed</string>
+    <string name="recently_viewed_remove_confirm_title">Remove from recently viewed?</string>
+    <string name="recently_viewed_remove_confirm_message">Remove “%1$s” from your recently-viewed list?</string>
+    <string name="recently_viewed_remove_confirm_action">Remove</string>
+    <string name="recently_viewed_remove_cancel">Cancel</string>
 
 </resources>

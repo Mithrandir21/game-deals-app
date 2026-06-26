@@ -14,10 +14,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +43,11 @@ import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_clear
 import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_open_cd
+import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_remove_cancel
 import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_remove_cd
+import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_remove_confirm_action
+import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_remove_confirm_message
+import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_remove_confirm_title
 import pm.bam.gamedeals.common.ui.generated.resources.recently_viewed_title
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -58,6 +67,8 @@ fun RecentlyViewedCarousel(
     modifier: Modifier = Modifier,
 ) {
     if (games.isEmpty()) return
+    // Long-press a tile to stage a removal; confirm before actually dropping it.
+    var pendingRemoval: RecentlyViewedGame? by remember { mutableStateOf(null) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
@@ -84,9 +95,27 @@ fun RecentlyViewedCarousel(
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
             items(games, key = { it.gameId }) { game ->
-                RecentlyViewedTile(game = game, onOpen = { onOpen(game) }, onRemove = { onRemove(game) })
+                RecentlyViewedTile(game = game, onOpen = { onOpen(game) }, onRemove = { pendingRemoval = game })
             }
         }
+    }
+
+    pendingRemoval?.let { game ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text(stringResource(CommonRes.string.recently_viewed_remove_confirm_title)) },
+            text = { Text(stringResource(CommonRes.string.recently_viewed_remove_confirm_message, game.title)) },
+            confirmButton = {
+                TextButton(onClick = { onRemove(game); pendingRemoval = null }) {
+                    Text(stringResource(CommonRes.string.recently_viewed_remove_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemoval = null }) {
+                    Text(stringResource(CommonRes.string.recently_viewed_remove_cancel))
+                }
+            },
+        )
     }
 }
 
