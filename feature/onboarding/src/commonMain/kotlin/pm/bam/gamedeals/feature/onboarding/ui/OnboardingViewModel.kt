@@ -108,9 +108,26 @@ internal class OnboardingViewModel(
         }
     }
 
+    /**
+     * Decline background alerts from the onboarding slide ("Not now"). Persists the opt-out and cancels any
+     * scheduled poll — onboarding now forces an explicit choice, so this is also a real opt-out path on a
+     * replay where alerts were previously on.
+     */
+    fun onNotificationsDeclined() {
+        viewModelScope.launch {
+            notificationSettings.setEnabled(false)
+            notificationScheduler.cancel()
+        }
+    }
+
     /** Grant analytics consent from the onboarding slide (persists + flips PostHog via SettingsRepository). */
     fun onEnableAnalytics() {
         viewModelScope.launch { settingsRepository.setAnalyticsConsent(true) }
+    }
+
+    /** Decline analytics consent ("Not now"). Persists the opt-out, which flips PostHog to opted-out. */
+    fun onDeclineAnalytics() {
+        viewModelScope.launch { settingsRepository.setAnalyticsConsent(false) }
     }
 
     /** Finish onboarding without signing in (Skip, or the final "Maybe later"). */

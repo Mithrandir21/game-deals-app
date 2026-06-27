@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.common.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -142,14 +141,15 @@ private fun RecentlyViewedTile(game: RecentlyViewedGame, onOpen: () -> Unit, onR
             model = game.boxart,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            placeholder = painterResource(CommonRes.drawable.videogame_thumb),
+            // No loading placeholder or background — the cover fades in over the transparent screen
+            // background, matching the other Home tiles so loading is unobtrusive. The error/fallback
+            // icon still shows for genuinely-missing covers.
             error = painterResource(CommonRes.drawable.videogame_thumb),
             fallback = painterResource(CommonRes.drawable.videogame_thumb),
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(GAME_COVER_ASPECT_RATIO)
-                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
         )
         Text(
             text = game.title,

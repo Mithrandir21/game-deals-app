@@ -35,7 +35,6 @@ import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
-import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -86,10 +85,6 @@ class DealsViewModelTest : MainDispatcherTest() {
         everySuspend { setDealsFilter(any()) } calls { (filter: DealsFilter) -> dealsFilterFlow.value = filter }
     }
 
-    private val recentlyViewedRepository: RecentlyViewedRepository = mock(MockMode.autoUnit) {
-        every { observeRecentlyViewed() } returns flowOf(persistentListOf())
-    }
-
     private val featureFlags = FakeFeatureFlags()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -106,7 +101,6 @@ class DealsViewModelTest : MainDispatcherTest() {
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
         settingsRepository = settingsRepository,
-        recentlyViewedRepository = recentlyViewedRepository,
         featureFlags = featureFlags,
     )
 

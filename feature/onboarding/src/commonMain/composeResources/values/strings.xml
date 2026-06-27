@@ -40,16 +40,19 @@
     <string name="onboarding_notifications_title">Get sale alerts</string>
     <string name="onboarding_notifications_body">Get notified when a game on your waitlist or a series you follow goes on sale. Alerts start working once you sign in.</string>
     <string name="onboarding_notifications_enable">Turn on alerts</string>
+    <string name="onboarding_notifications_decline">Not now</string>
     <string name="onboarding_notifications_enabled">Alerts are on</string>
-    <string name="onboarding_notifications_off">Notifications are currently off for this app.</string>
-    <string name="onboarding_notifications_denied">Notifications are blocked. Turn them on for this app in system settings.</string>
+    <string name="onboarding_notifications_off">No alerts for now — you can turn them on later in Account.</string>
+    <string name="onboarding_notifications_denied">Notifications are blocked. You can turn them on later in system settings.</string>
     <string name="onboarding_open_settings">Open settings</string>
 
     <!-- 7. Analytics consent (interactive) — off by default (GDPR opt-out). -->
     <string name="onboarding_analytics_title">Help improve the app</string>
     <string name="onboarding_analytics_body">Share usage data — which games, deals and searches you interact with — so we can see what to improve. It\'s linked to a random anonymous id, EU-hosted, and off unless you turn it on. You can change this any time in Account.</string>
     <string name="onboarding_analytics_enable">Turn on analytics</string>
+    <string name="onboarding_analytics_decline">Not now</string>
     <string name="onboarding_analytics_enabled">Analytics on</string>
+    <string name="onboarding_analytics_off">Analytics stays off — you can turn it on later in Account.</string>
     <string name="onboarding_analytics_privacy_link">Privacy policy</string>
 
     <!-- 8. Sign in (interactive, last) -->
