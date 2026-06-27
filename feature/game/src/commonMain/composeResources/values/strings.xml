@@ -109,6 +109,21 @@
     <string name="game_page_tab_history">History</string>
     <string name="game_page_tab_stats">Stats</string>
     <string name="game_page_tab_regions">Regions</string>
+
+    <!-- Game page redesign: 3 logical tabs + hero buy box + clustered sections -->
+    <string name="game_page_tab_deal">Deal</string>
+    <string name="game_page_tab_about">About</string>
+    <string name="game_page_tab_community">Community</string>
+    <string name="game_page_buy_box_store">at %1$s</string>
+    <string name="game_page_buy_box_open">Open deal</string>
+    <string name="game_page_buy_box_cd">Best price %1$s, %2$s. Open deal.</string>
+    <string name="game_page_section_details">Details</string>
+    <string name="game_page_section_media">Media</string>
+    <string name="game_page_details_genres_label">Genres</string>
+    <string name="game_page_details_developer_label">Developer</string>
+    <string name="game_page_details_publisher_label">Publisher</string>
+    <string name="game_page_details_age_label">Age rating</string>
+    <string name="game_page_regions_expander">Regional prices</string>
     <string name="game_page_regions_empty">No regional prices available.</string>
     <string name="game_page_regions_error">Couldn't load regional prices.</string>
     <string name="game_page_regions_loading_cd">Loading regional prices</string>

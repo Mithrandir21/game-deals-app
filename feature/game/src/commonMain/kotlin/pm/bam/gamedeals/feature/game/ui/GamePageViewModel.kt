@@ -29,6 +29,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
+import pm.bam.gamedeals.domain.models.dealQuality
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
@@ -542,6 +543,16 @@ internal class GamePageViewModel(
             val gameMetaOrNull: GameMeta? get() = (gameMeta as? SectionState.Loaded)?.value
             /** The loaded IGDB record, or null when absent/loading/errored — for the hero/picker. */
             val igdbGameOrNull: IgdbGame? get() = (igdb as? SectionState.Loaded)?.value
+
+            /**
+             * The hero "buy box": the cheapest current deal (with its store) plus the [dealQuality] buy-signal,
+             * or null when there's no live deal. Derived (no extra fetch), so the hero and the condensed sticky
+             * bar always agree, and it auto-tracks [retryDeals] since it reads [dealDetails]/[deals].
+             */
+            val buyBox: BuyBoxState? get() {
+                val pair = dealDetails.minByOrNull { it.deal.priceValue } ?: return null
+                return BuyBoxState(pair = pair, quality = gameDetailsOrNull?.dealQuality())
+            }
         }
     }
 }

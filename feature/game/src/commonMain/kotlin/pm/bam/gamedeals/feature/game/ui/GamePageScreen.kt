@@ -2,7 +2,6 @@
 
 package pm.bam.gamedeals.feature.game.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,17 +17,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,9 +40,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.material.icons.filled.MoreVert
@@ -54,7 +59,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,12 +75,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -84,16 +88,25 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -102,52 +115,41 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.roundToInt
 import kotlin.time.Instant
+import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
+import pm.bam.gamedeals.common.ui.components.AgeRatingsRow
+import pm.bam.gamedeals.common.ui.components.DiscountBadge
+import pm.bam.gamedeals.common.ui.components.PriceBlock
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.DealQuality
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
-import pm.bam.gamedeals.domain.models.DealQuality
-import pm.bam.gamedeals.domain.models.dealQuality
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.portrait
 import pm.bam.gamedeals.feature.game.generated.resources.Res
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_ao
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_e
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_e10
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_ec
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_m
-import pm.bam.gamedeals.feature.game.generated.resources.esrb_t
-import pm.bam.gamedeals.feature.game.generated.resources.pegi_12
-import pm.bam.gamedeals.feature.game.generated.resources.pegi_16
-import pm.bam.gamedeals.feature.game.generated.resources.pegi_18
-import pm.bam.gamedeals.feature.game.generated.resources.pegi_3
-import pm.bam.gamedeals.feature.game.generated.resources.pegi_7
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_developer
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_porting
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_publisher
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_company_role_supporting
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_cover_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_critic_rating_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_back_button
@@ -156,15 +158,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_s
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_released_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_screenshot_image_cd
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_companies
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_links
-import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_screenshots
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_similar
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_above_detail
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_all_time_low_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_at_low_detail
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_near_low_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_game_modes
@@ -172,7 +171,6 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_platf
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_follow
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_following
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_series_section
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_trailers
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_thumbnail_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_trailer_title_fallback
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_section_storyline
@@ -188,6 +186,13 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_matc
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_warning_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_bundle_games_count
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_buy_box_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_buy_box_open
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_buy_box_store
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_details_age_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_details_developer_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_details_genres_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_details_publisher_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_completely
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_hastily
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_hltb_hours
@@ -196,8 +201,10 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_players_peak
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_players_recent
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_review_count
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_bundles
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_details
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_dlcs
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_hltb
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_media
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_players
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_reviews
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_history_empty
@@ -205,17 +212,14 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_overview_empt
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_prices_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_empty
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_expander
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_regions_loading_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_loading_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_stats_empty
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_history
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_overview
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_prices
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_regions
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_ever_label
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_cheapest_value_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_about
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_community
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_deal
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_game_image
@@ -223,14 +227,12 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_list_item_s
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_loading_indicator
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_back_button
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_add_action
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_delete_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_cancel
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_placeholder
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_save
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_edit_action
-import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_section_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_share_action
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_store_deal_row_description
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_summary_read_more
@@ -250,8 +252,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
-private val AlwaysScrollable: () -> Boolean = { true }
-
 // IGDB video ids are YouTube ids; we open the watch page externally and show YouTube's thumbnail tile.
 private fun youTubeWatchUrl(videoId: String): String = "https://www.youtube.com/watch?v=$videoId"
 private fun youTubeThumbnailUrl(videoId: String): String = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
@@ -261,14 +261,18 @@ private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
 private val TRAILER_TILE_WIDTH = 320.dp // 180.dp tall × 16:9
 private const val COLLAPSED_LINES = 5
 
+/** Height of the condensed price bar that fades in as the hero collapses. */
+private val STICKY_BAR_HEIGHT = 56.dp
+
 /** Which facet a tab's "Retry" re-fetches — threaded down to the tabs and dispatched to the VM at the top. */
 private enum class RetrySection { Deals, PriceHistory, GameMeta, Igdb }
 
 /**
- * The unified Game Page (epic #291). Renders [GamePageViewModel]'s aggregate state: an ITAD deal side and
- * an IGDB metadata side that each degrade independently. Reuses the standalone [PriceHistoryChart] and
- * [ScreenshotViewerDialog]; the remaining sections are private here so the screen stays self-contained
- * (the old `GameScreen`/`GameDetailsScreen` are removed in Phase 8).
+ * The unified Game Page (epic #291), redesigned into three intent-based tabs — **Deal**, **About** and
+ * **Community** — under a collapsing hero whose "buy box" (best price + discount + store + all-time-low) is
+ * the single source of price truth. As the hero scrolls away a condensed price bar fades in so the best
+ * deal stays one tap away from any tab. Reuses the standalone [PriceHistoryChart] and [ScreenshotViewerDialog]
+ * plus the shared [AgeRatingsRow]/[PriceBlock]/[DiscountBadge]; the remaining sections are private here.
  */
 @Composable
 internal fun GamePageScreen(
@@ -364,6 +368,9 @@ private fun GamePageContent(
     val errorMessage = stringResource(Res.string.game_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.game_screen_data_loading_error_retry)
 
+    // "My note" is a personal action, not page content — it lives in the top bar and opens this dialog.
+    var editingNote by remember { mutableStateOf(false) }
+
     val title = when (data) {
         is GamePageData.Data -> data.title
         is GamePageData.NoMatch -> data.title
@@ -406,9 +413,8 @@ private fun GamePageContent(
                                 )
                             }
                         }
-                        // Waitlist (bookmark) + Collection (library-check) are the two primary actions;
-                        // Ignore folds into the overflow menu. The heart is retired (it implied "Like",
-                        // not the price-watch it actually is).
+                        // Waitlist (bookmark) + Collection (library-check) + Note are the primary actions;
+                        // Ignore folds into the overflow menu.
                         IconButton(enabled = canAct, onClick = onToggleFavourite) {
                             Icon(
                                 imageVector = if (isFavourite) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -424,6 +430,15 @@ private fun GamePageContent(
                                 tint = if (isCollected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 contentDescription = stringResource(
                                     if (isCollected) Res.string.game_screen_collection_remove_action else Res.string.game_screen_collection_add_action
+                                ),
+                            )
+                        }
+                        IconButton(enabled = canAct, onClick = { editingNote = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                tint = if (note != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                                contentDescription = stringResource(
+                                    if (note != null) Res.string.game_screen_note_edit_action else Res.string.game_screen_note_add_action
                                 ),
                             )
                         }
@@ -489,13 +504,10 @@ private fun GamePageContent(
                 is GamePageData.Data -> GamePageBody(
                     modifier = Modifier.padding(innerPadding),
                     data = data,
-                    note = note,
                     followedFranchiseIds = followedFranchiseIds,
                     goToWeb = goToWeb,
                     onSimilarGameClick = onSimilarGameClick,
                     onShareDeal = onShareDeal,
-                    onSaveNote = onSaveNote,
-                    onDeleteNote = onDeleteNote,
                     onToggleFollowFranchise = onToggleFollowFranchise,
                     onBundleClick = onBundleClick,
                     onRegionsSelected = onRegionsSelected,
@@ -505,206 +517,457 @@ private fun GamePageContent(
         }
     }
 
+    if (data is GamePageData.Data && editingNote) {
+        NoteEditDialog(initial = note.orEmpty(), onDismiss = { editingNote = false }, onConfirm = { text ->
+            editingNote = false
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) onDeleteNote() else onSaveNote(trimmed)
+        })
+    }
+
     if (data is GamePageData.Data && data.showPicker) {
         CandidatePickerSheet(data = data, onDismiss = onPickerDismiss, onCandidatePicked = onCandidatePicked, onRetry = onWarningTap)
     }
 }
 
+/**
+ * The collapsing-hero + 3-tab body. The hero (cover, title, ratings, buy box) is rendered once in a
+ * translated header overlay above a pinned [TabRow]; the three tab bodies are pages of a [HorizontalPager],
+ * each its own [LazyColumn] so they scroll — and retain scroll position — independently. As the user scrolls
+ * a tab, a [NestedScrollConnection] collapses the hero first (translating the header up); a condensed
+ * [StickyPriceBar] crossfades in beneath the tabs so the best price is always reachable.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GamePageBody(
     modifier: Modifier,
     data: GamePageData.Data,
-    note: String?,
     followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
-    onSaveNote: (String) -> Unit,
-    onDeleteNote: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
+    onBundleClick: (bundleId: Int) -> Unit,
+    onRegionsSelected: () -> Unit,
+    onRetrySection: (RetrySection) -> Unit,
+) {
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState { 3 }
+    val listStates = List(3) { rememberLazyListState() }
+    val tabs = listOf(
+        stringResource(Res.string.game_page_tab_deal),
+        stringResource(Res.string.game_page_tab_about),
+        stringResource(Res.string.game_page_tab_community),
+    )
+
+    // Collapsing-hero geometry. Heights are measured from content (independent of the scroll offset, so no
+    // feedback loop); only the offset drives the collapse.
+    val heroPx = remember { mutableFloatStateOf(0f) }
+    val tabPx = remember { mutableFloatStateOf(0f) }
+    val heroOffset = remember { mutableFloatStateOf(0f) }
+    val stickyPx = if (data.buyBox != null) with(density) { STICKY_BAR_HEIGHT.toPx() } else 0f
+    val collapseFraction = if (heroPx.floatValue > 0f) (-heroOffset.floatValue / heroPx.floatValue).coerceIn(0f, 1f) else 0f
+
+    val connection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta >= 0f) return Offset.Zero // scrolling down → handled in onPostScroll (expand only at top)
+                val max = heroPx.floatValue
+                val newOffset = (heroOffset.floatValue + delta).coerceIn(-max, 0f)
+                val consumed = newOffset - heroOffset.floatValue
+                heroOffset.floatValue = newOffset
+                return Offset(0f, consumed)
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta <= 0f) return Offset.Zero
+                val max = heroPx.floatValue
+                val newOffset = (heroOffset.floatValue + delta).coerceIn(-max, 0f)
+                val used = newOffset - heroOffset.floatValue
+                heroOffset.floatValue = newOffset
+                return Offset(0f, used)
+            }
+        }
+    }
+
+    // The pinned header bottom (where tab content must start): visible hero + tab row + the growing strip.
+    val contentTopPx = (heroOffset.floatValue + heroPx.floatValue + tabPx.floatValue + stickyPx * collapseFraction).coerceAtLeast(0f)
+    val contentTopDp = with(density) { contentTopPx.toDp() }
+
+    Box(modifier = modifier.fillMaxSize().nestedScroll(connection)) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            LazyColumn(
+                state = listStates[page],
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = contentTopDp, bottom = GameDealsCustomTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+            ) {
+                item(key = "tab-$page") {
+                    when (page) {
+                        0 -> DealTab(
+                            data = data,
+                            goToWeb = goToWeb,
+                            onShareDeal = onShareDeal,
+                            onBundleClick = onBundleClick,
+                            onRegionsSelected = onRegionsSelected,
+                            onRetrySection = onRetrySection,
+                        )
+                        1 -> AboutTab(
+                            data = data,
+                            followedFranchiseIds = followedFranchiseIds,
+                            goToWeb = goToWeb,
+                            onSimilarGameClick = onSimilarGameClick,
+                            onToggleFollowFranchise = onToggleFollowFranchise,
+                            onRetryIgdb = { onRetrySection(RetrySection.Igdb) },
+                        )
+                        else -> CommunityTab(data = data, onRetry = { onRetrySection(RetrySection.GameMeta) })
+                    }
+                }
+            }
+        }
+
+        // Header overlay: drawn over the pager, translated up by the collapse offset. Opaque so content
+        // scrolling underneath the hero band stays hidden.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(0, heroOffset.floatValue.roundToInt()) }
+                .background(MaterialTheme.colorScheme.background),
+        ) {
+            HeroContent(
+                data = data,
+                goToWeb = goToWeb,
+                onRatingsClick = { scope.launch { pagerState.animateScrollToPage(2) } },
+                modifier = Modifier.onSizeChanged { heroPx.floatValue = it.height.toFloat() },
+            )
+            TabRow(
+                selectedTabIndex = pagerState.currentPage,
+                containerColor = MaterialTheme.colorScheme.background,
+                modifier = Modifier.onSizeChanged { tabPx.floatValue = it.height.toFloat() },
+            ) {
+                tabs.forEachIndexed { index, label ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                        text = { Text(label) },
+                    )
+                }
+            }
+            // Condensed price bar — reserves height and fades in only as the hero collapses, so it doesn't
+            // leave a blank band when the full hero (and its buy box) is visible.
+            data.buyBox?.let { buyBox ->
+                Box(modifier = Modifier.height(STICKY_BAR_HEIGHT * collapseFraction).alpha(collapseFraction)) {
+                    StickyPriceBar(buyBox = buyBox, gameId = data.gameId, gameTitle = data.title, goToWeb = goToWeb)
+                }
+            }
+        }
+    }
+}
+
+// ----- Hero + buy box -------------------------------------------------------------------------------------
+
+@Composable
+private fun HeroContent(
+    data: GamePageData.Data,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onRatingsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val igdb = data.igdbGameOrNull
+    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetailsOrNull?.info?.artwork?.portrait
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                modifier = Modifier
+                    .width(96.dp)
+                    .aspectRatio(COVER_ASPECT_RATIO)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+            ) {
+                AsyncImage(
+                    model = coverModel,
+                    contentDescription = stringResource(Res.string.game_screen_game_image, data.title),
+                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
+                )
+            }
+            Column(
+                modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.medium).weight(1f),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            ) {
+                Text(text = data.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                igdb?.firstReleaseDate?.let { instant ->
+                    Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
+                }
+                // Compact ratings here; the full breakdown (with players/reviews) lives in the Community tab.
+                if (igdb != null) RatingsRow(igdb, onClick = onRatingsClick)
+            }
+        }
+        data.buyBox?.let { HeroBuyBox(buyBox = it, gameId = data.gameId, gameTitle = data.title, goToWeb = goToWeb) }
+    }
+}
+
+/**
+ * The hero "buy box": the single source of price truth. Shows the cheapest current deal (price + struck
+ * regular price), its discount and store, and the [DealQuality] buy-signal. The whole card opens that deal
+ * (same analytics + in-app browser path as a store row), merged into one spoken phrase for TalkBack.
+ */
+@Composable
+private fun HeroBuyBox(
+    buyBox: BuyBoxState,
+    gameId: String?,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+) {
+    val analytics: Analytics = koinInject()
+    val deal = buyBox.pair.deal
+    val store = buyBox.pair.store
+    val rowCd = stringResource(Res.string.game_screen_store_deal_row_description, store.storeName, deal.savings, deal.priceDenominated)
+    val qualityTitle = buyBox.quality?.let { dealQualityTitle(it) }
+    val mergedCd = stringResource(Res.string.game_page_buy_box_cd, deal.priceDenominated, qualityTitle ?: rowCd)
+    Card(
+        onClick = { openStoreDeal(analytics, gameId, store, deal, gameTitle, goToWeb) },
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = mergedCd },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+                PriceBlock(
+                    salePrice = deal.priceDenominated,
+                    regularPrice = deal.retailPriceDenominated,
+                    salePriceStyle = MaterialTheme.typography.headlineSmall,
+                    horizontalAlignment = Alignment.Start,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+                    StoreIcon(storeName = store.storeName, iconUrl = store.iconUrl, iconSize = GameDealsCustomTheme.spacing.large, contentDescription = null)
+                    Text(text = stringResource(Res.string.game_page_buy_box_store, store.storeName), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                buyBox.quality?.let { BuyBoxQuality(it) }
+            }
+            DiscountBadge(discountPercent = deal.savings)
+        }
+    }
+}
+
+/** The colour-graded all-time-low buy signal line inside the buy box (replaces the old standalone callout). */
+@Composable
+private fun BuyBoxQuality(quality: DealQuality) {
+    val color = when (quality.tier) {
+        DealQuality.Tier.AllTimeLow -> MaterialTheme.colorScheme.tertiary
+        DealQuality.Tier.NearLow -> MaterialTheme.colorScheme.primary
+        DealQuality.Tier.Elevated -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Text(text = dealQualityTitle(quality), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = color)
+}
+
+@Composable
+private fun dealQualityTitle(quality: DealQuality): String = stringResource(
+    when (quality.tier) {
+        DealQuality.Tier.AllTimeLow -> Res.string.game_page_deal_quality_all_time_low_title
+        DealQuality.Tier.NearLow -> Res.string.game_page_deal_quality_near_low_title
+        DealQuality.Tier.Elevated -> Res.string.game_page_deal_quality_elevated_title
+    }
+)
+
+/** The condensed price bar that crossfades in beneath the tabs once the hero collapses. */
+@Composable
+private fun StickyPriceBar(
+    buyBox: BuyBoxState,
+    gameId: String?,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+) {
+    val analytics: Analytics = koinInject()
+    val deal = buyBox.pair.deal
+    val store = buyBox.pair.store
+    val rowCd = stringResource(Res.string.game_screen_store_deal_row_description, store.storeName, deal.savings, deal.priceDenominated)
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(role = Role.Button) { openStoreDeal(analytics, gameId, store, deal, gameTitle, goToWeb) }
+                .clearAndSetSemantics { contentDescription = rowCd }
+                .padding(horizontal = GameDealsCustomTheme.spacing.large),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            StoreIcon(storeName = store.storeName, iconUrl = store.iconUrl, iconSize = GameDealsCustomTheme.spacing.large, contentDescription = null)
+            PriceBlock(
+                salePrice = deal.priceDenominated,
+                regularPrice = deal.retailPriceDenominated,
+                salePriceStyle = MaterialTheme.typography.titleMedium,
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f),
+            )
+            DiscountBadge(discountPercent = deal.savings)
+            Text(text = stringResource(Res.string.game_page_buy_box_open), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+/** Records the click-through to a store (analytics) then opens the deal in the in-app browser. */
+private fun openStoreDeal(
+    analytics: Analytics,
+    gameId: String?,
+    store: Store,
+    deal: GameDetails.GameDeal,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+) {
+    analytics.capture(
+        AnalyticsEvents.DEAL_STORE_OPENED,
+        mapOf(
+            "game_id" to (gameId ?: ""),
+            "store_id" to store.storeID,
+            "store_name" to store.storeName,
+            "discount_pct" to deal.savings,
+        ),
+    )
+    goToWeb(deal.url, gameTitle)
+}
+
+// ----- Deal tab -------------------------------------------------------------------------------------------
+
+/** All store deals, the price-history chart (which already marks the all-time low), regional prices (lazy, behind an expander) and bundles. */
+@Composable
+private fun DealTab(
+    data: GamePageData.Data,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
     onBundleClick: (bundleId: Int) -> Unit,
     onRegionsSelected: () -> Unit,
     onRetrySection: (RetrySection) -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = GameDealsCustomTheme.spacing.large),
-        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
-    ) {
-        // The hero is the persistent header; everything else lives under a tab so each tab shows only its
-        // own data — the game info/metadata sits under the first "Overview" tab.
-        HeroSection(data)
-        GameTabs(
-            data = data,
-            note = note,
-            followedFranchiseIds = followedFranchiseIds,
-            goToWeb = goToWeb,
-            onSimilarGameClick = onSimilarGameClick,
-            onShareDeal = onShareDeal,
-            onSaveNote = onSaveNote,
-            onDeleteNote = onDeleteNote,
-            onToggleFollowFranchise = onToggleFollowFranchise,
-            onBundleClick = onBundleClick,
-            onRegionsSelected = onRegionsSelected,
-            onRetrySection = onRetrySection,
-        )
-    }
-}
-
-@Composable
-private fun HeroSection(data: GamePageData.Data) {
-    val igdb = data.igdbGameOrNull
-    val coverModel: Any? = igdb?.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) } ?: data.gameDetailsOrNull?.info?.artwork?.portrait
-    Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
-        verticalAlignment = Alignment.Top,
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        Box(
-            modifier = Modifier
-                .width(132.dp)
-                .aspectRatio(COVER_ASPECT_RATIO)
-                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
-        ) {
-            AsyncImage(
-                model = coverModel,
-                contentDescription = stringResource(Res.string.game_screen_game_image, data.title),
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small)),
-            )
-        }
-        Column(
-            modifier = Modifier.padding(start = GameDealsCustomTheme.spacing.medium).weight(1f),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            Text(text = data.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            igdb?.firstReleaseDate?.let { instant ->
-                Text(text = stringResource(Res.string.game_details_released_label, formatReleaseDate(instant)), style = MaterialTheme.typography.bodyMedium)
-            }
-            if (igdb != null) RatingsRow(igdb)
-            // Age-rating badges sit just under the Players/Critics ratings in the header (#199).
-            if (igdb != null && igdb.ageRatings.isNotEmpty()) AgeRatingsRow(igdb.ageRatings)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GameTabs(
-    data: GamePageData.Data,
-    note: String?,
-    followedFranchiseIds: Set<Long>,
-    goToWeb: (url: String, gameTitle: String) -> Unit,
-    onSimilarGameClick: (igdbGameId: Long) -> Unit,
-    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
-    onSaveNote: (String) -> Unit,
-    onDeleteNote: () -> Unit,
-    onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
-    onBundleClick: (bundleId: Int) -> Unit,
-    onRegionsSelected: () -> Unit,
-    onRetrySection: (RetrySection) -> Unit,
-) {
-    var selected by rememberSaveable { mutableStateOf(0) }
-    val tabs = listOf(
-        stringResource(Res.string.game_page_tab_overview),
-        stringResource(Res.string.game_page_tab_prices),
-        stringResource(Res.string.game_page_tab_history),
-        stringResource(Res.string.game_page_tab_stats),
-        stringResource(Res.string.game_page_tab_regions),
-    )
-    val regionsIndex = 4
-    // Regional prices are N per-country fetches → load lazily, only once the Regions tab is first opened.
-    LaunchedEffect(selected) { if (selected == regionsIndex) onRegionsSelected() }
-    // Scrollable (not fixed) — five labels would cramp on a phone. The Overview tab's sections pad
-    // themselves horizontally; the price-family tabs are wrapped in a horizontal-inset column.
-    val inset = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        ScrollableTabRow(selectedTabIndex = selected, edgePadding = GameDealsCustomTheme.spacing.large) {
-            tabs.forEachIndexed { index, label ->
-                Tab(selected = selected == index, onClick = { selected = index }, text = { Text(label) })
-            }
-        }
-        when (selected) {
-            0 -> OverviewTab(
-                data = data,
-                note = note,
-                followedFranchiseIds = followedFranchiseIds,
-                goToWeb = goToWeb,
-                onSimilarGameClick = onSimilarGameClick,
-                onSaveNote = onSaveNote,
-                onDeleteNote = onDeleteNote,
-                onToggleFollowFranchise = onToggleFollowFranchise,
-                onBundleClick = onBundleClick,
-                onRetryIgdb = { onRetrySection(RetrySection.Igdb) },
-            )
-            1 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                PricesTab(data, goToWeb, onShareDeal, onRetry = { onRetrySection(RetrySection.Deals) })
-            }
-            2 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                // Cheapest-ever rides the deal side (shown when present); deal-side errors surface on Prices,
-                // so History keys its empty/error on the price-history chart alone.
-                data.gameDetailsOrNull?.let { CheapestEverBlock(it) }
-                when (val priceHistory = data.priceHistory) {
-                    SectionState.Loading -> TabLoading()
-                    SectionState.Error -> TabError(onRetry = { onRetrySection(RetrySection.PriceHistory) })
-                    is SectionState.Loaded ->
-                        if (priceHistory.value.points.isEmpty()) TabEmpty(stringResource(Res.string.game_page_history_empty))
-                        else PriceHistoryChart(priceHistory = priceHistory.value, modifier = Modifier.fillMaxWidth())
+        when (val deals = data.deals) {
+            SectionState.Loading -> TabLoading()
+            SectionState.Error -> TabError(onRetry = { onRetrySection(RetrySection.Deals) })
+            is SectionState.Loaded -> {
+                val gameDetails = deals.value
+                if (gameDetails == null || data.dealDetails.isEmpty()) {
+                    TabEmpty(stringResource(Res.string.game_page_prices_empty))
+                } else {
+                    data.dealDetails.forEach { pair ->
+                        StoreGameDealRow(gameId = data.gameId, store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
+                    }
                 }
             }
-            3 -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                StatsTab(data, onRetry = { onRetrySection(RetrySection.GameMeta) })
+        }
+        when (val priceHistory = data.priceHistory) {
+            SectionState.Loading -> TabLoading()
+            SectionState.Error -> TabError(onRetry = { onRetrySection(RetrySection.PriceHistory) })
+            is SectionState.Loaded ->
+                if (priceHistory.value.points.isEmpty()) TabEmpty(stringResource(Res.string.game_page_history_empty))
+                else PriceHistoryChart(priceHistory = priceHistory.value, modifier = Modifier.fillMaxWidth())
+        }
+        RegionalPricesExpander(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb, onExpand = onRegionsSelected)
+        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
+    }
+}
+
+/** Regional cross-country prices, collapsed behind an expander so the N per-country fetch only runs on demand. */
+@Composable
+private fun RegionalPricesExpander(
+    state: GamePageViewModel.RegionalPricesState,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    onExpand: () -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(expanded) { if (expanded) onExpand() }
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { expanded = !expanded }.padding(vertical = GameDealsCustomTheme.spacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionHeader(stringResource(Res.string.game_page_regions_expander), Modifier.weight(1f))
+            Icon(imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
+        }
+        if (expanded) RegionsContent(state = state, gameTitle = gameTitle, goToWeb = goToWeb)
+    }
+}
+
+@Composable
+private fun RegionsContent(
+    state: GamePageViewModel.RegionalPricesState,
+    gameTitle: String,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+) {
+    when (state) {
+        GamePageViewModel.RegionalPricesState.Idle,
+        GamePageViewModel.RegionalPricesState.Loading -> {
+            val loadingCd = stringResource(Res.string.game_page_regions_loading_cd)
+            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
             }
-            else -> Column(inset, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-                RegionsTab(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb)
+        }
+        GamePageViewModel.RegionalPricesState.Error -> Text(
+            text = stringResource(Res.string.game_page_regions_error),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        is GamePageViewModel.RegionalPricesState.Loaded -> {
+            if (state.items.isEmpty()) {
+                Text(text = stringResource(Res.string.game_page_regions_empty), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                state.items.forEachIndexed { index, region ->
+                    if (index > 0) HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { goToWeb(region.url, gameTitle) }.padding(vertical = GameDealsCustomTheme.spacing.small),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = region.country.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Text(text = region.priceDenominated, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         }
     }
 }
 
+// ----- About tab ------------------------------------------------------------------------------------------
+
 /**
- * The "Overview" tab — all the game info/metadata that used to sit below the tab strip (epic #291): the
- * user's note, "found in bundles", description + tags, screenshots, HowLongToBeat, DLCs, similar games,
- * companies and external links. Each section manages its own horizontal inset, so this column adds none.
+ * The game's IGDB content, clustered into scannable groups: description, a merged media gallery
+ * (trailers + screenshots), a compact details table (platforms/modes/genres/HLTB/companies/age), "more
+ * games" (DLC + similar + series) and a links footer. IGDB drives the empty/error message; links are a
+ * best-effort extra.
  */
 @Composable
-private fun OverviewTab(
+private fun AboutTab(
     data: GamePageData.Data,
-    note: String?,
     followedFranchiseIds: Set<Long>,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onSimilarGameClick: (igdbGameId: Long) -> Unit,
-    onSaveNote: (String) -> Unit,
-    onDeleteNote: () -> Unit,
     onToggleFollowFranchise: (franchiseId: Long, name: String) -> Unit,
-    onBundleClick: (bundleId: Int) -> Unit,
     onRetryIgdb: () -> Unit,
 ) {
-    val inset = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large)
-    val loadedGame = (data.igdb as? SectionState.Loaded)?.value
-    val noteModifier = Modifier.fillMaxWidth().then(inset)
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large)) {
-        // "My note" normally lives lower (just above DLC & Expansions, see below). But when there's no game
-        // info to host it, fall back to the top so the user can always add/edit a note (#291 follow-up).
-        if (loadedGame == null) {
-            NotesSection(note = note, onSaveNote = onSaveNote, onDeleteNote = onDeleteNote, modifier = noteModifier)
-        }
-        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
-        // Overview is IGDB-primary: the IGDB side drives the empty/error message; bundles + links are
-        // best-effort extras that simply don't appear when absent or failed.
         when (val igdb = data.igdb) {
-            SectionState.Loading -> TabLoading(inset)
-            SectionState.Error -> TabError(onRetry = onRetryIgdb, modifier = inset)
+            SectionState.Loading -> TabLoading()
+            SectionState.Error -> TabError(onRetry = onRetryIgdb)
             is SectionState.Loaded -> {
                 val game = igdb.value
                 if (game != null) {
                     if (!game.summary.isNullOrBlank() || !game.storyline.isNullOrBlank()) DescriptionSection(game)
-                    if (game.genres.isNotEmpty() || game.themes.isNotEmpty()) ChipsSection(game.genres + game.themes)
-                    if (game.platforms.isNotEmpty()) PlatformsSection(game.platforms)
-                    if (game.gameModes.isNotEmpty()) GameModesSection(game.gameModes)
-                    if (game.videos.isNotEmpty()) TrailersSection(game, goToWeb)
+                    if (game.videos.isNotEmpty() || game.screenshotImageIds.isNotEmpty()) MediaGallery(game, goToWeb)
+                    DetailsTable(game)
+                    val dlcs = game.dlcs + game.expansions
+                    if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
+                    if (game.similarGames.isNotEmpty()) SimilarGamesSection(game.similarGames, onSimilarGameClick)
                     game.franchises.forEach { franchise ->
                         SeriesSection(
                             franchise = franchise,
@@ -713,16 +976,8 @@ private fun OverviewTab(
                             onGameClick = onSimilarGameClick,
                         )
                     }
-                    if (game.screenshotImageIds.isNotEmpty()) ScreenshotsSection(game)
-                    game.timeToBeat?.let { HltbSection(it) }
-                    // My note sits here — further down the Overview, just above DLC & Expansions.
-                    NotesSection(note = note, onSaveNote = onSaveNote, onDeleteNote = onDeleteNote, modifier = noteModifier)
-                    val dlcs = game.dlcs + game.expansions
-                    if (dlcs.isNotEmpty()) DlcsSection(dlcs, onSimilarGameClick)
-                    if (game.similarGames.isNotEmpty()) SimilarGamesSection(game.similarGames, onSimilarGameClick)
-                    if (game.involvedCompanies.isNotEmpty()) CompaniesSection(game.involvedCompanies)
-                } else if (data.bundles.isEmpty() && data.websites.isEmpty()) {
-                    TabEmpty(stringResource(Res.string.game_page_overview_empty), inset)
+                } else if (data.websites.isEmpty()) {
+                    TabEmpty(stringResource(Res.string.game_page_overview_empty))
                 }
             }
         }
@@ -730,10 +985,162 @@ private fun OverviewTab(
     }
 }
 
+/** The compact label/value "Details" card — folds the old platform/mode/genre/HLTB/company chip-rows + age badges into one scannable block. */
+@Composable
+private fun DetailsTable(game: IgdbGame) {
+    val separator = ", "
+    val platforms = game.platforms.takeIf { it.isNotEmpty() }?.joinToString(separator)
+    val modes = game.gameModes.takeIf { it.isNotEmpty() }?.joinToString(separator)
+    val genres = (game.genres + game.themes).takeIf { it.isNotEmpty() }?.joinToString(separator)
+    val developers = game.involvedCompanies.filter { it.role == IgdbGame.IgdbCompanyRole.Role.Developer }.map { it.companyName }.distinct().takeIf { it.isNotEmpty() }?.joinToString(separator)
+    val publishers = game.involvedCompanies.filter { it.role == IgdbGame.IgdbCompanyRole.Role.Publisher }.map { it.companyName }.distinct().takeIf { it.isNotEmpty() }?.joinToString(separator)
+    val hltb = game.timeToBeat?.let { ttb ->
+        listOfNotNull(ttb.hastily, ttb.normally, ttb.completely).map { stringResource(Res.string.game_page_hltb_hours, hoursFromSeconds(it)) }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+    }
+    val hasAge = game.ageRatings.isNotEmpty()
+    if (platforms == null && modes == null && genres == null && developers == null && publishers == null && hltb == null && !hasAge) return
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+        Column(
+            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            SectionHeader(stringResource(Res.string.game_page_section_details))
+            platforms?.let { DetailRow(stringResource(Res.string.game_page_section_platforms), it) }
+            modes?.let { DetailRow(stringResource(Res.string.game_page_section_game_modes), it) }
+            genres?.let { DetailRow(stringResource(Res.string.game_page_details_genres_label), it) }
+            hltb?.let { DetailRow(stringResource(Res.string.game_page_section_hltb), it) }
+            developers?.let { DetailRow(stringResource(Res.string.game_page_details_developer_label), it) }
+            publishers?.let { DetailRow(stringResource(Res.string.game_page_details_publisher_label), it) }
+            if (hasAge) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = stringResource(Res.string.game_page_details_age_label), modifier = Modifier.width(112.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AgeRatingsRow(ratings = game.ageRatings, modifier = Modifier.weight(1f), badgeHeight = 32.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(text = label, modifier = Modifier.width(112.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** Trailers + screenshots merged into one horizontal gallery: video tiles play externally, image tiles open the viewer. */
+@Composable
+private fun MediaGallery(game: IgdbGame, goToWeb: (url: String, gameTitle: String) -> Unit) {
+    var openIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        SectionHeader(stringResource(Res.string.game_page_section_media), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            itemsIndexed(game.videos) { index, video ->
+                val title = video.name ?: stringResource(Res.string.game_page_trailer_title_fallback, index + 1)
+                val description = stringResource(Res.string.game_page_trailer_thumbnail_cd, index + 1, game.videos.size, game.name, title)
+                Column(
+                    modifier = Modifier
+                        .width(TRAILER_TILE_WIDTH)
+                        .clickable(role = Role.Button) { goToWeb(youTubeWatchUrl(video.videoId), game.name) }
+                        .semantics(mergeDescendants = true) { contentDescription = description },
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                            .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AsyncImage(
+                            model = youTubeThumbnailUrl(video.videoId),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                                .padding(GameDealsCustomTheme.spacing.extraSmall),
+                        )
+                    }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            itemsIndexed(game.screenshotImageIds) { index, imageId ->
+                AsyncImage(
+                    model = igdbImageUrl(imageId, IgdbImageSize.ScreenshotMed),
+                    contentDescription = stringResource(Res.string.game_details_screenshot_image_cd, game.name, index + 1),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .height(180.dp)
+                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clickable(role = Role.Button) { openIndex = index },
+                )
+            }
+        }
+    }
+    openIndex?.let { startPage ->
+        ScreenshotViewerDialog(
+            screenshotImageIds = game.screenshotImageIds,
+            gameName = game.name,
+            initialPage = startPage,
+            onDismiss = { openIndex = null },
+        )
+    }
+}
+
+// ----- Community tab --------------------------------------------------------------------------------------
+
+/** The social-proof tab: critic/user scores (full, with counts), current player counts and per-source review bars. */
+@Composable
+private fun CommunityTab(data: GamePageData.Data, onRetry: () -> Unit) {
+    val igdb = data.igdbGameOrNull
+    val hasRatings = igdb != null && (igdb.rating != null || igdb.aggregatedRating != null)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+    ) {
+        if (igdb != null) RatingsRow(igdb)
+        when (val meta = data.gameMeta) {
+            SectionState.Loading -> TabLoading()
+            SectionState.Error -> TabError(onRetry = onRetry)
+            is SectionState.Loaded -> {
+                val value = meta.value
+                val hasPlayers = value?.players?.let { it.recent != null || it.peak != null } == true
+                val hasReviews = value?.reviews?.isNotEmpty() == true
+                if (!hasPlayers && !hasReviews && !hasRatings) {
+                    TabEmpty(stringResource(Res.string.game_page_stats_empty))
+                } else {
+                    value?.players?.let { PlayersBlock(it) }
+                    value?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
+                }
+            }
+        }
+    }
+}
+
 /**
  * A franchise/series the game belongs to (#7): the series name with a Follow/Following toggle, and its
- * other member games as tappable tiles (reusing the similar-games row). Following persists locally so the
- * user can keep tabs on the whole series.
+ * other member games as tappable tiles (reusing the similar-games row).
  */
 @Composable
 private fun SeriesSection(
@@ -772,163 +1179,15 @@ private fun SeriesSection(
 }
 
 @Composable
-private fun RegionsTab(
-    state: GamePageViewModel.RegionalPricesState,
-    gameTitle: String,
-    goToWeb: (url: String, gameTitle: String) -> Unit,
-) {
-    when (state) {
-        GamePageViewModel.RegionalPricesState.Idle,
-        GamePageViewModel.RegionalPricesState.Loading -> {
-            val loadingCd = stringResource(Res.string.game_page_regions_loading_cd)
-            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
-            }
-        }
-        GamePageViewModel.RegionalPricesState.Error -> Text(
-            text = stringResource(Res.string.game_page_regions_error),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        is GamePageViewModel.RegionalPricesState.Loaded -> {
-            if (state.items.isEmpty()) {
-                Text(text = stringResource(Res.string.game_page_regions_empty), style = MaterialTheme.typography.bodyMedium)
-            } else {
-                state.items.forEachIndexed { index, region ->
-                    if (index > 0) HorizontalDivider()
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { goToWeb(region.url, gameTitle) }.padding(vertical = GameDealsCustomTheme.spacing.small),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = region.country.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Text(text = region.priceDenominated, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PricesTab(
-    data: GamePageData.Data,
-    goToWeb: (url: String, gameTitle: String) -> Unit,
-    onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
-    onRetry: () -> Unit,
-) {
-    when (val deals = data.deals) {
-        SectionState.Loading -> TabLoading()
-        SectionState.Error -> TabError(onRetry = onRetry)
-        is SectionState.Loaded -> {
-            val gameDetails = deals.value
-            if (gameDetails == null || data.dealDetails.isEmpty()) {
-                TabEmpty(stringResource(Res.string.game_page_prices_empty))
-            } else {
-                gameDetails.dealQuality()?.let { DealQualityCallout(it) }
-                Text(
-                    text = stringResource(Res.string.game_screen_cheapest_value_label, gameDetails.deals.minBy { it.priceValue }.priceDenominated),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                data.dealDetails.forEach { pair ->
-                    StoreGameDealRow(gameId = data.gameId, store = pair.store, gameInfo = gameDetails.info, deal = pair.deal, goToWeb = goToWeb, onShareDeal = onShareDeal)
-                }
-            }
-        }
-    }
-}
-
-/**
- * The deal-quality buy-signal callout (Phase 2) — sits atop the Prices tab and answers "should I buy
- * now?" by comparing the current best price to the game's all-time low. The tier drives both the colour
- * and the copy; the whole card is merged into one spoken phrase for TalkBack.
- */
-@Composable
-private fun DealQualityCallout(quality: DealQuality) {
-    val container = when (quality.tier) {
-        DealQuality.Tier.AllTimeLow -> MaterialTheme.colorScheme.tertiaryContainer
-        DealQuality.Tier.NearLow -> MaterialTheme.colorScheme.secondaryContainer
-        DealQuality.Tier.Elevated -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val onContainer = when (quality.tier) {
-        DealQuality.Tier.AllTimeLow -> MaterialTheme.colorScheme.onTertiaryContainer
-        DealQuality.Tier.NearLow -> MaterialTheme.colorScheme.onSecondaryContainer
-        DealQuality.Tier.Elevated -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val title = stringResource(
-        when (quality.tier) {
-            DealQuality.Tier.AllTimeLow -> Res.string.game_page_deal_quality_all_time_low_title
-            DealQuality.Tier.NearLow -> Res.string.game_page_deal_quality_near_low_title
-            DealQuality.Tier.Elevated -> Res.string.game_page_deal_quality_elevated_title
-        }
-    )
-    val detail = when (quality.tier) {
-        DealQuality.Tier.AllTimeLow -> stringResource(Res.string.game_page_deal_quality_at_low_detail, quality.allTimeLowDenominated)
-        else -> stringResource(
-            Res.string.game_page_deal_quality_above_detail,
-            quality.percentAboveLow,
-            quality.allTimeLowDenominated,
-        )
-    }
-    val mergedCd = stringResource(Res.string.game_page_deal_quality_cd, title, detail)
-    Card(
-        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = mergedCd },
-        colors = CardDefaults.cardColors(containerColor = container, contentColor = onContainer),
-    ) {
-        Column(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = detail, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun StatsTab(data: GamePageData.Data, onRetry: () -> Unit) {
-    // The Players/Critics rating pills (RatingsRow) live in the hero header — not repeated here. Stats
-    // shows the ITAD-only signals: current player counts + storefront/critic review scores.
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-        when (val meta = data.gameMeta) {
-            SectionState.Loading -> TabLoading()
-            SectionState.Error -> TabError(onRetry = onRetry)
-            is SectionState.Loaded -> {
-                val value = meta.value
-                val hasPlayers = value?.players?.let { it.recent != null || it.peak != null } == true
-                val hasReviews = value?.reviews?.isNotEmpty() == true
-                if (!hasPlayers && !hasReviews) {
-                    TabEmpty(stringResource(Res.string.game_page_stats_empty))
-                } else {
-                    value?.players?.let { PlayersBlock(it) }
-                    value?.reviews?.takeIf { it.isNotEmpty() }?.let { ReviewsBlock(it) }
-                }
-            }
-        }
-    }
-}
-
-/** The all-time historical low ("Cheapest ever") — shown on the History tab alongside the price chart. */
-@Composable
-private fun CheapestEverBlock(gameDetails: GameDetails) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
-        Text(text = stringResource(Res.string.game_screen_cheapest_ever_label), style = MaterialTheme.typography.titleSmall)
-        // ITAD's prices endpoint doesn't return the low's date (mapped to ""), so show just the price.
-        Text(text = gameDetails.cheapestPriceEver.priceDenominated, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-/** Current player counts from ITAD `players` (recent + peak); a snapshot, not a history graph (see ADR 0002). */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
 private fun PlayersBlock(players: GameMeta.Players) {
     val recent = players.recent
     val peak = players.peak
     if (recent == null && peak == null) return
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(stringResource(Res.string.game_page_section_players))
+        @OptIn(ExperimentalLayoutApi::class)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-            // Display-only stat chips: clear the (no-op) button semantics so TalkBack reads them as text
-            // rather than offering a "double-tap to activate" that does nothing.
+            // Display-only stat chips: clear the (no-op) button semantics so TalkBack reads them as text.
             recent?.let {
                 val label = stringResource(Res.string.game_page_players_recent, formatCount(it))
                 AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
@@ -1008,11 +1267,12 @@ private fun ReviewCard(review: GameMeta.Review) {
 private val ReviewPositiveColor = Color(0xFF43A047)
 
 @Composable
-private fun RatingsRow(game: IgdbGame) {
+private fun RatingsRow(game: IgdbGame, onClick: (() -> Unit)? = null) {
     val user = game.rating?.toInt()
     val critic = game.aggregatedRating?.toInt()
     if (user == null && critic == null) return
-    Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+    val rowModifier = if (onClick != null) Modifier.clickable(role = Role.Button) { onClick() } else Modifier
+    Row(modifier = rowModifier, horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
         if (user != null) RatingPill(stringResource(Res.string.game_details_user_rating_label), user, game.ratingCount)
         if (critic != null) RatingPill(stringResource(Res.string.game_details_critic_rating_label), critic, game.aggregatedRatingCount)
     }
@@ -1040,22 +1300,10 @@ private fun StoreGameDealRow(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onShareDeal: (GameDetails.GameInfo, Store, GameDetails.GameDeal) -> Unit,
 ) {
-    // Records the click-through to a store before the in-app browser opens. The Prices tab opens deals
-    // directly (not via the peek sheet), so this is the deal_store_opened capture point for the game page.
+    // Records the click-through to a store before the in-app browser opens.
     val analytics: Analytics = koinInject()
     val rowCd = stringResource(Res.string.game_screen_store_deal_row_description, store.storeName, deal.savings, deal.priceDenominated)
-    Card(onClick = {
-        analytics.capture(
-            AnalyticsEvents.DEAL_STORE_OPENED,
-            mapOf(
-                "game_id" to (gameId ?: ""),
-                "store_id" to store.storeID,
-                "store_name" to store.storeName,
-                "discount_pct" to deal.savings,
-            ),
-        )
-        goToWeb(deal.url, gameInfo.title)
-    }) {
+    Card(onClick = { openStoreDeal(analytics, gameId, store, deal, gameInfo.title, goToWeb) }) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
@@ -1124,198 +1372,6 @@ private fun CollapsibleParagraph(text: String) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ChipsSection(chips: List<String>) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-    ) {
-        // Display-only genre/theme tags: clear the no-op button semantics (read as text, not a button).
-        items(chips) { label -> AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) }) }
-    }
-}
-
-@Composable
-private fun ScreenshotsSection(game: IgdbGame) {
-    var openIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-        SectionHeader(stringResource(Res.string.game_details_section_screenshots), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            itemsIndexed(game.screenshotImageIds) { index, imageId ->
-                AsyncImage(
-                    model = igdbImageUrl(imageId, IgdbImageSize.ScreenshotMed),
-                    contentDescription = stringResource(Res.string.game_details_screenshot_image_cd, game.name, index + 1),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .height(180.dp)
-                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .clickable(role = Role.Button) { openIndex = index },
-                )
-            }
-        }
-    }
-    openIndex?.let { startPage ->
-        ScreenshotViewerDialog(
-            screenshotImageIds = game.screenshotImageIds,
-            gameName = game.name,
-            initialPage = startPage,
-            onDismiss = { openIndex = null },
-        )
-    }
-}
-
-/** Platform availability (IGDB `platforms`) — compact, display-only chips ("PC", "PS5", "Switch"). */
-@Composable
-private fun PlatformsSection(platforms: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-        SectionHeader(stringResource(Res.string.game_page_section_platforms), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            items(platforms) { label ->
-                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
-            }
-        }
-    }
-}
-
-/** Game modes (IGDB `game_modes`) — display-only chips ("Single player", "Co-operative", …) (#200). */
-@Composable
-private fun GameModesSection(modes: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-        SectionHeader(stringResource(Res.string.game_page_section_game_modes), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            items(modes) { label ->
-                AssistChip(onClick = {}, modifier = Modifier.clearAndSetSemantics { contentDescription = label }, label = { Text(label) })
-            }
-        }
-    }
-}
-
-/**
- * ESRB/PEGI age ratings (IGDB `age_ratings`) shown as the official rating badges — bundled vector drawables
- * traced from Wikimedia Commons — in the title header, under the review numbers (#199). Ratings we don't
- * ship an asset for (e.g. ESRB "Rating Pending") are simply omitted. Wraps if the header is narrow.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AgeRatingsRow(ratings: List<IgdbGame.IgdbAgeRating>) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-    ) {
-        ratings.forEach { rating ->
-            val art = ageRatingArt(rating) ?: return@forEach
-            val cd = when (rating.board) {
-                IgdbGame.IgdbAgeRating.Board.ESRB -> "ESRB ${rating.code}"
-                IgdbGame.IgdbAgeRating.Board.PEGI -> "PEGI ${rating.code}"
-            }
-            Image(
-                painter = painterResource(art),
-                contentDescription = cd,
-                modifier = Modifier.height(RATING_ICON_HEIGHT),
-            )
-        }
-    }
-}
-
-private val RATING_ICON_HEIGHT = 40.dp
-
-/** The bundled official badge for a rating, or null when we don't ship that one (e.g. ESRB Rating Pending). */
-private fun ageRatingArt(rating: IgdbGame.IgdbAgeRating): DrawableResource? = when (rating.board) {
-    IgdbGame.IgdbAgeRating.Board.ESRB -> when (rating.code) {
-        "EC" -> Res.drawable.esrb_ec
-        "E" -> Res.drawable.esrb_e
-        "E10+" -> Res.drawable.esrb_e10
-        "T" -> Res.drawable.esrb_t
-        "M" -> Res.drawable.esrb_m
-        "AO" -> Res.drawable.esrb_ao
-        else -> null
-    }
-    IgdbGame.IgdbAgeRating.Board.PEGI -> when (rating.code) {
-        "3" -> Res.drawable.pegi_3
-        "7" -> Res.drawable.pegi_7
-        "12" -> Res.drawable.pegi_12
-        "16" -> Res.drawable.pegi_16
-        "18" -> Res.drawable.pegi_18
-        else -> null
-    }
-}
-
-/**
- * Trailers/gameplay clips (IGDB `videos`). Each tile shows the YouTube thumbnail with a play overlay and
- * opens the clip externally via the shared in-app web view ([goToWeb]) — no embedded player needed.
- */
-@Composable
-private fun TrailersSection(game: IgdbGame, goToWeb: (url: String, gameTitle: String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-        SectionHeader(stringResource(Res.string.game_page_section_trailers), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            itemsIndexed(game.videos) { index, video ->
-                val title = video.name ?: stringResource(Res.string.game_page_trailer_title_fallback, index + 1)
-                val description = stringResource(Res.string.game_page_trailer_thumbnail_cd, index + 1, game.videos.size, game.name, title)
-                Column(
-                    modifier = Modifier
-                        .width(TRAILER_TILE_WIDTH)
-                        .clickable(role = Role.Button) { goToWeb(youTubeWatchUrl(video.videoId), game.name) }
-                        .semantics(mergeDescendants = true) { contentDescription = description },
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(SCREENSHOT_ASPECT_RATIO)
-                            .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AsyncImage(
-                            model = youTubeThumbnailUrl(video.videoId),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                                .padding(GameDealsCustomTheme.spacing.extraSmall),
-                        )
-                    }
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun SimilarGamesSection(games: List<IgdbGame.IgdbSimilarGame>, onSimilarGameClick: (Long) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
@@ -1359,33 +1415,6 @@ private fun IgdbGameTile(game: IgdbGame.IgdbSimilarGame, onClick: (Long) -> Unit
     }
 }
 
-@Composable
-private fun CompaniesSection(companies: List<IgdbGame.IgdbCompanyRole>) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
-        Column(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            SectionHeader(stringResource(Res.string.game_details_section_companies))
-            companies.forEachIndexed { index, role ->
-                if (index > 0) HorizontalDivider()
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = GameDealsCustomTheme.spacing.extraSmall), verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = companyRoleLabel(role.role), modifier = Modifier.width(112.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = role.companyName, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun companyRoleLabel(role: IgdbGame.IgdbCompanyRole.Role): String = when (role) {
-    IgdbGame.IgdbCompanyRole.Role.Developer -> stringResource(Res.string.game_details_company_role_developer)
-    IgdbGame.IgdbCompanyRole.Role.Publisher -> stringResource(Res.string.game_details_company_role_publisher)
-    IgdbGame.IgdbCompanyRole.Role.Porting -> stringResource(Res.string.game_details_company_role_porting)
-    IgdbGame.IgdbCompanyRole.Role.Supporting -> stringResource(Res.string.game_details_company_role_supporting)
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LinksSection(websites: List<WebsiteUiModel>) {
@@ -1401,8 +1430,6 @@ private fun LinksSection(websites: List<WebsiteUiModel>) {
                     AssistChip(
                         onClick = { uriHandler.openUri(site.url) },
                         label = { Text(site.category.name) },
-                        // Brand-keyed favicon (resolved in the VM via FaviconResolver). Shown only when a
-                        // URL resolved; on a failed fetch Coil renders nothing, leaving a label-only chip.
                         leadingIcon = site.faviconUrl?.let { faviconUrl ->
                             {
                                 AsyncImage(
@@ -1427,34 +1454,6 @@ private fun LinksSection(websites: List<WebsiteUiModel>) {
 }
 
 @Composable
-private fun NotesSection(note: String?, onSaveNote: (String) -> Unit, onDeleteNote: () -> Unit, modifier: Modifier = Modifier) {
-    var editing by remember { mutableStateOf(false) }
-    Card(modifier = modifier) {
-        Column(modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.medium)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(modifier = Modifier.weight(1f), text = stringResource(Res.string.game_screen_note_section_title), style = MaterialTheme.typography.titleSmall)
-                if (note != null) {
-                    IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, stringResource(Res.string.game_screen_note_edit_action)) }
-                    IconButton(onClick = onDeleteNote) { Icon(Icons.Filled.Delete, stringResource(Res.string.game_screen_note_delete_action)) }
-                }
-            }
-            if (note != null) {
-                Text(text = note, style = MaterialTheme.typography.bodyMedium)
-            } else {
-                TextButton(onClick = { editing = true }) { Text(stringResource(Res.string.game_screen_note_add_action)) }
-            }
-        }
-    }
-    if (editing) {
-        NoteEditDialog(initial = note.orEmpty(), onDismiss = { editing = false }, onConfirm = { text ->
-            editing = false
-            val trimmed = text.trim()
-            if (trimmed.isEmpty()) onDeleteNote() else onSaveNote(trimmed)
-        })
-    }
-}
-
-@Composable
 private fun NoteEditDialog(initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
@@ -1465,8 +1464,6 @@ private fun NoteEditDialog(initial: String, onDismiss: () -> Unit, onConfirm: (S
                 modifier = Modifier.fillMaxWidth(),
                 value = text,
                 onValueChange = { text = it },
-                // A persistent label gives the field a programmatic name for TalkBack; the placeholder
-                // is only a hint and disappears once the user types.
                 label = { Text(stringResource(Res.string.game_screen_note_dialog_label)) },
                 placeholder = { Text(stringResource(Res.string.game_screen_note_dialog_placeholder)) },
             )
@@ -1496,7 +1493,7 @@ private fun NoMatchSection(modifier: Modifier, title: String, onSearch: () -> Un
 
 @Composable
 private fun BundlesSection(bundles: List<Bundle>, onBundleClick: (bundleId: Int) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
             SectionHeader(stringResource(Res.string.game_page_section_bundles))
             bundles.forEachIndexed { index, bundle ->
@@ -1530,29 +1527,6 @@ private fun DlcsSection(dlcs: List<IgdbGame.IgdbSimilarGame>, onDlcClick: (igdbG
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
             items(dlcs, key = { it.id }) { dlc -> IgdbGameTile(dlc, onDlcClick, Modifier.width(112.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun HltbSection(timeToBeat: IgdbGame.IgdbTimeToBeat) {
-    val tiers = buildList {
-        timeToBeat.hastily?.let { add(stringResource(Res.string.game_page_hltb_hastily) to it) }
-        timeToBeat.normally?.let { add(stringResource(Res.string.game_page_hltb_normally) to it) }
-        timeToBeat.completely?.let { add(stringResource(Res.string.game_page_hltb_completely) to it) }
-    }
-    if (tiers.isEmpty()) return
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large)) {
-        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-            SectionHeader(stringResource(Res.string.game_page_section_hltb))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                tiers.forEach { (label, seconds) ->
-                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = stringResource(Res.string.game_page_hltb_hours, hoursFromSeconds(seconds)), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
         }
     }
 }
