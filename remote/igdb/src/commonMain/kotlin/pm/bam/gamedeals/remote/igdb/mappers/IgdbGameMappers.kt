@@ -6,6 +6,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbAgeRating
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbInvolvedCompany
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbSimilarGame
@@ -46,6 +47,9 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
             games = f.games.filter { it.id != id }.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
         )
     }.toImmutableList(),
+    // ESRB/PEGI only; other boards (CERO/USK/…) drop out. De-duped (IGDB can list the same rating twice).
+    ageRatings = ageRatings.mapNotNull { it.toIgdbAgeRatingOrNull() }.distinct().toImmutableList(),
+    gameModes = gameModes.mapNotNull { it.name?.takeIf(String::isNotBlank) }.distinct().toImmutableList(),
     // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
     steamAppId = externalGames
         .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
@@ -122,6 +126,43 @@ private fun mapWebsiteType(typeId: Long?, typeName: String?): IgdbGame.IgdbWebsi
 private fun RemoteIgdbSimilarGame.toIgdbSimilarGameOrNull(): IgdbGame.IgdbSimilarGame? {
     val n = name ?: return null
     return IgdbGame.IgdbSimilarGame(id = id, name = n, coverImageId = cover?.imageId)
+}
+
+// IGDB age-rating `organization` ids we surface; everything else (CERO/USK/GRAC/…) is dropped.
+private const val ESRB_ORG = 1
+private const val PEGI_ORG = 2
+
+/**
+ * Maps an IGDB `age_ratings` row to an ESRB/PEGI [IgdbGame.IgdbAgeRating], or null for other boards /
+ * unknown codes. `rating_category` ids are board-specific; values verified live against IGDB's
+ * `/v4/age_rating_categories` table (2026-06-26).
+ */
+private fun RemoteIgdbAgeRating.toIgdbAgeRatingOrNull(): IgdbGame.IgdbAgeRating? = when (organization) {
+    ESRB_ORG -> esrbCode(ratingCategory)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.ESRB, it) }
+    PEGI_ORG -> pegiCode(ratingCategory)?.let { IgdbGame.IgdbAgeRating(IgdbGame.IgdbAgeRating.Board.PEGI, it) }
+    else -> null
+}
+
+// /v4/age_rating_categories ids for organization = ESRB (1).
+private fun esrbCode(ratingCategory: Int?): String? = when (ratingCategory) {
+    1 -> "RP"   // Rating Pending
+    2 -> "EC"   // Early Childhood
+    3 -> "E"    // Everyone
+    4 -> "E10+" // Everyone 10+
+    5 -> "T"    // Teen
+    6 -> "M"    // Mature
+    7 -> "AO"   // Adults Only
+    else -> null
+}
+
+// /v4/age_rating_categories ids for organization = PEGI (2).
+private fun pegiCode(ratingCategory: Int?): String? = when (ratingCategory) {
+    8 -> "3"
+    9 -> "7"
+    10 -> "12"
+    11 -> "16"
+    12 -> "18"
+    else -> null
 }
 
 internal fun RemoteIgdbTimeToBeat.toIgdbTimeToBeat(): IgdbGame.IgdbTimeToBeat =

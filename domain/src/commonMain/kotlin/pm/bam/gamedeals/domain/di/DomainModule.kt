@@ -53,6 +53,8 @@ import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositor
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
 import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStoreImpl
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
@@ -101,6 +103,7 @@ val domainModule = module {
     single { get<DomainDatabase>().getCollectionDao() }
     single { get<DomainDatabase>().getIgnoredDao() }
     single { get<DomainDatabase>().getIgdbTagDao() }
+    single { get<DomainDatabase>().getRecentlyViewedDao() }
 
     single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
@@ -113,6 +116,8 @@ val domainModule = module {
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    // Recently-viewed games (#211): device-local Room history (dao, clock, analytics), not auth-gated.
+    single<RecentlyViewedRepository> { RecentlyViewedRepositoryImpl(get(), get(), get()) }
     single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // ITAD account. AuthTokenStore is Storage-backed (like RegionRepository); Waitlist/Collection are

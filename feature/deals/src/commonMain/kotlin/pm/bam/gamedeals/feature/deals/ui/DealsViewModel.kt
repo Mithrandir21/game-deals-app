@@ -57,7 +57,9 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.info
 
 /** Minimum time the search spinner stays up so a fast result doesn't flash (ported from the Search screen). */
@@ -90,6 +92,7 @@ internal class DealsViewModel(
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
     private val settingsRepository: SettingsRepository,
+    featureFlags: FeatureFlags,
 ) : ViewModel() {
 
     val waitlistIds: StateFlow<ImmutableSet<String>> = waitlistRepository.observeWaitlistIds()
@@ -131,6 +134,14 @@ internal class DealsViewModel(
      */
     val filter: StateFlow<DealsFilter> = settingsRepository.observeDealsFilter()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DealsFilter())
+
+    /**
+     * Whether the "Discover by Tag" entry point is shown — feature-flagged via [FeatureFlag.DiscoverByTag].
+     * Staged rollout: defaults to hidden and flips on if/when the flag provider enables it, reacting at runtime
+     * without a relaunch (the flag value can arrive after this screen is first composed).
+     */
+    val discoverEnabled: StateFlow<Boolean> = featureFlags.observe(FeatureFlag.DiscoverByTag)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeatureFlag.DiscoverByTag.default)
 
     val uiState: StateFlow<DealsScreenData>
         field = MutableStateFlow(DealsScreenData())
@@ -287,7 +298,7 @@ internal class DealsViewModel(
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
-            fatal(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
+            error(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
             uiState.update {
                 DealsScreenData(status = DealsScreenData.Status.ERROR, sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
             }
@@ -312,7 +323,7 @@ internal class DealsViewModel(
             } catch (c: CancellationException) {
                 throw c
             } catch (t: Throwable) {
-                fatal(logger, t) { "Failed to load more deals" }
+                error(logger, t) { "Failed to load more deals" }
                 uiState.update { it.copy(appending = false) }
                 events.tryEmit(DealsUiEvent.LoadMoreError)
             }

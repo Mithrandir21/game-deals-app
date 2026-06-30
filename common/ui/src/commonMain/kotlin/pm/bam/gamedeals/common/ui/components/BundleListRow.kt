@@ -164,7 +164,7 @@ private fun BundleArtStrip(
 /** Formats a bundle epoch-ms as a short local date, e.g. "Jul 7, 2026". Shared by the row + detail footer. */
 fun formatBundleShortDate(epochMs: Long): String {
     val date = Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault()).date
-    return "${MONTH_ABBREV[date.month.ordinal]} ${date.dayOfMonth}, ${date.year}"
+    return "${MONTH_ABBREV[date.month.ordinal]} ${date.day}, ${date.year}"
 }
 
 private val MONTH_ABBREV = listOf(

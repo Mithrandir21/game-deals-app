@@ -6,57 +6,54 @@ import kotlin.test.assertEquals
 class NotificationStepTest {
 
     @Test
-    fun active_only_when_opted_in_and_permission_granted() {
+    fun no_choice_yet_offers_the_allow_or_decline_step() {
+        // permissionGranted is irrelevant until the user has made a choice this run.
+        assertEquals(
+            NotificationStep.Choose,
+            notificationStep(decided = false, declined = false, permissionGranted = false),
+        )
+        assertEquals(
+            NotificationStep.Choose,
+            notificationStep(decided = false, declined = false, permissionGranted = true),
+        )
+    }
+
+    @Test
+    fun allow_with_permission_granted_is_active() {
         assertEquals(
             NotificationStep.Active,
-            notificationStep(enabled = true, permissionGranted = true, denied = false),
+            notificationStep(decided = true, declined = false, permissionGranted = true),
         )
     }
 
     @Test
-    fun opted_in_but_permission_revoked_is_not_active() {
-        // Regression: a permission revoked in settings must not keep reading as "on".
+    fun allow_without_permission_is_blocked() {
+        // Tapped Allow but the OS prompt was refused or suppressed — deep-link to settings.
         assertEquals(
             NotificationStep.Blocked,
-            notificationStep(enabled = true, permissionGranted = false, denied = true),
-        )
-        assertEquals(
-            NotificationStep.Off,
-            notificationStep(enabled = true, permissionGranted = false, denied = false),
+            notificationStep(decided = true, declined = false, permissionGranted = false),
         )
     }
 
     @Test
-    fun permission_granted_but_opted_out_offers_enable() {
+    fun granting_via_settings_clears_blocked() {
+        // Regression: returning from system settings with the permission granted must flip Blocked → Active,
+        // since the live permission now wins.
         assertEquals(
-            NotificationStep.Enable,
-            notificationStep(enabled = false, permissionGranted = true, denied = false),
+            NotificationStep.Active,
+            notificationStep(decided = true, declined = false, permissionGranted = true),
         )
     }
 
     @Test
-    fun granting_via_settings_clears_blocked_even_with_stale_denied_flag() {
-        // Regression: after enabling in system settings the (sticky) denied flag may still be true, but the
-        // live permission must win — show Enable (a one-tap opt-in), not the Blocked deep-link.
+    fun decline_is_declined_regardless_of_permission() {
         assertEquals(
-            NotificationStep.Enable,
-            notificationStep(enabled = false, permissionGranted = true, denied = true),
+            NotificationStep.Declined,
+            notificationStep(decided = true, declined = true, permissionGranted = false),
         )
-    }
-
-    @Test
-    fun permission_off_and_not_yet_refused_is_off() {
         assertEquals(
-            NotificationStep.Off,
-            notificationStep(enabled = false, permissionGranted = false, denied = false),
-        )
-    }
-
-    @Test
-    fun permission_off_after_refusal_is_blocked() {
-        assertEquals(
-            NotificationStep.Blocked,
-            notificationStep(enabled = false, permissionGranted = false, denied = true),
+            NotificationStep.Declined,
+            notificationStep(decided = true, declined = true, permissionGranted = true),
         )
     }
 }

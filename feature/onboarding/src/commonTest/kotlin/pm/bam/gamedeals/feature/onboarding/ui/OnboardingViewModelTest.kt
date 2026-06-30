@@ -167,6 +167,18 @@ class OnboardingViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun onNotificationsDeclined_persists_opt_out_and_cancels_poll() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.onNotificationsDeclined()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { notificationSettings.setEnabled(false) }
+        verify(exactly(1)) { notificationScheduler.cancel() }
+    }
+
+    @Test
     fun onEnableAnalytics_grants_consent() = runTest {
         val vm = viewModel()
         advanceUntilIdle()
@@ -175,6 +187,17 @@ class OnboardingViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         verifySuspend(exactly(1)) { settingsRepository.setAnalyticsConsent(true) }
+    }
+
+    @Test
+    fun onDeclineAnalytics_revokes_consent() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.onDeclineAnalytics()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { settingsRepository.setAnalyticsConsent(false) }
     }
 
     @Test

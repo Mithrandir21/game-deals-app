@@ -39,6 +39,8 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
@@ -83,6 +85,8 @@ class DealsViewModelTest : MainDispatcherTest() {
         everySuspend { setDealsFilter(any()) } calls { (filter: DealsFilter) -> dealsFilterFlow.value = filter }
     }
 
+    private val featureFlags = FakeFeatureFlags()
+
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
@@ -97,6 +101,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
         settingsRepository = settingsRepository,
+        featureFlags = featureFlags,
     )
 
     @Test
@@ -262,6 +267,22 @@ class DealsViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
         assertEquals(DealsFilter(), dealsFilterFlow.value)
         assertTrue(vm.uiState.value.filter.isEmpty())
+    }
+
+    @Test
+    fun discover_hidden_by_default_then_reacts_to_the_feature_flag() = runTest {
+        // Staged rollout: the Discover-by-Tag entry point defaults off and flips on when the flag provider
+        // enables it — without recreating the screen (the value can arrive after first composition).
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+
+        val vm = createViewModel()
+        val emissions = vm.discoverEnabled.observeEmissions(this.backgroundScope, testDispatcher)
+        advanceUntilIdle()
+        assertFalse(emissions.last()) // default = hidden
+
+        featureFlags.set(FeatureFlag.DiscoverByTag, true)
+        advanceUntilIdle()
+        assertTrue(emissions.last()) // reacts to the remote flag flipping on
     }
 
     @Test

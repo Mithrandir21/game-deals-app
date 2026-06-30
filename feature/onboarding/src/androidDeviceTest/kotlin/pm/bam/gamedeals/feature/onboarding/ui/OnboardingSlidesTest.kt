@@ -21,9 +21,12 @@ import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_off
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_denied
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enabled
@@ -52,8 +55,34 @@ class OnboardingSlidesTest {
     // --- Notifications slide ------------------------------------------------------------------------
 
     @Test
-    fun notifications_active_shows_alerts_on_only() {
-        setContent { NotificationsSlide(enabled = true, permissionGranted = true, denied = false, onEnable = {}, onOpenSettings = {}) }
+    fun notifications_undecided_forces_an_allow_or_decline_choice() {
+        var allowed = false
+        var declined = false
+        setContent {
+            NotificationsSlide(
+                decided = false, declined = false, permissionGranted = false,
+                onAllow = { allowed = true }, onDecline = { declined = true }, onOpenSettings = {},
+            )
+        }
+
+        // Both choices are present and reachable; no confirmation or settings deep-link yet.
+        composeTestRule.onNodeWithText(sem.turnOn).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.notifDecline).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.alertsOn).assertDoesNotExist()
+        composeTestRule.onNodeWithText(sem.openSettings).assertDoesNotExist()
+
+        composeTestRule.onNodeWithText(sem.notifDecline).performClick()
+        assertTrue(declined && !allowed)
+    }
+
+    @Test
+    fun notifications_allowed_and_granted_shows_alerts_on_only() {
+        setContent {
+            NotificationsSlide(
+                decided = true, declined = false, permissionGranted = true,
+                onAllow = {}, onDecline = {}, onOpenSettings = {},
+            )
+        }
 
         composeTestRule.onNodeWithText(sem.alertsOn).assertIsDisplayed()
         composeTestRule.onNodeWithText(sem.turnOn).assertDoesNotExist()
@@ -61,29 +90,30 @@ class OnboardingSlidesTest {
     }
 
     @Test
-    fun notifications_permission_granted_opt_out_offers_turn_on() {
-        setContent { NotificationsSlide(enabled = false, permissionGranted = true, denied = false, onEnable = {}, onOpenSettings = {}) }
+    fun notifications_declined_shows_status_and_no_choice() {
+        setContent {
+            NotificationsSlide(
+                decided = true, declined = true, permissionGranted = false,
+                onAllow = {}, onDecline = {}, onOpenSettings = {},
+            )
+        }
 
-        composeTestRule.onNodeWithText(sem.turnOn).assertIsDisplayed()
-        composeTestRule.onNodeWithText(sem.openSettings).assertDoesNotExist()
-        composeTestRule.onNodeWithText(sem.off).assertDoesNotExist()
-    }
-
-    @Test
-    fun notifications_permission_off_shows_status_and_turn_on() {
-        setContent { NotificationsSlide(enabled = false, permissionGranted = false, denied = false, onEnable = {}, onOpenSettings = {}) }
-
-        // The "off" status is a polite live region so a change reaches TalkBack.
+        // The "off" status is a polite live region so the change reaches TalkBack.
         composeTestRule.onNodeWithText(sem.off)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
-        composeTestRule.onNodeWithText(sem.turnOn).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.turnOn).assertDoesNotExist()
         composeTestRule.onNodeWithText(sem.openSettings).assertDoesNotExist()
     }
 
     @Test
-    fun notifications_blocked_offers_open_settings() {
+    fun notifications_allowed_but_blocked_offers_open_settings() {
         var opened = false
-        setContent { NotificationsSlide(enabled = false, permissionGranted = false, denied = true, onEnable = {}, onOpenSettings = { opened = true }) }
+        setContent {
+            NotificationsSlide(
+                decided = true, declined = false, permissionGranted = false,
+                onAllow = {}, onDecline = {}, onOpenSettings = { opened = true },
+            )
+        }
 
         composeTestRule.onNodeWithText(sem.denied)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
@@ -91,16 +121,6 @@ class OnboardingSlidesTest {
 
         composeTestRule.onNodeWithText(sem.openSettings).assertIsDisplayed().performClick()
         assertTrue(opened)
-    }
-
-    @Test
-    fun notifications_granted_after_settings_drops_open_settings_despite_stale_denied() {
-        // Regression: returning from system settings with the permission granted must not keep showing the
-        // "Open settings" deep-link just because the in-app denied flag is still set.
-        setContent { NotificationsSlide(enabled = false, permissionGranted = true, denied = true, onEnable = {}, onOpenSettings = {}) }
-
-        composeTestRule.onNodeWithText(sem.openSettings).assertDoesNotExist()
-        composeTestRule.onNodeWithText(sem.turnOn).assertIsDisplayed()
     }
 
     // --- Sign-in slide ------------------------------------------------------------------------------
@@ -136,21 +156,43 @@ class OnboardingSlidesTest {
     // --- Analytics consent slide --------------------------------------------------------------------
 
     @Test
-    fun analytics_consent_off_offers_turn_on() {
-        setContent { AnalyticsConsentSlide(enabled = false, onEnable = {}, onOpenPrivacyPolicy = {}) }
+    fun analytics_undecided_forces_an_allow_or_decline_choice() {
+        var allowed = false
+        var declined = false
+        setContent {
+            AnalyticsConsentSlide(
+                decided = false, declined = false,
+                onAllow = { allowed = true }, onDecline = { declined = true }, onOpenPrivacyPolicy = {},
+            )
+        }
 
         composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.analyticsDecline).assertIsDisplayed()
         composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
+
+        composeTestRule.onNodeWithText(sem.analyticsTurnOn).performClick()
+        assertTrue(allowed && !declined)
     }
 
     @Test
-    fun analytics_consent_on_shows_confirmation_only() {
-        var enabled = false
-        setContent { AnalyticsConsentSlide(enabled = true, onEnable = { enabled = true }, onOpenPrivacyPolicy = {}) }
+    fun analytics_allowed_shows_confirmation_only() {
+        setContent {
+            AnalyticsConsentSlide(decided = true, declined = false, onAllow = {}, onDecline = {}, onOpenPrivacyPolicy = {})
+        }
 
         composeTestRule.onNodeWithText(sem.analyticsOn).assertIsDisplayed()
         composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
-        assertTrue(!enabled) // already on: no enable affordance to click
+    }
+
+    @Test
+    fun analytics_declined_shows_off_status_only() {
+        setContent {
+            AnalyticsConsentSlide(decided = true, declined = true, onAllow = {}, onDecline = {}, onOpenPrivacyPolicy = {})
+        }
+
+        composeTestRule.onNodeWithText(sem.analyticsOff).assertIsDisplayed()
+        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
+        composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
     }
 
     // --- Page indicator -----------------------------------------------------------------------------
@@ -194,11 +236,14 @@ class OnboardingSlidesTest {
     private data class Semantics(
         val alertsOn: String,
         val turnOn: String,
+        val notifDecline: String,
         val off: String,
         val denied: String,
         val openSettings: String,
         val analyticsTurnOn: String,
+        val analyticsDecline: String,
         val analyticsOn: String,
+        val analyticsOff: String,
         val signInAction: String,
         val signedInAsBob: String,
         val signingIn: String,
@@ -210,11 +255,14 @@ class OnboardingSlidesTest {
             fun load(): Semantics = Semantics(
                 alertsOn = stringResource(Res.string.onboarding_notifications_enabled),
                 turnOn = stringResource(Res.string.onboarding_notifications_enable),
+                notifDecline = stringResource(Res.string.onboarding_notifications_decline),
                 off = stringResource(Res.string.onboarding_notifications_off),
                 denied = stringResource(Res.string.onboarding_notifications_denied),
                 openSettings = stringResource(Res.string.onboarding_open_settings),
                 analyticsTurnOn = stringResource(Res.string.onboarding_analytics_enable),
+                analyticsDecline = stringResource(Res.string.onboarding_analytics_decline),
                 analyticsOn = stringResource(Res.string.onboarding_analytics_enabled),
+                analyticsOff = stringResource(Res.string.onboarding_analytics_off),
                 signInAction = stringResource(Res.string.onboarding_signin_action),
                 signedInAsBob = stringResource(Res.string.onboarding_signin_signed_in_as, "bob"),
                 signingIn = stringResource(Res.string.onboarding_signing_in),

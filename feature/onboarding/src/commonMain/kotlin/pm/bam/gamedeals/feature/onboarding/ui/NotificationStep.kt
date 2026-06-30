@@ -1,33 +1,34 @@
 package pm.bam.gamedeals.feature.onboarding.ui
 
 /**
- * The notification step's visible state, derived from the three inputs the slide reacts to. Pulled out of
- * the composable so the precedence — which has had regressions — is unit-testable:
- *  - a revoked OS permission must never read as [Active] just because the opt-in flag is on;
- *  - granting the permission via system settings (so [permissionGranted] flips true on resume) must drop
- *    the [Blocked] deep-link even though the stale in-app [denied] flag lingers.
+ * The notification step's visible state under the forced-choice model. Pulled out of the composable so the
+ * precedence — which has had regressions — is unit-testable:
+ *  - until the user makes a choice this run the step is [Choose] (Allow / Not now), so a replay always
+ *    re-asks rather than reading a stale persisted opt-in as already decided;
+ *  - a revoked OS permission must never read as [Active] just because Allow was tapped — once the live
+ *    [permissionGranted] drops, the step falls back to [Blocked] (the system-settings deep-link).
  */
 internal enum class NotificationStep {
-    /** Opt-in on AND permission granted — alerts are genuinely active. */
+    /** No choice made yet this run — offer Allow / Not now. */
+    Choose,
+
+    /** Tapped Allow and the OS permission is granted — alerts are genuinely active. */
     Active,
 
-    /** Permission granted, opt-in off — a single tap turns alerts on. */
-    Enable,
-
-    /** Permission off, not yet refused in-app — inform, and offer to turn on (which prompts). */
-    Off,
-
-    /** Permission refused and still off — the in-app prompt won't reappear; deep-link to OS settings. */
+    /** Tapped Allow but the OS prompt was refused or suppressed — deep-link to system settings. */
     Blocked,
+
+    /** Tapped "Not now" — alerts left off (changeable later in Account). */
+    Declined,
 }
 
 internal fun notificationStep(
-    enabled: Boolean,
+    decided: Boolean,
+    declined: Boolean,
     permissionGranted: Boolean,
-    denied: Boolean,
 ): NotificationStep = when {
-    enabled && permissionGranted -> NotificationStep.Active
-    permissionGranted -> NotificationStep.Enable // permission is on, so only the opt-in is missing
-    denied -> NotificationStep.Blocked // permission off and the prompt has already been refused
-    else -> NotificationStep.Off
+    !decided -> NotificationStep.Choose
+    declined -> NotificationStep.Declined
+    permissionGranted -> NotificationStep.Active // Allow tapped and the permission is on
+    else -> NotificationStep.Blocked // Allow tapped but the permission is off/refused
 }

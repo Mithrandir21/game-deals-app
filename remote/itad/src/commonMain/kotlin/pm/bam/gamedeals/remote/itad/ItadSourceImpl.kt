@@ -149,7 +149,9 @@ internal class ItadSourceImpl(
             gameId = gameId,
             country = regionRepository.getSelectedCountryCode(),
             // ITAD's `since` is an ISO-8601 instant; the domain bound is epoch-ms (source-neutral).
-            since = since?.let { Instant.fromEpochMilliseconds(it).toString() },
+            // /games/history/v2 loads only the last 3 months when `since` is omitted, so a null
+            // `since` (the "full series" contract) is anchored at the epoch to fetch the whole log.
+            since = Instant.fromEpochMilliseconds(since ?: 0L).toString(),
         ).toPriceHistory(gameId)
 
     override suspend fun fetchBundles(): List<Bundle> =

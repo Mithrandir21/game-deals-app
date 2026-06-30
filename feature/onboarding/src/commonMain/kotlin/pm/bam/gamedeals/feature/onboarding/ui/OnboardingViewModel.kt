@@ -19,7 +19,7 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.feature.onboarding.platform.RegionDetector
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Drives the first-run onboarding carousel. Three of the slides are interactive setup steps:
@@ -108,9 +108,26 @@ internal class OnboardingViewModel(
         }
     }
 
+    /**
+     * Decline background alerts from the onboarding slide ("Not now"). Persists the opt-out and cancels any
+     * scheduled poll — onboarding now forces an explicit choice, so this is also a real opt-out path on a
+     * replay where alerts were previously on.
+     */
+    fun onNotificationsDeclined() {
+        viewModelScope.launch {
+            notificationSettings.setEnabled(false)
+            notificationScheduler.cancel()
+        }
+    }
+
     /** Grant analytics consent from the onboarding slide (persists + flips PostHog via SettingsRepository). */
     fun onEnableAnalytics() {
         viewModelScope.launch { settingsRepository.setAnalyticsConsent(true) }
+    }
+
+    /** Decline analytics consent ("Not now"). Persists the opt-out, which flips PostHog to opted-out. */
+    fun onDeclineAnalytics() {
+        viewModelScope.launch { settingsRepository.setAnalyticsConsent(false) }
     }
 
     /** Finish onboarding without signing in (Skip, or the final "Maybe later"). */
@@ -135,7 +152,7 @@ internal class OnboardingViewModel(
             } catch (ce: CancellationException) {
                 throw ce
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
             } finally {
                 uiState.update { it.copy(signingIn = false) }
             }

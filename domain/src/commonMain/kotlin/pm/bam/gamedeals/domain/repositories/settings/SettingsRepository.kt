@@ -10,6 +10,7 @@ import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.storage.getNullable
 import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.domain.models.DealsFilter
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 
@@ -57,6 +58,14 @@ interface SettingsRepository {
     fun observeAnalyticsConsent(): Flow<Boolean>
     suspend fun getAnalyticsConsent(): Boolean
     suspend fun setAnalyticsConsent(enabled: Boolean)
+
+    /**
+     * The app theme preference. Defaults to [ThemeMode.SYSTEM] (follow the OS) when nothing is stored.
+     * Exposed reactively so the app root re-themes the moment the choice changes — no restart needed.
+     */
+    fun observeThemeMode(): Flow<ThemeMode>
+    suspend fun getThemeMode(): ThemeMode
+    suspend fun setThemeMode(mode: ThemeMode)
 }
 
 internal const val MATURE_OPT_IN_KEY = "mature_opt_in"
@@ -64,6 +73,7 @@ internal const val DEALS_FILTER_KEY = "deals_filter"
 internal const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
 internal const val INSTALL_ID_KEY = "install_id"
 internal const val ANALYTICS_CONSENT_KEY = "analytics_consent"
+internal const val THEME_MODE_KEY = "theme_mode"
 
 internal class SettingsRepositoryImpl(
     private val storage: Storage,
@@ -78,6 +88,9 @@ internal class SettingsRepositoryImpl(
 
     // Deals filter source of truth, lazily seeded from [storage] (null = not yet loaded; absent = empty).
     private val dealsFilter = MutableStateFlow<DealsFilter?>(null)
+
+    // Theme-mode source of truth, lazily seeded from [storage] (null = not yet loaded; default SYSTEM).
+    private val themeMode = MutableStateFlow<ThemeMode?>(null)
 
     override fun observeMatureOptIn(): Flow<Boolean> =
         matureOptIn
@@ -154,6 +167,26 @@ internal class SettingsRepositoryImpl(
         analytics.setConsent(enabled)
         if (enabled) analytics.identify(getInstallId())
     }
+
+    override fun observeThemeMode(): Flow<ThemeMode> =
+        themeMode
+            .onStart { if (themeMode.value == null) themeMode.value = loadThemeModeFromStorage() }
+            .filterNotNull()
+
+    override suspend fun getThemeMode(): ThemeMode {
+        if (themeMode.value == null) themeMode.value = loadThemeModeFromStorage()
+        return themeMode.value ?: ThemeMode.SYSTEM
+    }
+
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        storage.save(THEME_MODE_KEY, mode.name)
+        themeMode.value = mode
+        analytics.capture(AnalyticsEvents.THEME_MODE_CHANGED, mapOf("mode" to mode.name))
+    }
+
+    private suspend fun loadThemeModeFromStorage(): ThemeMode =
+        runCatching { storage.getNullable<String>(THEME_MODE_KEY)?.let { ThemeMode.valueOf(it) } }.getOrNull()
+            ?: ThemeMode.SYSTEM
 
     private suspend fun loadMatureFromStorage(): Boolean =
         runCatching { storage.getNullable<Boolean>(MATURE_OPT_IN_KEY) }.getOrNull() ?: false

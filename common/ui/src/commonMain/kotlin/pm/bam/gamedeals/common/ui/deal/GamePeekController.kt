@@ -14,7 +14,7 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Loads the game-centric peek sheet ([GamePeekSheetData]). Keyed by `gameId`, it reads the game's
@@ -61,7 +61,7 @@ class GamePeekController(
             } catch (t: CancellationException) {
                 throw t
             } catch (t: Throwable) {
-                fatal(logger, t) { "Game peek by title failed" }
+                error(logger, t) { "Game peek by title failed" }
                 data.emit(GamePeekSheetData.Error(gameId = "", gameName = title, thumb = thumb))
             }
         }
@@ -89,7 +89,7 @@ class GamePeekController(
         } catch (t: CancellationException) {
             throw t
         } catch (t: Throwable) {
-            fatal(logger, t) { "Game peek load failed for $gameId" }
+            error(logger, t) { "Game peek load failed for $gameId" }
             data.emit(GamePeekSheetData.Error(gameId, gameName, thumb))
         }
     }

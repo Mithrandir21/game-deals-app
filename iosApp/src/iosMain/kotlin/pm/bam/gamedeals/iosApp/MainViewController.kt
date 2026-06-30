@@ -1,12 +1,14 @@
 package pm.bam.gamedeals.iosApp
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
@@ -42,6 +44,7 @@ import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIViewController
 import pm.bam.gamedeals.common.di.commonIosModule
 import pm.bam.gamedeals.common.di.commonModule
+import pm.bam.gamedeals.common.imaging.appCoilLogger
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
@@ -57,6 +60,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
@@ -92,6 +96,7 @@ import pm.bam.gamedeals.logging.analytics.configurePostHog
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingIosModule
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -173,7 +178,9 @@ private var libraryLifecycleStarted = false
 private val libraryLifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val sentryUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 private val analyticsUserScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val featureFlagsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+@OptIn(ExperimentalNativeApi::class)
 private fun bootstrapKoin() {
     if (koinStarted) return
     koinStarted = true
@@ -182,6 +189,7 @@ private fun bootstrapKoin() {
         single<ImageLoader> {
             ImageLoader.Builder(PlatformContext.INSTANCE)
                 .crossfade(true)
+                .logger(appCoilLogger(get(), debug = Platform.isDebugBinary))
                 .components { add(KtorNetworkFetcherFactory()) }
                 .build()
         }
@@ -238,8 +246,28 @@ private fun bootstrapKoin() {
 
     attachSentryUser()
     startAnalytics()
+    startFeatureFlags()
     startNotificationLifecycle()
     startLibraryLifecycle()
+}
+
+/**
+ * Kicks an initial feature-flag load once Koin is up — mirrors Android's `startFeatureFlags`. Deliberately **not**
+ * gated on analytics consent: flag-fetch is remote config, not tracking (the SDK is set up
+ * `sendFeatureFlagEvent = false`, so a flag read emits nothing), so a gated feature can roll out to users who
+ * haven't opted into analytics. No-op when analytics is disabled (the binding is NoOp). Fire-and-forget; failures
+ * are logged, never crash.
+ */
+private fun startFeatureFlags() {
+    featureFlagsScope.launch {
+        try {
+            KoinPlatform.getKoin().get<FeatureFlags>().refresh()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to refresh feature flags." } }
+        }
+    }
 }
 
 /**
@@ -341,12 +369,19 @@ private fun startLibraryLifecycle() {
 
 @Composable
 private fun App() {
-    GameDealsTheme {
+    val settings = remember { KoinPlatform.getKoin().get<SettingsRepository>() }
+    // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the Storage read lands.
+    val themeMode by settings.observeThemeMode().collectAsState(initial = ThemeMode.SYSTEM)
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    GameDealsTheme(darkTheme = darkTheme) {
         CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
             // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast) Storage read
             // is in flight — render nothing rather than flashing Home and bouncing into onboarding.
             val startDestination by produceState<Destination?>(initialValue = null) {
-                val settings = KoinPlatform.getKoin().get<SettingsRepository>()
                 value = if (settings.getOnboardingCompleted()) Destination.Home else Destination.Onboarding
             }
             startDestination?.let { AppNavHost(startDestination = it) }

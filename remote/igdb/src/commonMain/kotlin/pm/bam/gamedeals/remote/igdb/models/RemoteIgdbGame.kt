@@ -28,7 +28,28 @@ data class RemoteIgdbGame(
     val platforms: List<RemoteIgdbPlatform> = emptyList(),
     val videos: List<RemoteIgdbVideo> = emptyList(),
     val franchises: List<RemoteIgdbFranchise> = emptyList(),
+    @SerialName("age_ratings") val ageRatings: List<RemoteIgdbAgeRating> = emptyList(),
+    @SerialName("game_modes") val gameModes: List<RemoteIgdbGameMode> = emptyList(),
     @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+/**
+ * IGDB `age_ratings` row (current API shape). `organization` is the rating board (1=ESRB, 2=PEGI, …) and
+ * `rating_category` the specific rating within it (e.g. ESRB cat 6 = "M", PEGI cat 12 = "18"). Both are
+ * nullable so unknown/absent rows map to nothing rather than failing. (The pre-2024 `category`/`rating`
+ * integer fields were removed by IGDB — verified live 2026-06-26.)
+ */
+@Serializable
+data class RemoteIgdbAgeRating(
+    val id: Long,
+    val organization: Int? = null,
+    @SerialName("rating_category") val ratingCategory: Int? = null,
+)
+
+@Serializable
+data class RemoteIgdbGameMode(
+    val id: Long,
+    val name: String? = null,
 )
 
 @Serializable

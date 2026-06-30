@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Backs the Ignored-games manage sub-screen (epic #272, P3.3 #281). Observes the auth-gated, Room-backed ignore
@@ -43,7 +43,7 @@ internal class IgnoredViewModel(
                 if (!entries.keys.containsAll(ids)) {
                     if (entries.isEmpty()) uiState.update { it.copy(loading = true) }
                     entries = runCatching { ignoredRepository.getIgnored() }
-                        .getOrElse { fatal(logger, it); emptyList() }
+                        .getOrElse { error(logger, it); emptyList() }
                         .associate { it.gameId to GameListItem(it.gameId, it.title, it.artwork.thumbnail) }
                 }
                 uiState.update {
@@ -56,7 +56,7 @@ internal class IgnoredViewModel(
     /** Remote-first un-ignore; the Room delete flows back through [observeIgnoredIds] and drops the row. */
     fun onUnignore(gameId: String) {
         viewModelScope.launch {
-            runCatching { ignoredRepository.toggleIgnored(gameId) }.onFailure { fatal(logger, it) }
+            runCatching { ignoredRepository.toggleIgnored(gameId) }.onFailure { error(logger, it) }
         }
     }
 }

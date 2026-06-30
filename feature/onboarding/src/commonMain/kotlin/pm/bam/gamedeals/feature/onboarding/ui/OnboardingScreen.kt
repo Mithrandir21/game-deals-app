@@ -43,10 +43,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,8 +76,10 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_body
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_off
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_privacy_link
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
@@ -84,6 +88,7 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discov
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_next
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_body
+import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_denied
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enable
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_enabled
@@ -105,7 +110,6 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_signed_in_as
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signin_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_signing_in
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_skip
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_tab_account_desc
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_tab_account_label
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_tab_deals_desc
@@ -120,6 +124,8 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_welcom
 import pm.bam.gamedeals.feature.onboarding.ui.OnboardingViewModel.OnboardingState
 
 private const val ONBOARDING_PAGE_COUNT = 8
+private const val ONBOARDING_NOTIFICATIONS_PAGE = 5
+private const val ONBOARDING_ANALYTICS_PAGE = 6
 private const val ONBOARDING_SIGN_IN_PAGE = ONBOARDING_PAGE_COUNT - 1
 
 /** Hosted privacy disclosure linked from the analytics-consent step. */
@@ -140,23 +146,60 @@ internal fun OnboardingScreen(
     val permissionRequester = rememberNotificationPermissionRequester()
     val permissionGranted = rememberNotificationPermissionGranted()
     val platformActions = LocalPlatformActions.current
-    var notificationsDenied by remember { mutableStateOf(false) }
+
+    // Per-run consent decisions. They gate the consent steps (the only way forward is to choose), and
+    // reset on a fresh entry to the screen so a replay from the Account hub re-forces both choices. The
+    // persisted opt-ins can't gate this: they default false and can't tell "declined" from "never asked".
+    var notificationsDecided by rememberSaveable { mutableStateOf(false) }
+    var notificationsDeclined by rememberSaveable { mutableStateOf(false) }
+    var notificationsBlocked by rememberSaveable { mutableStateOf(false) }
+    var analyticsDecided by rememberSaveable { mutableStateOf(false) }
+    var analyticsDeclined by rememberSaveable { mutableStateOf(false) }
+
+    // If the user tapped Allow, was refused, then granted the permission from system settings and returned,
+    // honour that earlier intent: persist the opt-in and arm the poll (the display already reflects the
+    // live permission via [permissionGranted]).
+    LaunchedEffect(permissionGranted) {
+        if (permissionGranted && notificationsBlocked) {
+            notificationsBlocked = false
+            viewModel.onNotificationsEnabled()
+        }
+    }
 
     OnboardingContent(
         state = state,
         countries = viewModel.countries,
         onCountrySelected = viewModel::onCountrySelected,
         notificationsPermissionGranted = permissionGranted,
-        notificationsDenied = notificationsDenied,
-        onEnableNotifications = {
+        notificationsDecided = notificationsDecided,
+        notificationsDeclined = notificationsDeclined,
+        onAllowNotifications = {
             permissionRequester.request { granted ->
-                notificationsDenied = !granted
+                notificationsDecided = true
+                notificationsDeclined = false
+                notificationsBlocked = !granted
                 if (granted) viewModel.onNotificationsEnabled()
             }
         },
+        onDeclineNotifications = {
+            notificationsDecided = true
+            notificationsDeclined = true
+            notificationsBlocked = false
+            viewModel.onNotificationsDeclined()
+        },
         onOpenNotificationSettings = { platformActions.openAppNotificationSettings() },
-        analyticsEnabled = state.analyticsEnabled,
-        onEnableAnalytics = viewModel::onEnableAnalytics,
+        analyticsDecided = analyticsDecided,
+        analyticsDeclined = analyticsDeclined,
+        onAllowAnalytics = {
+            analyticsDecided = true
+            analyticsDeclined = false
+            viewModel.onEnableAnalytics()
+        },
+        onDeclineAnalytics = {
+            analyticsDecided = true
+            analyticsDeclined = true
+            viewModel.onDeclineAnalytics()
+        },
         onOpenPrivacyPolicy = { platformActions.openInApp(PRIVACY_POLICY_URL) },
         onSignIn = { viewModel.signInThenFinish(onFinish) },
         onFinish = { viewModel.finish(onFinish) },
@@ -170,11 +213,15 @@ private fun OnboardingContent(
     countries: ImmutableList<Country>,
     onCountrySelected: (Country) -> Unit,
     notificationsPermissionGranted: Boolean,
-    notificationsDenied: Boolean,
-    onEnableNotifications: () -> Unit,
+    notificationsDecided: Boolean,
+    notificationsDeclined: Boolean,
+    onAllowNotifications: () -> Unit,
+    onDeclineNotifications: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    analyticsEnabled: Boolean,
-    onEnableAnalytics: () -> Unit,
+    analyticsDecided: Boolean,
+    analyticsDeclined: Boolean,
+    onAllowAnalytics: () -> Unit,
+    onDeclineAnalytics: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
     onSignIn: () -> Unit,
     onFinish: () -> Unit,
@@ -182,15 +229,23 @@ private fun OnboardingContent(
     val pagerState = rememberPagerState(pageCount = { ONBOARDING_PAGE_COUNT })
     val scope = rememberCoroutineScope()
 
+    // A consent step blocks *all* forward progress until decided — the Next button and the swipe gesture
+    // alike. Gate on settledPage so the swipe lock only engages once the pager has fully landed on the
+    // step (never mid-drag, which can strand it between pages). Back always works (it scrolls
+    // programmatically), so the user is gated forward, never trapped.
+    val consentGateOpen = when (pagerState.settledPage) {
+        ONBOARDING_NOTIFICATIONS_PAGE -> notificationsDecided
+        ONBOARDING_ANALYTICS_PAGE -> analyticsDecided
+        else -> true
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Skip is always available so a one-time flow is never a dead end.
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onFinish) { Text(stringResource(Res.string.onboarding_skip)) }
-            }
-
+            // No Skip: the consent steps are mandatory, so the only way forward is to make a choice. The
+            // sign-in step keeps its own "Maybe later", so the flow still ends without an ITAD account.
             HorizontalPager(
                 state = pagerState,
+                userScrollEnabled = consentGateOpen,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) { page ->
                 when (page) {
@@ -204,15 +259,18 @@ private fun OnboardingContent(
                         onCountrySelected = onCountrySelected,
                     )
                     5 -> NotificationsSlide(
-                        enabled = state.notificationsEnabled,
+                        decided = notificationsDecided,
+                        declined = notificationsDeclined,
                         permissionGranted = notificationsPermissionGranted,
-                        denied = notificationsDenied,
-                        onEnable = onEnableNotifications,
+                        onAllow = onAllowNotifications,
+                        onDecline = onDeclineNotifications,
                         onOpenSettings = onOpenNotificationSettings,
                     )
                     6 -> AnalyticsConsentSlide(
-                        enabled = analyticsEnabled,
-                        onEnable = onEnableAnalytics,
+                        decided = analyticsDecided,
+                        declined = analyticsDeclined,
+                        onAllow = onAllowAnalytics,
+                        onDecline = onDeclineAnalytics,
                         onOpenPrivacyPolicy = onOpenPrivacyPolicy,
                     )
                     7 -> SignInSlide(
@@ -228,6 +286,7 @@ private fun OnboardingContent(
             BottomControls(
                 currentPage = pagerState.currentPage,
                 pageCount = ONBOARDING_PAGE_COUNT,
+                canAdvance = consentGateOpen,
                 onBack = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
                 onNext = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
             )
@@ -239,6 +298,7 @@ private fun OnboardingContent(
 private fun BottomControls(
     currentPage: Int,
     pageCount: Int,
+    canAdvance: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -259,8 +319,9 @@ private fun BottomControls(
         PageIndicator(pageCount = pageCount, currentPage = currentPage)
 
         Box(modifier = Modifier.widthIn(min = 72.dp), contentAlignment = Alignment.CenterEnd) {
-            // The sign-in page owns its own primary actions, so the generic Next is dropped there.
-            if (currentPage < pageCount - 1) {
+            // Next is dropped on the sign-in page (it owns its actions) and hidden on the consent steps
+            // until a choice is made (Back still works, so the user is never stuck — only gated forward).
+            if (currentPage < pageCount - 1 && canAdvance) {
                 TextButton(onClick = onNext) { Text(stringResource(Res.string.onboarding_next)) }
             }
         }
@@ -439,10 +500,11 @@ private fun RegionSlide(
 
 @Composable
 internal fun NotificationsSlide(
-    enabled: Boolean,
+    decided: Boolean,
+    declined: Boolean,
     permissionGranted: Boolean,
-    denied: Boolean,
-    onEnable: () -> Unit,
+    onAllow: () -> Unit,
+    onDecline: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     SlideScaffold(
@@ -451,38 +513,20 @@ internal fun NotificationsSlide(
         body = Res.string.onboarding_notifications_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        when (notificationStep(enabled = enabled, permissionGranted = permissionGranted, denied = denied)) {
-            NotificationStep.Active -> Row(
-                // Announce the success the moment the toggle flips, since focus was on the now-gone button.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(Res.string.onboarding_notifications_enabled),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
+        when (notificationStep(decided = decided, declined = declined, permissionGranted = permissionGranted)) {
+            NotificationStep.Choose -> ConsentChoice(
+                allowText = Res.string.onboarding_notifications_enable,
+                declineText = Res.string.onboarding_notifications_decline,
+                onAllow = onAllow,
+                onDecline = onDecline,
+            )
 
-            NotificationStep.Enable -> Button(onClick = onEnable) {
-                Text(stringResource(Res.string.onboarding_notifications_enable))
-            }
+            NotificationStep.Active -> ConsentConfirmation(Res.string.onboarding_notifications_enabled)
 
-            NotificationStep.Off -> {
-                NotificationStateMessage(
-                    text = Res.string.onboarding_notifications_off,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
-                Button(onClick = onEnable) {
-                    Text(stringResource(Res.string.onboarding_notifications_enable))
-                }
-            }
+            NotificationStep.Declined -> NotificationStateMessage(
+                text = Res.string.onboarding_notifications_off,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             NotificationStep.Blocked -> {
                 NotificationStateMessage(
@@ -500,14 +544,16 @@ internal fun NotificationsSlide(
 }
 
 /**
- * Analytics-consent step (GDPR opt-out). Positively framed; analytics stays **off** unless the user taps
- * "Turn on analytics" (swiping past leaves it off). Mirrors [NotificationsSlide]'s Enable → confirmed shape.
- * Tapping persists immediately via [OnboardingViewModel.onEnableAnalytics] (flips PostHog app-wide).
+ * Analytics-consent step (GDPR opt-out). The user must explicitly pick Allow or "Not now" — there is no
+ * skipping past it. Allow persists immediately via [OnboardingViewModel.onEnableAnalytics] (flips PostHog
+ * app-wide); "Not now" persists the opt-out via [OnboardingViewModel.onDeclineAnalytics].
  */
 @Composable
 internal fun AnalyticsConsentSlide(
-    enabled: Boolean,
-    onEnable: () -> Unit,
+    decided: Boolean,
+    declined: Boolean,
+    onAllow: () -> Unit,
+    onDecline: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
 ) {
     SlideScaffold(
@@ -516,32 +562,67 @@ internal fun AnalyticsConsentSlide(
         body = Res.string.onboarding_analytics_body,
     ) {
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        if (enabled) {
-            Row(
-                // Announce the success the moment the button flips to the confirmation, as in NotificationsSlide.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(Res.string.onboarding_analytics_enabled),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-        } else {
-            Button(onClick = onEnable) {
-                Text(stringResource(Res.string.onboarding_analytics_enable))
-            }
+        when {
+            !decided -> ConsentChoice(
+                allowText = Res.string.onboarding_analytics_enable,
+                declineText = Res.string.onboarding_analytics_decline,
+                onAllow = onAllow,
+                onDecline = onDecline,
+            )
+
+            declined -> NotificationStateMessage(
+                text = Res.string.onboarding_analytics_off,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            else -> ConsentConfirmation(Res.string.onboarding_analytics_enabled)
         }
         // GDPR disclosure: link the full hosted policy from the consent step itself.
         TextButton(onClick = onOpenPrivacyPolicy) {
             Text(stringResource(Res.string.onboarding_analytics_privacy_link))
         }
+    }
+}
+
+/**
+ * The forced Allow / Not now choice shared by the notification and analytics steps. Allow is the
+ * emphasized (filled) action; "Not now" is a quieter text button — both are one tap and equally reachable.
+ */
+@Composable
+private fun ConsentChoice(
+    allowText: StringResource,
+    declineText: StringResource,
+    onAllow: () -> Unit,
+    onDecline: () -> Unit,
+) {
+    Button(onClick = onAllow) {
+        Text(stringResource(allowText))
+    }
+    Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.small))
+    TextButton(onClick = onDecline) {
+        Text(stringResource(declineText))
+    }
+}
+
+/** A confirmed-on status line (check + label), announced politely so the change reaches TalkBack. */
+@Composable
+private fun ConsentConfirmation(text: StringResource) {
+    Row(
+        // Announce the success the moment the choice flips to the confirmation, since focus was on the
+        // now-gone button.
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = stringResource(text),
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 

@@ -66,6 +66,7 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.components.DealHeroTile
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.components.RecentlyViewedCarousel
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
@@ -78,6 +79,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.RankedGame
+import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
@@ -115,6 +117,7 @@ private const val CONTENT_TYPE_DEAL = "deal"
 private const val CONTENT_TYPE_RANKED = "ranked"
 private const val CONTENT_TYPE_RELEASE = "release"
 private const val CONTENT_TYPE_BUNDLE = "bundle"
+private const val CONTENT_TYPE_RECENTLY_VIEWED = "recently_viewed"
 
 @Composable
 internal fun HomeScreen(
@@ -134,6 +137,7 @@ internal fun HomeScreen(
     val collectionIds = viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = viewModel.stores.collectAsStateWithLifecycle()
+    val recentlyViewed = viewModel.recentlyViewed.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -144,6 +148,9 @@ internal fun HomeScreen(
         collectionIds = collectionIds.value,
         ignoredIds = ignoredIds.value,
         stores = stores.value,
+        recentlyViewed = recentlyViewed.value,
+        onRemoveRecentlyViewed = { gameId -> viewModel.onRemoveRecentlyViewed(gameId) },
+        onClearRecentlyViewed = { viewModel.onClearRecentlyViewed() },
         snackbarHostState = snackbarHostState,
         gamePeek = gamePeek.value,
         onPeekGame = { gameId, gameName, thumb -> viewModel.peekGame(gameId, gameName, thumb) },
@@ -192,6 +199,9 @@ private fun HomeScreenContent(
     onToggleCollection: (gameId: String) -> Unit,
     ignoredIds: ImmutableSet<String> = persistentSetOf(),
     onToggleIgnore: (gameId: String) -> Unit = {},
+    recentlyViewed: ImmutableList<RecentlyViewedGame> = persistentListOf(),
+    onRemoveRecentlyViewed: (gameId: String) -> Unit = {},
+    onClearRecentlyViewed: () -> Unit = {},
     onViewWaitlist: () -> Unit,
     onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
@@ -233,6 +243,9 @@ private fun HomeScreenContent(
                         waitlistIds = waitlistIds,
                         collectionIds = collectionIds,
                         stores = stores,
+                        recentlyViewed = recentlyViewed,
+                        onRemoveRecentlyViewed = onRemoveRecentlyViewed,
+                        onClearRecentlyViewed = onClearRecentlyViewed,
                         onPeekGame = onPeekGame,
                         onPeekRelease = onPeekRelease,
                         onViewWaitlist = onViewWaitlist,
@@ -278,6 +291,9 @@ private fun HomeFeed(
     waitlistIds: ImmutableSet<String>,
     collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
+    recentlyViewed: ImmutableList<RecentlyViewedGame>,
+    onRemoveRecentlyViewed: (gameId: String) -> Unit,
+    onClearRecentlyViewed: () -> Unit,
     onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
     onPeekRelease: (title: String, thumb: String?) -> Unit,
     onViewWaitlist: () -> Unit,
@@ -395,6 +411,20 @@ private fun HomeFeed(
                     storeIconUrl = store?.iconUrl,
                     isWaitlisted = isWaitlisted,
                     isCollected = isCollected,
+                )
+            }
+        }
+
+        // 3b. Recently-viewed games (#211) — device-local history, after Trending. Hidden when empty.
+        if (recentlyViewed.isNotEmpty()) {
+            if (renderedSection) sectionDivider()
+            renderedSection = true
+            item(contentType = CONTENT_TYPE_RECENTLY_VIEWED) {
+                RecentlyViewedCarousel(
+                    games = recentlyViewed,
+                    onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
+                    onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
+                    onClearAll = onClearRecentlyViewed,
                 )
             }
         }

@@ -35,7 +35,7 @@ import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
 /**
@@ -159,7 +159,7 @@ internal class BundleDetailViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
                 uiState.value = BundleDetailScreenData.Error
             }
         }
@@ -174,7 +174,7 @@ internal class BundleDetailViewModel(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            fatal(logger, t)
+            error(logger, t)
             emptyList()
         }
         val priceMap = prices.associateBy { it.gameId }.toImmutableMap()

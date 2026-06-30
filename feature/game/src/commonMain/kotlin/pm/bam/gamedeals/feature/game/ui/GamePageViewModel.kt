@@ -29,6 +29,7 @@ import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
+import pm.bam.gamedeals.domain.models.dealQuality
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
@@ -41,6 +42,7 @@ import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
@@ -77,6 +79,7 @@ internal class GamePageViewModel(
     private val faviconResolver: FaviconResolver,
     private val followedFranchiseRepository: FollowedFranchiseRepository,
     private val franchiseFollowSeeder: FranchiseFollowSeeder,
+    private val recentlyViewedRepository: RecentlyViewedRepository,
 ) : ViewModel() {
 
     // The ITAD game UUID. Seeded from the deal-entry arg and *updated* once an IGDB-only entry resolves its
@@ -177,6 +180,13 @@ internal class GamePageViewModel(
 
         // Publish the resolved ITAD id so waitlist/ignore/note observe it (no-op when null).
         gameIdFlow.value = gameId
+
+        // Record this view for the recently-viewed carousel (#211) — only when we have an ITAD id (the
+        // peek/open path needs it). Upsert de-dupes and moves the game back to the top.
+        gameId?.let { id ->
+            val viewedTitle = gameDetails?.info?.title ?: igdbGame?.name ?: titleArg.orEmpty()
+            recentlyViewedRepository.recordView(id, viewedTitle, gameDetails?.info?.artwork?.boxart)
+        }
 
         val dealDetails = mapDealDetails(gameDetails)
         val resolvedGameId = gameId
@@ -533,6 +543,16 @@ internal class GamePageViewModel(
             val gameMetaOrNull: GameMeta? get() = (gameMeta as? SectionState.Loaded)?.value
             /** The loaded IGDB record, or null when absent/loading/errored — for the hero/picker. */
             val igdbGameOrNull: IgdbGame? get() = (igdb as? SectionState.Loaded)?.value
+
+            /**
+             * The hero "buy box": the cheapest current deal (with its store) plus the [dealQuality] buy-signal,
+             * or null when there's no live deal. Derived (no extra fetch), so the hero and the condensed sticky
+             * bar always agree, and it auto-tracks [retryDeals] since it reads [dealDetails]/[deals].
+             */
+            val buyBox: BuyBoxState? get() {
+                val pair = dealDetails.minByOrNull { it.deal.priceValue } ?: return null
+                return BuyBoxState(pair = pair, quality = gameDetailsOrNull?.dealQuality())
+            }
         }
     }
 }

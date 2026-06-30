@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Backs the Notifications **list** sub-screen (#7 notification revamp). A single ITAD notification is a daily
@@ -64,12 +64,12 @@ internal class NotificationsViewModel(
         // Remote-as-truth reload, then resolve each notification's games (cached) before dropping the spinner.
         viewModelScope.launch {
             val list = runCatching { notificationsRepository.getNotifications() }
-                .getOrElse { fatal(logger, it); emptyList() }
+                .getOrElse { error(logger, it); emptyList() }
             gamesByEntry.value = coroutineScope {
                 list.map { entry ->
                     async {
                         entry.id to runCatching { notificationsRepository.getNotificationDetail(entry.id).games }
-                            .getOrElse { fatal(logger, it); emptyList() }
+                            .getOrElse { error(logger, it); emptyList() }
                             .map { NotificationGameThumb(gameId = it.gameId, title = it.title, thumbnailUrl = it.artwork.thumbnail) }
                     }
                 }.awaitAll()
@@ -80,7 +80,7 @@ internal class NotificationsViewModel(
 
     fun onMarkAllRead() {
         viewModelScope.launch {
-            runCatching { notificationsRepository.markAllRead() }.onFailure { fatal(logger, it) }
+            runCatching { notificationsRepository.markAllRead() }.onFailure { error(logger, it) }
         }
     }
 

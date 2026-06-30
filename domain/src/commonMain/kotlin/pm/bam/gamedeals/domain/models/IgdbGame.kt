@@ -31,6 +31,10 @@ data class IgdbGame(
     val videos: ImmutableList<IgdbVideo> = persistentListOf(),
     /** Series/franchises (IGDB `franchises`) this game belongs to, with their other member games (#7). */
     val franchises: ImmutableList<IgdbFranchise> = persistentListOf(),
+    /** ESRB/PEGI age ratings (IGDB `age_ratings`), other boards dropped — rendered as badges (#199). */
+    val ageRatings: ImmutableList<IgdbAgeRating> = persistentListOf(),
+    /** Game-mode labels (IGDB `game_modes`) — "Single player", "Co-operative", "Split screen", … (#200). */
+    val gameModes: ImmutableList<String> = persistentListOf(),
     /**
      * HowLongToBeat-style completion estimates (epic #291, Phase 2). Fetched separately from IGDB's
      * `/v4/game_time_to_beats` endpoint (not part of the games dot-expansion) and merged in by the
@@ -88,6 +92,18 @@ data class IgdbGame(
         val name: String,
         val games: ImmutableList<IgdbSimilarGame> = persistentListOf(),
     )
+
+    /**
+     * An ESRB or PEGI age rating. [code] is the short display token within the [board]: ESRB → EC/E/E10/
+     * T/M/AO/RP; PEGI → 3/7/12/16/18. Other IGDB rating organisations are filtered out at mapping time.
+     */
+    @Immutable
+    data class IgdbAgeRating(
+        val board: Board,
+        val code: String,
+    ) {
+        enum class Board { ESRB, PEGI }
+    }
 
     /** HowLongToBeat completion estimates in **seconds** (IGDB `game_time_to_beats`); UI formats to hours. */
     @Immutable

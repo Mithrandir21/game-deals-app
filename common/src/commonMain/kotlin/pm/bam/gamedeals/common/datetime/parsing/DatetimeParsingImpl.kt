@@ -10,7 +10,7 @@ import kotlinx.datetime.format.char
 internal class DatetimeParsingImpl : DatetimeParsing {
 
     private val format = LocalDateTime.Format {
-        year(); char('-'); monthNumber(); char('-'); dayOfMonth()
+        year(); char('-'); monthNumber(); char('-'); day()
         char(' ')
         hour(); char(':'); minute(); char(':'); second()
     }

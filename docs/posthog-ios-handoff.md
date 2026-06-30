@@ -1,9 +1,11 @@
 # PostHog iOS — implementation handoff
 
-> **Status: deferred — Mac-gated.** The shared Kotlin and the Android path are wired and verified; the iOS-native
-> §3 work below (SPM link + `Secrets`/`Info.plist` plumbing + the `AppDelegate` call) needs a Mac with Xcode and
-> can't be done in this Linux environment. This mirrors the original Sentry iOS handoff — see
-> [docs/sentry-ios-handoff.md](sentry-ios-handoff.md) for the analogous, now-completed runbook.
+> **Status: done — build-verified on macOS (Xcode 26.5, iOS 26.5 arm64 sim, 2026-06-24).** The §3 iOS-native
+> work is complete: `posthog-ios` 3.38.0 linked via SPM (product `PostHog`), `Secrets`/`Info.plist` plumbing in,
+> `startPostHog()` called in the `AppDelegate`. `BUILD SUCCEEDED` with the SDK linked (no `-ObjC`/symbol issues)
+> and the app boots clean with `PostHog.setup()` running. **Pending:** the live `app_opened`/`screen` event check
+> in the PostHog EU dashboard (deferred to a later session). Mirrors the completed
+> [Sentry iOS handoff](sentry-ios-handoff.md).
 
 ## Context
 
@@ -27,21 +29,23 @@ which must be linked natively via SPM (same app-link story as sentry-cocoa).
    > now depends on `Analytics`. With no key it resolves to `NoOpAnalytics`, so the app is safe **before** the SPM
    > link below is done.
 
-## Remaining iOS-native work (do on a Mac)
-1. **Link posthog-ios via SPM.** Add the PostHog Swift package to `iosApp/iosApp.xcodeproj`. Pin to the exact
-   `posthog-ios` version the wrapper 0.1.4 was compiled against — check the wrapper's build config for the pin
-   (the analogue of how sentry-kmp pins sentry-cocoa `8.58.2`); using a mismatched version risks link/symbol
-   errors. If the static-framework `-ObjC` linker pitfalls bite (they did for Sentry), prefer the **dynamic**
-   product, matching the `Sentry-Dynamic` decision.
-2. **Key plumbing.** Add `POSTHOG_API_KEY` to `iosApp/Secrets.xcconfig` (+ commit the line to
-   `Secrets.xcconfig.template`) → `PostHogApiKey` in `Info.plist` → already read at runtime via `infoPlistString("PostHogApiKey")`.
-   > The xcconfig `//` escape bit the Sentry work — but a PostHog `phc_…` key has no `//`, so the host URL is the
-   > only place it could matter, and the host is hardcoded to `HOST_EU` in `configurePostHog()` (not in xcconfig).
-3. **Call `startPostHog()` first in the Swift `AppDelegate`** (`iOSApp.swift`), alongside the existing
-   `startSentry()`. `startAnalytics()` is already invoked from `bootstrapKoin()`, so identify + `app_opened` fire
-   automatically once a key is present.
+## iOS-native work — DONE (build-verified 2026-06-24)
+1. **✅ Linked posthog-ios via SPM.** Added the PostHog Swift package to `iosApp.xcodeproj` pinned `exactVersion`
+   **3.38.0** (the pin `posthog-kmp` 0.1.4 binds via spmForKmp — `libs.versions.posthog-ios` in the wrapper),
+   product **`PostHog`**. The static product links cleanly with the static Kotlin framework + the `PostHogBridge`
+   cinterop — **no `-ObjC`/dynamic-product workaround was needed** (unlike Sentry).
+2. **✅ Key plumbing.** `POSTHOG_API_KEY` added to `Secrets.xcconfig.template` (real `Secrets.xcconfig` already had
+   the `phc_…` value) → `PostHogApiKey` in `Info.plist` → read at runtime via `infoPlistString("PostHogApiKey")`.
+   No `//` escaping needed (the `phc_…` key has none; host is hardcoded `HOST_EU` in `configurePostHog()`).
+3. **✅ Call `startPostHog()` in the Swift `AppDelegate`** (`iOSApp.swift`) — placed **between `startSentry()` and
+   `startKoinIfNeeded()`**, so `PostHog.setup()` runs before `startAnalytics()` (invoked from `bootstrapKoin()`)
+   applies consent/opt-in. identify + `app_opened` fire automatically once a key is present and consent is given.
 
 ## Verification (on the Mac)
+> **2026-06-24:** steps 1–2 **PASS** (`:iosApp:compileKotlinIosSimulatorArm64` green; `xcodebuild` Debug for the
+> iPhone 17 arm64 sim `BUILD SUCCEEDED` with `posthog-ios` linked; app installs and boots clean). Step 3 (live
+> dashboard event) **pending** — deferred to a later session.
+
 1. `./gradlew :iosApp:linkDebugFrameworkIosSimulatorArm64` — Kotlin framework compiles with the PostHog calls.
    > Build for a **concrete arm64 simulator id**, not `generic/platform=iOS Simulator` (the project only declares
    > `iosSimulatorArm64`) — same invocation gotcha as the Sentry handoff.

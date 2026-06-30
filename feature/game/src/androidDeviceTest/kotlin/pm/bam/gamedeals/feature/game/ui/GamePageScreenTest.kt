@@ -37,7 +37,7 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_navigation_
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_stats_empty
-import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_stats
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_tab_community
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 
 /**
@@ -165,20 +165,20 @@ class GamePageScreenTest {
     }
 
     @Test
-    fun statsTabShowsEmptyMessageWhenNoMeta() {
-        // Default dataState has no game meta (gameMeta = Loaded(null)) → Stats tab is genuinely empty.
+    fun communityTabShowsEmptyMessageWhenNoMeta() {
+        // Default dataState has no game meta (gameMeta = Loaded(null)) and no IGDB ratings → Community is empty.
         setContent(dataState())
 
-        composeTestRule.onNodeWithText(labels.statsTab).performClick()
+        composeTestRule.onNodeWithText(labels.communityTab).performClick()
 
         composeTestRule.onNodeWithText(labels.statsEmpty).assertIsDisplayed()
     }
 
     @Test
-    fun statsTabErrorShowsRetryAndDispatches() {
+    fun communityTabErrorShowsRetryAndDispatches() {
         setContent(dataState().copy(gameMeta = SectionState.Error))
 
-        composeTestRule.onNodeWithText(labels.statsTab).performClick()
+        composeTestRule.onNodeWithText(labels.communityTab).performClick()
 
         composeTestRule.onNodeWithText(labels.sectionError).assertIsDisplayed()
         composeTestRule.onNodeWithText(labels.retry).performClick()
@@ -196,7 +196,7 @@ class GamePageScreenTest {
         val ignoreAdd: String,
         val searchButton: String,
         val noMatchMessage: String,
-        val statsTab: String,
+        val communityTab: String,
         val statsEmpty: String,
         val sectionError: String,
         val retry: String,
@@ -213,7 +213,7 @@ class GamePageScreenTest {
                 ignoreAdd = stringResource(Res.string.game_screen_ignore_add_action),
                 searchButton = stringResource(Res.string.game_details_no_match_search_button),
                 noMatchMessage = stringResource(Res.string.game_details_no_match_message, TITLE),
-                statsTab = stringResource(Res.string.game_page_tab_stats),
+                communityTab = stringResource(Res.string.game_page_tab_community),
                 statsEmpty = stringResource(Res.string.game_page_stats_empty),
                 sectionError = stringResource(Res.string.game_page_section_error),
                 retry = stringResource(Res.string.game_screen_data_loading_error_retry),

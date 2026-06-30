@@ -13,7 +13,7 @@ import pm.bam.gamedeals.domain.source.GamerPowerSource
 import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /** Giveaways rotate intra-day (12-hour tier — ITAD caching strategy, Phase 1). */
 internal const val GIVEAWAYS_TTL_MILLIS = millisInHour * 12
@@ -47,7 +47,7 @@ internal class GiveawaysRepositoryImpl(
     override fun observeGiveaways(): Flow<List<Giveaway>> =
         giveawaysDao.observeAllGiveaways()
             .map { items -> items.sortedByDescending { it.publishedDate } }
-            .onError { fatal(logger, it) }
+            .onError { error(logger, it) }
 
     override fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>> {
         val typeValues = giveawaySearchParameters.types
@@ -74,7 +74,7 @@ internal class GiveawaysRepositoryImpl(
                     GiveawaySortBy.VALUE -> items.sortedByDescending { it.worth }
                 }
             }
-            .onError { fatal(logger, it) }
+            .onError { error(logger, it) }
     }
 
     override suspend fun getGiveaway(id: Int): Giveaway? = giveawaysDao.getGiveaway(id)

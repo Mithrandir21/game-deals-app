@@ -36,7 +36,18 @@ class PostHogConfigFactoryTest {
         assertFalse(config.captureScreenViews)
         assertFalse(config.captureDeepLinks)
         assertFalse(config.enableExceptionAutocapture)
-        assertFalse(config.preloadFeatureFlags)
+    }
+
+    /**
+     * Feature flags are used (behind the FeatureFlags seam): preload them on setup, but NEVER let a flag read
+     * emit a `$feature_flag_called` event — that would bypass the opt-out gate and leak before consent. Pin both.
+     */
+    @Test
+    fun preloads_feature_flags_without_emitting_flag_events() {
+        val config = configurePostHog(apiKey = "phc_key", debug = false)
+
+        assertTrue(config.preloadFeatureFlags)
+        assertFalse(config.sendFeatureFlagEvent)
     }
 
     @Test

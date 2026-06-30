@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Backs the notification **day** detail screen (#7 notification revamp) — the games + deals notified on one
@@ -69,12 +69,12 @@ internal class NotificationDayViewModel(
         }
         viewModelScope.launch {
             val entries = runCatching { notificationsRepository.observeNotifications().first() }
-                .getOrElse { fatal(logger, it); emptyList() }
+                .getOrElse { error(logger, it); emptyList() }
                 .filter { it.timestamp.substringBefore('T') == day }
             // (entryId, game) pairs across all the day's entries.
             val pairs = entries.flatMap { entry ->
                 runCatching { notificationsRepository.getNotificationDetail(entry.id).games }
-                    .getOrElse { fatal(logger, it); emptyList() }
+                    .getOrElse { error(logger, it); emptyList() }
                     .map { entry.id to it }
             }
             sourceIdsByGameId = pairs.groupBy({ it.second.gameId }, { it.first })
@@ -90,7 +90,7 @@ internal class NotificationDayViewModel(
         sourceIdsByGameId[gameId]?.forEach { sourceId ->
             if (markedRead.add(sourceId)) {
                 viewModelScope.launch {
-                    runCatching { notificationsRepository.markRead(sourceId) }.onFailure { fatal(logger, it) }
+                    runCatching { notificationsRepository.markRead(sourceId) }.onFailure { error(logger, it) }
                 }
             }
         }

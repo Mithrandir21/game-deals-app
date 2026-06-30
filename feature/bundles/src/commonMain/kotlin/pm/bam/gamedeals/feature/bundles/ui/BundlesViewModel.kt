@@ -17,7 +17,7 @@ import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /** Client-side sort orders for the bundles list (the raw region feed is fetched once and re-sorted). */
 enum class BundleSort { Newest, ExpiringSoon, Price }
@@ -69,7 +69,7 @@ internal class BundlesViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
                 loadError.value = true
             }
         }

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Backs the shell-level sign-in prompt ([SignInPromptHost]). Runs the ITAD OAuth flow on demand and exposes
@@ -35,7 +35,7 @@ internal class SignInPromptViewModel(
             } catch (ce: CancellationException) {
                 throw ce
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
             } finally {
                 signingIn.value = false
             }

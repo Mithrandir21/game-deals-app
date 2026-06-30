@@ -13,6 +13,7 @@ import pm.bam.gamedeals.domain.db.cache.GameIdMappingEntry
 import pm.bam.gamedeals.domain.db.cache.IgdbTagEntry
 import pm.bam.gamedeals.domain.db.cache.IgnoredGameIdEntry
 import pm.bam.gamedeals.domain.db.cache.PriceHistoryCacheEntry
+import pm.bam.gamedeals.domain.db.cache.RecentlyViewedGameEntry
 import pm.bam.gamedeals.domain.db.cache.StatsRankingsCacheEntry
 import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.BundlesCacheDao
@@ -26,6 +27,7 @@ import pm.bam.gamedeals.domain.db.dao.IgdbTagDao
 import pm.bam.gamedeals.domain.db.dao.GiveawaysDao
 import pm.bam.gamedeals.domain.db.dao.IgnoredDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
+import pm.bam.gamedeals.domain.db.dao.RecentlyViewedDao
 import pm.bam.gamedeals.domain.db.dao.ReleasesDao
 import pm.bam.gamedeals.domain.db.dao.StatsRankingsCacheDao
 import pm.bam.gamedeals.domain.db.dao.StoresDao
@@ -41,7 +43,8 @@ import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 
 // v1 is the clean pre-1.0 baseline — the prior v5–v21 history never shipped (see Migrations.kt).
 // From v1 forward, bumping this REQUIRES a real Migration(n, n+1) + a schema-diff test.
-internal const val DOMAIN_DB_VERSION = 1
+// v2 (#211): adds the RecentlyViewedGame table (see MIGRATION_1_2).
+internal const val DOMAIN_DB_VERSION = 2
 
 @Database(
     version = DOMAIN_DB_VERSION,
@@ -50,7 +53,7 @@ internal const val DOMAIN_DB_VERSION = 1
         DealDetailsCacheEntry::class, GameDetailsCacheEntry::class, PriceHistoryCacheEntry::class,
         BundlesCacheEntry::class, StatsRankingsCacheEntry::class, GameIdMappingEntry::class,
         WaitlistGameIdEntry::class, CollectionGameIdEntry::class, IgnoredGameIdEntry::class,
-        IgdbTagEntry::class,
+        IgdbTagEntry::class, RecentlyViewedGameEntry::class,
     ],
     exportSchema = true,
 )
@@ -87,6 +90,8 @@ abstract class DomainDatabase : RoomDatabase() {
     internal abstract fun getIgnoredDao(): IgnoredDao
 
     internal abstract fun getIgdbTagDao(): IgdbTagDao
+
+    internal abstract fun getRecentlyViewedDao(): RecentlyViewedDao
 
 }
 

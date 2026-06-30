@@ -14,7 +14,7 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 
 /** Current semantic cache-format version; bump to force a one-time clear of the format-versioned caches. */
-internal const val CACHE_SCHEMA_VERSION = 1
+internal const val CACHE_SCHEMA_VERSION = 2
 internal const val CACHE_SCHEMA_VERSION_KEY = "cache_schema_version"
 
 /** Keep rows for a grace window past TTL expiry so serve-stale-on-error (D7) still has something to fall back on. */

@@ -16,7 +16,7 @@ import pm.bam.gamedeals.domain.models.IgdbTagDimension
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /** Identifies one selectable tag chip (ids are only unique within a dimension). */
 @Immutable
@@ -54,7 +54,7 @@ internal class DiscoverPickerViewModel(
                     emitReady(persistentSetOf())
                 }
                 .onFailure { t ->
-                    fatal(logger, t) { "Failed to load tag vocabulary" }
+                    error(logger, t) { "Failed to load tag vocabulary" }
                     uiState.value = PickerState.Error
                 }
         }

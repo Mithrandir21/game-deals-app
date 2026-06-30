@@ -62,6 +62,9 @@ fun Any.warn(logger: Logger, throwable: Throwable? = null, tag: String? = null, 
 fun Any.error(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
     logger.log(LogLevel.ERROR, tag ?: this::class.simpleName, throwable, messageProvider)
 
+fun Any.error(logger: Logger, throwable: Throwable, tag: String? = null) =
+    logger.log(LogLevel.ERROR, tag ?: this::class.simpleName, throwable) { throwable.message ?: throwable::class.simpleName ?: "Error" }
+
 fun Any.fatal(logger: Logger, throwable: Throwable? = null, tag: String? = null, messageProvider: () -> String) =
     logger.log(LogLevel.FATAL, tag ?: this::class.simpleName, throwable, messageProvider)
 

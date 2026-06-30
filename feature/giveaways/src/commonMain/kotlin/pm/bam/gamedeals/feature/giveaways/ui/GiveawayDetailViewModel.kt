@@ -12,7 +12,7 @@ import pm.bam.gamedeals.common.datetime.parsing.DatetimeParsing
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.fatal
+import pm.bam.gamedeals.logging.error
 
 /**
  * Resolves a single [Giveaway] by id for the in-app detail screen (GamerPower source — one game per
@@ -57,7 +57,7 @@ internal class GiveawayDetailViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                fatal(logger, t)
+                error(logger, t)
                 uiState.value = GiveawayDetailScreenData.Error
             }
         }

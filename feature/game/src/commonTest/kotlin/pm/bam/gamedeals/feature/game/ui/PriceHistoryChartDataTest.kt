@@ -98,6 +98,78 @@ class PriceHistoryChartDataTest {
     }
 
     @Test
+    fun ALL_coarsens_a_dense_daily_history_into_far_fewer_points() {
+        // 120 consecutive daily points ending recently; ALL buckets at ~30 days.
+        val dense = (0 until 120).map { pt(880 + it, 50.0 - it * 0.1) }
+        val result = windowedPriceHistory(dense, PriceHistoryRange.ALL, now)
+
+        // 120 daily points would be far denser; monthly bucketing collapses them dramatically.
+        assertTrue(result.size < 20, "expected a coarsened series, got ${result.size} points")
+        // Every plotted point is a real day (no fabricated timestamps), chronological & strictly increasing.
+        val days = result.map { it.timestampEpochMs.toEpochDay() }
+        assertEquals(days.sorted(), days)
+        assertEquals(days.toSet().size, days.size)
+    }
+
+    @Test
+    fun ALL_downsampling_keeps_the_all_time_low_even_as_a_single_day_dip() {
+        // A flat $50 history with one deep one-day dip to $5 buried mid-bucket.
+        val points = (0 until 120).map { pt(880 + it, 50.0) }.toMutableList()
+        points[40] = pt(920, 5.0) // a lone dip on day 920
+        val result = windowedPriceHistory(points, PriceHistoryRange.ALL, now)
+
+        assertEquals(5.0, lowestPoint(result)?.priceValue)
+        assertTrue(result.any { it.timestampEpochMs.toEpochDay() == 920L && it.priceValue == 5.0 })
+    }
+
+    @Test
+    fun ALL_downsampling_samples_the_prevailing_price_not_the_period_low() {
+        // Flat $60 history with a transient mid-bucket sale to $40 that is NOT the all-time-low
+        // (a deeper $10 low sits elsewhere). The prevailing-price sampling must keep the bucket's
+        // end price ($60), so the $40 blip never appears — the past must not look cheaper than it was.
+        val points = (0 until 120).map { pt(880 + it, 60.0) }.toMutableList()
+        points[5] = pt(885, 40.0)   // transient sale inside bucket 0 (ends; price returns to $60)
+        points[80] = pt(960, 10.0)  // the genuine all-time-low, much later
+        val result = windowedPriceHistory(points, PriceHistoryRange.ALL, now)
+
+        assertTrue(result.none { it.priceValue == 40.0 }, "transient non-low sale must not be plotted")
+        assertEquals(10.0, lowestPoint(result)?.priceValue) // the real all-time-low is still kept
+        assertTrue(result.any { it.priceValue == 60.0 }) // prevailing price is represented
+    }
+
+    @Test
+    fun ALL_downsampling_preserves_the_true_latest_point() {
+        val points = (0 until 120).map { pt(880 + it, 50.0 - it * 0.1) } // newest is the cheapest
+        val result = windowedPriceHistory(points, PriceHistoryRange.ALL, now)
+
+        // The real last change (day 999, the cheapest) is retained; the synthetic now@1000 carries its price.
+        val lastReal = points.last()
+        assertTrue(result.any { it.timestampEpochMs == lastReal.timestampEpochMs && it.priceValue == lastReal.priceValue })
+        assertEquals(lastReal.priceValue, result.last().priceValue)
+        assertEquals(1000, result.last().timestampEpochMs.toEpochDay())
+    }
+
+    @Test
+    fun THREE_MONTHS_keeps_every_daily_point_no_downsampling() {
+        // 80 consecutive daily points inside the 3-month window; bucketDays=1 is a no-op.
+        val dense = (0 until 80).map { pt(920 + it, 40.0 - it * 0.1) }
+        val result = windowedPriceHistory(dense, PriceHistoryRange.THREE_MONTHS, now)
+
+        // All 80 distinct days survive (newest day 999 < now 1000, so a synthetic now point is added).
+        assertEquals(81, result.size)
+        assertEquals(1000, result.last().timestampEpochMs.toEpochDay())
+    }
+
+    @Test
+    fun ONE_YEAR_coarsens_dense_daily_history_to_roughly_weekly() {
+        // A dense year of daily points; 1Y buckets at ~7 days → on the order of 52 points.
+        val dense = (0 until 360).map { pt(640 + it, 60.0 - it * 0.05) }
+        val result = windowedPriceHistory(dense, PriceHistoryRange.ONE_YEAR, now)
+
+        assertTrue(result.size in 40..70, "expected ~weekly granularity, got ${result.size} points")
+    }
+
+    @Test
     fun latestRegular_returns_the_most_recent_non_null_regular_price() {
         val points = listOf(
             pt(900, 60.0, regular = 60.0),

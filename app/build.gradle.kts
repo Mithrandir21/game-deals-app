@@ -185,6 +185,7 @@ dependencies {
     implementation(project(":logging"))
     implementation(project(":common"))
     implementation(project(":common:ui"))
+    implementation(project(":common:imaging"))
     implementation(project(":domain"))
 
     // Remote source adapters — wired in Koin at the app boundary so :domain stays free of pm.bam.gamedeals.remote.* imports (port/adapter pattern).
