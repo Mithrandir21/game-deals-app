@@ -602,7 +602,10 @@ private fun GamePageBody(
             LazyColumn(
                 state = listStates[page],
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = contentTopDp, bottom = GameDealsCustomTheme.spacing.large),
+                contentPadding = PaddingValues(
+                    top = contentTopDp + GameDealsCustomTheme.spacing.large,
+                    bottom = GameDealsCustomTheme.spacing.large,
+                ),
                 verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
             ) {
                 item(key = "tab-$page") {
