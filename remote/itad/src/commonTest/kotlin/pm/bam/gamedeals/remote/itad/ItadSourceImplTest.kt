@@ -302,6 +302,15 @@ class ItadSourceImplTest {
         assertEquals("$5.99", point.priceDenominated)
         assertEquals("/games/history/v2", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
+        // A null `since` is anchored at the epoch so ITAD returns the full log (not its 3-month default).
+        assertEquals("1970-01-01T00:00:00Z", recordedRequests.single().url.parameters["since"])
+    }
+
+    @Test
+    fun fetchPriceHistory_passes_an_incremental_since_as_an_iso_instant() = runTest {
+        impl.fetchPriceHistory("uuid-1", since = 1767225600000L) // 2026-01-01T00:00:00Z
+
+        assertEquals("2026-01-01T00:00:00Z", recordedRequests.single().url.parameters["since"])
     }
 
     @Test
