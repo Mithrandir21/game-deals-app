@@ -12,10 +12,14 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.account.AccountRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.collection.CollectionDisplayStore
+import pm.bam.gamedeals.domain.repositories.collection.CollectionDisplayStoreImpl
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistDisplayStore
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistDisplayStoreImpl
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
@@ -125,8 +129,13 @@ val domainModule = module {
     // Auth token is encrypted at rest — use the SECURE_QUALIFIER store (#239), not the settings store.
     single<AuthTokenStore> { AuthTokenStoreImpl(get(SECURE_QUALIFIER)) }
     single<AccountRepository> { AccountRepositoryImpl(get(), get(), get()) }
-    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get()) }
-    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get()) }
+    // Waitlist/Collection display caches (JSON blobs in the settings store, like FranchiseSaleSnapshotStore)
+    // back the enriched dashboard rows for instant/offline render. Waitlist also merges a batched price
+    // lookup (dealsSource) keyed to the user's region; collection is price-less.
+    single<WaitlistDisplayStore> { WaitlistDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).

@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.ItadUser
+import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
@@ -53,6 +54,7 @@ class AccountViewModelTest : MainDispatcherTest() {
         every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
         every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)
+        every { settingsRepository.observeThemeMode() } returns flowOf(ThemeMode.SYSTEM)
         every { notificationsRepository.observeUnreadCount() } returns flowOf(0)
     }
 

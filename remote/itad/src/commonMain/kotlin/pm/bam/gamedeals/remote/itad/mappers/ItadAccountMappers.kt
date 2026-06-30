@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.remote.itad.mappers
 
+import kotlin.time.Instant
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.ItadNote
@@ -63,10 +64,29 @@ private fun RemoteItadDealEntry.toNotificationShopDeal(): NotificationShopDeal =
     )
 
 internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
-    WaitlistEntry(gameId = id, title = title, artwork = assets.toGameArtwork())
+    WaitlistEntry(
+        gameId = id,
+        title = title,
+        artwork = assets.toGameArtwork(),
+        type = type,
+        mature = mature ?: false,
+        addedEpochMs = added.toEpochMsOrNull(),
+    )
 
 internal fun RemoteItadSearchGame.toCollectionEntry(): CollectionEntry =
-    CollectionEntry(gameId = id, title = title, artwork = assets.toGameArtwork())
+    CollectionEntry(
+        gameId = id,
+        title = title,
+        artwork = assets.toGameArtwork(),
+        type = type,
+        mature = mature ?: false,
+        group = group,
+        addedEpochMs = added.toEpochMsOrNull(),
+    )
+
+/** ISO-8601 (with offset) → epoch millis; unparseable/null → null. Mirrors the bundle date idiom. */
+private fun String?.toEpochMsOrNull(): Long? =
+    this?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() }
 
 internal fun RemoteItadSearchGame.toIgnoredEntry(): IgnoredEntry =
     IgnoredEntry(gameId = id, title = title, artwork = assets.toGameArtwork())

@@ -43,9 +43,9 @@ class ItadAccountSourceImplTest {
             when {
                 request.url.encodedPath == "/user/info/v2" -> respond("""{"username":"alice"}""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/waitlist/games/v1" && request.method == HttpMethod.Get ->
-                    respond("""[{"id":"uuid-1","title":"Hades","assets":{"boxart":"box.jpg","banner300":"banner300.jpg"}}]""", HttpStatusCode.OK, jsonHeaders)
+                    respond("""[{"id":"uuid-1","title":"Hades","type":"game","added":"2023-02-01T21:04:21+01:00","assets":{"boxart":"box.jpg","banner300":"banner300.jpg"}}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/collection/games/v1" && request.method == HttpMethod.Get ->
-                    respond("""[{"id":"uuid-2","title":"Celeste"}]""", HttpStatusCode.OK, jsonHeaders)
+                    respond("""[{"id":"uuid-2","title":"Celeste","type":"game","group":3,"added":"2022-05-10T00:00:00+00:00"}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/notifications/v1" && request.method == HttpMethod.Get ->
                     respond("""[{"id":"n1","type":"waitlist","title":"Price drop","timestamp":"2026-06-12T00:00:00+00:00","read":null}]""", HttpStatusCode.OK, jsonHeaders)
                 request.url.encodedPath == "/notifications/waitlist/v1" && request.method == HttpMethod.Get ->
@@ -89,6 +89,9 @@ class ItadAccountSourceImplTest {
         assertEquals("uuid-1", entries.single().gameId)
         assertEquals("Hades", entries.single().title)
         assertEquals("banner300.jpg", entries.single().artwork.thumbnail) // prioritized banner300 over boxart
+        assertEquals("game", entries.single().type)
+        // "added" (ISO offset) is parsed to epoch millis: 2023-02-01T21:04:21+01:00 == 2023-02-01T20:04:21Z.
+        assertEquals(1675281861000L, entries.single().addedEpochMs)
         assertEquals("/waitlist/games/v1", recorded.single().url.encodedPath)
     }
 
@@ -111,6 +114,8 @@ class ItadAccountSourceImplTest {
         val entries = source().getCollection()
         assertEquals("uuid-2", entries.single().gameId)
         assertEquals("Celeste", entries.single().title)
+        assertEquals(3, entries.single().group)
+        assertEquals(1652140800000L, entries.single().addedEpochMs) // 2022-05-10T00:00:00Z
         assertEquals("/collection/games/v1", recorded.single().url.encodedPath)
     }
 

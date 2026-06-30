@@ -64,6 +64,10 @@ data class RemoteItadSearchGame(
     @SerialName("type") val type: String? = null,
     @SerialName("mature") val mature: Boolean? = null,
     @SerialName("assets") val assets: RemoteItadGameAssets? = null,
+    // Waitlist/collection rows carry an ISO-8601 "added" timestamp (nullable per the ITAD spec); other
+    // reuses of this DTO (search/lookup/bundle tiers) simply omit it. `group` is collection-only.
+    @SerialName("added") val added: String? = null,
+    @SerialName("group") val group: Int? = null,
 )
 
 @Serializable

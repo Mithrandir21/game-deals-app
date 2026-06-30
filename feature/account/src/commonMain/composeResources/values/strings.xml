@@ -107,4 +107,39 @@
     <string name="account_followed_series_unfollow">Unfollow %1$s</string>
     <string name="account_followed_series_game_image">Cover art for %1$s</string>
 
+    <!-- Library list enrichment: waitlist buy-dashboard + collection metadata (#274 follow-up) -->
+    <string name="account_game_image">Cover art for %1$s</string>
+    <string name="account_list_sort">Sort</string>
+    <string name="account_list_refresh_failed">Couldn\'t refresh — showing saved data</string>
+    <string name="account_waitlist_no_deal">No current deal</string>
+    <string name="account_waitlist_lowest_ever">Lowest ever</string>
+
+    <!-- Waitlist sort options -->
+    <string name="account_waitlist_sort_recently_added">Recently added</string>
+    <string name="account_waitlist_sort_biggest_discount">Biggest discount</string>
+    <string name="account_waitlist_sort_price_low_high">Price: low to high</string>
+    <string name="account_waitlist_sort_now_lowest">Now at lowest ever</string>
+
+    <!-- Collection sort options -->
+    <string name="account_collection_sort_recently_added">Recently added</string>
+    <string name="account_collection_sort_title">Title A–Z</string>
+
+    <!-- Game type labels -->
+    <string name="account_type_game">Game</string>
+    <string name="account_type_dlc">DLC</string>
+    <string name="account_type_package">Package</string>
+
+    <!-- Relative "added" time. Days are always 2+ (one day reads as the singular below). -->
+    <string name="account_time_today">today</string>
+    <string name="account_time_day_ago">1 day ago</string>
+    <string name="account_time_days_ago">%1$d days ago</string>
+    <string name="account_time_week_ago">1 week ago</string>
+    <string name="account_time_weeks_ago">%1$d weeks ago</string>
+    <string name="account_time_month_ago">1 month ago</string>
+    <string name="account_time_months_ago">%1$d months ago</string>
+    <string name="account_time_year_ago">1 year ago</string>
+    <string name="account_time_years_ago">%1$d years ago</string>
+    <string name="account_waitlisted_ago">Waitlisted %1$s</string>
+    <string name="account_added_ago">Added %1$s</string>
+
 </resources>

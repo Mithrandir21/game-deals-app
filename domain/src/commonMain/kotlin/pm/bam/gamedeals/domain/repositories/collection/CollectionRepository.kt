@@ -4,8 +4,10 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
@@ -29,7 +31,16 @@ interface CollectionRepository {
     suspend fun getCollection(): List<CollectionEntry>
     suspend fun toggleCollection(gameId: String): RepoUpdateResult
 
-    /** Wipes the locally-cached id set (no remote call) — used to clear the row on logout. */
+    /**
+     * The enriched collection snapshot (title/art/type/added — no price; the games are owned). Emits the
+     * persisted cache first, then each [refreshCollectionDisplay] result. Null until a snapshot exists.
+     */
+    fun observeCollectionDisplay(): Flow<List<CollectionEntry>?>
+
+    /** Reconciles the collection from remote (also refreshing the id set) and persists the display snapshot. */
+    suspend fun refreshCollectionDisplay()
+
+    /** Wipes the locally-cached id set + display snapshot (no remote call) — used to clear the row on logout. */
     suspend fun clearLocal()
 }
 
@@ -38,7 +49,10 @@ internal class CollectionRepositoryImpl(
     private val authTokenStore: AuthTokenStore,
     private val collectionDao: CollectionDao,
     private val analytics: Analytics,
+    private val displayStore: CollectionDisplayStore,
 ) : CollectionRepository {
+
+    private val displayFlow = MutableStateFlow<List<CollectionEntry>?>(null)
 
     override fun observeCollectionIds(): Flow<ImmutableSet<String>> =
         combine(authTokenStore.observeAuthState(), collectionDao.observeAll()) { authState, rows ->
@@ -47,6 +61,9 @@ internal class CollectionRepositoryImpl(
 
     override fun observeIsCollected(gameId: String): Flow<Boolean> =
         observeCollectionIds().map { gameId in it }
+
+    override fun observeCollectionDisplay(): Flow<List<CollectionEntry>?> =
+        displayFlow.onStart { if (displayFlow.value == null) displayFlow.value = displayStore.get() }
 
     override suspend fun getCollection(): List<CollectionEntry> {
         if (!loggedIn()) {
@@ -58,7 +75,22 @@ internal class CollectionRepositoryImpl(
         return entries
     }
 
-    override suspend fun clearLocal() = collectionDao.clear()
+    override suspend fun refreshCollectionDisplay() {
+        val entries = getCollection()
+        if (entries.isEmpty()) {
+            displayStore.clear()
+            displayFlow.value = emptyList()
+            return
+        }
+        displayStore.replace(entries)
+        displayFlow.value = entries
+    }
+
+    override suspend fun clearLocal() {
+        collectionDao.clear()
+        displayStore.clear()
+        displayFlow.value = null
+    }
 
     override suspend fun toggleCollection(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN

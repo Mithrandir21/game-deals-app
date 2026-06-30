@@ -44,10 +44,12 @@ fun NavGraphBuilder.accountScreen(
     }
 
     composable<Destination.WaitlistList> {
-        WaitlistListScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+        // A tap opens the shared game-centric peek sheet (same as Home/Deals); the sheet routes to the full
+        // game page via goToGame and to store deals via goToWeb.
+        WaitlistListScreen(onBack = { navController.popBackStack() }, goToGame = goToGame, goToWeb = goToWeb)
     }
     composable<Destination.CollectionList> {
-        CollectionListScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+        CollectionListScreen(onBack = { navController.popBackStack() }, goToGame = goToGame, goToWeb = goToWeb)
     }
     composable<Destination.FollowedSeriesList> {
         // Followed-series tiles carry IGDB ids, so they open the game page by IGDB id (a Steam-id detour
