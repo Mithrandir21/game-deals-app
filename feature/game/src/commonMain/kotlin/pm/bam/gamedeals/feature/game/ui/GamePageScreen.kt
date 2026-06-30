@@ -853,8 +853,9 @@ private fun DealTab(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = GameDealsCustomTheme.spacing.large),
-        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
     ) {
+        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
         when (val deals = data.deals) {
             SectionState.Loading -> TabLoading()
             SectionState.Error -> TabError(onRetry = { onRetrySection(RetrySection.Deals) })
@@ -877,7 +878,6 @@ private fun DealTab(
                 else PriceHistoryChart(priceHistory = priceHistory.value, modifier = Modifier.fillMaxWidth())
         }
         RegionalPricesExpander(state = data.regionalPricesState, gameTitle = data.title, goToWeb = goToWeb, onExpand = onRegionsSelected)
-        if (data.bundles.isNotEmpty()) BundlesSection(data.bundles, onBundleClick)
     }
 }
 
@@ -1080,6 +1080,7 @@ private fun MediaGallery(game: IgdbGame, goToWeb: (url: String, gameTitle: Strin
                     Text(
                         text = title,
                         style = MaterialTheme.typography.labelMedium,
+                        minLines = 2,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(),
@@ -1087,17 +1088,32 @@ private fun MediaGallery(game: IgdbGame, goToWeb: (url: String, gameTitle: Strin
                 }
             }
             itemsIndexed(game.screenshotImageIds) { index, imageId ->
-                AsyncImage(
-                    model = igdbImageUrl(imageId, IgdbImageSize.ScreenshotMed),
-                    contentDescription = stringResource(Res.string.game_details_screenshot_image_cd, game.name, index + 1),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .height(180.dp)
-                        .aspectRatio(SCREENSHOT_ASPECT_RATIO)
-                        .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .clickable(role = Role.Button) { openIndex = index },
-                )
+                // Mirror the trailer tile's structure (same width + a reserved 2-line caption area) so the
+                // LazyRow's height stays constant when scrolling from videos to screenshots. Screenshots
+                // have no caption, so the text is blank — it only reserves the matching vertical space.
+                Column(
+                    modifier = Modifier.width(TRAILER_TILE_WIDTH),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                ) {
+                    AsyncImage(
+                        model = igdbImageUrl(imageId, IgdbImageSize.ScreenshotMed),
+                        contentDescription = stringResource(Res.string.game_details_screenshot_image_cd, game.name, index + 1),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(SCREENSHOT_ASPECT_RATIO)
+                            .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .clickable(role = Role.Button) { openIndex = index },
+                    )
+                    Text(
+                        text = "",
+                        style = MaterialTheme.typography.labelMedium,
+                        minLines = 2,
+                        maxLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
@@ -1602,7 +1618,7 @@ private fun CandidatePickerSheet(
 
 @Composable
 private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    Text(modifier = modifier.semantics { heading() }, text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    Text(modifier = modifier.semantics { heading() }, text = text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
 }
 
 /** Short "nothing here" line for an empty tab/section — matches the Regions tab's empty state. */
