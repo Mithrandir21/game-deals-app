@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
@@ -35,8 +36,8 @@ import kotlin.test.assertTrue
 
 class OnboardingViewModelTest : MainDispatcherTest() {
 
-    private val us = Country("US", "United States")
-    private val gb = Country("GB", "United Kingdom")
+    private val us = Country("US", "United States", Region.AMERICAS)
+    private val gb = Country("GB", "United Kingdom", Region.EUROPE)
 
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit)
     private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit)

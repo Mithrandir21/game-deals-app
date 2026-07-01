@@ -20,6 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
@@ -47,8 +48,8 @@ class OnboardingSlidesTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val us = Country("US", "United States")
-    private val gb = Country("GB", "United Kingdom")
+    private val us = Country("US", "United States", Region.AMERICAS)
+    private val gb = Country("GB", "United Kingdom", Region.EUROPE)
 
     private lateinit var sem: Semantics
 

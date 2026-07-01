@@ -16,6 +16,7 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_followed_series
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_how_it_works
@@ -46,7 +47,7 @@ class AccountScreenTest {
 
     private fun setContent() {
         every { viewModel.uiState } returns MutableStateFlow(
-            AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States")),
+            AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", Region.AMERICAS)),
         )
         every { viewModel.countries } returns persistentListOf(US, UK)
         composeTestRule.setContent {
@@ -128,7 +129,7 @@ class AccountScreenTest {
     }
 
     private companion object {
-        val US = Country("US", "United States")
-        val UK = Country("GB", "United Kingdom")
+        val US = Country("US", "United States", Region.AMERICAS)
+        val UK = Country("GB", "United Kingdom", Region.EUROPE)
     }
 }

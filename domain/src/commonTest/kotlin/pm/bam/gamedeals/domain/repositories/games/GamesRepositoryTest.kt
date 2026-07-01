@@ -25,6 +25,7 @@ import pm.bam.gamedeals.domain.db.dao.GamesDao
 import pm.bam.gamedeals.domain.db.dao.PriceHistoryCacheDao
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
@@ -339,7 +340,7 @@ class GamesRepositoryTest {
 
     @Test
     fun get_regional_prices_delegates_with_the_curated_country_set() = runTest {
-        val regions = listOf(RegionalPrice(Country("US", "United States"), 9.99, "$9.99", "https://store/x"))
+        val regions = listOf(RegionalPrice(Country("US", "United States", Region.AMERICAS), 9.99, "$9.99", "https://store/x"))
         everySuspend { dealsSource.fetchRegionalPrices("uuid-1", REGIONAL_COMPARISON_COUNTRIES) } returns regions
 
         val result = impl.getRegionalPrices("uuid-1")

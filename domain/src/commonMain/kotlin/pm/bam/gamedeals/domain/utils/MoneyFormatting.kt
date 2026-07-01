@@ -41,4 +41,6 @@ private val CURRENCY_SYMBOLS: Map<String, String> = mapOf(
     "JPY" to "¥",
     "BRL" to "R$",
     "MXN" to "MX$",
+    "INR" to "₹",
+    "CNY" to "¥",
 )

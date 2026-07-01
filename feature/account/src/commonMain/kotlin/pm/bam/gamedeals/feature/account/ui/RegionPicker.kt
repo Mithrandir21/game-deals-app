@@ -9,11 +9,16 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -23,13 +28,16 @@ import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.countriesByRegion
 import pm.bam.gamedeals.feature.account.generated.resources.Res
+import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_no_matches
+import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_search_hint
 import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_title
 
 /**
- * Bottom-sheet region picker (#276): the currently-selected country is pinned to the top, the rest follow
- * alphabetically, each shown with its flag emoji (derived from the ISO code). Selecting one persists the
- * region and dismisses the sheet.
+ * Bottom-sheet region picker (#276): countries are grouped into continent sections (Africa, Americas, …)
+ * with sticky headers, each row shown with its flag emoji (derived from the ISO code). A search field
+ * filters by name/code. Selecting a country persists the region and dismisses the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,10 +47,10 @@ internal fun RegionPickerSheet(
     onSelect: (Country) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val ordered = remember(countries, selectedCode) {
-        val selected = countries.firstOrNull { it.code == selectedCode }
-        val rest = countries.filter { it.code != selectedCode }.sortedBy { it.name }
-        listOfNotNull(selected) + rest
+    var query by remember { mutableStateOf("") }
+    val grouped = remember(countries, query) {
+        val filtered = countries.filter { it.matches(query) }
+        countriesByRegion(filtered)
     }
 
     ModalBottomSheet(
@@ -56,15 +64,59 @@ internal fun RegionPickerSheet(
                 .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
                 .semantics { heading() },
         )
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            placeholder = { Text(stringResource(Res.string.account_region_picker_search_hint)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
+        )
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(ordered, key = { it.code }) { country ->
-                CountryRow(
-                    country = country,
-                    selected = country.code == selectedCode,
-                    onClick = { onSelect(country) },
-                )
+            if (grouped.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(Res.string.account_region_picker_no_matches),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(
+                            horizontal = GameDealsCustomTheme.spacing.large,
+                            vertical = GameDealsCustomTheme.spacing.medium,
+                        ),
+                    )
+                }
+            }
+            grouped.forEach { (region, entries) ->
+                item(key = "header_${region.name}") { RegionHeader(region.displayName) }
+                items(entries, key = { it.code }) { country ->
+                    CountryRow(
+                        country = country,
+                        selected = country.code == selectedCode,
+                        onClick = { onSelect(country) },
+                    )
+                }
             }
         }
+    }
+}
+
+private fun Country.matches(query: String): Boolean {
+    if (query.isBlank()) return true
+    val q = query.trim()
+    return name.contains(q, ignoreCase = true) || code.contains(q, ignoreCase = true)
+}
+
+@Composable
+private fun RegionHeader(title: String) {
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
+                .semantics { heading() },
+        )
     }
 }
 

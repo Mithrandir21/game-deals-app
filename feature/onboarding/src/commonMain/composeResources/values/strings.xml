@@ -35,6 +35,8 @@
     <string name="onboarding_region_body">We've set your region from your device. Change it any time so prices and currency match your stores.</string>
     <string name="onboarding_region_change">Change region</string>
     <string name="onboarding_region_picker_title">Choose your region</string>
+    <string name="onboarding_region_picker_search_hint">Search countries</string>
+    <string name="onboarding_region_picker_no_matches">No matching countries</string>
 
     <!-- 6. Notifications (interactive) -->
     <string name="onboarding_notifications_title">Get sale alerts</string>

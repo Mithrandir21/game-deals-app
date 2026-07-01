@@ -22,6 +22,7 @@ import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
+import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.SearchParameters
 import pm.bam.gamedeals.domain.repositories.cache.CachedResource
@@ -58,16 +59,9 @@ internal const val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
  * `/games/prices/v3` round-trip, so the set is kept small and skewed to regions whose pricing differs
  * most (cheap: TR/BR/IN/AR; reference: US/GB/DE/JP). Drawn from [SUPPORTED_COUNTRIES].
  */
-internal val REGIONAL_COMPARISON_COUNTRIES: List<Country> = listOf(
-    Country("US", "United States"),
-    Country("GB", "United Kingdom"),
-    Country("DE", "Germany"),
-    Country("BR", "Brazil"),
-    Country("TR", "Türkiye"),
-    Country("IN", "India"),
-    Country("AR", "Argentina"),
-    Country("JP", "Japan"),
-)
+internal val REGIONAL_COMPARISON_COUNTRIES: List<Country> =
+    listOf("US", "GB", "DE", "BR", "TR", "IN", "AR", "JP")
+        .mapNotNull { code -> SUPPORTED_COUNTRIES.firstOrNull { it.code == code } }
 
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>

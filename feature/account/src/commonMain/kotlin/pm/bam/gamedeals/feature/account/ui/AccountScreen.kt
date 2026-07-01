@@ -51,6 +51,7 @@ import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequest
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
@@ -571,7 +572,10 @@ private fun HubRow(
     )
 }
 
-private val previewCountries = persistentListOf(Country("US", "United States"), Country("GB", "United Kingdom"))
+private val previewCountries = persistentListOf(
+    Country("US", "United States", Region.AMERICAS),
+    Country("GB", "United Kingdom", Region.EUROPE),
+)
 
 @Composable
 private fun AccountScreenContentPreview(data: AccountScreenData) {
@@ -602,7 +606,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
 @Composable
 private fun AccountScreen_LoggedOut_Preview() {
     AccountScreenContentPreview(
-        AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States")),
+        AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", Region.AMERICAS)),
     )
 }
 
@@ -617,7 +621,7 @@ private fun AccountScreen_LoggedIn_Preview() {
             collectionCount = 34,
             unreadNotifications = 3,
             linkedSteam = true,
-            selectedCountry = Country("US", "United States"),
+            selectedCountry = Country("US", "United States", Region.AMERICAS),
             matureOptIn = true,
         ),
     )

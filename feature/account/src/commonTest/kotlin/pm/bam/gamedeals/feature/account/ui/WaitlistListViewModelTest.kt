@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -61,7 +62,7 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(ids.toPersistentSet())
         // observeWaitlistIds returns an ImmutableSet; toPersistentSet() satisfies that contract.
         every { storesRepository.observeStores() } returns flowOf(emptyList())
-        every { regionRepository.observeSelectedCountry() } returns flowOf(Country(region, region))
+        every { regionRepository.observeSelectedCountry() } returns flowOf(Country(region, region, Region.EUROPE))
         // The peek delegate observes these id sets at construction (for the sheet's icon states).
         every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
         every { ignoredRepository.observeIgnoredIds() } returns flowOf(persistentSetOf())

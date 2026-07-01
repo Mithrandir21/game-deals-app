@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
@@ -50,8 +51,8 @@ class AccountViewModelTest : MainDispatcherTest() {
         // The library reconcile is now owned app-wide (applyLibraryLifecycle), so the VM no longer fetches here.
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf())
         every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
-        every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
-        every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
+        every { regionRepository.supportedCountries } returns listOf(Country("US", "United States", Region.AMERICAS))
+        every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States", Region.AMERICAS))
         every { settingsRepository.observeThemeMode() } returns flowOf(ThemeMode.LIGHT)
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
         every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)

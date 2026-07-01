@@ -6,6 +6,7 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
@@ -43,7 +44,7 @@ class RegionRepositoryTest {
 
     @Test
     fun set_country_persists_and_is_reflected() = runTest {
-        val germany = Country("DE", "Germany")
+        val germany = Country("DE", "Germany", Region.EUROPE)
         repository.setSelectedCountry(germany)
 
         assertEquals("DE", repository.getSelectedCountryCode())

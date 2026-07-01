@@ -7,6 +7,7 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
@@ -95,9 +96,9 @@ internal val PreviewWebsites = persistentListOf(
 )
 
 internal val PreviewRegionalPrices = persistentListOf(
-    RegionalPrice(Country("US", "United States"), 12.49, "$12.49", ""),
-    RegionalPrice(Country("PL", "Poland"), 39.99, "39.99 zł", ""),
-    RegionalPrice(Country("BR", "Brazil"), 29.90, "R$29.90", ""),
+    RegionalPrice(Country("US", "United States", Region.AMERICAS), 12.49, "$12.49", ""),
+    RegionalPrice(Country("PL", "Poland", Region.EUROPE), 39.99, "39.99 zł", ""),
+    RegionalPrice(Country("BR", "Brazil", Region.AMERICAS), 29.90, "R$29.90", ""),
 )
 
 /** ~15 months of prices with a few sale dips and a stable $24.99 MSRP — enough to exercise the step line, MSRP rule and low/current dots. */
