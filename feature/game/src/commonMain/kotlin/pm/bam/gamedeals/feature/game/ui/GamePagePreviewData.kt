@@ -10,6 +10,7 @@ import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.RegionalPricesState
@@ -99,6 +100,21 @@ internal val PreviewRegionalPrices = persistentListOf(
     RegionalPrice(Country("BR", "Brazil"), 29.90, "R$29.90", ""),
 )
 
+/** ~15 months of prices with a few sale dips and a stable $24.99 MSRP — enough to exercise the step line, MSRP rule and low/current dots. */
+internal val PreviewPriceHistory = PriceHistory(
+    gameID = "g1",
+    points = persistentListOf(
+        PriceHistory.PricePoint(1_704_067_200_000, 24.99, "$24.99", cutPercent = 0, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_709_251_200_000, 18.74, "$18.74", cutPercent = 25, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_714_521_600_000, 24.99, "$24.99", cutPercent = 0, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_719_792_000_000, 12.49, "$12.49", cutPercent = 50, regularValue = 24.99, shopName = "GOG"),
+        PriceHistory.PricePoint(1_725_148_800_000, 24.99, "$24.99", cutPercent = 0, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_733_011_200_000, 9.99, "$9.99", cutPercent = 60, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_738_368_000_000, 24.99, "$24.99", cutPercent = 0, regularValue = 24.99, shopName = "Steam"),
+        PriceHistory.PricePoint(1_743_465_600_000, 12.49, "$12.49", cutPercent = 50, regularValue = 24.99, shopName = "GOG"),
+    ),
+)
+
 internal val PreviewGameDetails = GameDetails(
     info = GameDetails.GameInfo(title = "Hades"),
     cheapestPriceEver = GameDetails.GameCheapestPriceEver(12.49, "$12.49", "January 13, 2024"),
@@ -111,6 +127,7 @@ internal val PreviewGamePageData = GamePageData.Data(
     gameId = "g1",
     deals = SectionState.Loaded(PreviewGameDetails),
     dealDetails = PreviewStoreDeals,
+    priceHistory = SectionState.Loaded(PreviewPriceHistory),
     gameMeta = SectionState.Loaded(PreviewGameMeta),
     bundles = PreviewBundles,
     igdb = SectionState.Loaded(PreviewIgdbGame),

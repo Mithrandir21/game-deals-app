@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalTime::class)
+@file:Suppress("DEPRECATION")
 
 package pm.bam.gamedeals.feature.game.ui
 
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
@@ -31,8 +33,10 @@ import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
@@ -50,10 +54,13 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import androidx.compose.material3.Surface
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.PriceHistory.PricePoint
 import pm.bam.gamedeals.feature.game.generated.resources.Res
@@ -240,15 +247,23 @@ private fun PriceHistoryGraph(
         (lowestPoint(points) ?: points.last()).priceDenominated,
     )
 
-    CartesianChartHost(
-        chart = chart,
-        modelProducer = modelProducer,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CHART_HEIGHT)
-            .clearAndSetSemantics { this.contentDescription = contentDescription },
-        scrollState = rememberVicoScrollState(scrollEnabled = false),
-    )
+    val chartModifier = modifier
+        .fillMaxWidth()
+        .height(CHART_HEIGHT)
+        .clearAndSetSemantics { this.contentDescription = contentDescription }
+    val scrollState = rememberVicoScrollState(scrollEnabled = false)
+
+    // In an @Preview, effects don't run, so the [modelProducer] transaction above never fires and the
+    // line would be blank. Feed Vico's synchronous model overload from the same points instead; at runtime
+    // the producer path is kept for its diff animations.
+    if (LocalInspectionMode.current) {
+        val previewModel = remember(xs, ys) {
+            CartesianChartModel(LineCartesianLayerModel(listOf(xs.zip(ys).map { (x, y) -> LineCartesianLayerModel.Entry(x, y) })))
+        }
+        CartesianChartHost(chart = chart, model = previewModel, modifier = chartModifier, scrollState = scrollState)
+    } else {
+        CartesianChartHost(chart = chart, modelProducer = modelProducer, modifier = chartModifier, scrollState = scrollState)
+    }
 }
 
 /** Step-after interpolation: the price holds at the prior level until the next change, then jumps. */
@@ -280,7 +295,7 @@ private class HighlightPointProvider(
     private val currentPoint: LineCartesianLayer.Point,
 ) : LineCartesianLayer.PointProvider {
     override fun getPoint(
-        entry: com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel.Entry,
+        entry: LineCartesianLayerModel.Entry,
         extraStore: ExtraStore,
     ): LineCartesianLayer.Point? =
         when (entry.x) {
@@ -317,3 +332,34 @@ private val CHART_HEIGHT = 200.dp
 private val HIGHLIGHT_POINT_SIZE = 8.dp
 private val MARKER_CORNER_RADIUS = 4.dp
 private const val X_AXIS_TARGET_LABELS = 4.0
+
+// The chart's model is normally supplied asynchronously via a model producer, which doesn't run in a
+// static @Preview; [PriceHistoryGraph] detects LocalInspectionMode and feeds Vico's synchronous model
+// overload instead, so these previews render the real step line, MSRP rule and low/current dots.
+
+@Preview
+@Composable
+private fun PriceHistoryChartPreview() {
+    GameDealsTheme {
+        Surface {
+            PriceHistoryChart(
+                priceHistory = PreviewPriceHistory,
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PriceHistoryRangeSelectorPreview() {
+    GameDealsTheme {
+        Surface {
+            PriceHistoryRangeSelector(
+                selected = PriceHistoryRange.ALL,
+                onSelected = {},
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+            )
+        }
+    }
+}
