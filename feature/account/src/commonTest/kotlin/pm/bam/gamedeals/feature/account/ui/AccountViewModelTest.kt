@@ -52,6 +52,7 @@ class AccountViewModelTest : MainDispatcherTest() {
         every { collectionRepository.observeCollectionIds() } returns flowOf(persistentSetOf())
         every { regionRepository.supportedCountries } returns listOf(Country("US", "United States"))
         every { regionRepository.observeSelectedCountry() } returns flowOf(Country("US", "United States"))
+        every { settingsRepository.observeThemeMode() } returns flowOf(ThemeMode.LIGHT)
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
         every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)
         every { settingsRepository.observeThemeMode() } returns flowOf(ThemeMode.SYSTEM)
