@@ -25,6 +25,7 @@ import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.SearchParameters
@@ -541,7 +542,7 @@ class ItadSourceImplTest {
 
     @Test
     fun fetchRegionalPrices_queries_each_country_and_maps_cheapest_deal() = runTest {
-        val regions = listOf(Country("US", "United States"), Country("GB", "United Kingdom"))
+        val regions = listOf(Country("US", "United States", Region.AMERICAS), Country("GB", "United Kingdom", Region.EUROPE))
 
         val prices = impl.fetchRegionalPrices("uuid-1", regions)
 

@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
@@ -207,7 +208,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
             deals = persistentListOf(gameDeal()),
         )
         everySuspend { gamesRepository.getRegionalPrices("g1") } returns listOf(
-            RegionalPrice(Country("US", "United States"), 9.99, "$9.99", "https://store/x"),
+            RegionalPrice(Country("US", "United States", Region.AMERICAS), 9.99, "$9.99", "https://store/x"),
         )
         val vm = viewModel(mapOf("gameId" to "g1"))
         val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
