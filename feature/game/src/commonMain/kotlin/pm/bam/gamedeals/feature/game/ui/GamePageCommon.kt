@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
@@ -48,6 +50,10 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_ratin
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_loading_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.width
 
 // IGDB video ids are YouTube ids; we open the watch page externally and show YouTube's thumbnail tile.
 internal fun youTubeWatchUrl(videoId: String): String = "https://www.youtube.com/watch?v=$videoId"
@@ -169,4 +175,48 @@ private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul
 internal fun formatReleaseDate(instant: Instant): String {
     val date = instant.toLocalDateTime(TimeZone.UTC).date
     return "${MONTH_ABBREV[date.month.ordinal]} ${date.dayOfMonth}, ${date.year}"
+}
+
+
+@Preview
+@Composable
+private fun SectionHeaderPreview() {
+    GameDealsTheme { Surface { SectionHeader("Similar games", Modifier.padding(GameDealsCustomTheme.spacing.large)) } }
+}
+
+@Preview
+@Composable
+private fun TabStatesPreview() {
+    GameDealsTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+            ) {
+                TabEmpty("Nothing here yet")
+                TabError(onRetry = {})
+                TabLoading()
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun IgdbGameTilePreview() {
+    GameDealsTheme {
+        Surface {
+            IgdbGameTile(
+                game = PreviewSimilarGames.first(),
+                onClick = {},
+                modifier = Modifier.width(112.dp).padding(GameDealsCustomTheme.spacing.large),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RatingsRowPreview() {
+    GameDealsTheme { Surface { Box(Modifier.padding(GameDealsCustomTheme.spacing.large)) { RatingsRow(PreviewIgdbGame) } } }
 }

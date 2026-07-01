@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
@@ -89,6 +91,9 @@ import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import org.jetbrains.compose.resources.StringResource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import androidx.compose.material3.Surface
 
 private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
 
@@ -412,4 +417,67 @@ private fun LinksSection(websites: List<WebsiteUiModel>) {
             }
         }
     }
+}
+
+
+@Preview
+@Composable
+private fun AboutTabPreview() {
+    GameDealsTheme {
+        Surface {
+            AboutTab(
+                data = PreviewGamePageData,
+                followedFranchiseIds = emptySet(),
+                goToWeb = { _, _ -> },
+                onSimilarGameClick = {},
+                onToggleFollowFranchise = { _, _ -> },
+                onRetryIgdb = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun GameTileRowPreview() {
+    GameDealsTheme { Surface { GameTileRow(Res.string.game_details_section_similar, PreviewSimilarGames, onClick = {}) } }
+}
+
+@Preview
+@Composable
+private fun DetailsTablePreview() {
+    GameDealsTheme { Surface { DetailsTable(PreviewIgdbGame) } }
+}
+
+@Preview
+@Composable
+private fun DescriptionSectionPreview() {
+    GameDealsTheme { Surface { DescriptionSection(PreviewIgdbGame) } }
+}
+
+@Preview
+@Composable
+private fun MediaGalleryPreview() {
+    GameDealsTheme { Surface { MediaGallery(PreviewIgdbGame, goToWeb = { _, _ -> }) } }
+}
+
+@Preview
+@Composable
+private fun SeriesSectionPreview() {
+    GameDealsTheme {
+        Surface {
+            SeriesSection(
+                franchise = PreviewIgdbGame.franchises.first(),
+                isFollowed = true,
+                onToggleFollow = {},
+                onGameClick = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun LinksSectionPreview() {
+    GameDealsTheme { Surface { LinksSection(PreviewWebsites) } }
 }

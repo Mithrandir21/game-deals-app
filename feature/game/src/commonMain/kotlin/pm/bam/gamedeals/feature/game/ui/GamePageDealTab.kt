@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
@@ -56,6 +58,9 @@ import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import pm.bam.gamedeals.logging.analytics.Analytics
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import androidx.compose.material3.Surface
 
 // ----- Deal tab -------------------------------------------------------------------------------------------
 
@@ -225,6 +230,70 @@ private fun BundlesSection(bundles: List<Bundle>, onBundleClick: (bundleId: Int)
                     }
                     bundle.priceDenominated?.let { Text(text = it, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold) }
                 }
+            }
+        }
+    }
+}
+
+
+@Preview
+@Composable
+private fun BundlesSectionPreview() {
+    GameDealsTheme { Surface { Box(Modifier.padding(GameDealsCustomTheme.spacing.large)) { BundlesSection(PreviewBundles, onBundleClick = {}) } } }
+}
+
+@Preview
+@Composable
+private fun RegionsContentPreview() {
+    GameDealsTheme {
+        Surface {
+            Column(Modifier.padding(GameDealsCustomTheme.spacing.large)) {
+                RegionsContent(
+                    state = GamePageViewModel.RegionalPricesState.Loaded(PreviewRegionalPrices),
+                    gameTitle = "Hades",
+                    goToWeb = { _, _ -> },
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun StoreGameDealRowPreview() {
+    GameDealsTheme {
+        Surface {
+            PreviewKoin {
+                val pair = PreviewStoreDeals.first()
+                Column(Modifier.padding(GameDealsCustomTheme.spacing.large)) {
+                    StoreGameDealRow(
+                        gameId = "g1",
+                        store = pair.store,
+                        gameInfo = PreviewGameDetails.info,
+                        deal = pair.deal,
+                        goToWeb = { _, _ -> },
+                        onShareDeal = { _, _, _ -> },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealTabPreview() {
+    GameDealsTheme {
+        Surface {
+            PreviewKoin {
+                DealTab(
+                    data = PreviewGamePageData,
+                    goToWeb = { _, _ -> },
+                    onShareDeal = { _, _, _ -> },
+                    onBundleClick = {},
+                    onRegionsSelected = {},
+                    onRetrySection = {},
+                )
             }
         }
     }

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.background
@@ -42,6 +44,9 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_playe
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_reviews
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_stats_empty
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import androidx.compose.material3.Surface
 
 /** Green used for the positive share of review bars/labels; reads on both light and dark surfaces. */
 private val ReviewPositiveColor = Color(0xFF43A047)
@@ -156,6 +161,31 @@ private fun ReviewCard(review: GameMeta.Review) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+    }
+}
+
+
+@Preview
+@Composable
+private fun CommunityTabPreview() {
+    GameDealsTheme { Surface { CommunityTab(data = PreviewGamePageData, onRetry = {}) } }
+}
+
+@Preview
+@Composable
+private fun ReviewCardPreview() {
+    GameDealsTheme { Surface { Column(Modifier.padding(GameDealsCustomTheme.spacing.large)) { ReviewCard(PreviewGameMeta.reviews.first()) } } }
+}
+
+@Preview
+@Composable
+private fun PlayersBlockPreview() {
+    GameDealsTheme {
+        Surface {
+            Column(Modifier.padding(GameDealsCustomTheme.spacing.large)) {
+                PreviewGameMeta.players?.let { PlayersBlock(it) }
             }
         }
     }

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package pm.bam.gamedeals.feature.game.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_screen_note_dialog
 import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 
 @Composable
 internal fun NoteEditDialog(initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
@@ -118,5 +122,30 @@ internal fun CandidatePickerSheet(
                 TextButton(onClick = onDismiss) { Text(stringResource(Res.string.game_details_title_match_picker_close)) }
             }
         }
+    }
+}
+
+
+@Preview
+@Composable
+private fun NoteEditDialogPreview() {
+    GameDealsTheme {
+        NoteEditDialog(initial = "Waiting for a deeper discount.", onDismiss = {}, onConfirm = {})
+    }
+}
+
+@Preview
+@Composable
+private fun CandidatePickerSheetPreview() {
+    GameDealsTheme {
+        CandidatePickerSheet(
+            data = PreviewGamePageData.copy(
+                showPicker = true,
+                candidatesState = GamePageViewModel.CandidatesState.Loaded(PreviewSimilarGames),
+            ),
+            onDismiss = {},
+            onCandidatePicked = {},
+            onRetry = {},
+        )
     }
 }
