@@ -100,6 +100,38 @@ class DealsScreenTest {
     }
 
     @Test
+    fun wideLayoutRendersListAndPeeksOnTap() {
+        // Force the tablet list-detail path; the list pane renders in both single- and dual-pane states,
+        // so the row assertion is device-width-independent (the split itself is covered by the @Preview).
+        val onPeekGame = mockk<(String, String, String?) -> Unit>(relaxed = true)
+        composeTestRule.setContent {
+            GameDealsTheme {
+                DealsContent(
+                    isWide = true,
+                    data = DealsScreenData(
+                        status = DealsScreenData.Status.DATA,
+                        deals = persistentListOf(PreviewDeal.copy(dealID = "d1", title = DEAL_TITLE, gameID = DEAL_GAME_ID)),
+                    ),
+                    waitlistIds = persistentSetOf(),
+                    gamePeek = null,
+                    onSelectSortField = {},
+                    onLoadMore = {},
+                    onRetry = {},
+                    onPeekGame = onPeekGame,
+                    onDismissPeek = {},
+                    onShare = {},
+                    goToWeb = { _, _ -> },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(DEAL_TITLE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(DEAL_TITLE).performClick()
+
+        verify(exactly = 1) { onPeekGame(DEAL_GAME_ID, DEAL_TITLE, any()) }
+    }
+
+    @Test
     fun emptyBrowseStateShowsEmptyLabel() {
         every { viewModel.uiState } returns MutableStateFlow(
             DealsScreenData(status = DealsScreenData.Status.DATA, deals = persistentListOf())

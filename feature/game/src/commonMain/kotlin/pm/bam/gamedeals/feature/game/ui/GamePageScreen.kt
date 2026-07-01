@@ -166,6 +166,9 @@ internal fun GamePageScreen(
     onSimilarGameClick: (igdbGameId: Long) -> Unit = {},
     onSearchDealsByTitle: (title: String) -> Unit = {},
     onBundleClick: (bundleId: Int) -> Unit = {},
+    // Lets an embedding host (e.g. the Deals tablet detail pane) control the back arrow independently of
+    // the personal actions (waitlist/collection/note), which always stay.
+    showBackButton: Boolean = true,
     viewModel: GamePageViewModel = koinViewModel(),
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
@@ -185,6 +188,7 @@ internal fun GamePageScreen(
     }
 
     GamePageContent(
+        showBackButton = showBackButton,
         data = data.value,
         isFavourite = isFavourite.value,
         isCollected = isCollected.value,
@@ -223,6 +227,7 @@ internal fun GamePageScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GamePageContent(
+    showBackButton: Boolean = true,
     data: GamePageData,
     isFavourite: Boolean,
     isCollected: Boolean,
@@ -279,11 +284,13 @@ private fun GamePageContent(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.game_screen_navigation_back_button),
-                            )
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(Res.string.game_screen_navigation_back_button),
+                                )
+                            }
                         }
                     },
                     actions = {

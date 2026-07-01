@@ -5,10 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -129,6 +133,19 @@ internal fun NavGraph(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToDiscover = { navActions.navigateToDiscover() },
+                gameDetailPane = { gameId, canReturnToList, onReturnToList ->
+                    GameDetailPane(
+                        gameId = gameId,
+                        canReturnToList = canReturnToList,
+                        onReturnToList = onReturnToList,
+                        goToWeb = { url, _ -> platformActions.openInApp(url) },
+                        goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+                        goToSearchByTitle = { title ->
+                            analytics.capture(AnalyticsEvents.SEARCH_PERFORMED, mapOf("query" to title))
+                            navActions.searchDeals(title)
+                        },
+                    )
+                },
             )
 
             discoverScreen(
@@ -217,3 +234,50 @@ internal fun NavGraph(
  */
 private fun screenNameOf(route: String): String =
     route.substringBefore('/').substringBefore('?').substringAfterLast('.')
+
+/**
+ * Hosts the full game page in the Deals tablet detail pane via a nested [NavHost] on the [gamePageScreen]
+ * route — reusing the page's SavedStateHandle identity + per-game ViewModel scoping without a
+ * feature:deals → feature:game dependency. Re-points to the newly selected game as deals are tapped.
+ */
+@Composable
+private fun GameDetailPane(
+    gameId: String,
+    canReturnToList: Boolean,
+    onReturnToList: () -> Unit,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToBundle: (bundleId: Int) -> Unit,
+    goToSearchByTitle: (title: String) -> Unit,
+) {
+    val nestedNavController = rememberNavController()
+    var currentGameId by remember { mutableStateOf(gameId) }
+    // The nested graph is built once, so read these live (not captured) inside the reactive callbacks.
+    val canReturnToListNow by rememberUpdatedState(canReturnToList)
+    val onReturnToListNow by rememberUpdatedState(onReturnToList)
+
+    NavHost(
+        navController = nestedNavController,
+        startDestination = Destination.Game(gameId),
+    ) {
+        gamePageScreen(
+            navController = nestedNavController,
+            goToWeb = goToWeb,
+            goToBundle = goToBundle,
+            goToSearchByTitle = goToSearchByTitle,
+            // Single-pane portrait hides the list, so warrant a back-to-list arrow there.
+            canReturnToList = { canReturnToListNow },
+            onExit = { onReturnToListNow() },
+        )
+    }
+
+    // The start destination seeds the first selection; re-point only when the user picks a different deal.
+    LaunchedEffect(gameId) {
+        if (gameId != currentGameId) {
+            currentGameId = gameId
+            nestedNavController.navigate(Destination.Game(gameId)) {
+                popUpTo(nestedNavController.graph.findStartDestination().id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+}

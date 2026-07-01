@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.deals.navigation
 
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import pm.bam.gamedeals.common.navigation.Destination
@@ -14,12 +15,16 @@ fun NavGraphBuilder.dealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
     goToDiscover: () -> Unit = {},
+    // Injected by :app: on tablets the list-detail layout renders this (the full game page) in the
+    // detail pane. Null on iOS/where unset → the wide detail pane falls back to the peek content.
+    gameDetailPane: (@Composable (gameId: String, canReturnToList: Boolean, onReturnToList: () -> Unit) -> Unit)? = null,
 ) {
     composable<Destination.Deals> {
         DealsScreen(
             goToWeb = goToWeb,
             goToGame = goToGame,
             goToDiscover = goToDiscover,
+            gameDetailPane = gameDetailPane,
         )
     }
 }

@@ -53,6 +53,7 @@ class DealsFilterSheetTest {
         every { viewModel.searchQuery } returns MutableStateFlow("")
         every { viewModel.searchResults } returns MutableStateFlow(SearchResultsState.Idle)
         every { viewModel.gamePeek } returns MutableStateFlow(null)
+        every { viewModel.discoverEnabled } returns MutableStateFlow(false)
         every { viewModel.events } returns MutableSharedFlow()
 
         composeTestRule.setContent {

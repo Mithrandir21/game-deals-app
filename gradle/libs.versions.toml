@@ -41,7 +41,10 @@ work = "2.10.0"
 compose-bom = "2026.05.00"
 compose-navigation = "2.9.5"
 material3 = "1.4.0"
-material3-adaptive = "1.0.0-alpha06"
+# JetBrains Compose-Multiplatform Material3 Adaptive (usable from commonMain, incl. iOS) — NOT the
+# androidx artifacts, which are Android-only. Pinned to 1.2.0: the 1.3.x line's Android variant
+# requires compileSdk 37, and this project is on 36 (bumping is app-wide + SDK 37 not installed).
+compose-material3-adaptive = "1.2.0"
 appcompat = "1.7.1"
 material = "1.13.0"
 tracing = "1.3.0"
@@ -79,8 +82,9 @@ androidx-webview = { group = "androidx.webkit", name = "webkit", version.ref = "
 androidx-compose-navigation = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version = "2.9.0-beta01" }
 androidx-compose-activity = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-androidx-compose-material3-window = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }
-androidx-compose-material3-adaptive = { group = "androidx.compose.material3", name = "material3-adaptive", version.ref = "material3-adaptive" }
+compose-material3-adaptive = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-layout = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-layout", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-navigation = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-navigation", version.ref = "compose-material3-adaptive" }
 # Lifecycle / ViewModel — AndroidX 2.8+ publishes these as multiplatform artifacts; package paths (androidx.lifecycle.ViewModel, viewModelScope,
 # SavedStateHandle, collectAsStateWithLifecycle) work in commonMain.
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle-runtime-ktx" }
@@ -101,6 +105,7 @@ kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotli
 
 # Compose Multiplatform runtime artifact (the only direct compose.* lib reference here; the rest come via the JetBrains compose plugin's `compose.*` accessor).
 compose-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "compose-multiplatform" }
+compose-ui-backhandler = { group = "org.jetbrains.compose.ui", name = "ui-backhandler", version.ref = "compose-multiplatform" }
 
 # Room (Android KAPT/KSP-style + the KMP-supporting artifact + the bundled SQLite for iOS).
 room = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

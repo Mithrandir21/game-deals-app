@@ -28,6 +28,12 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,9 +56,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -63,6 +71,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -73,6 +82,8 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.adaptive.rememberIsWideLayout
+import pm.bam.gamedeals.common.ui.deal.GamePeekContent
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -88,6 +99,7 @@ import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_detail_pane_empty_label
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_discover_by_tag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button
@@ -167,6 +179,9 @@ internal fun DealsScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGame: (gameId: String) -> Unit,
     goToDiscover: () -> Unit = {},
+    // Tablet detail-pane content injected from :app (which can reach feature:game); null → the wide
+    // detail pane falls back to the peek.
+    gameDetailPane: (@Composable (gameId: String, canReturnToList: Boolean, onReturnToList: () -> Unit) -> Unit)? = null,
     viewModel: DealsViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -202,6 +217,8 @@ internal fun DealsScreen(
     }
 
     DealsContent(
+        isWide = rememberIsWideLayout(),
+        gameDetailPane = gameDetailPane,
         data = data,
         waitlistIds = waitlistIds,
         collectionIds = collectionIds,
@@ -245,9 +262,11 @@ internal fun DealsScreen(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3AdaptiveApi::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun DealsContent(
+internal fun DealsContent(
+    isWide: Boolean = false,
+    gameDetailPane: (@Composable (gameId: String, canReturnToList: Boolean, onReturnToList: () -> Unit) -> Unit)? = null,
     data: DealsScreenData,
     waitlistIds: ImmutableSet<String>,
     collectionIds: ImmutableSet<String> = persistentSetOf(),
@@ -291,25 +310,11 @@ private fun DealsContent(
     // Hide ignored games from the deals list. Paging still tracks the full fetched list (offset),
     // so only the rendered list is filtered; the id set is Room-backed (correct on cold start + offline).
     val visibleDeals = remember(data.deals, ignoredIds) { data.deals.filter { it.gameID !in ignoredIds } }
-    val listState = rememberLazyListState()
     val errorMessage = stringResource(Res.string.deals_screen_loading_error_msg)
     val errorRetry = stringResource(Res.string.deals_screen_loading_error_retry)
     val storesById = remember(stores) { stores.associateBy(Store::storeID) }
 
-    // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
-    // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
-    val shouldLoadMore by remember(visibleDeals.size, data.deals.size, searching) {
-        derivedStateOf {
-            if (searching) return@derivedStateOf false
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            // Also fetch more when the whole loaded page is filtered out (all ignored); the VM guards
-            // against duplicate/exhausted calls (appending / endReached).
-            data.deals.isNotEmpty() && (visibleDeals.isEmpty() || lastVisible >= visibleDeals.size - LOAD_MORE_THRESHOLD)
-        }
-    }
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) onLoadMore()
-    }
+    val filterActiveCount = selectedShops.size + filter.activeCount
 
     if (data.status == DealsScreenData.Status.ERROR && !searching) {
         LaunchedEffect(snackbarHostState) {
@@ -329,96 +334,112 @@ private fun DealsContent(
                 .padding(innerPadding)
                 .fillMaxSize(),
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // The search input lives in the app-shell toolbar; show the Filter bar only in browse
-                // mode (during a search the results fill the screen).
-                if (!searching) {
-                    FilterBar(
-                        activeCount = selectedShops.size + filter.activeCount,
-                        onClick = { onShowFiltersChange(true) },
-                        onDiscover = onDiscover,
-                        showDiscover = discoverEnabled,
-                    )
+            if (isWide) {
+                // Tablet: list + detail side by side (Expanded) or list→detail nav (Medium). Selection is
+                // the same `gamePeek` VM state the phone bottom sheet uses; tapping a row loads the peek
+                // and drives the scaffold navigator to reveal the detail pane.
+                val scope = rememberCoroutineScope()
+                val navigator = rememberListDetailPaneScaffoldNavigator<Nothing>()
+                // Medium (portrait tablet) shows one pane at a time; back returns list→detail. Expanded
+                // (landscape tablet) shows both, where there's nothing to pop.
+                BackHandler(enabled = navigator.canNavigateBack()) {
+                    scope.launch { navigator.navigateBack() }
                 }
-
-                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    when {
-                        searching -> SearchResultsBody(
-                            state = searchResults,
-                            ignoredIds = ignoredIds,
-                            waitlistIds = waitlistIds,
-                            collectionIds = collectionIds,
-                            storesById = storesById,
-                            errorMessage = errorMessage,
-                            onPeekGame = onPeekGame,
-                        )
-
-                        data.status == DealsScreenData.Status.LOADING -> CircularProgressIndicator(
-                            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
-                        )
-
-                        data.status == DealsScreenData.Status.DATA && data.deals.isEmpty() -> Text(
-                            text = stringResource(Res.string.deals_screen_empty_label),
-                            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
-                        )
-
-                        else -> LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            state = listState,
-                            contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
-                        ) {
-                            items(items = visibleDeals, key = { it.dealID }) { deal ->
-                                val store = storesById[deal.storeID]
-                                val isWaitlisted = deal.gameID in waitlistIds
-                                val isCollected = deal.gameID in collectionIds
-                                DealListRow(
-                                    title = deal.title,
-                                    contentDescription = stringResource(
-                                        if (isWaitlisted) Res.string.deals_screen_deal_row_description_waitlisted
-                                        else Res.string.deals_screen_deal_row_description,
-                                        deal.title, deal.salePriceDenominated,
-                                    ),
-                                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
-                                    imageUrl = deal.artwork.thumbnail,
-                                    salePrice = deal.salePriceDenominated,
-                                    regularPrice = deal.normalPriceDenominated,
-                                    discountPercent = deal.savings.roundToInt(),
-                                    hasVoucher = deal.hasVoucher,
-                                    isNewHistoricalLow = deal.isNewHistoricalLow,
-                                    isStoreLow = deal.isStoreLow,
-                                    storeName = store?.storeName,
-                                    storeIconUrl = store?.iconUrl,
-                                    isWaitlisted = isWaitlisted,
-                                    isCollected = isCollected,
+                ListDetailPaneScaffold(
+                    directive = navigator.scaffoldDirective,
+                    value = navigator.scaffoldValue,
+                    listPane = {
+                        AnimatedPane {
+                            DealsListPane(
+                                data = data,
+                                visibleDeals = visibleDeals,
+                                searching = searching,
+                                searchResults = searchResults,
+                                waitlistIds = waitlistIds,
+                                collectionIds = collectionIds,
+                                ignoredIds = ignoredIds,
+                                storesById = storesById,
+                                errorMessage = errorMessage,
+                                filterActiveCount = filterActiveCount,
+                                discoverEnabled = discoverEnabled,
+                                onShowFilters = { onShowFiltersChange(true) },
+                                onDiscover = onDiscover,
+                                onLoadMore = onLoadMore,
+                                onPeekGame = { gameId, gameName, thumb ->
+                                    onPeekGame(gameId, gameName, thumb)
+                                    scope.launch { navigator.navigateTo(ListDetailPaneScaffoldRole.Detail) }
+                                },
+                            )
+                        }
+                    },
+                    detailPane = {
+                        AnimatedPane {
+                            val selectedGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
+                            if (gameDetailPane == null) {
+                                // No slot (previews/tests): fall back to the peek (also handles upcoming
+                                // games with no id, and the no-selection placeholder).
+                                DealDetailPane(
+                                    gamePeek = gamePeek,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    ignoredIds = ignoredIds,
+                                    goToWeb = goToWeb,
+                                    goToGame = goToGame,
+                                    onShare = onShare,
+                                    onToggleWaitlist = onToggleWaitlist,
+                                    onToggleCollection = onToggleCollection,
+                                    onToggleIgnore = onToggleIgnore,
+                                    onRetryPeek = onRetryPeek,
                                 )
-                            }
-                            if (data.appending) {
-                                item(key = "deals-load-more-spinner") {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.Center)
-                                    )
+                            } else if (selectedGameId != null) {
+                                // :app injected the full game page — render it for the selected game.
+                                // canNavigateBack() is true only in single-pane (portrait), where the
+                                // scaffold's back is what returns to the list.
+                                gameDetailPane(selectedGameId, navigator.canNavigateBack()) {
+                                    scope.launch { navigator.navigateBack() }
                                 }
+                            } else {
+                                DealDetailPlaceholder()
                             }
                         }
-                    }
-                }
-            }
+                    },
+                )
+            } else {
+                // Phone (incl. landscape): unchanged — single-column list + the quick-glance bottom sheet.
+                DealsListPane(
+                    data = data,
+                    visibleDeals = visibleDeals,
+                    searching = searching,
+                    searchResults = searchResults,
+                    waitlistIds = waitlistIds,
+                    collectionIds = collectionIds,
+                    ignoredIds = ignoredIds,
+                    storesById = storesById,
+                    errorMessage = errorMessage,
+                    filterActiveCount = filterActiveCount,
+                    discoverEnabled = discoverEnabled,
+                    onShowFilters = { onShowFiltersChange(true) },
+                    onDiscover = onDiscover,
+                    onLoadMore = onLoadMore,
+                    onPeekGame = onPeekGame,
+                )
 
-            val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
-            GamePeekSheet(
-                data = gamePeek,
-                isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
-                isCollected = peekGameId?.let { it in collectionIds } == true,
-                isIgnored = peekGameId?.let { it in ignoredIds } == true,
-                goToWeb = goToWeb,
-                onViewGamePage = { peekData -> goToGame(peekData.gameId) },
-                onDismiss = { onDismissPeek() },
-                onShare = { peekData -> onShare(peekData) },
-                onToggleWaitlist = onToggleWaitlist,
-                onToggleCollection = onToggleCollection,
-                onToggleIgnore = onToggleIgnore,
-                onRetry = onRetryPeek,
-            )
+                val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
+                GamePeekSheet(
+                    data = gamePeek,
+                    isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                    isCollected = peekGameId?.let { it in collectionIds } == true,
+                    isIgnored = peekGameId?.let { it in ignoredIds } == true,
+                    goToWeb = goToWeb,
+                    onViewGamePage = { peekData -> goToGame(peekData.gameId) },
+                    onDismiss = { onDismissPeek() },
+                    onShare = { peekData -> onShare(peekData) },
+                    onToggleWaitlist = onToggleWaitlist,
+                    onToggleCollection = onToggleCollection,
+                    onToggleIgnore = onToggleIgnore,
+                    onRetry = onRetryPeek,
+                )
+            }
 
             DealsFilterSheet(
                 show = showFilters,
@@ -445,6 +466,176 @@ private fun DealsContent(
                 onClearFilters = onClearFilters,
             )
         }
+    }
+}
+
+/**
+ * The list/browse column shared by the phone layout and the tablet scaffold's list pane: the Filter bar
+ * (browse mode only) above the deals feed / search results, including the scroll-driven load-more.
+ */
+@Composable
+private fun DealsListPane(
+    data: DealsScreenData,
+    visibleDeals: List<Deal>,
+    searching: Boolean,
+    searchResults: SearchResultsState,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String>,
+    storesById: Map<Int, Store>,
+    errorMessage: String,
+    filterActiveCount: Int,
+    discoverEnabled: Boolean,
+    onShowFilters: () -> Unit,
+    onDiscover: () -> Unit,
+    onLoadMore: () -> Unit,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+) {
+    val listState = rememberLazyListState()
+
+    // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
+    // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
+    val shouldLoadMore by remember(visibleDeals.size, data.deals.size, searching) {
+        derivedStateOf {
+            if (searching) return@derivedStateOf false
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            // Also fetch more when the whole loaded page is filtered out (all ignored); the VM guards
+            // against duplicate/exhausted calls (appending / endReached).
+            data.deals.isNotEmpty() && (visibleDeals.isEmpty() || lastVisible >= visibleDeals.size - LOAD_MORE_THRESHOLD)
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) onLoadMore()
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // The search input lives in the app-shell toolbar; show the Filter bar only in browse
+        // mode (during a search the results fill the screen).
+        if (!searching) {
+            FilterBar(
+                activeCount = filterActiveCount,
+                onClick = onShowFilters,
+                onDiscover = onDiscover,
+                showDiscover = discoverEnabled,
+            )
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            when {
+                searching -> SearchResultsBody(
+                    state = searchResults,
+                    ignoredIds = ignoredIds,
+                    waitlistIds = waitlistIds,
+                    collectionIds = collectionIds,
+                    storesById = storesById,
+                    errorMessage = errorMessage,
+                    onPeekGame = onPeekGame,
+                )
+
+                data.status == DealsScreenData.Status.LOADING -> CircularProgressIndicator(
+                    modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
+                )
+
+                data.status == DealsScreenData.Status.DATA && data.deals.isEmpty() -> Text(
+                    text = stringResource(Res.string.deals_screen_empty_label),
+                    modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center).politeLiveRegion(),
+                )
+
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
+                ) {
+                    items(items = visibleDeals, key = { it.dealID }) { deal ->
+                        val store = storesById[deal.storeID]
+                        val isWaitlisted = deal.gameID in waitlistIds
+                        val isCollected = deal.gameID in collectionIds
+                        DealListRow(
+                            title = deal.title,
+                            contentDescription = stringResource(
+                                if (isWaitlisted) Res.string.deals_screen_deal_row_description_waitlisted
+                                else Res.string.deals_screen_deal_row_description,
+                                deal.title, deal.salePriceDenominated,
+                            ),
+                            onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                            imageUrl = deal.artwork.thumbnail,
+                            salePrice = deal.salePriceDenominated,
+                            regularPrice = deal.normalPriceDenominated,
+                            discountPercent = deal.savings.roundToInt(),
+                            hasVoucher = deal.hasVoucher,
+                            isNewHistoricalLow = deal.isNewHistoricalLow,
+                            isStoreLow = deal.isStoreLow,
+                            storeName = store?.storeName,
+                            storeIconUrl = store?.iconUrl,
+                            isWaitlisted = isWaitlisted,
+                            isCollected = isCollected,
+                        )
+                    }
+                    if (data.appending) {
+                        item(key = "deals-load-more-spinner") {
+                            CircularProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.Center)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The tablet list-detail *detail pane*: hosts the shared [GamePeekContent] for the selected game
+ * (the same peek shown in the phone bottom sheet), or a placeholder when nothing is selected.
+ */
+@Composable
+private fun DealDetailPane(
+    gamePeek: GamePeekSheetData?,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    ignoredIds: ImmutableSet<String>,
+    goToWeb: (url: String, gameTitle: String) -> Unit,
+    goToGame: (gameId: String) -> Unit,
+    onShare: (data: GamePeekSheetData.Data) -> Unit,
+    onToggleWaitlist: (gameId: String) -> Unit,
+    onToggleCollection: (gameId: String) -> Unit,
+    onToggleIgnore: (gameId: String) -> Unit,
+    onRetryPeek: () -> Unit,
+) {
+    if (gamePeek == null) {
+        DealDetailPlaceholder()
+        return
+    }
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+        val peekGameId = gamePeek.gameId.takeIf { it.isNotEmpty() }
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            GamePeekContent(
+                data = gamePeek,
+                isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
+                isCollected = peekGameId?.let { it in collectionIds } == true,
+                isIgnored = peekGameId?.let { it in ignoredIds } == true,
+                onShare = onShare,
+                onToggleWaitlist = onToggleWaitlist,
+                onToggleCollection = onToggleCollection,
+                onToggleIgnore = onToggleIgnore,
+                goToWeb = goToWeb,
+                onViewGamePage = { peekData -> goToGame(peekData.gameId) },
+                onRetry = onRetryPeek,
+            )
+        }
+    }
+}
+
+/** Empty-state for the tablet detail pane before a deal is selected. */
+@Composable
+private fun DealDetailPlaceholder() {
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(Res.string.deals_detail_pane_empty_label),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+        )
     }
 }
 
@@ -927,6 +1118,29 @@ private fun DealsContent_Loading_Preview() {
         DealsContent(
             data = DealsScreenData(status = DealsScreenData.Status.LOADING),
             waitlistIds = persistentSetOf(),
+            onSelectSortField = {},
+            onLoadMore = {},
+            onRetry = {},
+            onPeekGame = { _, _, _ -> },
+            onDismissPeek = {},
+            onShare = {},
+            goToWeb = { _, _ -> },
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun DealsContent_Wide_Preview() {
+    GameDealsTheme {
+        // Forces the tablet list-detail path deterministically (no real wide window needed); nothing
+        // selected, so the detail pane shows the "Select a deal" placeholder.
+        DealsContent(
+            isWide = true,
+            data = DealsScreenData(status = DealsScreenData.Status.DATA, deals = previewDeals),
+            waitlistIds = persistentSetOf("222"),
+            stores = previewStores,
+            selectedShops = persistentSetOf(16),
             onSelectSortField = {},
             onLoadMore = {},
             onRetry = {},

@@ -25,6 +25,9 @@ kotlin {
             implementation(libs.coil3)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.ktor)
+
+            // Material3 Adaptive (JetBrains MP port) — currentWindowAdaptiveInfo() for rememberIsWideLayout().
+            implementation(libs.compose.material3.adaptive)
         }
 
         commonTest.dependencies {
@@ -46,8 +49,6 @@ kotlin {
             implementation(libs.androidx.ui.graphics)
             implementation(libs.androidx.ui.tooling.preview)
             implementation(libs.androidx.compose.material3)
-            implementation(libs.androidx.compose.material3.window)
-            implementation(libs.androidx.compose.material3.adaptive)
         }
 
         val androidHostTest by getting {

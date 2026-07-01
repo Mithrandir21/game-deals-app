@@ -116,13 +116,18 @@ fun GamePeekSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
-            PeekContent(data, isWaitlisted, isCollected, isIgnored, onShare, onToggleWaitlist, onToggleCollection, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
+            GamePeekContent(data, isWaitlisted, isCollected, isIgnored, onShare, onToggleWaitlist, onToggleCollection, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
         }
     }
 }
 
+/**
+ * The peek's body (header + best-price/stores + actions), independent of the [ModalBottomSheet] chrome.
+ * Public so wide/tablet layouts can host it directly as a list-detail *detail pane* (see Deals) rather
+ * than in a bottom sheet.
+ */
 @Composable
-private fun PeekContent(
+fun GamePeekContent(
     data: GamePeekSheetData,
     isWaitlisted: Boolean,
     isCollected: Boolean,
@@ -382,7 +387,7 @@ private val previewPeekData = GamePeekSheetData.Data(
 private fun GamePeekSheet_Data_Preview() {
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
-            PeekContent(previewPeekData, false, false, false, {}, {}, {}, {}, { _, _ -> }, {}, {})
+            GamePeekContent(previewPeekData, false, false, false, {}, {}, {}, {}, { _, _ -> }, {}, {})
         }
     }
 }
@@ -392,7 +397,7 @@ private fun GamePeekSheet_Data_Preview() {
 private fun GamePeekSheet_Upcoming_Preview() {
     GameDealsTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
-            PeekContent(
+            GamePeekContent(
                 previewPeekData.copy(bestDeal = null, otherStores = persistentListOf(), cheapestPriceEver = null, upcoming = true),
                 false, false, false, {}, {}, {}, {}, { _, _ -> }, {}, {},
             )

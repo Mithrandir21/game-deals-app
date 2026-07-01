@@ -39,6 +39,14 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
 
                     implementation(lib("coil3"))
                     implementation(lib("coil3-compose"))
+
+                    // Material3 Adaptive (JetBrains MP port) — panes + window-size-class live in commonMain
+                    // so feature screens can go two-pane on tablets across Android + iOS. ui-backhandler
+                    // provides the commonMain BackHandler used to pop the detail pane on medium windows.
+                    implementation(lib("compose-material3-adaptive"))
+                    implementation(lib("compose-material3-adaptive-layout"))
+                    implementation(lib("compose-material3-adaptive-navigation"))
+                    implementation(lib("compose-ui-backhandler"))
                 }
 
                 androidMain.dependencies {
@@ -50,8 +58,6 @@ class KotlinMultiplatformFeatureConventionPlugin : Plugin<Project> {
                     implementation(lib("androidx-ui-graphics"))
                     implementation(lib("androidx-ui-tooling-preview"))
                     implementation(lib("androidx-compose-material3"))
-                    implementation(lib("androidx-compose-material3-window"))
-                    implementation(lib("androidx-compose-material3-adaptive"))
 
                     implementation(lib("koin-android"))
                     implementation(lib("koin-androidx-compose"))
