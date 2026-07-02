@@ -5,6 +5,18 @@
 //   ./gradlew :app:stabilityDump
 
 @Composable
+private fun pm.bam.gamedeals.navigation.GameDetailPane(gameId: kotlin.String, canReturnToList: kotlin.Boolean, onReturnToList: kotlin.Function0<kotlin.Unit>, goToWeb: kotlin.Function2<@[ParameterName(name = \, goToBundle: kotlin.Function1<@[ParameterName(name = \, goToSearchByTitle: kotlin.Function1<@[ParameterName(name = \): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - gameId: STABLE (String is immutable)
+    - canReturnToList: STABLE (primitive type)
+    - onReturnToList: STABLE (function type)
+    - goToWeb: STABLE (function type)
+    - goToBundle: STABLE (function type)
+    - goToSearchByTitle: STABLE (function type)
+
+@Composable
 internal fun pm.bam.gamedeals.navigation.NavGraph(modifier: androidx.compose.ui.Modifier, navController: androidx.navigation.NavHostController, startDestination: kotlin.Any, navActions: pm.bam.gamedeals.navigation.NavigationActions): kotlin.Unit
   skippable: false
   restartable: true
