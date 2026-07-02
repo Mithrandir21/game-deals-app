@@ -119,7 +119,6 @@ private val GiveawayBadgeRowHeight = 24.dp
 @Composable
 internal fun GiveawaysScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGiveawayDetail: (giveawayId: Int) -> Unit,
     viewModel: GiveawaysViewModel = koinViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -133,7 +132,6 @@ internal fun GiveawaysScreen(
         widthClass = rememberWidthSizeClass(),
         onReload = { viewModel.reloadGiveaways() },
         goToWeb = goToWeb,
-        goToGiveawayDetail = goToGiveawayDetail,
         existingParameters = existingParameters,
         showFilters = showFilters,
         onShowFiltersChanged = { newShowFilters ->
@@ -168,7 +166,6 @@ private fun GiveawaysScreenContent(
     widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
     onReload: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    goToGiveawayDetail: (giveawayId: Int) -> Unit,
     existingParameters: GiveawaySearchParameters,
     showFilters: Boolean,
     onShowFiltersChanged: (showFilters: Boolean) -> Unit,
@@ -178,6 +175,11 @@ private fun GiveawaysScreenContent(
 ) {
     val scrollState = rememberLazyGridState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Tapping a card opens a peek sheet for that giveaway (no navigation). We keep the id (Saveable)
+    // and resolve the full object from the live list; if it expired out of the list the sheet closes.
+    var selectedGiveawayId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val selectedGiveaway = selectedGiveawayId?.let { id -> data.giveaways.firstOrNull { it.id == id } }
 
     // Column count widens with the available space (Home hero-tile gradation): 2-up on phones,
     // 3 on medium (portrait tablets), 4 on expanded (large/wide windows).
@@ -236,7 +238,7 @@ private fun GiveawaysScreenContent(
                                 GiveawayCard(
                                     giveaway = giveaway,
                                     endDateMillis = data.endDateMillis[giveaway.id],
-                                    onOpenDetail = { goToGiveawayDetail(giveaway.id) },
+                                    onOpenDetail = { selectedGiveawayId = giveaway.id },
                                     onGoToGiveaway = { goToWeb(giveaway.openGiveawayUrl, giveaway.title) },
                                     // Fill the grid line's height so cards in a row line up at the bottom.
                                     modifier = Modifier.fillMaxHeight(),
@@ -264,6 +266,13 @@ private fun GiveawaysScreenContent(
                 onPlatformSelection = onPlatformSelection,
                 onTypeSelection = onTypeSelection,
                 onSortBySelection = onSortBySelection
+            )
+
+            GiveawayPeekSheet(
+                giveaway = selectedGiveaway,
+                endDateMillis = selectedGiveaway?.let { data.endDateMillis[it.id] },
+                onDismiss = { selectedGiveawayId = null },
+                goToWeb = goToWeb,
             )
         }
     }
@@ -619,7 +628,6 @@ private fun GiveawaysScreen_Success_Preview() {
             ),
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -642,7 +650,6 @@ private fun GiveawaysScreen_Success_Dark_Preview() {
             ),
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -669,7 +676,6 @@ private fun GiveawaysScreen_Success_Medium_Preview() {
             widthClass = WidthSizeClass.MEDIUM,
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -693,7 +699,6 @@ private fun GiveawaysScreen_Success_Expanded_Preview() {
             widthClass = WidthSizeClass.EXPANDED,
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -714,7 +719,6 @@ private fun GiveawaysScreen_Loading_Preview() {
             ),
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},
@@ -736,7 +740,6 @@ private fun GiveawaysScreen_Empty_Preview() {
             ),
             onReload = {},
             goToWeb = { _, _ -> },
-            goToGiveawayDetail = {},
             existingParameters = GiveawaySearchParameters(),
             showFilters = false,
             onShowFiltersChanged = {},

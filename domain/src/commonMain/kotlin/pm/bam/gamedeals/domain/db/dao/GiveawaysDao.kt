@@ -18,10 +18,6 @@ internal interface GiveawaysDao {
     @Query("SELECT * FROM Giveaway")
     suspend fun getAllGiveaways(): List<Giveaway>
 
-    /** One-shot lookup of a single cached [Giveaway] by id, for the detail screen. */
-    @Query("SELECT * FROM Giveaway WHERE id = :id LIMIT 1")
-    suspend fun getGiveaway(id: Int): Giveaway?
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addGiveaways(vararg genericItem: Giveaway)
 

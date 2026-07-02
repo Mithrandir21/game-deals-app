@@ -44,14 +44,10 @@
 
     <string name="giveaway_screen_loading_indicator">Loading giveaways</string>
 
-    <!-- Giveaway detail screen -->
+    <!-- Giveaway peek sheet -->
     <string name="giveaway_detail_image">%1$s image</string>
     <string name="giveaway_detail_go_to_giveaway">Go to giveaway</string>
     <string name="giveaway_detail_description_heading">Description</string>
     <string name="giveaway_detail_instructions_heading">How to claim</string>
-    <string name="giveaway_detail_loading_indicator">Loading giveaway</string>
-    <string name="giveaway_detail_error_msg">Something went wrong. Please try again.</string>
-    <string name="giveaway_detail_error_retry">Retry</string>
-    <string name="giveaway_detail_back_button">Back</string>
 
 </resources>

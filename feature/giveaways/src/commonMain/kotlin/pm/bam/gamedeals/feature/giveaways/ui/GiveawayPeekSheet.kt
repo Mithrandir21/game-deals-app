@@ -1,189 +1,116 @@
 package pm.bam.gamedeals.feature.giveaways.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
-import pm.bam.gamedeals.logging.analytics.Analytics
-import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
-import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.StoreLabel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_back_button
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_description_heading
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_error_msg
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_error_retry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_go_to_giveaway
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_image
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_instructions_heading
-import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_loading_indicator
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
-import pm.bam.gamedeals.feature.giveaways.ui.GiveawayDetailViewModel.GiveawayDetailScreenData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
-@Composable
-internal fun GiveawayDetailScreen(
-    onBack: () -> Unit,
-    goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: GiveawayDetailViewModel = koinViewModel(),
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val analytics: Analytics = koinInject()
-    GiveawayDetailScreenContent(
-        state = state,
-        onBack = onBack,
-        // The only web link on this screen is the giveaway claim, so wrapping goToWeb records the claim open.
-        goToWeb = { url, gameTitle ->
-            (state as? GiveawayDetailScreenData.Data)?.giveaway?.let { g ->
-                analytics.capture(
-                    AnalyticsEvents.GIVEAWAY_OPENED,
-                    mapOf(
-                        "giveaway_id" to g.id,
-                        "type" to g.type.name,
-                        "platforms" to g.platforms.map { it.name },
-                    ),
-                )
-            }
-            goToWeb(url, gameTitle)
-        },
-        onRetry = viewModel::load,
-    )
-}
-
+/**
+ * A quick-peek bottom sheet for a single [Giveaway], opened from a [GiveawayCard] tap. Shows the same
+ * detail the old full-screen `GiveawayDetailScreen` did — hero art, claim button, countdown, platforms,
+ * worth, description and instructions — without a screen transition. The whole [Giveaway] is passed in
+ * from the list (it's already in memory), so there is no loading/error state to model. Gated on
+ * [giveaway] being non-null, so it can sit unconditionally in the composition (like `GamePeekSheet`).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GiveawayDetailScreenContent(
-    state: GiveawayDetailScreenData,
-    onBack: () -> Unit,
+internal fun GiveawayPeekSheet(
+    giveaway: Giveaway?,
+    endDateMillis: Long?,
+    onDismiss: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    onRetry: () -> Unit,
 ) {
-    val title = (state as? GiveawayDetailScreenData.Data)?.giveaway?.title.orEmpty()
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    title = {
-                        Text(
-                            modifier = Modifier.semantics { heading() },
-                            text = title,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.giveaway_detail_back_button),
-                            )
-                        }
-                    },
-                )
-            },
-        ) { innerPadding: PaddingValues ->
-            when (state) {
-                GiveawayDetailScreenData.Loading -> {
-                    val loadingCd = stringResource(Res.string.giveaway_detail_loading_indicator)
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .fillMaxSize()
-                            .wrapContentSize(Alignment.Center)
-                            .semantics { contentDescription = loadingCd },
-                    )
-                }
-
-                GiveawayDetailScreenData.Error -> Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
-                        .padding(GameDealsCustomTheme.spacing.large)
-                        .wrapContentSize(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                ) {
-                    Text(stringResource(Res.string.giveaway_detail_error_msg), modifier = Modifier.politeLiveRegion())
-                    Button(onClick = onRetry) { Text(stringResource(Res.string.giveaway_detail_error_retry)) }
-                }
-
-                is GiveawayDetailScreenData.Data -> GiveawayDetailBody(
-                    data = state,
-                    goToWeb = goToWeb,
-                    modifier = Modifier.padding(innerPadding),
-                )
-            }
+    val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    if (giveaway != null) {
+        ModalBottomSheet(
+            onDismissRequest = { onDismiss() },
+            sheetState = modalBottomSheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+        ) {
+            GiveawayPeekContent(
+                giveaway = giveaway,
+                endDateMillis = endDateMillis,
+                goToWeb = goToWeb,
+            )
         }
     }
 }
 
+/**
+ * The peek's scrollable body, independent of the [ModalBottomSheet] chrome. Instructions can be long,
+ * so this stays a [LazyColumn]. Records the [AnalyticsEvents.GIVEAWAY_OPENED] event on claim — the only
+ * web link on this surface.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GiveawayDetailBody(
-    data: GiveawayDetailScreenData.Data,
+internal fun GiveawayPeekContent(
+    giveaway: Giveaway,
+    endDateMillis: Long?,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val giveaway = data.giveaway
+    val analytics: Analytics = koinInject()
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
         contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
+        // The sheet has no TopAppBar, so the title leads the content.
+        item {
+            Text(
+                modifier = Modifier.semantics { heading() },
+                text = giveaway.title,
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
+
         item {
             // Matches GamerPower's source image ratio (460×215 ≈ 2.14:1) so the full Steam-header art
             // shows uncropped; 460px wide is also its max resolution (can't be made sharper).
@@ -201,7 +128,17 @@ private fun GiveawayDetailBody(
 
         item {
             Button(
-                onClick = { goToWeb(giveaway.openGiveawayUrl, giveaway.title) },
+                onClick = {
+                    analytics.capture(
+                        AnalyticsEvents.GIVEAWAY_OPENED,
+                        mapOf(
+                            "giveaway_id" to giveaway.id,
+                            "type" to giveaway.type.name,
+                            "platforms" to giveaway.platforms.map { it.name },
+                        ),
+                    )
+                    goToWeb(giveaway.openGiveawayUrl, giveaway.title)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(Res.string.giveaway_detail_go_to_giveaway))
@@ -209,7 +146,7 @@ private fun GiveawayDetailBody(
         }
 
         item {
-            data.endDateMillis?.let {
+            endDateMillis?.let {
                 GiveawayCountdown(expiryEpochMs = it, modifier = Modifier.fillMaxWidth())
             } ?: Text(
                 text = stringResource(Res.string.giveaway_screen_no_expiry),
@@ -283,22 +220,18 @@ private fun GiveawayDetailBody(
 
 @Preview
 @Composable
-private fun GiveawayDetailScreenPreview() {
+private fun GiveawayPeekContentPreview() {
     GameDealsTheme {
-        GiveawayDetailScreenContent(
-            state = GiveawayDetailScreenData.Data(
-                giveaway = PreviewGiveaway.copy(
-                    title = "Tell Me Why - Chapters 1,2,3",
-                    worthDenominated = "$29.99",
-                    description = "Get Tell Me Why's three chapters free on Steam for a limited time.",
-                    instructions = "1. Sign in to Steam.\n2. Open the store page.\n3. Click \"Add to Account\".",
-                    platforms = persistentListOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
-                ),
-                endDateMillis = 4_102_444_800_000L,
+        GiveawayPeekContent(
+            giveaway = PreviewGiveaway.copy(
+                title = "Tell Me Why - Chapters 1,2,3",
+                worthDenominated = "$29.99",
+                description = "Get Tell Me Why's three chapters free on Steam for a limited time.",
+                instructions = "1. Sign in to Steam.\n2. Open the store page.\n3. Click \"Add to Account\".",
+                platforms = persistentListOf(GiveawayPlatform.PC, GiveawayPlatform.STEAM),
             ),
-            onBack = {},
+            endDateMillis = 4_102_444_800_000L,
             goToWeb = { _, _ -> },
-            onRetry = {},
         )
     }
 }

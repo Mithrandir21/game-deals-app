@@ -22,8 +22,6 @@ interface GiveawaysRepository {
     fun observeGiveaways(): Flow<List<Giveaway>>
     fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>>
 
-    /** Resolves a single cached [Giveaway] by id for the detail screen, or `null` if it isn't cached. */
-    suspend fun getGiveaway(id: Int): Giveaway?
     suspend fun refreshGiveaways()
 }
 
@@ -76,8 +74,6 @@ internal class GiveawaysRepositoryImpl(
             }
             .onError { error(logger, it) }
     }
-
-    override suspend fun getGiveaway(id: Int): Giveaway? = giveawaysDao.getGiveaway(id)
 
     override suspend fun refreshGiveaways() {
         val refreshed = cache.refreshIfNeeded()

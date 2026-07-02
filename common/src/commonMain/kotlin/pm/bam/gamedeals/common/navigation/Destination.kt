@@ -82,10 +82,6 @@ sealed interface Destination {
     @Serializable
     data object Giveaways : Destination
 
-    /** Giveaway detail (in-app), reached from the Giveaways list. Owns its Scaffold/TopAppBar + back arrow. */
-    @Serializable
-    data class GiveawayDetail(val giveawayId: Int) : Destination
-
     @Serializable
     data object Bundles : Destination
 

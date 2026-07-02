@@ -35,7 +35,6 @@ import pm.bam.gamedeals.feature.deals.navigation.dealsScreen
 import pm.bam.gamedeals.feature.discover.navigation.discoverResultsScreen
 import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
-import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
@@ -200,12 +199,6 @@ internal fun NavGraph(
             )
 
             giveawaysScreen(
-                goToWeb = { url, _ -> platformActions.openInApp(url) },
-                goToGiveawayDetail = { giveawayId -> navActions.navigateToGiveawayDetail(giveawayId) },
-            )
-
-            giveawayDetailScreen(
-                navController = navController,
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
             )
 

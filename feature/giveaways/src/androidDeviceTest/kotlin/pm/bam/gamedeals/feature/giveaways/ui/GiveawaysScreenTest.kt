@@ -7,6 +7,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,10 +22,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.stringResource
 import org.junit.Rule
 import org.junit.Test
+import org.koin.compose.KoinApplication
+import org.koin.dsl.module
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
+import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.feature.giveaways.generated.resources.Res
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_go_to_giveaway
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_instructions_heading
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_msg
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_data_loading_error_retry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_empty_live
@@ -31,6 +38,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_fi
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_detail
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
+import pm.bam.gamedeals.testing.fixtures.giveaway
 
 class GiveawaysScreenTest {
 
@@ -43,16 +51,17 @@ class GiveawaysScreenTest {
 
     private fun setupCompose(
         goToWeb: (String, String) -> Unit = { _, _ -> },
-        goToGiveawayDetail: (Int) -> Unit = {},
     ) {
         composeTestRule.setContent {
             screenSemantics = ScreenSemantics.load()
-            GameDealsTheme {
-                GiveawaysScreen(
-                    goToWeb = goToWeb,
-                    goToGiveawayDetail = goToGiveawayDetail,
-                    viewModel = viewModel,
-                )
+            // The peek sheet resolves Analytics via koinInject, so provide an isolated Koin for it.
+            KoinApplication(application = { modules(module { single<Analytics> { mockk(relaxed = true) } }) }) {
+                GameDealsTheme {
+                    GiveawaysScreen(
+                        goToWeb = goToWeb,
+                        viewModel = viewModel,
+                    )
+                }
             }
         }
     }
@@ -149,6 +158,41 @@ class GiveawaysScreenTest {
     }
 
     @Test
+    fun tappingCard_opensPeekSheet_andClaimOpensUrl() {
+        val item = giveaway(
+            id = 5,
+            title = "Tell Me Why",
+            openGiveawayUrl = "https://claim",
+            endDate = null,
+            description = "A great narrative game",
+            instructions = "1. Sign in to Steam",
+        )
+        every { viewModel.uiState } returns MutableStateFlow(
+            GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = persistentListOf(item),
+            )
+        )
+        val goToWeb = mockk<(String, String) -> Unit>(relaxed = true)
+
+        setupCompose(goToWeb = goToWeb)
+
+        // The sheet's net-new content isn't shown until the card is tapped.
+        composeTestRule.onNodeWithText(screenSemantics.howToClaim).assertDoesNotExist()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.opensDetail, substring = true).performClick()
+
+        // The peek sheet surfaces the description/instructions the card doesn't show.
+        composeTestRule.onNodeWithText(screenSemantics.howToClaim).assertIsDisplayed()
+        composeTestRule.onNodeWithText("1. Sign in to Steam", substring = true).assertIsDisplayed()
+
+        // Claiming from the sheet (the last of the two identically-labelled buttons) opens the claim URL.
+        composeTestRule.onAllNodesWithText(screenSemantics.goToGiveaway).onLast().performClick()
+
+        verify { goToWeb("https://claim", "Tell Me Why") }
+    }
+
+    @Test
     fun onShowFilters() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
@@ -172,6 +216,8 @@ class GiveawaysScreenTest {
         val platformLabel: String,
         val opensDetail: String,
         val emptyLive: String,
+        val howToClaim: String,
+        val goToGiveaway: String,
     ) {
         companion object {
             @Composable
@@ -183,6 +229,8 @@ class GiveawaysScreenTest {
                 platformLabel = stringResource(Res.string.giveaway_screen_filters_platform_label),
                 opensDetail = stringResource(Res.string.giveaway_screen_list_item_opens_detail),
                 emptyLive = stringResource(Res.string.giveaway_screen_empty_live),
+                howToClaim = stringResource(Res.string.giveaway_detail_instructions_heading),
+                goToGiveaway = stringResource(Res.string.giveaway_detail_go_to_giveaway),
             )
         }
     }

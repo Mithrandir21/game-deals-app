@@ -79,7 +79,6 @@ import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.di.gameModule
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
-import pm.bam.gamedeals.feature.giveaways.navigation.giveawayDetailScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
@@ -504,11 +503,6 @@ private fun AppNavHost(startDestination: Destination) {
             },
         )
         giveawaysScreen(
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
-            goToGiveawayDetail = { giveawayId -> navController.navigate(Destination.GiveawayDetail(giveawayId)) },
-        )
-        giveawayDetailScreen(
-            navController = navController,
             goToWeb = { url, _ -> uriHandler.openUri(url) },
         )
         bundlesScreen(
