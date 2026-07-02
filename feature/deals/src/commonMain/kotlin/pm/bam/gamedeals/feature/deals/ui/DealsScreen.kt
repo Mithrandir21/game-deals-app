@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -544,7 +548,13 @@ private fun DealsListPane(
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
+                    // Reserve the system nav-bar inset so the last row clears the safe zone — the app
+                    // shell hands screens a zero bottom inset (see AppShellScaffold).
+                    contentPadding = PaddingValues(
+                        top = GameDealsCustomTheme.spacing.small,
+                        bottom = GameDealsCustomTheme.spacing.small +
+                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding(),
+                    ),
                 ) {
                     items(items = visibleDeals, key = { it.dealID }) { deal ->
                         val store = storesById[deal.storeID]
@@ -675,7 +685,12 @@ private fun SearchResultsBody(
             val visible = remember(state.results, ignoredIds) { state.results.filter { it.gameID !in ignoredIds } }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.small),
+                // Reserve the system nav-bar inset so the last row clears the safe zone (see AppShellScaffold).
+                contentPadding = PaddingValues(
+                    top = GameDealsCustomTheme.spacing.small,
+                    bottom = GameDealsCustomTheme.spacing.small +
+                        WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding(),
+                ),
             ) {
                 items(items = visible, key = { it.gameID }) { group ->
                     SearchResultListItem(

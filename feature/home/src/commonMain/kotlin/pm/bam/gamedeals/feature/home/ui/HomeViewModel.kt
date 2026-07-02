@@ -63,11 +63,16 @@ import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
-internal const val LIMIT_HERO = 6
+// 12 is the LCM of the hero column counts (2-up Compact, 3-up Medium, 4-up Expanded), so the grid
+// fills with no trailing blank cells in every tier — the same 12 deals, just re-arranged per width.
+internal const val LIMIT_HERO = 12
 internal const val LIMIT_TRENDING = 10
 internal const val LIMIT_STATS = 10
-internal const val LIMIT_BUNDLES = 5
-internal const val LIMIT_RELEASES = 5
+// Bundles / New Releases / Recommended lay out at 1/2/3 columns (Compact/Medium/Expanded), whose LCM
+// is 6 — so their caps are multiples of 6 to fill each grid with no trailing blank cells (assuming the
+// source returns at least that many; a short source can still leave a gap, same as the hero).
+internal const val LIMIT_BUNDLES = 6
+internal const val LIMIT_RELEASES = 6
 internal const val LIMIT_RECOMMENDATIONS = 12
 
 /**

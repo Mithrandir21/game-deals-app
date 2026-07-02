@@ -5,15 +5,22 @@ package pm.bam.gamedeals.feature.home.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
@@ -72,11 +79,14 @@ import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_remove_action
 import pm.bam.gamedeals.common.navigation.SignInPromptController
+import pm.bam.gamedeals.common.ui.adaptive.WidthSizeClass
+import pm.bam.gamedeals.common.ui.adaptive.rememberWidthSizeClass
 import pm.bam.gamedeals.common.ui.home.StatCard
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.RankedGame
 import pm.bam.gamedeals.domain.models.RecentlyViewedGame
@@ -117,7 +127,15 @@ private const val CONTENT_TYPE_DEAL = "deal"
 private const val CONTENT_TYPE_RANKED = "ranked"
 private const val CONTENT_TYPE_RELEASE = "release"
 private const val CONTENT_TYPE_BUNDLE = "bundle"
+private const val CONTENT_TYPE_GRID_BUNDLE = "grid_bundle"
+private const val CONTENT_TYPE_GRID_RELEASE = "grid_release"
+private const val CONTENT_TYPE_SIDE_BY_SIDE = "side_by_side"
 private const val CONTENT_TYPE_RECENTLY_VIEWED = "recently_viewed"
+
+// Max number of rows shown per column when the Trending / Waitlisted / Collected lists are laid out
+// side-by-side on wide screens: they render as non-lazy Columns (the outer feed is the only vertical
+// scroller), so they must be capped rather than showing the full list inline.
+private const val SIDE_BY_SIDE_CAP = 8
 
 @Composable
 internal fun HomeScreen(
@@ -140,8 +158,10 @@ internal fun HomeScreen(
     val recentlyViewed = viewModel.recentlyViewed.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val widthClass = rememberWidthSizeClass()
 
     HomeScreenContent(
+        widthClass = widthClass,
         data = data.value,
         accountStats = accountStats.value,
         waitlistIds = waitlistIds.value,
@@ -189,6 +209,7 @@ internal fun HomeScreen(
 private fun HomeScreenContent(
     data: HomeViewModel.HomeScreenData,
     accountStats: HomeViewModel.AccountStats?,
+    widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
     waitlistIds: ImmutableSet<String>,
     collectionIds: ImmutableSet<String>,
     stores: ImmutableMap<Int, Store>,
@@ -238,6 +259,7 @@ private fun HomeScreenContent(
                     )
                 } else {
                     HomeFeed(
+                        widthClass = widthClass,
                         data = data,
                         accountStats = accountStats,
                         waitlistIds = waitlistIds,
@@ -300,10 +322,31 @@ private fun HomeFeed(
     onViewCollection: () -> Unit,
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
+    widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+    // The app shell deliberately hands screens a zero bottom inset (the hide-on-scroll bottom bar would
+    // otherwise leave a gap when it slides away — see AppShellScaffold), so the feed must reserve the
+    // system navigation-bar inset itself as bottom contentPadding. Without it the last section (Bundles)
+    // scrolls under the gesture pill / device nav bar.
+    val bottomInset = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues()
+
+    // Column counts per section, widening with the available space. Compact = today's phone layout.
+    val heroCols = when (widthClass) {
+        WidthSizeClass.COMPACT -> 2
+        WidthSizeClass.MEDIUM -> 3
+        WidthSizeClass.EXPANDED -> 4
+    }
+    val bundleCols = when (widthClass) {
+        WidthSizeClass.COMPACT -> 1
+        WidthSizeClass.MEDIUM -> 2
+        WidthSizeClass.EXPANDED -> 3
+    }
+    val otherCols = bundleCols // Recommended / New Releases share the bundle 1/2/3 gradation.
+
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomInset) {
         // Track whether we've already emitted a section so each subsequent section is preceded by a
         // separator + spacing, while the first one stays flush to the top (no stray divider).
         var renderedSection = false
@@ -314,6 +357,9 @@ private fun HomeFeed(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // On wide screens two weighted cards would stretch to enormous widths; cap the row so
+                        // they stay a sensible size, left-aligned. Compact keeps the full-width phone layout.
+                        .then(if (widthClass != WidthSizeClass.COMPACT) Modifier.widthIn(max = 480.dp) else Modifier)
                         .padding(
                             start = GameDealsCustomTheme.spacing.medium,
                             top = GameDealsCustomTheme.spacing.large,
@@ -341,45 +387,39 @@ private fun HomeFeed(
             renderedSection = true
         }
 
-        // 2. Featured hero grid (top-discount deals), two tiles per row.
+        // 2. Featured hero grid (top-discount deals): 2 tiles/row on phones, widening to 3/4 columns.
         if (data.featuredHero.isNotEmpty()) {
             if (renderedSection) sectionDivider()
             renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_featured_label)) }
-
-            val heroRows = data.featuredHero.chunked(2)
-            items(
-                count = heroRows.size,
-                key = { index -> "hero-${heroRows[index].first().dealID}" },
-                contentType = { CONTENT_TYPE_HERO_ROW },
-            ) { index ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                ) {
-                    heroRows[index].forEach { deal ->
-                        val store = stores[deal.storeID]
-                        DealHeroTile(
-                            deal = deal,
-                            storeName = store?.storeName,
-                            storeIconUrl = store?.iconUrl,
-                            contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
-                            onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
-                            isWaitlisted = deal.gameID in waitlistIds,
-                            isCollected = deal.gameID in collectionIds,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    // Pad the final row when there's an odd number of tiles so the last tile keeps its half-width.
-                    if (heroRows[index].size == 1) Spacer(Modifier.weight(1f))
-                }
+            gridSection(
+                items = data.featuredHero,
+                columns = heroCols,
+                key = { it.dealID },
+                contentType = CONTENT_TYPE_HERO_ROW,
+            ) { deal, cellModifier ->
+                val store = stores[deal.storeID]
+                DealHeroTile(
+                    deal = deal,
+                    storeName = store?.storeName,
+                    storeIconUrl = store?.iconUrl,
+                    contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
+                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                    isWaitlisted = deal.gameID in waitlistIds,
+                    isCollected = deal.gameID in collectionIds,
+                    modifier = cellModifier,
+                )
             }
         }
 
-        // 3. Trending deals.
-        if (data.trending.isNotEmpty()) {
+        // 3. Trending / Most Waitlisted / Most Collected.
+        // Compact: three stacked full-width lazy sections (phone layout). Medium: Trending stays
+        // full-width, Waitlisted + Collected pair side-by-side. Expanded: all three side-by-side.
+        // Side-by-side columns are non-lazy (the feed is the only vertical scroller) so they cap at
+        // SIDE_BY_SIDE_CAP. Trending has no "View all" (there's no Trending destination).
+        val foldTrending = widthClass == WidthSizeClass.EXPANDED
+
+        if (!foldTrending && data.trending.isNotEmpty()) {
             if (renderedSection) sectionDivider()
             renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_trending_label)) }
@@ -388,34 +428,11 @@ private fun HomeFeed(
                 key = { index -> "trending-${data.trending[index].dealID}" },
                 contentType = { CONTENT_TYPE_DEAL },
             ) { index ->
-                val deal = data.trending[index]
-                val store = stores[deal.storeID]
-                val isWaitlisted = deal.gameID in waitlistIds
-                val isCollected = deal.gameID in collectionIds
-                DealListRow(
-                    title = deal.title,
-                    contentDescription = stringResource(
-                        if (isWaitlisted) Res.string.home_screen_store_deal_row_description_favourite
-                        else Res.string.home_screen_store_deal_row_description,
-                        deal.title, deal.normalPriceDenominated, deal.salePriceDenominated,
-                    ),
-                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
-                    imageUrl = deal.artwork.thumbnail,
-                    salePrice = deal.salePriceDenominated,
-                    regularPrice = deal.normalPriceDenominated,
-                    discountPercent = deal.savings.roundToInt(),
-                    hasVoucher = deal.hasVoucher,
-                    isNewHistoricalLow = deal.isNewHistoricalLow,
-                    isStoreLow = deal.isStoreLow,
-                    storeName = store?.storeName,
-                    storeIconUrl = store?.iconUrl,
-                    isWaitlisted = isWaitlisted,
-                    isCollected = isCollected,
-                )
+                TrendingDealRow(data.trending[index], stores, waitlistIds, collectionIds, onPeekGame)
             }
         }
 
-        // 3b. Recently-viewed games (#211) — device-local history, after Trending. Hidden when empty.
+        // 3b. Recently-viewed games (#211) — device-local history. Hidden when empty.
         if (recentlyViewed.isNotEmpty()) {
             if (renderedSection) sectionDivider()
             renderedSection = true
@@ -429,32 +446,109 @@ private fun HomeFeed(
             }
         }
 
-        // 4. Most Waitlisted.
-        if (data.mostWaitlisted.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            rankedSection(
-                titleRes = Res.string.home_screen_most_waitlisted_label,
-                games = data.mostWaitlisted,
-                keyPrefix = "waitlisted",
-                waitlistIds = waitlistIds,
-                collectionIds = collectionIds,
-                onPeekGame = onPeekGame,
-            )
-        }
+        when (widthClass) {
+            WidthSizeClass.EXPANDED -> {
+                // All three lists side-by-side in one row.
+                if (data.trending.isNotEmpty() || data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
+                    if (renderedSection) sectionDivider()
+                    renderedSection = true
+                    item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
+                        SideBySideRow {
+                            if (data.trending.isNotEmpty()) {
+                                DealColumn(
+                                    title = stringResource(Res.string.home_screen_trending_label),
+                                    deals = data.trending,
+                                    stores = stores,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    onPeekGame = onPeekGame,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (data.mostWaitlisted.isNotEmpty()) {
+                                RankedColumn(
+                                    title = stringResource(Res.string.home_screen_most_waitlisted_label),
+                                    games = data.mostWaitlisted,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    onPeekGame = onPeekGame,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (data.mostCollected.isNotEmpty()) {
+                                RankedColumn(
+                                    title = stringResource(Res.string.home_screen_most_collected_label),
+                                    games = data.mostCollected,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    onPeekGame = onPeekGame,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            WidthSizeClass.MEDIUM -> {
+                // Waitlisted + Collected paired side-by-side (Trending already emitted full-width above).
+                if (data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
+                    if (renderedSection) sectionDivider()
+                    renderedSection = true
+                    item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
+                        SideBySideRow {
+                            if (data.mostWaitlisted.isNotEmpty()) {
+                                RankedColumn(
+                                    title = stringResource(Res.string.home_screen_most_waitlisted_label),
+                                    games = data.mostWaitlisted,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    onPeekGame = onPeekGame,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (data.mostCollected.isNotEmpty()) {
+                                RankedColumn(
+                                    title = stringResource(Res.string.home_screen_most_collected_label),
+                                    games = data.mostCollected,
+                                    waitlistIds = waitlistIds,
+                                    collectionIds = collectionIds,
+                                    onPeekGame = onPeekGame,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            WidthSizeClass.COMPACT -> {
+                // 4. Most Waitlisted.
+                if (data.mostWaitlisted.isNotEmpty()) {
+                    if (renderedSection) sectionDivider()
+                    renderedSection = true
+                    rankedSection(
+                        titleRes = Res.string.home_screen_most_waitlisted_label,
+                        games = data.mostWaitlisted,
+                        keyPrefix = "waitlisted",
+                        waitlistIds = waitlistIds,
+                        collectionIds = collectionIds,
+                        onPeekGame = onPeekGame,
+                    )
+                }
 
-        // 5. Most Collected.
-        if (data.mostCollected.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            rankedSection(
-                titleRes = Res.string.home_screen_most_collected_label,
-                games = data.mostCollected,
-                keyPrefix = "collected",
-                waitlistIds = waitlistIds,
-                collectionIds = collectionIds,
-                onPeekGame = onPeekGame,
-            )
+                // 5. Most Collected.
+                if (data.mostCollected.isNotEmpty()) {
+                    if (renderedSection) sectionDivider()
+                    renderedSection = true
+                    rankedSection(
+                        titleRes = Res.string.home_screen_most_collected_label,
+                        games = data.mostCollected,
+                        keyPrefix = "collected",
+                        waitlistIds = waitlistIds,
+                        collectionIds = collectionIds,
+                        onPeekGame = onPeekGame,
+                    )
+                }
+            }
         }
 
         // 5.5. Recommended for you (#6) — IGDB games similar to the user's waitlist/collection. Title-only
@@ -463,12 +557,12 @@ private fun HomeFeed(
             if (renderedSection) sectionDivider()
             renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_recommended_label)) }
-            items(
-                count = data.recommendations.size,
-                key = { index -> "recommendation-${data.recommendations[index].id}" },
-                contentType = { CONTENT_TYPE_RELEASE },
-            ) { index ->
-                val rec = data.recommendations[index]
+            gridSection(
+                items = data.recommendations,
+                columns = otherCols,
+                key = { it.id },
+                contentType = CONTENT_TYPE_RELEASE,
+            ) { rec, cellModifier ->
                 val image = rec.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }
                 DealListRow(
                     title = rec.name,
@@ -481,6 +575,7 @@ private fun HomeFeed(
                         onPeekRelease(rec.name, image)
                     },
                     imageUrl = image,
+                    modifier = cellModifier,
                 )
             }
         }
@@ -491,18 +586,19 @@ private fun HomeFeed(
             if (renderedSection) sectionDivider()
             renderedSection = true
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
-            items(
-                count = data.releases.size,
-                key = { index -> "release-${data.releases[index].title}" },
-                contentType = { CONTENT_TYPE_RELEASE },
-            ) { index ->
-                val release = data.releases[index]
+            gridSection(
+                items = data.releases,
+                columns = otherCols,
+                key = { it.title },
+                contentType = CONTENT_TYPE_RELEASE,
+            ) { release, cellModifier ->
                 DealListRow(
                     title = release.title,
                     contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
                     onClick = { onPeekRelease(release.title, release.image) },
                     imageUrl = release.image,
                     neutralChip = upcomingChip,
+                    modifier = cellModifier,
                 )
             }
         }
@@ -518,12 +614,23 @@ private fun HomeFeed(
                     onActionClick = onViewBundles,
                 )
             }
-            items(
-                count = data.bundles.size,
-                key = { index -> "bundle-${data.bundles[index].id}" },
-                contentType = { CONTENT_TYPE_BUNDLE },
-            ) { index ->
-                HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
+            if (bundleCols == 1) {
+                items(
+                    count = data.bundles.size,
+                    key = { index -> "bundle-${data.bundles[index].id}" },
+                    contentType = { CONTENT_TYPE_BUNDLE },
+                ) { index ->
+                    HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
+                }
+            } else {
+                gridSection(
+                    items = data.bundles,
+                    columns = bundleCols,
+                    key = { it.id },
+                    contentType = CONTENT_TYPE_GRID_BUNDLE,
+                ) { bundle, cellModifier ->
+                    BundleListRow(bundle = bundle, onClick = { onViewBundle(bundle.id) }, modifier = cellModifier)
+                }
             }
         }
     }
@@ -560,28 +667,167 @@ private fun LazyListScope.rankedSection(
         key = { index -> "$keyPrefix-${games[index].gameId}" },
         contentType = { CONTENT_TYPE_RANKED },
     ) { index ->
-        val game = games[index]
-        val isWaitlisted = game.gameId in waitlistIds
-        val isCollected = game.gameId in collectionIds
-        val cd = game.priceDenominated?.let { stringResource(Res.string.home_screen_ranked_game_description, game.title, it) }
-            ?: stringResource(Res.string.home_screen_ranked_game_description_no_price, game.title)
-        // Same anatomy as the Trending rows: store label, struck regular price, discount + flag badges,
-        // and the passive waitlist/collection badges — all enriched off the best current deal in the HomeViewModel.
-        DealListRow(
-            title = game.title,
-            contentDescription = cd,
-            onClick = { onPeekGame(game.gameId, game.title, game.artwork.thumbnail) },
-            imageUrl = game.artwork.thumbnail,
-            salePrice = game.priceDenominated,
-            regularPrice = game.regularPriceDenominated,
-            discountPercent = game.cutPercent ?: 0,
-            hasVoucher = game.hasVoucher,
-            isNewHistoricalLow = game.isNewHistoricalLow,
-            isStoreLow = game.isStoreLow,
-            storeName = game.storeName,
-            isWaitlisted = isWaitlisted,
-            isCollected = isCollected,
-        )
+        RankedGameRow(games[index], waitlistIds, collectionIds, onPeekGame)
+    }
+}
+
+/**
+ * A row of [SIDE_BY_SIDE_CAP]-capped vertical lists shown next to each other on wide screens
+ * (Trending / Waitlisted / Collected). The lists are plain [Column]s — not lazy — because the Home
+ * feed's outer [LazyColumn] is the only vertical scroller; each caller sizes its column with
+ * `Modifier.weight(1f)`.
+ */
+@Composable
+private fun SideBySideRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+    ) {
+        content()
+    }
+}
+
+/** A single capped vertical list of Trending [Deal]s used inside [SideBySideRow]. */
+@Composable
+private fun DealColumn(
+    title: String,
+    deals: ImmutableList<Deal>,
+    stores: ImmutableMap<Int, Store>,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        SectionHeader(text = title)
+        deals.take(SIDE_BY_SIDE_CAP).forEach { deal ->
+            TrendingDealRow(deal, stores, waitlistIds, collectionIds, onPeekGame)
+        }
+    }
+}
+
+/** A single capped vertical list of [RankedGame]s used inside [SideBySideRow]. */
+@Composable
+private fun RankedColumn(
+    title: String,
+    games: ImmutableList<RankedGame>,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        SectionHeader(text = title)
+        games.take(SIDE_BY_SIDE_CAP).forEach { game ->
+            RankedGameRow(game, waitlistIds, collectionIds, onPeekGame)
+        }
+    }
+}
+
+/** The Trending deal row, shared by the full-width lazy section and the side-by-side [DealColumn]. */
+@Composable
+private fun TrendingDealRow(
+    deal: Deal,
+    stores: ImmutableMap<Int, Store>,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+) {
+    val store = stores[deal.storeID]
+    val isWaitlisted = deal.gameID in waitlistIds
+    val isCollected = deal.gameID in collectionIds
+    DealListRow(
+        title = deal.title,
+        contentDescription = stringResource(
+            if (isWaitlisted) Res.string.home_screen_store_deal_row_description_favourite
+            else Res.string.home_screen_store_deal_row_description,
+            deal.title, deal.normalPriceDenominated, deal.salePriceDenominated,
+        ),
+        onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+        imageUrl = deal.artwork.thumbnail,
+        salePrice = deal.salePriceDenominated,
+        regularPrice = deal.normalPriceDenominated,
+        discountPercent = deal.savings.roundToInt(),
+        hasVoucher = deal.hasVoucher,
+        isNewHistoricalLow = deal.isNewHistoricalLow,
+        isStoreLow = deal.isStoreLow,
+        storeName = store?.storeName,
+        storeIconUrl = store?.iconUrl,
+        isWaitlisted = isWaitlisted,
+        isCollected = isCollected,
+    )
+}
+
+/** The ranked-game row, shared by [rankedSection] (Compact) and the side-by-side [RankedColumn]. */
+@Composable
+private fun RankedGameRow(
+    game: RankedGame,
+    waitlistIds: ImmutableSet<String>,
+    collectionIds: ImmutableSet<String>,
+    onPeekGame: (gameId: String, gameName: String, thumb: String?) -> Unit,
+) {
+    val isWaitlisted = game.gameId in waitlistIds
+    val isCollected = game.gameId in collectionIds
+    val cd = game.priceDenominated?.let { stringResource(Res.string.home_screen_ranked_game_description, game.title, it) }
+        ?: stringResource(Res.string.home_screen_ranked_game_description_no_price, game.title)
+    // Same anatomy as the Trending rows: store label, struck regular price, discount + flag badges,
+    // and the passive waitlist/collection badges — all enriched off the best current deal in the HomeViewModel.
+    DealListRow(
+        title = game.title,
+        contentDescription = cd,
+        onClick = { onPeekGame(game.gameId, game.title, game.artwork.thumbnail) },
+        imageUrl = game.artwork.thumbnail,
+        salePrice = game.priceDenominated,
+        regularPrice = game.regularPriceDenominated,
+        discountPercent = game.cutPercent ?: 0,
+        hasVoucher = game.hasVoucher,
+        isNewHistoricalLow = game.isNewHistoricalLow,
+        isStoreLow = game.isStoreLow,
+        storeName = game.storeName,
+        isWaitlisted = isWaitlisted,
+        isCollected = isCollected,
+    )
+}
+
+/**
+ * Emits a section as a grid of [columns] cells per row inside the Home [LazyColumn]. Each grid row is
+ * one lazy item: a [Row] of `weight(1f)` cells with a short final row padded by [Spacer]s so the last
+ * cells keep their fractional width. With `columns <= 1` it degrades to a plain one-item-per-row list
+ * (each item gets `Modifier` unchanged), so callers can pass a per-tier column count uniformly.
+ */
+private fun <T> LazyListScope.gridSection(
+    items: List<T>,
+    columns: Int,
+    key: (T) -> Any,
+    contentType: String,
+    itemContent: @Composable (item: T, cellModifier: Modifier) -> Unit,
+) {
+    if (columns <= 1) {
+        items(
+            count = items.size,
+            key = { index -> "grid1-$contentType-${key(items[index])}" },
+            contentType = { contentType },
+        ) { index -> itemContent(items[index], Modifier) }
+        return
+    }
+    val rows = items.chunked(columns)
+    items(
+        count = rows.size,
+        key = { index -> "grid-$contentType-${key(rows[index].first())}" },
+        contentType = { contentType },
+    ) { index ->
+        val row = rows[index]
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+        ) {
+            row.forEach { item -> itemContent(item, Modifier.weight(1f)) }
+            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+        }
     }
 }
 
@@ -659,6 +905,15 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.H
         PreviewDeal,
         PreviewDeal.copy(dealID = "hero-2", title = "Hollow Knight", salePriceDenominated = "$7.49", normalPriceDenominated = "$14.99", gameID = "22222"),
         PreviewDeal.copy(dealID = "hero-3", title = "Stardew Valley", salePriceDenominated = "$8.99", normalPriceDenominated = "$14.99", gameID = "33333"),
+        PreviewDeal.copy(dealID = "hero-4", title = "Elden Ring", salePriceDenominated = "$41.99", normalPriceDenominated = "$59.99", gameID = "hero4"),
+        PreviewDeal.copy(dealID = "hero-5", title = "Disco Elysium", salePriceDenominated = "$9.99", normalPriceDenominated = "$39.99", gameID = "hero5"),
+        PreviewDeal.copy(dealID = "hero-6", title = "Hades", salePriceDenominated = "$12.49", normalPriceDenominated = "$24.99", gameID = "hero6"),
+        PreviewDeal.copy(dealID = "hero-7", title = "Outer Wilds", salePriceDenominated = "$11.99", normalPriceDenominated = "$24.99", gameID = "hero7"),
+        PreviewDeal.copy(dealID = "hero-8", title = "Dave the Diver", salePriceDenominated = "$14.99", normalPriceDenominated = "$19.99", gameID = "hero8"),
+        PreviewDeal.copy(dealID = "hero-9", title = "Terraria", salePriceDenominated = "$4.99", normalPriceDenominated = "$9.99", gameID = "hero9"),
+        PreviewDeal.copy(dealID = "hero-10", title = "Cuphead", salePriceDenominated = "$13.39", normalPriceDenominated = "$19.99", gameID = "hero10"),
+        PreviewDeal.copy(dealID = "hero-11", title = "Slay the Spire", salePriceDenominated = "$5.99", normalPriceDenominated = "$24.99", gameID = "hero11"),
+        PreviewDeal.copy(dealID = "hero-12", title = "Portal 2", salePriceDenominated = "$0.99", normalPriceDenominated = "$9.99", gameID = "hero12"),
     ).toImmutableList(),
     trending = listOf(
         PreviewDeal.copy(dealID = "trend-1", title = "Celeste", salePriceDenominated = "$4.99", normalPriceDenominated = "$19.99", gameID = "44444"),
@@ -682,12 +937,15 @@ private fun previewSuccessData(): HomeViewModel.HomeScreenData = HomeViewModel.H
     ).toImmutableList(),
 )
 
-@Preview
+// Shared success-state preview body. The width tier is forced via [widthClass] (not read from the
+// window), so the Medium/Expanded previews exercise the wide layouts even though the CMP @Preview
+// canvas defaults to phone width — resize the preview in the IDE to see the columns breathe.
 @Composable
-private fun HomeScreenContent_Success_Preview() {
-    GameDealsTheme {
+private fun HomeSuccessPreview(widthClass: WidthSizeClass, darkTheme: Boolean = false) {
+    GameDealsTheme(darkTheme = darkTheme) {
         HomeScreenContent(
             data = previewSuccessData(),
+            widthClass = widthClass,
             accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
             waitlistIds = persistentSetOf("22222"),
             collectionIds = persistentSetOf("33333"),
@@ -714,33 +972,19 @@ private fun HomeScreenContent_Success_Preview() {
 
 @Preview
 @Composable
-private fun HomeScreenContent_Success_Dark_Preview() {
-    GameDealsTheme(darkTheme = true) {
-        HomeScreenContent(
-            data = previewSuccessData(),
-            accountStats = HomeViewModel.AccountStats(waitlistedCount = 12, collectedCount = 47),
-            waitlistIds = persistentSetOf("22222"),
-            collectionIds = persistentSetOf("33333"),
-            stores = persistentMapOf(PreviewStore.storeID to PreviewStore),
-            gamePeek = null,
-            onPeekGame = { _, _, _ -> },
-            onPeekRelease = { _, _ -> },
-            onToggleWaitlist = {},
-            onToggleCollection = {},
-            onViewWaitlist = {},
-            onViewCollection = {},
-            onViewBundles = {},
-            onViewBundle = {},
-            goToGame = {},
-            goToGameByTitle = {},
-            onDismissPeek = {},
-            onShare = {},
-            onRetryPeek = {},
-            goToWeb = { _, _ -> },
-            onRetry = {},
-        )
-    }
-}
+private fun HomeScreenContent_Success_Preview() = HomeSuccessPreview(WidthSizeClass.COMPACT)
+
+@Preview
+@Composable
+private fun HomeScreenContent_Success_Dark_Preview() = HomeSuccessPreview(WidthSizeClass.COMPACT, darkTheme = true)
+
+@Preview
+@Composable
+private fun HomeScreenContent_Success_Medium_Preview() = HomeSuccessPreview(WidthSizeClass.MEDIUM)
+
+@Preview
+@Composable
+private fun HomeScreenContent_Success_Expanded_Preview() = HomeSuccessPreview(WidthSizeClass.EXPANDED)
 
 @Preview
 @Composable
