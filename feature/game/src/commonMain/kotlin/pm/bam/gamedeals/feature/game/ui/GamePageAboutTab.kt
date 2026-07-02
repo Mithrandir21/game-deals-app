@@ -45,13 +45,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
@@ -100,6 +105,22 @@ private const val SCREENSHOT_ASPECT_RATIO = 16f / 9f
 private val TRAILER_TILE_WIDTH = 320.dp // 180.dp tall × 16:9
 
 private const val COLLAPSED_LINES = 5
+
+/**
+ * Keeps a horizontal [LazyRow]'s drag/fling from leaking past its own edges into the parent
+ * HorizontalPager (which would flip to the next tab). Absorbs only leftover horizontal scroll and
+ * fling; vertical deltas pass straight through so the page still scrolls vertically.
+ */
+@Composable
+private fun rememberPagerScrollGuard(): NestedScrollConnection = remember {
+    object : NestedScrollConnection {
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
+            Offset(available.x, 0f)
+
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+            Velocity(available.x, 0f)
+    }
+}
 
 // ----- About tab ------------------------------------------------------------------------------------------
 
@@ -191,7 +212,7 @@ private fun MediaGallery(game: IgdbGame, goToWeb: (url: String, gameTitle: Strin
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(stringResource(Res.string.game_page_section_media), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().nestedScroll(rememberPagerScrollGuard()),
             contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
@@ -332,7 +353,7 @@ private fun GameTileRow(
     Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
         SectionHeader(stringResource(titleRes), Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().nestedScroll(rememberPagerScrollGuard()),
             contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
             horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         ) {
@@ -371,7 +392,7 @@ private fun SeriesSection(
         }
         if (franchise.games.isNotEmpty()) {
             LazyRow(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().nestedScroll(rememberPagerScrollGuard()),
                 contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large),
                 horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
             ) {
