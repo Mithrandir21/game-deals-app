@@ -4,19 +4,26 @@ package pm.bam.gamedeals.feature.giveaways.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ContextualFlowRow
+import androidx.compose.foundation.layout.ContextualFlowRowOverflow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
@@ -58,6 +65,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
@@ -69,6 +77,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.PreviewGiveaway
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
+import pm.bam.gamedeals.common.ui.adaptive.WidthSizeClass
+import pm.bam.gamedeals.common.ui.adaptive.rememberWidthSizeClass
 import pm.bam.gamedeals.common.ui.components.StoreLabel
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -98,8 +108,13 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_li
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_title_free_on
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_platforms_overflow
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+
+// Fixed height of the GiveawayCard platform-badge / countdown row. Comfortably fits the 16dp
+// StoreIcon chip and the labelMedium countdown text, and keeps every card the exact same height.
+private val GiveawayBadgeRowHeight = 24.dp
 
 @Composable
 internal fun GiveawaysScreen(
@@ -115,6 +130,7 @@ internal fun GiveawaysScreen(
 
     GiveawaysScreenContent(
         data = uiState.value,
+        widthClass = rememberWidthSizeClass(),
         onReload = { viewModel.reloadGiveaways() },
         goToWeb = goToWeb,
         goToGiveawayDetail = goToGiveawayDetail,
@@ -149,6 +165,7 @@ internal fun GiveawaysScreen(
 @Composable
 private fun GiveawaysScreenContent(
     data: GiveawaysViewModel.GiveawaysScreenData,
+    widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
     onReload: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     goToGiveawayDetail: (giveawayId: Int) -> Unit,
@@ -159,8 +176,16 @@ private fun GiveawaysScreenContent(
     onTypeSelection: (type: GiveawayType, selection: Boolean) -> Unit,
     onSortBySelection: (sortBy: GiveawaySortBy) -> Unit
 ) {
-    val scrollState = rememberLazyListState()
+    val scrollState = rememberLazyGridState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Column count widens with the available space (Home hero-tile gradation): 2-up on phones,
+    // 3 on medium (portrait tablets), 4 on expanded (large/wide windows).
+    val columns = when (widthClass) {
+        WidthSizeClass.COMPACT -> 2
+        WidthSizeClass.MEDIUM -> 3
+        WidthSizeClass.EXPANDED -> 4
+    }
     val currentOnReload by rememberUpdatedState(onReload)
 
     val errorMessage = stringResource(Res.string.giveaway_screen_data_loading_error_msg)
@@ -194,23 +219,30 @@ private fun GiveawaysScreenContent(
                     GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS -> if (data.giveaways.isEmpty()) {
                         CenteredMessage(message = stringResource(Res.string.giveaway_screen_empty_live))
                     } else {
-                        LazyColumn(
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(columns),
                             state = scrollState,
-                            content = {
-                                items(
-                                    count = data.giveaways.size,
-                                    key = { index -> data.giveaways[index].id }
-                                ) { index ->
-                                    val giveaway = data.giveaways[index]
-                                    GiveawayCard(
-                                        giveaway = giveaway,
-                                        endDateMillis = data.endDateMillis[giveaway.id],
-                                        onOpenDetail = { goToGiveawayDetail(giveaway.id) },
-                                        onGoToGiveaway = { goToWeb(giveaway.openGiveawayUrl, giveaway.title) },
-                                    )
-                                }
+                            contentPadding = PaddingValues(
+                                horizontal = GameDealsCustomTheme.spacing.medium,
+                                vertical = GameDealsCustomTheme.spacing.small,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                        ) {
+                            items(
+                                items = data.giveaways,
+                                key = { giveaway -> giveaway.id },
+                            ) { giveaway ->
+                                GiveawayCard(
+                                    giveaway = giveaway,
+                                    endDateMillis = data.endDateMillis[giveaway.id],
+                                    onOpenDetail = { goToGiveawayDetail(giveaway.id) },
+                                    onGoToGiveaway = { goToWeb(giveaway.openGiveawayUrl, giveaway.title) },
+                                    // Fill the grid line's height so cards in a row line up at the bottom.
+                                    modifier = Modifier.fillMaxHeight(),
+                                )
                             }
-                        )
+                        }
                     }
 
                     GiveawaysViewModel.GiveawaysScreenStatus.ERROR -> LaunchedEffect(snackbarHostState) {
@@ -296,6 +328,7 @@ private fun GiveawayCard(
     endDateMillis: Long?,
     onOpenDetail: () -> Unit,
     onGoToGiveaway: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val platformsText = giveaway.platforms.joinToString { it.platformValue }
     val titleText = if (platformsText.isNotBlank()) {
@@ -311,13 +344,14 @@ private fun GiveawayCard(
 
     Card(
         onClick = onOpenDetail,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
             .semantics(mergeDescendants = true) { contentDescription = "$rowCd, $opensDetailCd" },
     ) {
         Column(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(GameDealsCustomTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
             // Full-width hero art uses the card's whole width; the platform badges and countdown
@@ -335,18 +369,36 @@ private fun GiveawayCard(
                     .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
             )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                // Fixed height so this row is identical whether the card has platform chips (16dp
+                // StoreIcon), just countdown text, or no platforms at all — the last thing that made
+                // card heights wobble. Content is centred within it.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(GiveawayBadgeRowHeight),
                 horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                FlowRow(
+                // Cap to one line so every card's badge row is the same height. Platforms that don't
+                // fit collapse into a trailing "+N" indicator so the user knows there are more (they're
+                // also all named in the "… FREE on <platforms>" title above).
+                ContextualFlowRow(
+                    itemCount = giveaway.platforms.size,
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
                     verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-                ) {
-                    giveaway.platforms.forEach { platform ->
-                        StoreLabel(storeName = platform.platformValue)
-                    }
+                    maxLines = 1,
+                    overflow = ContextualFlowRowOverflow.expandIndicator {
+                        Text(
+                            text = stringResource(
+                                Res.string.giveaway_screen_platforms_overflow,
+                                totalItemCount - shownItemCount,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                ) { index ->
+                    StoreLabel(storeName = giveaway.platforms[index].platformValue)
                 }
                 endDateMillis?.let {
                     GiveawayCountdown(expiryEpochMs = it, style = MaterialTheme.typography.labelMedium)
@@ -360,23 +412,37 @@ private fun GiveawayCard(
             Text(
                 text = titleText,
                 style = MaterialTheme.typography.titleMedium,
+                // Always reserve two lines so a 1-line and a 2-line title take the same vertical space.
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             giveaway.worthDenominated?.let {
-                Text(text = buildAnnotatedString {
-                    withStyle(style = MaterialTheme.typography.bodyMedium.toSpanStyle()) {
-                        append(stringResource(Res.string.giveaway_screen_list_item_free_label))
-                    }
-                    append(" ")
-                    withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                        append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
-                    }
-                })
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(style = MaterialTheme.typography.bodyMedium.toSpanStyle()) {
+                            append(stringResource(Res.string.giveaway_screen_list_item_free_label))
+                        }
+                        append(" ")
+                        withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                            append(stringResource(Res.string.giveaway_screen_list_item_worth_label, it))
+                        }
+                    },
+                    // Match the plain "Free" branch's metrics so worth-present and worth-absent
+                    // cards are the exact same height (otherwise this falls back to the larger
+                    // default LocalTextStyle line height).
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             } ?: Text(
                 text = stringResource(Res.string.giveaway_screen_list_item_free_label),
                 style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
             )
+
+            // Push the claim button to the bottom so cards in the same grid row line up.
+            Spacer(modifier = Modifier.weight(1f))
 
             Button(onClick = onGoToGiveaway, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.giveaway_screen_list_item_go_to_giveaway))
@@ -574,6 +640,57 @@ private fun GiveawaysScreen_Success_Dark_Preview() {
                 giveaways = previewGiveawaysList,
                 endDateMillis = previewEndDateMillis,
             ),
+            onReload = {},
+            goToWeb = { _, _ -> },
+            goToGiveawayDetail = {},
+            existingParameters = GiveawaySearchParameters(),
+            showFilters = false,
+            onShowFiltersChanged = {},
+            onPlatformSelection = { _, _ -> },
+            onTypeSelection = { _, _ -> },
+            onSortBySelection = {},
+        )
+    }
+}
+
+// The width tier is forced via [widthClass] (not read from the window), so these previews exercise the
+// wide layouts even though the CMP @Preview canvas defaults to phone width — resize in the IDE to see
+// the columns breathe.
+@Preview
+@Composable
+private fun GiveawaysScreen_Success_Medium_Preview() {
+    GameDealsTheme {
+        GiveawaysScreenContent(
+            data = GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = previewGiveawaysList,
+                endDateMillis = previewEndDateMillis,
+            ),
+            widthClass = WidthSizeClass.MEDIUM,
+            onReload = {},
+            goToWeb = { _, _ -> },
+            goToGiveawayDetail = {},
+            existingParameters = GiveawaySearchParameters(),
+            showFilters = false,
+            onShowFiltersChanged = {},
+            onPlatformSelection = { _, _ -> },
+            onTypeSelection = { _, _ -> },
+            onSortBySelection = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GiveawaysScreen_Success_Expanded_Preview() {
+    GameDealsTheme {
+        GiveawaysScreenContent(
+            data = GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = previewGiveawaysList,
+                endDateMillis = previewEndDateMillis,
+            ),
+            widthClass = WidthSizeClass.EXPANDED,
             onReload = {},
             goToWeb = { _, _ -> },
             goToGiveawayDetail = {},
