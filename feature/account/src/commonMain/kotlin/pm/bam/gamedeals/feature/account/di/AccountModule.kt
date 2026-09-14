@@ -2,7 +2,7 @@ package pm.bam.gamedeals.feature.account.di
 
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import pm.bam.gamedeals.feature.account.ui.AccountTabBadgeViewModel
+import pm.bam.gamedeals.feature.account.ui.NotificationBellViewModel
 import pm.bam.gamedeals.feature.account.ui.AccountViewModel
 import pm.bam.gamedeals.feature.account.ui.CollectionListViewModel
 import pm.bam.gamedeals.feature.account.ui.FollowedSeriesViewModel
@@ -21,7 +21,7 @@ val accountModule = module {
     viewModel { FollowedSeriesViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }
     viewModel { NotificationDayViewModel(get(), get(), get()) }
-    viewModel { AccountTabBadgeViewModel(get(), get()) }
+    viewModel { NotificationBellViewModel(get(), get()) }
     viewModel { IgnoredViewModel(get(), get()) }
     viewModel { MyNotesViewModel(get(), get()) }
     viewModel { NotificationSettingsViewModel(get(), get()) }

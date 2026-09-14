@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -52,8 +53,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.generated.resources.Res
-import pm.bam.gamedeals.common.ui.generated.resources.app_shell_account_unread
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_more_action
+import pm.bam.gamedeals.common.ui.generated.resources.app_shell_notifications_action
+import pm.bam.gamedeals.common.ui.generated.resources.app_shell_notifications_unread
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_overflow_stores
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_action
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_search_close
@@ -77,7 +79,9 @@ fun GameDealsAppShell(
     onSearchSubmit: (String) -> Unit,
     onSearchClosed: () -> Unit,
     onBrowseStores: (() -> Unit)? = null,
-    accountUnreadCount: Int = 0,
+    showNotifications: Boolean = false,
+    notificationUnreadCount: Int = 0,
+    onOpenNotifications: () -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -150,6 +154,27 @@ fun GameDealsAppShell(
                     },
                     actions = {
                         if (!showSearchField) {
+                            if (showNotifications) {
+                                // The badge carries the tally; the merged description carries it for TalkBack,
+                                // so the bare number isn't announced on its own.
+                                val notificationsCd = if (notificationUnreadCount > 0) {
+                                    stringResource(Res.string.app_shell_notifications_unread, notificationUnreadCount)
+                                } else {
+                                    stringResource(Res.string.app_shell_notifications_action)
+                                }
+                                IconButton(onClick = onOpenNotifications) {
+                                    if (notificationUnreadCount > 0) {
+                                        BadgedBox(
+                                            badge = { Badge { Text(notificationUnreadCount.toString()) } },
+                                            modifier = Modifier.semantics { contentDescription = notificationsCd },
+                                        ) {
+                                            Icon(Icons.Filled.Notifications, contentDescription = null)
+                                        }
+                                    } else {
+                                        Icon(Icons.Filled.Notifications, contentDescription = notificationsCd)
+                                    }
+                                }
+                            }
                             IconButton(onClick = {
                                 searchText = activeSearchQuery.orEmpty()
                                 manualSearch = true
@@ -189,23 +214,12 @@ fun GameDealsAppShell(
                         }
                 ) {
                     TopLevelDestination.entries.forEach { tab ->
-                        val showAccountBadge = tab == TopLevelDestination.ACCOUNT && accountUnreadCount > 0
                         NavigationBarItem(
                             selected = selectedTab == tab,
                             onClick = { onSelectTab(tab) },
-                            icon = {
-                                if (showAccountBadge) {
-                                    val badgeCd = stringResource(Res.string.app_shell_account_unread, accountUnreadCount)
-                                    BadgedBox(
-                                        badge = { Badge { Text(accountUnreadCount.toString()) } },
-                                        modifier = Modifier.semantics { contentDescription = badgeCd },
-                                    ) {
-                                        Icon(tab.icon, contentDescription = null)
-                                    }
-                                } else {
-                                    Icon(tab.icon, contentDescription = null)
-                                }
-                            },
+                            // The unread tally lives on the toolbar's notification bell, not here — one
+                            // on-screen surface for the signal rather than two showing the same number.
+                            icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(stringResource(tab.label)) },
                         )
                     }
@@ -289,6 +303,8 @@ private fun GameDealsAppShell_Preview() {
             activeSearchQuery = null,
             onSearchSubmit = {},
             onSearchClosed = {},
+            showNotifications = true,
+            notificationUnreadCount = 3,
             content = { padding ->
                 Text("Content", modifier = Modifier.padding(padding))
             }

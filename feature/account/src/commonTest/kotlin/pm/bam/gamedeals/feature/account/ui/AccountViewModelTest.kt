@@ -57,7 +57,7 @@ class AccountViewModelTest : MainDispatcherTest() {
         every { settingsRepository.observeMatureOptIn() } returns flowOf(false)
         every { settingsRepository.observeAnalyticsConsent() } returns flowOf(false)
         every { settingsRepository.observeThemeMode() } returns flowOf(ThemeMode.SYSTEM)
-        every { notificationsRepository.observeUnreadCount() } returns flowOf(0)
+        every { notificationsRepository.observeUnreadGameCount() } returns flowOf(0)
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()

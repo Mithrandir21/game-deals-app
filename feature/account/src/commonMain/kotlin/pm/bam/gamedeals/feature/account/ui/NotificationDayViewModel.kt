@@ -70,7 +70,7 @@ internal class NotificationDayViewModel(
         viewModelScope.launch {
             val entries = runCatchingLogged(logger) { notificationsRepository.observeNotifications().first() }
                 .getOrElse { emptyList() }
-                .filter { it.timestamp.substringBefore('T') == day }
+                .filter { it.day == day }
             // (entryId, game) pairs across all the day's entries.
             val pairs = entries.flatMap { entry ->
                 runCatchingLogged(logger) { notificationsRepository.getNotificationDetail(entry.id).games }

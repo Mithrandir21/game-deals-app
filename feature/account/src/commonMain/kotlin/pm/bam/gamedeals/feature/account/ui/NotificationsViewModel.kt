@@ -47,7 +47,7 @@ internal class NotificationsViewModel(
         viewModelScope.launch {
             combine(notificationsRepository.observeNotifications(), gamesByEntry) { list, gamesByEntry ->
                 list
-                    .groupBy { it.timestamp.substringBefore('T') }
+                    .groupBy { it.day }
                     .map { (date, entries) ->
                         val games = entries.flatMap { gamesByEntry[it.id].orEmpty() }.distinctBy { it.gameId }
                         NotificationDay(

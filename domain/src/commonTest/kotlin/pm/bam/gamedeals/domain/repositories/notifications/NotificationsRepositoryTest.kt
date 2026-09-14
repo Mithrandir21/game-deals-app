@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.notifications
 
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
+import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
@@ -43,6 +44,16 @@ class NotificationsRepositoryTest {
     private fun notification(id: String, read: Boolean) =
         ItadNotification(id = id, type = "waitlist", title = id, timestamp = "2026-06-12T00:00:00+00:00", read = read)
 
+    private fun notification(id: String, read: Boolean, day: String) =
+        ItadNotification(id = id, type = "waitlist", title = id, timestamp = "${day}T09:00:00+00:00", read = read)
+
+    private fun detail(id: String, vararg gameIds: String) =
+        NotificationDetail(id, gameIds.map { NotificationDealGame(gameId = it, title = it) })
+
+    /** The list's unread entry ids — what the old entry-count tally was derived from. */
+    private suspend fun NotificationsRepository.unreadIds() =
+        observeNotifications().first().filterNot { it.read }.map { it.id }
+
     private fun loggedIn(loggedIn: Boolean) {
         every { authTokenStore.observeAuthState() } returns
             flowOf(if (loggedIn) AuthState.LoggedIn("user") else AuthState.LoggedOut)
@@ -50,17 +61,17 @@ class NotificationsRepositoryTest {
     }
 
     @Test
-    fun unread_count_is_zero_when_logged_out() = runTest {
+    fun unread_game_count_is_zero_when_logged_out() = runTest {
         loggedIn(false)
 
         val repo = repo()
         repo.getNotifications() // no-op when logged out
 
-        assertEquals(0, repo.observeUnreadCount().first())
+        assertEquals(0, repo.observeUnreadGameCount().first())
     }
 
     @Test
-    fun unread_count_reflects_loaded_unread() = runTest {
+    fun loaded_list_keeps_read_state() = runTest {
         loggedIn(true)
         everySuspend { accountSource.getNotifications() } returns
             listOf(notification("n1", read = false), notification("n2", read = false), notification("n3", read = true))
@@ -68,7 +79,7 @@ class NotificationsRepositoryTest {
         val repo = repo()
         repo.getNotifications()
 
-        assertEquals(2, repo.observeUnreadCount().first())
+        assertEquals(listOf("n1", "n2"), repo.unreadIds())
     }
 
     @Test
@@ -85,7 +96,7 @@ class NotificationsRepositoryTest {
 
         assertEquals(listOf("recent"), loaded.map { it.id })
         assertEquals(emptyList(), repo.observeNotifications().first().filter { it.id == "stale" })
-        assertEquals(1, repo.observeUnreadCount().first()) // the stale unread one no longer counts
+        assertEquals(listOf("recent"), repo.unreadIds()) // the stale unread one no longer counts
     }
 
     @Test
@@ -98,7 +109,7 @@ class NotificationsRepositoryTest {
         repo.getNotifications()
         repo.markRead("n1")
 
-        assertEquals(1, repo.observeUnreadCount().first())
+        assertEquals(listOf("n2"), repo.unreadIds())
         verifySuspend(exactly(1)) { accountSource.markNotificationRead("n1") }
         assertTrue(analytics.events.contains(AnalyticsEvents.NOTIFICATION_MARKED_READ))
     }
@@ -113,7 +124,7 @@ class NotificationsRepositoryTest {
         repo.getNotifications()
         repo.markAllRead()
 
-        assertEquals(0, repo.observeUnreadCount().first())
+        assertEquals(emptyList(), repo.unreadIds())
         verifySuspend(exactly(1)) { accountSource.markAllNotificationsRead() }
         assertTrue(analytics.events.contains(AnalyticsEvents.NOTIFICATIONS_MARKED_ALL_READ))
     }
@@ -174,6 +185,121 @@ class NotificationsRepositoryTest {
         loggedIn(false)
 
         assertEquals(NotificationDetail("n1", emptyList()), repo().getNotificationDetail("n1"))
+
+        verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationDetail(any()) }
+    }
+
+    // --- Unread-games badge: must equal the Notifications list's "· N games" summed over unread days. ---
+
+    @Test
+    fun unread_game_count_sums_distinct_games_per_unread_day() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { accountSource.getNotifications() } returns listOf(
+            // 12 Jun (unread): g1+g2, g2+g3, and the read entry's g4 (the row lists it too) → 4 distinct games.
+            notification("a", read = false, day = "2026-06-12"),
+            notification("b", read = false, day = "2026-06-12"),
+            notification("c", read = true, day = "2026-06-12"),
+            // 11 Jun (unread): g1 again — a different row, so it counts again → 1.
+            notification("d", read = false, day = "2026-06-11"),
+            // 10 Jun (all read): not an unread row → 0.
+            notification("e", read = true, day = "2026-06-10"),
+        )
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g1", "g2")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g2", "g3")
+        everySuspend { accountSource.getWaitlistNotificationDetail("c") } returns detail("c", "g4")
+        everySuspend { accountSource.getWaitlistNotificationDetail("d") } returns detail("d", "g1")
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.resolveUnreadGames()
+
+        assertEquals(5, repo.observeUnreadGameCount().first()) // 12 Jun: 4 + 11 Jun: 1
+        verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationDetail("e") } // read-only day skipped
+    }
+
+    @Test
+    fun unresolved_entries_contribute_no_games_until_resolved() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("a", read = false, day = "2026-06-12"))
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g1", "g2")
+
+        val repo = repo()
+        repo.getNotifications()
+        assertEquals(0, repo.observeUnreadGameCount().first())
+
+        repo.getNotificationDetail("a") // e.g. the list screen resolving it
+        assertEquals(2, repo.observeUnreadGameCount().first())
+    }
+
+    @Test
+    fun marking_a_day_read_drops_its_games_from_the_count() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { accountSource.getNotifications() } returns listOf(
+            notification("a", read = false, day = "2026-06-12"),
+            notification("b", read = false, day = "2026-06-11"),
+        )
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g1", "g2")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g3")
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.resolveUnreadGames()
+        assertEquals(3, repo.observeUnreadGameCount().first())
+
+        repo.markRead("a")
+        assertEquals(1, repo.observeUnreadGameCount().first())
+    }
+
+    @Test
+    fun reload_keeps_resolved_games_so_the_badge_does_not_flicker_and_prunes_gone_entries() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { accountSource.getNotifications() } returns listOf(
+            notification("a", read = false, day = "2026-06-12"),
+            notification("b", read = false, day = "2026-06-11"),
+        )
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g1", "g2")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g3")
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.resolveUnreadGames()
+
+        // The list screen's remote-as-truth reload: "b" has aged out server-side.
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("a", read = false, day = "2026-06-12"))
+        repo.getNotifications()
+        assertEquals(2, repo.observeUnreadGameCount().first()) // "a" still counted without re-resolving
+
+        repo.resolveUnreadGames()
+        verifySuspend(exactly(1)) { accountSource.getWaitlistNotificationDetail("a") } // already resolved → skipped
+    }
+
+    @Test
+    fun a_failing_detail_counts_no_games_for_that_entry_only() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { accountSource.getNotifications() } returns listOf(
+            notification("a", read = false, day = "2026-06-12"),
+            notification("b", read = false, day = "2026-06-11"),
+        )
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } throws IllegalStateException("boom")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g3")
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.resolveUnreadGames()
+
+        assertEquals(1, repo.observeUnreadGameCount().first())
+    }
+
+    @Test
+    fun resolveUnreadGames_is_a_no_op_when_logged_out() = runTest {
+        loggedIn(false)
+
+        repo().resolveUnreadGames()
 
         verifySuspend(exactly(0)) { accountSource.getWaitlistNotificationDetail(any()) }
     }

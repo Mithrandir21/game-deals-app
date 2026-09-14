@@ -89,11 +89,11 @@ internal class AccountViewModel(
             }
         }
 
-        // Unread notifications for the hub's Notifications row badge. The app-wide refresh is
-        // driven by AccountTabBadgeViewModel at the shell level; here we just observe the shared tally.
+        // Unread games for the hub's Notifications row badge (same unit as the list's "· N games"). The app-wide refresh is
+        // driven by NotificationBellViewModel at the shell level; here we just observe the shared tally.
         viewModelScope.launch {
-            notificationsRepository.observeUnreadCount().collect { unread ->
-                uiState.update { it.copy(unreadNotifications = unread) }
+            notificationsRepository.observeUnreadGameCount().collect { unread ->
+                uiState.update { it.copy(unreadGames = unread) }
             }
         }
 
@@ -180,7 +180,7 @@ internal class AccountViewModel(
         val waitlistCount: Int = 0,
         val collectionCount: Int = 0,
         /** Unread ITAD notifications; populated in P2 (#277/#278), 0 until then. */
-        val unreadNotifications: Int = 0,
+        val unreadGames: Int = 0,
         /** Whether a Steam profile is linked; populated in P5 (#285/#286), false until then. */
         val linkedSteam: Boolean = false,
         /** The selected storefront region, shown on the Region row and pre-selected in the picker (#276). */

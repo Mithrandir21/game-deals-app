@@ -401,7 +401,7 @@ private fun LoggedInContent(
         }
 
         item { SectionHeader(stringResource(Res.string.account_section_discovery)) }
-        item { HubRow(label = stringResource(Res.string.account_row_notifications), badgeCount = data.unreadNotifications, onClick = onOpenNotifications) }
+        item { HubRow(label = stringResource(Res.string.account_row_notifications), badgeCount = data.unreadGames, onClick = onOpenNotifications) }
         item { NotificationDeliveryRow() }
         item { HubRow(label = stringResource(Res.string.account_row_ignored), onClick = onOpenIgnored) }
         item { HubRow(label = stringResource(Res.string.account_row_notes), onClick = onOpenMyNotes) }
@@ -689,7 +689,7 @@ private fun AccountScreen_LoggedIn_Preview() {
             username = "alice",
             waitlistCount = 12,
             collectionCount = 34,
-            unreadNotifications = 3,
+            unreadGames = 3,
             linkedSteam = true,
             selectedCountry = Country("US", "United States", Region.AMERICAS),
             matureOptIn = true,

@@ -70,7 +70,7 @@ import pm.bam.gamedeals.feature.account.navigation.accountScreen
 import pm.bam.gamedeals.feature.account.ui.SignInPromptHost
 import pm.bam.gamedeals.feature.appupdate.di.appUpdateModule
 import pm.bam.gamedeals.feature.appupdate.ui.AppUpdateHost
-import pm.bam.gamedeals.feature.account.ui.rememberAccountTabUnreadCount
+import pm.bam.gamedeals.feature.account.ui.rememberNotificationBellState
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
 import pm.bam.gamedeals.feature.bundles.navigation.bundlesScreen
@@ -448,6 +448,10 @@ private fun AppNavHost(startDestination: Destination) {
     // SearchController so a search started anywhere (toolbar submit or a deep-link) is shown there.
     val activeSearchQuery by SearchController.activeQuery.collectAsState()
 
+    // Toolbar notification bell: shown only while logged in (a logged-out user has no notifications),
+    // badged with the unread tally. Same destination as the Account hub's Notifications row.
+    val notificationBell = rememberNotificationBellState()
+
     GameDealsAppShell(
         selectedTab = selectedTab,
         showTopBar = isTab,
@@ -460,7 +464,9 @@ private fun AppNavHost(startDestination: Destination) {
         },
         onSearchClosed = { SearchController.clear() },
         onBrowseStores = null,
-        accountUnreadCount = rememberAccountTabUnreadCount(),
+        showNotifications = notificationBell.visible,
+        notificationUnreadCount = notificationBell.unreadCount,
+        onOpenNotifications = { navController.navigate(Destination.Notifications) },
     ) { padding ->
         NavHost(
             navController = navController,

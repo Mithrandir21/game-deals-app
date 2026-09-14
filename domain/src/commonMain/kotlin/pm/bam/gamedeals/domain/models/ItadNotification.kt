@@ -14,4 +14,11 @@ data class ItadNotification(
     val title: String,
     val timestamp: String,
     val read: Boolean,
-)
+) {
+    /**
+     * The calendar day (ISO date, e.g. "2026-06-18") this notification belongs to — the grouping key for the
+     * day-grouped Notifications list, its day detail, and the unread-games badge. One definition so the badge
+     * and the list can never disagree on which entries share a day.
+     */
+    val day: String get() = timestamp.substringBefore('T')
+}
