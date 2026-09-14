@@ -1,5 +1,5 @@
-Another bug-fix release, clearing out the top crash reports.
+A small update that puts your deal alerts one tap away.
 
-• Fixed a crash while scrolling Discover results
-• Signing out now always sticks
-• Fixed a crash on a fresh install when store details couldn't be loaded
+• New notification bell at the top of every tab when you're signed in
+• The bell shows how many games have new deals waiting for you
+• That count now matches your notifications list exactly
