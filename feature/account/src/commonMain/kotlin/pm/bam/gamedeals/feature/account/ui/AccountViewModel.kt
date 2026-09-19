@@ -74,14 +74,6 @@ internal class AccountViewModel(
             }
         }
 
-        // Analytics (PostHog) consent — off by default (GDPR opt-out). The toggle here and the onboarding
-        // consent slide both write through SettingsRepository, which is the single point that flips PostHog.
-        viewModelScope.launch {
-            settingsRepository.observeAnalyticsConsent().collect { consent ->
-                uiState.update { it.copy(analyticsConsent = consent) }
-            }
-        }
-
         // App theme preference (#193) — drives the app root's dark/light scheme; defaults to SYSTEM.
         viewModelScope.launch {
             settingsRepository.observeThemeMode().collect { mode ->
@@ -154,11 +146,6 @@ internal class AccountViewModel(
         viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
     }
 
-    /** Toggle analytics consent (persisted; flips PostHog's native opt-out via SettingsRepository). */
-    fun onSetAnalyticsConsent(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setAnalyticsConsent(enabled) }
-    }
-
     /** Set the app theme preference (persisted; the app root re-themes live). */
     fun onSetThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settingsRepository.setThemeMode(mode) }
@@ -187,8 +174,6 @@ internal class AccountViewModel(
         val selectedCountry: Country? = null,
         /** Whether adult titles are shown app-wide (the single mature opt-in, moved out of the filters). */
         val matureOptIn: Boolean = false,
-        /** Analytics (PostHog) consent — off by default; EU users opt in here or on the onboarding slide. */
-        val analyticsConsent: Boolean = false,
         /** App theme preference (#193) — defaults to SYSTEM (follow the OS). */
         val themeMode: ThemeMode = ThemeMode.SYSTEM,
     )

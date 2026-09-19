@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
@@ -80,13 +79,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.countriesByRegion
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_body
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_decline
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_off
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_privacy_link
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_title
@@ -131,13 +123,9 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_welcom
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_welcome_title
 import pm.bam.gamedeals.feature.onboarding.ui.OnboardingViewModel.OnboardingState
 
-private const val ONBOARDING_PAGE_COUNT = 8
+private const val ONBOARDING_PAGE_COUNT = 7
 private const val ONBOARDING_NOTIFICATIONS_PAGE = 5
-private const val ONBOARDING_ANALYTICS_PAGE = 6
 private const val ONBOARDING_SIGN_IN_PAGE = ONBOARDING_PAGE_COUNT - 1
-
-/** Hosted privacy disclosure linked from the analytics-consent step. */
-private const val PRIVACY_POLICY_URL = "https://bam.pm/privacy_policy.txt"
 
 /**
  * First-run welcome carousel (one-time, replayable from the Account hub). Explains the app and walks the
@@ -155,14 +143,12 @@ internal fun OnboardingScreen(
     val permissionGranted = rememberNotificationPermissionGranted()
     val platformActions = LocalPlatformActions.current
 
-    // Per-run consent decisions. They gate the consent steps (the only way forward is to choose), and
-    // reset on a fresh entry to the screen so a replay from the Account hub re-forces both choices. The
-    // persisted opt-ins can't gate this: they default false and can't tell "declined" from "never asked".
+    // Per-run consent decision. It gates the consent step (the only way forward is to choose), and
+    // resets on a fresh entry to the screen so a replay from the Account hub re-forces the choice. The
+    // persisted opt-in can't gate this: it defaults false and can't tell "declined" from "never asked".
     var notificationsDecided by rememberSaveable { mutableStateOf(false) }
     var notificationsDeclined by rememberSaveable { mutableStateOf(false) }
     var notificationsBlocked by rememberSaveable { mutableStateOf(false) }
-    var analyticsDecided by rememberSaveable { mutableStateOf(false) }
-    var analyticsDeclined by rememberSaveable { mutableStateOf(false) }
 
     // If the user tapped Allow, was refused, then granted the permission from system settings and returned,
     // honour that earlier intent: persist the opt-in and arm the poll (the display already reflects the
@@ -196,19 +182,6 @@ internal fun OnboardingScreen(
             viewModel.onNotificationsDeclined()
         },
         onOpenNotificationSettings = { platformActions.openAppNotificationSettings() },
-        analyticsDecided = analyticsDecided,
-        analyticsDeclined = analyticsDeclined,
-        onAllowAnalytics = {
-            analyticsDecided = true
-            analyticsDeclined = false
-            viewModel.onEnableAnalytics()
-        },
-        onDeclineAnalytics = {
-            analyticsDecided = true
-            analyticsDeclined = true
-            viewModel.onDeclineAnalytics()
-        },
-        onOpenPrivacyPolicy = { platformActions.openInApp(PRIVACY_POLICY_URL) },
         onSignIn = { viewModel.signInThenFinish(onFinish) },
         onFinish = { viewModel.finish(onFinish) },
     )
@@ -226,11 +199,6 @@ private fun OnboardingContent(
     onAllowNotifications: () -> Unit,
     onDeclineNotifications: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    analyticsDecided: Boolean,
-    analyticsDeclined: Boolean,
-    onAllowAnalytics: () -> Unit,
-    onDeclineAnalytics: () -> Unit,
-    onOpenPrivacyPolicy: () -> Unit,
     onSignIn: () -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -243,7 +211,6 @@ private fun OnboardingContent(
     // programmatically), so the user is gated forward, never trapped.
     val consentGateOpen = when (pagerState.settledPage) {
         ONBOARDING_NOTIFICATIONS_PAGE -> notificationsDecided
-        ONBOARDING_ANALYTICS_PAGE -> analyticsDecided
         else -> true
     }
 
@@ -252,7 +219,7 @@ private fun OnboardingContent(
         // inset the content ourselves: safeDrawing keeps the pager (icon/heading) clear of the status bar
         // and the BottomControls clear of the gesture/nav bar. The Surface still paints under the bars.
         Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            // No Skip: the consent steps are mandatory, so the only way forward is to make a choice. The
+            // No Skip: the consent step is mandatory, so the only way forward is to make a choice. The
             // sign-in step keeps its own "Maybe later", so the flow still ends without an ITAD account.
             HorizontalPager(
                 state = pagerState,
@@ -277,14 +244,7 @@ private fun OnboardingContent(
                         onDecline = onDeclineNotifications,
                         onOpenSettings = onOpenNotificationSettings,
                     )
-                    6 -> AnalyticsConsentSlide(
-                        decided = analyticsDecided,
-                        declined = analyticsDeclined,
-                        onAllow = onAllowAnalytics,
-                        onDecline = onDeclineAnalytics,
-                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                    )
-                    7 -> SignInSlide(
+                    6 -> SignInSlide(
                         loggedIn = state.loggedIn,
                         username = state.username,
                         signingIn = state.signingIn,
@@ -330,7 +290,7 @@ private fun BottomControls(
         PageIndicator(pageCount = pageCount, currentPage = currentPage)
 
         Box(modifier = Modifier.widthIn(min = 72.dp), contentAlignment = Alignment.CenterEnd) {
-            // Next is dropped on the sign-in page (it owns its actions) and hidden on the consent steps
+            // Next is dropped on the sign-in page (it owns its actions) and hidden on the consent step
             // until a choice is made (Back still works, so the user is never stuck — only gated forward).
             if (currentPage < pageCount - 1 && canAdvance) {
                 TextButton(onClick = onNext) { Text(stringResource(Res.string.onboarding_next)) }
@@ -555,48 +515,7 @@ internal fun NotificationsSlide(
 }
 
 /**
- * Analytics-consent step (GDPR opt-out). The user must explicitly pick Allow or "Not now" — there is no
- * skipping past it. Allow persists immediately via [OnboardingViewModel.onEnableAnalytics] (flips PostHog
- * app-wide); "Not now" persists the opt-out via [OnboardingViewModel.onDeclineAnalytics].
- */
-@Composable
-internal fun AnalyticsConsentSlide(
-    decided: Boolean,
-    declined: Boolean,
-    onAllow: () -> Unit,
-    onDecline: () -> Unit,
-    onOpenPrivacyPolicy: () -> Unit,
-) {
-    SlideScaffold(
-        icon = Icons.Filled.Insights,
-        title = Res.string.onboarding_analytics_title,
-        body = Res.string.onboarding_analytics_body,
-    ) {
-        Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
-        when {
-            !decided -> ConsentChoice(
-                allowText = Res.string.onboarding_analytics_enable,
-                declineText = Res.string.onboarding_analytics_decline,
-                onAllow = onAllow,
-                onDecline = onDecline,
-            )
-
-            declined -> NotificationStateMessage(
-                text = Res.string.onboarding_analytics_off,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            else -> ConsentConfirmation(Res.string.onboarding_analytics_enabled)
-        }
-        // GDPR disclosure: link the full hosted policy from the consent step itself.
-        TextButton(onClick = onOpenPrivacyPolicy) {
-            Text(stringResource(Res.string.onboarding_analytics_privacy_link))
-        }
-    }
-}
-
-/**
- * The forced Allow / Not now choice shared by the notification and analytics steps. Allow is the
+ * The forced Allow / Not now choice on the notification step. Allow is the
  * emphasized (filled) action; "Not now" is a quieter text button — both are one tap and equally reachable.
  */
 @Composable

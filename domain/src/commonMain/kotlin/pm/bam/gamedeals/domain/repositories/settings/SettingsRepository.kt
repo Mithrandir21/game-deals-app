@@ -51,9 +51,9 @@ interface SettingsRepository {
     suspend fun getInstallId(): String
 
     /**
-     * Analytics (PostHog) consent. **Off by default** — EU users must explicitly opt in (GDPR), so nothing
-     * is sent until [setAnalyticsConsent] is called with `true` (via the onboarding consent slide or the
-     * Account toggle). [setAnalyticsConsent] both persists the choice and flips PostHog's native opt-out
+     * Analytics consent. **Off by default** — EU users must explicitly opt in (GDPR), so nothing is sent
+     * until [setAnalyticsConsent] is called with `true`. No consent UI is shown while no analytics provider
+     * is integrated. [setAnalyticsConsent] both persists the choice and flips the provider's opt-out
      * (and re-identifies on grant), so there's a single source of truth for the whole app.
      */
     fun observeAnalyticsConsent(): Flow<Boolean>
@@ -189,8 +189,8 @@ internal class SettingsRepositoryImpl(
     override suspend fun setAnalyticsConsent(enabled: Boolean) {
         storage.save(ANALYTICS_CONSENT_KEY, enabled)
         analyticsConsent.value = enabled
-        // Single point that flips PostHog's native opt-out. On grant, re-identify so the freshly opted-in
-        // SDK is tied to the same anonymous install id (Sentry↔PostHog correlation). On revoke we just stop
+        // Single point that flips the analytics provider's opt-out. On grant, re-identify so the freshly
+        // opted-in provider is tied to the same anonymous install id (Sentry↔analytics correlation). On revoke we just stop
         // sending — no reset(), so the local id/queue are kept.
         analytics.setConsent(enabled)
         if (enabled) analytics.identify(getInstallId())

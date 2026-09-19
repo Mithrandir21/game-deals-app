@@ -22,10 +22,6 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_decline
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enable
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_enabled
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_analytics_off
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_decline
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_denied
@@ -154,48 +150,6 @@ class OnboardingSlidesTest {
         composeTestRule.onNodeWithContentDescription(sem.signingIn).assertIsNotEnabled()
     }
 
-    // --- Analytics consent slide --------------------------------------------------------------------
-
-    @Test
-    fun analytics_undecided_forces_an_allow_or_decline_choice() {
-        var allowed = false
-        var declined = false
-        setContent {
-            AnalyticsConsentSlide(
-                decided = false, declined = false,
-                onAllow = { allowed = true }, onDecline = { declined = true }, onOpenPrivacyPolicy = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertIsDisplayed()
-        composeTestRule.onNodeWithText(sem.analyticsDecline).assertIsDisplayed()
-        composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
-
-        composeTestRule.onNodeWithText(sem.analyticsTurnOn).performClick()
-        assertTrue(allowed && !declined)
-    }
-
-    @Test
-    fun analytics_allowed_shows_confirmation_only() {
-        setContent {
-            AnalyticsConsentSlide(decided = true, declined = false, onAllow = {}, onDecline = {}, onOpenPrivacyPolicy = {})
-        }
-
-        composeTestRule.onNodeWithText(sem.analyticsOn).assertIsDisplayed()
-        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
-    }
-
-    @Test
-    fun analytics_declined_shows_off_status_only() {
-        setContent {
-            AnalyticsConsentSlide(decided = true, declined = true, onAllow = {}, onDecline = {}, onOpenPrivacyPolicy = {})
-        }
-
-        composeTestRule.onNodeWithText(sem.analyticsOff).assertIsDisplayed()
-        composeTestRule.onNodeWithText(sem.analyticsTurnOn).assertDoesNotExist()
-        composeTestRule.onNodeWithText(sem.analyticsOn).assertDoesNotExist()
-    }
-
     // --- Page indicator -----------------------------------------------------------------------------
 
     @Test
@@ -241,10 +195,6 @@ class OnboardingSlidesTest {
         val off: String,
         val denied: String,
         val openSettings: String,
-        val analyticsTurnOn: String,
-        val analyticsDecline: String,
-        val analyticsOn: String,
-        val analyticsOff: String,
         val signInAction: String,
         val signedInAsBob: String,
         val signingIn: String,
@@ -260,10 +210,6 @@ class OnboardingSlidesTest {
                 off = stringResource(Res.string.onboarding_notifications_off),
                 denied = stringResource(Res.string.onboarding_notifications_denied),
                 openSettings = stringResource(Res.string.onboarding_open_settings),
-                analyticsTurnOn = stringResource(Res.string.onboarding_analytics_enable),
-                analyticsDecline = stringResource(Res.string.onboarding_analytics_decline),
-                analyticsOn = stringResource(Res.string.onboarding_analytics_enabled),
-                analyticsOff = stringResource(Res.string.onboarding_analytics_off),
                 signInAction = stringResource(Res.string.onboarding_signin_action),
                 signedInAsBob = stringResource(Res.string.onboarding_signin_signed_in_as, "bob"),
                 signingIn = stringResource(Res.string.onboarding_signing_in),

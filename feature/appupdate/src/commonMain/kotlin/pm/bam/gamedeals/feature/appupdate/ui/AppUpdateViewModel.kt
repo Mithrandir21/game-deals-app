@@ -47,8 +47,8 @@ internal class AppUpdateViewModel(
     /** The store listing id to hand to `PlatformActions.openStoreListing`; may be empty (see [AppInfo]). */
     val storeId: String = appInfo.storeId
 
-    // In a debug build a locally-set override stands in for the remote payload, since debug builds bind
-    // NoOpFeatureFlags and would otherwise never see one. Release builds never read it.
+    // In a debug build a locally-set override stands in for the remote payload, since builds without a flag
+    // provider bind NoOpFeatureFlags and would otherwise never see one. Release builds never read it.
     private val overrides = if (appInfo.isDebug) debugOverride.observe() else flowOf(null)
 
     val state: StateFlow<AppUpdateState> =

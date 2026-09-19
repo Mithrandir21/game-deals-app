@@ -33,8 +33,9 @@ jobs:
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-
-    - run: sdkmanager tools platform-tools
+      with:
+        # The action's default ("tools platform-tools") fails: the legacy `tools` package is gone from sdkmanager.
+        packages: platform-tools
 
     - name: Gradle cache
       uses: gradle/actions/setup-gradle@v5
@@ -84,6 +85,9 @@ jobs:
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        # The action's default ("tools platform-tools") fails: the legacy `tools` package is gone from sdkmanager.
+        packages: platform-tools
 
     - name: Gradle cache
       uses: gradle/actions/setup-gradle@v5
@@ -136,6 +140,9 @@ jobs:
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        # The action's default ("tools platform-tools") fails: the legacy `tools` package is gone from sdkmanager.
+        packages: platform-tools
 
     - name: Gradle cache
       uses: gradle/actions/setup-gradle@v5

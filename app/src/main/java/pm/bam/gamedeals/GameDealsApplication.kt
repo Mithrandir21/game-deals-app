@@ -6,8 +6,6 @@ import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import io.github.samuolis.posthog.PostHog
-import io.github.samuolis.posthog.PostHogContext
 import io.sentry.kotlin.multiplatform.Sentry
 import io.sentry.kotlin.multiplatform.protocol.User
 import kotlinx.coroutines.CancellationException
@@ -46,14 +44,10 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.Logger
-import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
-import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
-import pm.bam.gamedeals.logging.analytics.configurePostHog
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
-import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -85,7 +79,6 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         initSentry()
-        initPostHog()
         startKoin {
             androidContext(this@GameDealsApplication)
             modules(
@@ -106,12 +99,11 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 itadRemoteModule,
                 itadAndroidModule,
                 module { single { ItadCredentials(BuildConfig.ITAD_API_KEY, BuildConfig.ITAD_OAUTH_CLIENT_ID) } },
-                // PostHog analytics config (key + env tag + version) — read by :logging's Analytics binding to
-                // decide NoOp vs PostHog and to stamp every event. Provided here from BuildConfig like the creds above.
+                // Analytics base properties (env tag + version) for an Analytics provider to stamp on every event.
+                // Provided here from BuildConfig like the creds above; unused while :logging binds NoOpAnalytics.
                 module {
                     single {
                         AnalyticsConfig(
-                            apiKey = BuildConfig.POSTHOG_API_KEY,
                             environment = if (isDebuggable()) "debug" else "release",
                             appVersion = BuildConfig.VERSION_NAME,
                         )
@@ -142,8 +134,6 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             )
         }
         attachSentryUser()
-        startAnalytics()
-        startFeatureFlags()
         warmDomainDatabase()
         runCacheMaintenance()
         runNotificationLifecycle()
@@ -290,75 +280,6 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 dist = BuildConfig.VERSION_CODE.toString(),
                 tracesSampleRate = TRACES_SAMPLE_RATE,
             )
-        }
-    }
-
-    /**
-     * Initialise the PostHog SDK for product analytics. Release-only, like [initSentry]: the debug build type
-     * forces an empty [BuildConfig.POSTHOG_API_KEY] (see app/build.gradle.kts), so this early-returns on debug
-     * and the Koin [Analytics] binding falls back to NoOp — keeping the un-`setup()` SDK off every code path.
-     * The SDK is configured (see [configurePostHog]) to emit nothing on its own — every event flows through our
-     * [Analytics] wrapper, which stamps the environment so any release-debug events stay filterable in PostHog.
-     */
-    private fun initPostHog() {
-        if (BuildConfig.POSTHOG_API_KEY.isEmpty()) return
-        PostHog.setup(
-            config = configurePostHog(apiKey = BuildConfig.POSTHOG_API_KEY, debug = isDebuggable()),
-            context = PostHogContext(this),
-        )
-    }
-
-    /**
-     * Applies the persisted analytics consent at launch. The SDK is set up **opted out** ([configurePostHog]),
-     * so this only opts in — identifying the PostHog user with the same anonymised install id as the Sentry
-     * user (so the two correlate without PII) and emitting the launch event — when the user has consented
-     * (GDPR). With no consent it stays opted out and sends nothing. Needs [SettingsRepository] from Koin, so it
-     * runs after [startKoin]. No-op when analytics is disabled (the binding is NoOp). Fire-and-forget on
-     * [applicationScope]; failures are logged, never crash.
-     */
-    private fun startAnalytics() {
-        if (BuildConfig.POSTHOG_API_KEY.isEmpty()) return
-        applicationScope.launch {
-            try {
-                val settings = get<SettingsRepository>()
-                if (settings.getAnalyticsConsent()) {
-                    val analytics = get<Analytics>()
-                    analytics.setConsent(true) // optIn the freshly-opted-out SDK
-                    analytics.identify(settings.getInstallId())
-                    analytics.capture(AnalyticsEvents.APP_OPENED)
-                }
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                try {
-                    error(logger, throwable = t) { "Failed to start analytics" }
-                } catch (_: Throwable) {
-                }
-            }
-        }
-    }
-
-    /**
-     * Kicks an initial feature-flag load once Koin is up. Deliberately **not** gated on analytics consent:
-     * flag-fetch is remote config, not tracking (the SDK is configured `sendFeatureFlagEvent = false`, so a flag
-     * read emits nothing), so a gated feature can roll out to users who haven't opted into analytics. Needs the
-     * [FeatureFlags] binding from Koin, so it runs after [startKoin]. No-op when analytics is disabled (the binding
-     * is NoOp) — also guarded on the key so we don't touch an un-`setup()` SDK. Fire-and-forget on
-     * [applicationScope]; failures are logged, never crash.
-     */
-    private fun startFeatureFlags() {
-        if (BuildConfig.POSTHOG_API_KEY.isEmpty()) return
-        applicationScope.launch {
-            try {
-                get<FeatureFlags>().refresh()
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                try {
-                    error(logger, throwable = t) { "Failed to refresh feature flags" }
-                } catch (_: Throwable) {
-                }
-            }
         }
     }
 

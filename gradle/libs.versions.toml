@@ -26,10 +26,6 @@ koin-compose = "4.2.2"
 sentry-kmp = "0.27.0"
 # Sentry Android Gradle plugin — applied to :app for R8 mapping upload (symbolication). The 6.x line supports AGP 9.x.
 sentry-android-gradle = "6.22.0"
-# PostHog product analytics — community KMP wrapper (samuolis/posthog-kmp) binding the official PostHog
-# Android/iOS SDKs. Pre-1.0 micro-dependency: hidden behind our own :logging `Analytics` interface so it's
-# swappable. The iOS klib needs posthog-ios linked via SPM at app-link (Mac-gated) — see docs/posthog-ios-handoff.md.
-posthog-kmp = "0.1.4"
 kotlinx-datetime = "0.8.0"
 coil3 = "3.6.2"
 zoomable = "2.13.0"
@@ -68,10 +64,6 @@ tracing = "1.3.0"
 # Test libraries.
 junit = "4.13.2"
 mockk = "1.14.11"
-# Real org.json for host tests. android.jar ships stubbed org.json classes that throw "Stub!", which the
-# payload normaliser catches and turns into null — so without this the Android actual can only ever be
-# asserted to fail. AGP puts the mockable android.jar last on the unit-test classpath, so this wins.
-org-json = "20260814"
 mokkery = "3.4.2"
 coroutines-testing = "1.11.0"
 core-testing = "2.2.0"
@@ -154,9 +146,6 @@ koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin"
 # Sentry — crash + perf telemetry (KMP; replaced Firebase Crashlytics + Performance).
 sentry-kotlin-multiplatform = { group = "io.sentry", name = "sentry-kotlin-multiplatform", version.ref = "sentry-kmp" }
 
-# PostHog — product analytics (KMP community wrapper; manual events + screen tracking, hidden behind :logging Analytics).
-posthog-kmp = { group = "io.github.samuolis", name = "posthog-kmp", version.ref = "posthog-kmp" }
-
 # kotlinx-datetime — date/time (KMP; replaced java.time).
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
@@ -180,7 +169,6 @@ sandwich-ktor = { group = "com.github.skydoves", name = "sandwich-ktor", version
 # Unit-test libraries (JVM host tests).
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
-org-json = { group = "org.json", name = "json", version.ref = "org-json" }
 coroutines-testing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines-testing" }
 core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "core-testing" }
 

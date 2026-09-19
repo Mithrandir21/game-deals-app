@@ -125,7 +125,7 @@ val domainModule = module {
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
-    // exercised without a PostHog key. Written by the Account hub, read by :feature:appupdate.
+    // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }
     // Recently-viewed games (#211): device-local Room history (dao, clock, analytics), not auth-gated.
     single<RecentlyViewedRepository> { RecentlyViewedRepositoryImpl(get(), get(), get()) }

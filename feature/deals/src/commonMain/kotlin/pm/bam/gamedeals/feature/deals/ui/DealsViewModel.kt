@@ -154,8 +154,8 @@ internal class DealsViewModel(
 
     /**
      * Whether the "Discover by Tag" entry point is shown — feature-flagged via [FeatureFlag.DiscoverByTag].
-     * Staged rollout: defaults to hidden and flips on if/when the flag provider enables it, reacting at runtime
-     * without a relaunch (the flag value can arrive after this screen is first composed).
+     * Defaults to shown; a flag provider can turn it off, reacting at runtime without a relaunch (the flag
+     * value can arrive after this screen is first composed).
      */
     val discoverEnabled: StateFlow<Boolean> = featureFlags.observe(FeatureFlag.DiscoverByTag)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeatureFlag.DiscoverByTag.default)
