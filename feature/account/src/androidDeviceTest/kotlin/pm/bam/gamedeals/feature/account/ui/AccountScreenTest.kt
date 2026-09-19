@@ -17,10 +17,16 @@ import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
 import org.jetbrains.compose.resources.stringResource
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.common.version.AppInfo
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -151,8 +157,25 @@ class AccountScreenTest {
         }
     }
 
-    private companion object {
-        val US = Country("US", "United States", Region.AMERICAS)
-        val UK = Country("GB", "United Kingdom", Region.EUROPE)
+    companion object {
+        private val US = Country("US", "United States", Region.AMERICAS)
+        private val UK = Country("GB", "United Kingdom", Region.EUROPE)
+
+        // DebugEntryRow (the hub's last row) resolves AppInfo via koinInject(), so scrolling far enough to reach
+        // it needs a graph. Kept up for the whole class (not per-test) so a late resolution during Compose
+        // disposal never hits a closed scope — a per-test stopKoin() in @After races the compose rule's teardown.
+        @JvmStatic
+        @BeforeClass
+        fun startKoinForAppInfo() {
+            startKoin {
+                modules(module { single { AppInfo(versionName = "1.0.0", versionCode = 1, storeId = "", isDebug = false) } })
+            }
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun stopKoinForAppInfo() {
+            stopKoin()
+        }
     }
 }
