@@ -5,9 +5,9 @@ import kotlinx.coroutines.flow.Flow
 /**
  * App-facing feature-flag seam. Deliberately tiny and provider-agnostic — a sibling of `Analytics`, not an
  * extension of it (reading flags and sending events are separate concerns). Feature code references the typed
- * [FeatureFlag] catalogue and never imports a flag-provider SDK; the concrete binding (the PostHog-backed
- * [PostHogFeatureFlags] today, or a future provider) is swapped in Koin. Bound to [NoOpFeatureFlags] whenever no
- * provider is configured (e.g. a build with an empty PostHog key), so callers never need to null-check.
+ * [FeatureFlag] catalogue and never imports a flag-provider SDK; a concrete provider binding is swapped in Koin.
+ * No remote provider is integrated today, so every build binds [NoOpFeatureFlags] and callers never need to
+ * null-check.
  *
  * Remote providers deliver flags asynchronously over the network, so the two reads serve different needs:
  * [isEnabled] is a synchronous snapshot for one-shot decisions, while [observe] is reactive so UI updates the
@@ -41,7 +41,7 @@ interface FeatureFlags {
      * Payloads cross this seam as JSON *text* on purpose. Providers hand back loosely-typed objects whose
      * concrete shape differs per platform — a Kotlin `Map` on Android, a bridged `NSDictionary` on iOS — so
      * each provider normalises to one well-defined representation rather than pushing that difference onto
-     * every caller. See `toJsonStringOrNull`.
+     * every caller.
      */
     fun payload(flag: FeatureFlag): String?
 

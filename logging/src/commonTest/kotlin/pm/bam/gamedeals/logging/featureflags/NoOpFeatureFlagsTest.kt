@@ -7,8 +7,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * The provider bound in *every debug build* and anywhere `POSTHOG_API_KEY` is absent, so it is the
- * implementation developers actually run against day to day. Its whole contract is "hand back the catalogue
+ * The provider bound in *every build* while no remote flag provider is integrated, so it is the
+ * implementation users and developers actually run against. Its whole contract is "hand back the catalogue
  * default and nothing else"; a regression that returned `true`, or a non-null payload, would quietly enable
  * unreleased features locally and make the flag seam look like it worked when it did not.
  */
@@ -33,7 +33,9 @@ class NoOpFeatureFlagsTest {
     fun `no flag ships defaulted on`() {
         // A default of `true` would ship the feature to everyone the moment it merged, with the remote flag
         // able only to turn it *off* — the opposite of a staged rollout. Deliberate exceptions belong here.
-        FeatureFlag.entries.forEach { flag ->
+        // DiscoverByTag ships on because no remote provider is integrated to roll it out.
+        val shippedOn = setOf(FeatureFlag.DiscoverByTag)
+        FeatureFlag.entries.filterNot { it in shippedOn }.forEach { flag ->
             assertEquals(false, flag.default, "${flag.key} defaults to on")
         }
     }

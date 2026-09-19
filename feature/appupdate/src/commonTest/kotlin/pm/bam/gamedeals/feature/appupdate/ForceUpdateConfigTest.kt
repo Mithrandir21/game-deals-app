@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 /**
  * Direct tests for the payload parse. `AppUpdateViewModelTest` already covers the *decision* these feed, but
  * this is the boundary where untrusted remote text enters the app, so it is worth pinning on its own: the
- * failure modes are a hand-edited JSON blob in a PostHog textarea, and the only recovery from a bad one is
+ * failure modes are a hand-edited JSON blob in a flag provider's dashboard, and the only recovery from a bad one is
  * shipping a release.
  */
 class ForceUpdateConfigTest {

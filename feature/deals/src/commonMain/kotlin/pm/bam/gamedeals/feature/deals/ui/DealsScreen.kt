@@ -983,7 +983,7 @@ private fun FilterBar(
             )
         }
         // Catalogue-wide tag discovery — distinct from the deal-feed filters above. Feature-flagged
-        // (FeatureFlag.DiscoverByTag): hidden until the flag provider enables it (staged rollout).
+        // (FeatureFlag.DiscoverByTag): shown by default; a flag provider can turn it off.
         if (showDiscover) {
             OutlinedButton(onClick = onDiscover) {
                 Text(stringResource(Res.string.deals_discover_by_tag))

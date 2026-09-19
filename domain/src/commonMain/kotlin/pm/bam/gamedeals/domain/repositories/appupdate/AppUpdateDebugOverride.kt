@@ -11,11 +11,11 @@ import pm.bam.gamedeals.common.storage.save
 
 /**
  * A locally-stored stand-in for the `force_update` flag payload, so the minimum-version gate can be exercised
- * on a device **without** a PostHog key.
+ * on a device **without** a remote flag provider.
  *
- * This exists because debug builds force an empty `POSTHOG_API_KEY`, which binds `NoOpFeatureFlags` — every
- * flag resolves to its default, so the prompt could otherwise never appear outside a signed release talking to
- * live PostHog. That would mean shipping this UI having never seen it run.
+ * This exists because builds without a remote flag provider bind `NoOpFeatureFlags` — every flag resolves to its
+ * default, so the prompt could otherwise never appear outside a release talking to a live provider. That would
+ * mean shipping this UI having never seen it run.
  *
  * It lives in `:domain` rather than in `:feature:appupdate` for two reasons. It is persisted state, which is
  * what `:domain` is for (it sits beside `SettingsRepository`, sharing the same [Storage] seam). And it is
@@ -26,7 +26,7 @@ import pm.bam.gamedeals.common.storage.save
  * cannot reach [Storage] at all. Consumption is gated on `AppInfo.isDebug`, so a release build never reads it
  * even if a value somehow ended up in storage.
  *
- * The stored value is the same JSON a PostHog payload would carry:
+ * The stored value is the same JSON a remote flag payload would carry:
  * `{"minimum_version": "99.0.0", "blocking": true}`. Setting `null` clears it and hands control back to the
  * real flag.
  */

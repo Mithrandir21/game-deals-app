@@ -88,7 +88,7 @@ class SettingsRepositoryImplTest {
     fun analytics_consent_defaults_to_off() = runTest {
         assertFalse(repository.getAnalyticsConsent())
         assertFalse(repository.observeAnalyticsConsent().first())
-        // Nothing should have been pushed to PostHog before the user has chosen.
+        // Nothing should have been pushed to the analytics provider before the user has chosen.
         assertNull(analytics.consent)
     }
 
@@ -99,7 +99,7 @@ class SettingsRepositoryImplTest {
         assertEquals(true, backing[ANALYTICS_CONSENT_KEY])
         assertTrue(repository.getAnalyticsConsent())
         assertTrue(repository.observeAnalyticsConsent().first())
-        // Flipped PostHog on and tied it to the install id (Sentry↔PostHog correlation).
+        // Opted the provider in and tied it to the install id (Sentry↔analytics correlation).
         assertEquals(true, analytics.consent)
         assertEquals(listOf(backing[INSTALL_ID_KEY]), analytics.identified)
     }

@@ -14,7 +14,7 @@ import pm.bam.gamedeals.logging.featureflags.FeatureFlags
  * [FeatureFlag.default]. [refreshCount] records how many times [refresh] was called.
  *
  * Payloads are set independently of the on/off state via [setPayload], because the two are independent in
- * PostHog too — a flag can be enabled with no payload, or carry a stale payload while disabled. Tests for
+ * remote flag providers too — a flag can be enabled with no payload, or carry a stale payload while disabled. Tests for
  * payload-driven features should exercise both axes.
  */
 class FakeFeatureFlags(
