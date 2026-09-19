@@ -5,7 +5,7 @@ package pm.bam.gamedeals.logging.analytics
  * instrumentation is added. Screen views are emitted separately via [Analytics.screen] (driven by the nav
  * graph), so they don't need an entry here.
  *
- * Events are emitted only for consenting users (PostHog starts opted out — see `configurePostHog`), which is
+ * Events are emitted only for consenting users (a provider must start opted out — see [Analytics.setConsent]), which is
  * what makes the identifying properties below (game/store/bundle ids, raw search text) acceptable. Property
  * keys are snake_case; see each call site for the map it sends.
  */

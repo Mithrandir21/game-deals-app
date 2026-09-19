@@ -7,8 +7,7 @@ package pm.bam.gamedeals.common.version
  *
  * This exists separately from `AnalyticsConfig.appVersion`, which already carries the same version string,
  * because the minimum-version gate is not an analytics concern: reading a config object from the analytics
- * namespace to decide whether to block the app would couple two things that should be free to diverge (and
- * `AnalyticsConfig` is bound to `NoOpAnalytics` reasoning it has no business influencing).
+ * namespace to decide whether to block the app would couple two things that should be free to diverge.
  *
  * @property versionName the human semantic version ("1.1.3"). Compared against the remote floor by
  *   [isBelowMinimum]; the one field that must be a real semver string on both platforms.

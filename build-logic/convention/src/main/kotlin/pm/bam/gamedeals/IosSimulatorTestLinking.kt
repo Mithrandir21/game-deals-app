@@ -27,8 +27,8 @@ object IosSpm {
  * Gives `iosSimulatorArm64` test executables the framework and Swift-runtime search paths they need in order to link.
  *
  * Sentry KMP's cinterop klib carries `linkerOpts=-framework Sentry`, which every consumer inherits. The app framework gets away with it because it is static
- * and defers symbol resolution to Xcode, where SPM supplies Sentry; a standalone test executable has to resolve it at link time. Separately, the Sentry and
- * PostHog artifacts auto-link Swift compatibility libraries through search paths baked in on their own build machines, so the local toolchain has to be
+ * and defers symbol resolution to Xcode, where SPM supplies Sentry; a standalone test executable has to resolve it at link time. Separately, the Sentry
+ * artifacts auto-link Swift compatibility libraries through search paths baked in on their own build machines, so the local toolchain has to be
  * named explicitly. Without both, every module fails `linkDebugTestIosSimulatorArm64` and no iOS unit test can run at all.
  */
 internal fun Project.configureIosSimulatorTestLinking() {

@@ -10,13 +10,16 @@ package pm.bam.gamedeals.logging.featureflags
  * offline, or under a provider that doesn't do remote config ([NoOpFeatureFlags]). Choose it to be the safe /
  * shipped state for that flag.
  *
- * @property key the provider-side flag key (PostHog flag key today).
+ * @property key the provider-side flag key.
  * @property default the value returned until/unless a provider supplies an override.
  */
 enum class FeatureFlag(val key: String, val default: Boolean) {
 
-    /** Gates the "Discover by Tag" entry point on the Deals screen. Staged rollout: hidden until enabled remotely. */
-    DiscoverByTag(key = "discover_by_tag", default = false),
+    /**
+     * Gates the "Discover by Tag" entry point on the Deals screen. Defaults to on: with no remote flag provider
+     * integrated the feature ships to everyone, while a future provider can still turn it off remotely.
+     */
+    DiscoverByTag(key = "discover_by_tag", default = true),
 
     /**
      * Gates the minimum-supported-version prompt. Unlike every other flag here this one is *not* self-contained:

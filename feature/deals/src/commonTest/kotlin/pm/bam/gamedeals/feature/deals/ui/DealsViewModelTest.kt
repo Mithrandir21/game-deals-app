@@ -336,19 +336,19 @@ class DealsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun discover_hidden_by_default_then_reacts_to_the_feature_flag() = runTest {
-        // Staged rollout: the Discover-by-Tag entry point defaults off and flips on when the flag provider
-        // enables it — without recreating the screen (the value can arrive after first composition).
+    fun discover_shown_by_default_then_reacts_to_the_feature_flag() = runTest {
+        // The Discover-by-Tag entry point defaults on, and a flag provider can still turn it off — without
+        // recreating the screen (the value can arrive after first composition).
         everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
 
         val vm = createViewModel()
         val emissions = vm.discoverEnabled.observeEmissions(this.backgroundScope, testDispatcher)
         advanceUntilIdle()
-        assertFalse(emissions.last()) // default = hidden
+        assertTrue(emissions.last()) // default = shown
 
-        featureFlags.set(FeatureFlag.DiscoverByTag, true)
+        featureFlags.set(FeatureFlag.DiscoverByTag, false)
         advanceUntilIdle()
-        assertTrue(emissions.last()) // reacts to the remote flag flipping on
+        assertFalse(emissions.last()) // reacts to the remote flag flipping off
     }
 
     @Test

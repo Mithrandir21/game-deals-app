@@ -1,17 +1,14 @@
 package pm.bam.gamedeals.logging.analytics
 
 /**
- * Platform-sourced analytics configuration, registered in Koin by the app entry point (BuildConfig on
- * Android, Info.plist on iOS) — mirrors how `IgdbCredentials` / `ItadCredentials` are provided. The
- * :logging Koin module reads this to decide [NoOpAnalytics] vs [PostHogAnalytics] and to build the base
- * properties stamped on every event.
+ * Platform-sourced analytics configuration, registered in Koin by the app entry point — mirrors how
+ * `IgdbCredentials` / `ItadCredentials` are provided. Carries the base properties a future [Analytics]
+ * provider stamps on every event; the current [NoOpAnalytics] binding ignores it.
  *
- * @property apiKey the PostHog `phc_…` project key; empty disables analytics (binds [NoOpAnalytics]).
  * @property environment "debug" or "release" — stamped on every event so dev noise is filterable.
  * @property appVersion the app's versionName — stamped on every event.
  */
 data class AnalyticsConfig(
-    val apiKey: String,
     val environment: String,
     val appVersion: String,
 ) {

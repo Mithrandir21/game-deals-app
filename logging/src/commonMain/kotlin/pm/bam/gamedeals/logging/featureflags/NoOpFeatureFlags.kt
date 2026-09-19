@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * No-op [FeatureFlags] bound whenever no flag provider is configured (no PostHog key — debug builds, previews).
+ * No-op [FeatureFlags] bound while no remote flag provider is integrated (currently every build).
  * Every flag resolves to its [FeatureFlag.default], so gated features show their shipped/default state and
  * callers never have to special-case a missing provider.
  */
