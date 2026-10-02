@@ -21,6 +21,7 @@ import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.deal.StoreDealPair
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
 import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -291,6 +292,40 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertEquals(listOf("Safe", "Adult"), vm.uiState.value.releases.map { it.title })
         assertEquals(listOf("Soon", "Adult soon"), vm.uiState.value.mostAnticipated.map { it.title })
     }
+
+    @Test
+    fun mature_bundles_hidden_unless_opted_in() = runTest {
+        everySuspend { bundlesRepository.getBundles() } returns listOf(bundle(1), bundle(2, isMature = true), bundle(3))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf(1, 3), vm.uiState.value.bundles.map { it.id })
+    }
+
+    @Test
+    fun mature_bundles_shown_when_opted_in() = runTest {
+        every { settingsRepository.observeMatureOptIn() } returns flowOf(true)
+        everySuspend { settingsRepository.getMatureOptIn() } returns true
+        everySuspend { bundlesRepository.getBundles() } returns listOf(bundle(1), bundle(2, isMature = true), bundle(3))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf(1, 2, 3), vm.uiState.value.bundles.map { it.id })
+    }
+
+    private fun bundle(id: Int, isMature: Boolean = false) = Bundle(
+        id = id,
+        title = "Bundle $id",
+        storeName = "Store",
+        url = "https://example.com/$id",
+        expiryEpochMs = null,
+        gameCount = 0,
+        priceDenominated = null,
+        games = persistentListOf(),
+        isMature = isMature,
+    )
 
     private fun release(title: String, isMature: Boolean = false) = Release(title = title, date = 0, image = "", isMature = isMature)
 

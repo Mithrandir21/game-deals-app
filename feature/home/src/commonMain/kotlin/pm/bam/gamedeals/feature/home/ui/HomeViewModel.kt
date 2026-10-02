@@ -199,7 +199,7 @@ internal class HomeViewModel(
                 val mostAnticipated = async {
                     section { igdbRepository.fetchMostAnticipated().filter { matureOptIn || !it.isMature }.distinctBy { it.title }.take(LIMIT_ANTICIPATED) }
                 }
-                val bundles = async { section { bundlesRepository.getBundles().take(LIMIT_BUNDLES) } }
+                val bundles = async { section { bundlesRepository.getBundles().filter { matureOptIn || !it.isMature }.take(LIMIT_BUNDLES) } }
                 val recommendations = async { section { recommendationsRepository.getRecommendations(LIMIT_RECOMMENDATIONS) } }
 
                 // Enrich the ranked rows with a current price + discount (one batched lookup over both
