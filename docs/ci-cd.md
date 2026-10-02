@@ -123,7 +123,7 @@ same number for the same tag.
 | `set-java-version` (21) | The Xcode "Compile Kotlin Framework" phase runs Gradle (`embedAndSignAppleFrameworkForXcode`); it honours `JAVA_HOME` and only falls back to Android Studio's JDK locally. |
 | Script — **write `Secrets.xcconfig`** | Generates `iosApp/Secrets.xcconfig` (gitignored; both Xcode configurations are based on it) from the same `IGDB_*` / `ITAD_*` / `SENTRY_DSN` secrets. `SENTRY_DSN_IOS` overrides the DSN if iOS gets its own Sentry project. Rewrites the DSN's `//` as `$(SLASH)$(SLASH)` since xcconfig treats `//` as a comment. |
 | Script — **install sentry-cli** (run_if `SENTRY_AUTH_TOKEN`) | Puts `sentry-cli` on `PATH` so the existing "Upload dSYMs to Sentry" build phase actually uploads. `SENTRY_PROJECT_IOS` overrides `SENTRY_PROJECT` for that upload. |
-| `xcode-archive@6` | Archives scheme `iosApp` (Release) and exports an **app-store** IPA. `automatic_code_signing: api-key` uses the project's Apple service connection + the uploaded distribution cert. Version injected via `xcconfig_content` (`MARKETING_VERSION = $VERSION_NAME`, `CURRENT_PROJECT_VERSION = $VERSION_CODE`). |
+| `xcode-archive@6` | Archives scheme `iosApp` (Release) and exports an **app-store** IPA. `automatic_code_signing: api-key` uses the project's Apple service connection + the uploaded distribution cert. `min_profile_validity: 30` forces Bitrise-managed signing (an App Store profile, so no device or development cert is needed). Version injected via `xcconfig_content` (`MARKETING_VERSION = $VERSION_NAME`, `CURRENT_PROJECT_VERSION = $VERSION_CODE`). |
 | `deploy-to-itunesconnect-application-loader@2` | Uploads the IPA to App Store Connect → appears in **TestFlight** after processing. `app_id` (6818586859) switches v2 to `altool --upload-package`; v2 also fails the step when Xcode 26's `altool` reports an error but exits 0 (v1 passed silently). `ITSAppUsesNonExemptEncryption = false` in `Info.plist` skips the export-compliance prompt. |
 | `deploy-to-bitrise-io` | Archives the IPA + dSYMs as build artifacts. |
 
@@ -279,8 +279,11 @@ generate the mapping and skip the upload.
   `versionCode=10007` / `versionName=1.0.7`; R8 + baseline profile + signing all green (~1m52s).
 - ✅ `bitrise.yml` and `android.yml` parse as valid YAML.
 - ✅ `bitrise validate` passes (pipeline, step bundle, `release-ios`).
-- ⏳ `release-ios` is unverified until its first run: the Xcode project changes (shared scheme,
-  `DEVELOPMENT_TEAM`, `JAVA_HOME` fallback) were made on Linux without an Xcode build.
+- ✅ `release-ios` verified with v1.3.0 (2026-10-02, Bitrise build #19): archive signed with a
+  Bitrise-created App Store profile, then uploaded to App Store Connect (TestFlight). Signing must be
+  Bitrise-managed (`min_profile_validity > 0`). Otherwise `xcode-archive` hands the project's Xcode
+  automatic signing to xcodebuild, which needs a development profile, and that fails because the team
+  has no registered devices.
 - ⏳ The Bitrise step wiring and the Play upload can only be confirmed once the UI setup (§6) is done
   and a release runs (try a throwaway `v0.0.1-rc1` tag first). The *build* it runs is the same
   `:app:bundleRelease` verified above.

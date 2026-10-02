@@ -177,6 +177,12 @@ workflows:
         - configuration: Release
         - distribution_method: app-store
         - automatic_code_signing: api-key
+        # Any value > 0 makes the step manage signing itself (Bitrise-managed) instead of handing the
+        # project's Xcode automatic signing to xcodebuild. xcodebuild would archive with a development
+        # profile, which needs a registered device and a development cert. Bitrise-managed signing with
+        # only the distribution cert uploaded signs the archive with an App Store profile it creates via
+        # the API key. No device is needed.
+        - min_profile_validity: '30'
         - xcconfig_content: |-
             COMPILER_INDEX_STORE_ENABLE = NO
             MARKETING_VERSION = $VERSION_NAME
