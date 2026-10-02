@@ -40,6 +40,10 @@ kotlin {
             implementation(project(":testing"))
         }
 
+        iosTest.dependencies {
+            implementation(libs.room.testing)
+        }
+
         val androidHostTest by getting {
             dependencies {
                 implementation(project(":testing"))
@@ -61,4 +65,9 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
+}
+
+// The simulator only forwards SIMCTL_CHILD_-prefixed variables to the test process; the migration test reads the schemas from here.
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest>().configureEach {
+    environment("SIMCTL_CHILD_ROOM_SCHEMA_DIR", "$projectDir/schemas")
 }

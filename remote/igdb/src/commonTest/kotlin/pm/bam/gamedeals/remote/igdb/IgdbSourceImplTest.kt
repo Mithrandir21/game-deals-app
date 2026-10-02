@@ -216,6 +216,27 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun exact_name_lookup_prefers_the_most_rated_of_same_named_games() {
+        // IGDB has four games named exactly "God of War"; unsorted, limit 1 returned a 2009 port instead of the 2018 game.
+        val query = buildExactNameLookupDetailsQuery("God of War")
+
+        assertTrue("""where name = "God of War"; sort total_rating_count desc; limit 1;""" in query, query)
+    }
+
+    @Test
+    fun steam_app_id_prefers_the_steam_entry_named_like_the_game() = runTest {
+        val impl = rig(mutableListOf()) { _ ->
+            respond(
+                content = PORTAL_EXTERNAL_GAMES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        assertEquals(400, impl.fetchGameDetailsByIgdbId(71L)?.steamAppId) // not 52003 "Mac Portal", which IGDB lists first
+    }
+
+    @Test
     fun fetchGameDetailsByIgdbId_returns_null_when_response_is_empty_list() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -550,6 +571,23 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun releases_tagged_with_the_erotic_theme_map_as_mature() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = THEMED_RELEASES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchNewReleases()
+
+        assertEquals(listOf("Adult Game" to true, "Fantasy Game" to false), result.map { it.title to it.isMature })
+        assertTrue("themes.id" in (recorded.single().body as TextContent).text)
+    }
+
+    @Test
     fun fetchTimeToBeat_posts_query_to_game_time_to_beats_and_maps_seconds() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -609,6 +647,20 @@ class IgdbSourceImplTest {
         const val NEW_RELEASES_BODY = """[
             {"id":501,"name":"Some Game","cover":{"id":7,"image_id":"abc123"},"first_release_date":1700000000},
             {"id":502,"name":"No Cover Game","first_release_date":1699000000}
+        ]"""
+
+        // language=JSON
+        const val PORTAL_EXTERNAL_GAMES_BODY = """[
+            {"id":71,"name":"Portal","external_games":[
+                {"id":13860,"uid":"52003","name":"Mac Portal","external_game_source":1},
+                {"id":15156,"uid":"400","name":"Portal","external_game_source":1}
+            ]}
+        ]"""
+
+        // language=JSON
+        const val THEMED_RELEASES_BODY = """[
+            {"id":601,"name":"Adult Game","cover":{"id":9,"image_id":"adult"},"first_release_date":1700000000,"themes":[{"id":27},{"id":42}]},
+            {"id":602,"name":"Fantasy Game","cover":{"id":10,"image_id":"fantasy"},"first_release_date":1700000000,"themes":[{"id":17}]}
         ]"""
 
         // language=JSON

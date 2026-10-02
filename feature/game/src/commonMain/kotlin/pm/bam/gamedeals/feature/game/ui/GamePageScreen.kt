@@ -294,9 +294,9 @@ private fun GamePageContent(
                         }
                     },
                     actions = {
-                        val resolvedByTitle = (data as? GamePageData.Data)?.resolvedByTitle == true
+                        val isUncertainMatch = (data as? GamePageData.Data)?.isUncertainMatch == true
                         val canAct = data is GamePageData.Data
-                        if (resolvedByTitle) {
+                        if (isUncertainMatch) {
                             IconButton(onClick = onWarningTap) {
                                 Icon(
                                     imageVector = Icons.Filled.Warning,

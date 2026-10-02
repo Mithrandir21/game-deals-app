@@ -14,7 +14,9 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.IgdbTag
 import pm.bam.gamedeals.domain.models.IgdbTagDimension
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
+import pm.bam.gamedeals.domain.models.isMature
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
 
@@ -34,15 +36,23 @@ data class TagGroup(val dimension: IgdbTagDimension, val tags: ImmutableList<Igd
 internal class DiscoverPickerViewModel(
     private val logger: Logger,
     private val tagDiscoveryRepository: TagDiscoveryRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val uiState: StateFlow<PickerState>
         field = MutableStateFlow<PickerState>(PickerState.Loading)
 
     private var vocabulary: List<IgdbTag> = emptyList()
+    private var matureOptIn = false
 
     init {
         load()
+        viewModelScope.launch {
+            settingsRepository.observeMatureOptIn().collect { optIn ->
+                matureOptIn = optIn
+                (uiState.value as? PickerState.Ready)?.let { emitReady(it.selected) }
+            }
+        }
     }
 
     private fun load() {
@@ -86,8 +96,11 @@ internal class DiscoverPickerViewModel(
         )
     }
 
+    // Mature tags (IGDB's Erotic theme) stay hidden, and drop out of the selection, unless the user opted in.
     private fun emitReady(selected: Set<TagKey>) {
-        uiState.value = PickerState.Ready(groupByDimension(vocabulary), selected.toImmutableSet())
+        val visible = vocabulary.filter { matureOptIn || !it.isMature }
+        val visibleKeys = visible.map { TagKey(it.dimension, it.igdbId) }.toSet()
+        uiState.value = PickerState.Ready(groupByDimension(visible), selected.filter { it in visibleKeys }.toImmutableSet())
     }
 
     // Fixed dimension order (coarse → granular), tags sorted by name within each group.

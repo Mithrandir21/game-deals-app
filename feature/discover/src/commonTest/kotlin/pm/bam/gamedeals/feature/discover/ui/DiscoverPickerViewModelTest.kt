@@ -5,14 +5,17 @@ package pm.bam.gamedeals.feature.discover.ui
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
+import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.mock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.IgdbTag
 import pm.bam.gamedeals.domain.models.IgdbTagDimension
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.feature.discover.ui.DiscoverPickerViewModel.PickerState
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -25,11 +28,15 @@ import kotlin.test.assertTrue
 class DiscoverPickerViewModelTest : MainDispatcherTest() {
 
     private val tagDiscoveryRepository: TagDiscoveryRepository = mock(MockMode.autoUnit)
+    private val matureOptIn = MutableStateFlow(false)
+    private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit) {
+        every { observeMatureOptIn() } returns matureOptIn
+    }
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun createViewModel() = DiscoverPickerViewModel(TestingLoggingListener(), tagDiscoveryRepository)
+    private fun createViewModel() = DiscoverPickerViewModel(TestingLoggingListener(), tagDiscoveryRepository, settingsRepository)
 
     @Test
     fun loads_vocabulary_and_groups_by_dimension_in_fixed_order() = runTest {
@@ -94,4 +101,47 @@ class DiscoverPickerViewModelTest : MainDispatcherTest() {
 
         assertEquals(PickerState.Error, vm.uiState.value)
     }
+
+    @Test
+    fun mature_themes_hidden_unless_opted_in() = runTest {
+        everySuspend { tagDiscoveryRepository.getTagVocabulary() } returns themedVocabulary()
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Fantasy", "Horror"), themeNames(vm))
+    }
+
+    @Test
+    fun mature_themes_shown_when_opted_in() = runTest {
+        matureOptIn.value = true
+        everySuspend { tagDiscoveryRepository.getTagVocabulary() } returns themedVocabulary()
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Erotic", "Fantasy", "Horror"), themeNames(vm))
+    }
+
+    @Test
+    fun opting_out_hides_and_deselects_a_selected_mature_theme() = runTest {
+        matureOptIn.value = true
+        everySuspend { tagDiscoveryRepository.getTagVocabulary() } returns themedVocabulary()
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.toggleTag(TagKey(IgdbTagDimension.Theme, 42L))
+
+        matureOptIn.value = false
+        advanceUntilIdle()
+
+        assertEquals(listOf("Fantasy", "Horror"), themeNames(vm))
+        assertTrue(vm.currentFilter().themeIds.isEmpty())
+    }
+
+    private fun themedVocabulary() = listOf(
+        IgdbTag(IgdbTagDimension.Theme, 42L, "Erotic", "erotic"),
+        IgdbTag(IgdbTagDimension.Theme, 17L, "Fantasy", "fantasy"),
+        IgdbTag(IgdbTagDimension.Theme, 19L, "Horror", "horror"),
+    )
+
+    private fun themeNames(vm: DiscoverPickerViewModel) =
+        (vm.uiState.value as PickerState.Ready).groups.single { it.dimension == IgdbTagDimension.Theme }.tags.map { it.name }
 }

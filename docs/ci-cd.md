@@ -3,11 +3,12 @@
 How this project is verified and released, and **why** it's set up this way.
 
 - **Verification** → GitHub Actions (`.github/workflows/android.yml`)
-- **Releases** → Bitrise (`bitrise.yml`), Android-only for now
+- **Releases** → Bitrise (`bitrise.yml`), Android + iOS from one tag
 
 ```
  PR / push to dev,main ─► GitHub Actions ─► build + unit tests + Compose-stability + (R8 verify)
- push tag v*.*.*       ─► Bitrise        ─► signed AAB ─► Play internal ─► (manual) production
+ push tag v*.*.*       ─► Bitrise pipeline `release` ─┬─► signed AAB ─► Play internal ─► (manual) production
+                                                      └─► signed IPA ─► TestFlight ─► (manual) App Store review
 ```
 
 The two systems never overlap: GHA's `push` trigger is branch-filtered, so version tags only ever
@@ -20,7 +21,8 @@ run on Bitrise.
 | Decision | Choice | Why |
 |---|---|---|
 | Release CI | **Bitrise for releases only**; GHA stays verification | GHA already verifies well; no reason to migrate it. Bitrise's real payoff is iOS (managed signing, macOS minutes), so standing it up now means the release infra already lives on the iOS-friendly platform when iOS ships. |
-| Platforms | **Android only** (iOS deferred) | Fastest path to the first Play Store submission. iOS is a live KMP target but has no release lane yet. |
+| Platforms | **Android + iOS, one tag** | A `v*.*.*` tag runs the `release` pipeline: `release-android` and `release-ios` in parallel. One version scheme, one set of release notes, no platform drifting behind. A failure in one platform doesn't cancel the other's upload — re-run the failed workflow from the pipeline. |
+| iOS signing | **App Store Connect team API key (Admin) + uploaded Apple Distribution cert** | Team key (not individual) because individual keys can't use Apple's provisioning API. Admin because `xcode-archive`'s API-key signing creates/updates the App Store provisioning profile. The certificate itself must be uploaded — Bitrise can't generate it. |
 | Release trigger | **Git tag `v*.*.*`** | Explicit, auditable, decoupled from merges. A release is a deliberate act (`git tag … && git push …`), not a side effect of merging. |
 | Distribution | **Play internal → production** (staged) | Internal track is the QA gate; production is a manual promotion at a staged rollout %. |
 | `versionCode` | **Derived from the tag** (`major*10000 + minor*100 + patch`) | Deterministic & strictly increasing. Lets production reuse the *exact* artifact tested on internal (see §4). A build-number scheme would be non-deterministic and break promotion. Constraint: minor/patch each `< 100`. |
@@ -94,8 +96,11 @@ Two things frame the design:
 ```yaml
 trigger_map:
   - tag: "v*.*.*"
-    workflow: release-android
+    pipeline: release        # runs release-android + release-ios in parallel
 ```
+The version derivation lives in the `derive-version` **step bundle**, used by both workflows, so
+`VERSION_CODE` (Play `versionCode`) and `CURRENT_PROJECT_VERSION` (iOS `CFBundleVersion`) are always the
+same number for the same tag.
 
 ### Workflow `release-android` (automatic, on tag)
 
@@ -109,6 +114,24 @@ trigger_map:
 | `android-build` | `./gradlew :app:bundleRelease`. Gradle reads `RELEASE_*`, `IGDB_*`, `ITAD_*`, `SENTRY_*`, `VERSION_*` from env. Outputs `$BITRISE_AAB_PATH` + `$BITRISE_MAPPING_PATH`. When `SENTRY_AUTH_TOKEN` is set, the Sentry Gradle plugin also uploads the R8 mapping to Sentry (readable crash stacks there too). |
 | `google-play-deploy` | Uploads the AAB to the **internal** track (`status: completed`), with the R8 mapping (readable Play crash stacks) and notes from `whatsnew/`. |
 | `deploy-to-bitrise-io` | Archives the AAB + mapping as Bitrise build artifacts (audit trail + source for promotion). |
+
+### Workflow `release-ios` (automatic, on tag, macOS stack)
+
+| Step | Purpose |
+|---|---|
+| `git-clone` + `derive-version` | Same as Android. |
+| `set-java-version` (21) | The Xcode "Compile Kotlin Framework" phase runs Gradle (`embedAndSignAppleFrameworkForXcode`); it honours `JAVA_HOME` and only falls back to Android Studio's JDK locally. |
+| Script — **write `Secrets.xcconfig`** | Generates `iosApp/Secrets.xcconfig` (gitignored; both Xcode configurations are based on it) from the same `IGDB_*` / `ITAD_*` / `SENTRY_DSN` secrets. `SENTRY_DSN_IOS` overrides the DSN if iOS gets its own Sentry project. Rewrites the DSN's `//` as `$(SLASH)$(SLASH)` since xcconfig treats `//` as a comment. |
+| Script — **install sentry-cli** (run_if `SENTRY_AUTH_TOKEN`) | Puts `sentry-cli` on `PATH` so the existing "Upload dSYMs to Sentry" build phase actually uploads. `SENTRY_PROJECT_IOS` overrides `SENTRY_PROJECT` for that upload. |
+| `xcode-archive@6` | Archives scheme `iosApp` (Release) and exports an **app-store** IPA. `automatic_code_signing: api-key` uses the project's Apple service connection + the uploaded distribution cert. Version injected via `xcconfig_content` (`MARKETING_VERSION = $VERSION_NAME`, `CURRENT_PROJECT_VERSION = $VERSION_CODE`). |
+| `deploy-to-itunesconnect-application-loader@2` | Uploads the IPA to App Store Connect → appears in **TestFlight** after processing. `app_id` (6818586859) switches v2 to `altool --upload-package`; v2 also fails the step when Xcode 26's `altool` reports an error but exits 0 (v1 passed silently). `ITSAppUsesNonExemptEncryption = false` in `Info.plist` skips the export-compliance prompt. |
+| `deploy-to-bitrise-io` | Archives the IPA + dSYMs as build artifacts. |
+
+There is no iOS `promote-production`: an uploaded build is promoted to the App Store by attaching it to
+a version in App Store Connect and submitting for review — same binary, no rebuild, so the §4 contract
+holds by construction. App Store Connect also rejects a re-upload of the same
+`CFBundleShortVersionString` + `CFBundleVersion`, so re-running `release-ios` for an already-uploaded tag
+fails at the upload step — expected.
 
 The build steps are just plumbing that feeds env vars and a file into the same `:app:bundleRelease`
 build verified locally — no Bitrise-specific signing/versioning magic.
@@ -178,10 +201,13 @@ it's independent of the `local.properties`-vs-env signing branch. Bitrise sets t
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Sentry Gradle plugin — R8 mapping upload (build-time). Without the token, the build still produces the mapping but skips the upload. | Bitrise **Secrets** |
 | `$BITRISEIO_ANDROID_KEYSTORE_URL` | Keystore download | Published by Bitrise **Code Signing** tab |
 | `$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL` | Play upload auth | Published by a Bitrise **Generic File Storage** secret |
-| `VERSION_NAME`, `VERSION_CODE` | Gradle version | Computed in the `release-android` derive-version step |
+| `VERSION_NAME`, `VERSION_CODE` | Gradle version; iOS `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` | Computed by the `derive-version` step bundle |
 | `BITRISE_API_TOKEN` | `promote-production` — reads the promoted build and its artifacts over the Bitrise API | Bitrise **Secrets** (personal access token, Bitrise → Profile → Security → API tokens) |
 | `PROMOTE_BUILD_SLUG` | `promote-production` — which `release-android` build to promote | Set per-run when starting the workflow |
 | `PROMOTE_AAB_PATH` | `google-play-deploy` in `promote-production` | Published by that workflow's fetch step |
+| App Store Connect API key (Issuer ID, Key ID, `.p8`) | `xcode-archive` signing + TestFlight upload | Bitrise **Workspace → Apple service connection**, selected in the project's Integrations settings. Team key, **Admin** role. |
+| `$BITRISE_CERTIFICATE_URL`, `$BITRISE_CERTIFICATE_PASSPHRASE` | `xcode-archive` — Apple Distribution certificate | Published by Bitrise **Code Signing** tab (`.p12` upload) |
+| `SENTRY_DSN_IOS`, `SENTRY_PROJECT_IOS` (optional) | iOS overrides of `SENTRY_DSN` / `SENTRY_PROJECT` | Bitrise **Secrets** — only if iOS uses a separate Sentry project |
 
 Locally, the same `RELEASE_*` / `IGDB_*` / `ITAD_*` values, plus `sentryDsn`, come from `local.properties`
 (gitignored), and the keystore from `upload_keystore.jks` at the repo root (gitignored). Nothing sensitive
@@ -199,11 +225,23 @@ generate the mapping and skip the upload.
   → Auth Tokens. Add `BITRISE_API_TOKEN` too (Bitrise → Profile → Security → API tokens) — only
   `promote-production` reads it, so it can wait until the first production promotion.
 - **Generic File Storage**: the Play service-account JSON → `$BITRISEIO_SERVICE_ACCOUNT_JSON_KEY_URL`.
-- **Stack**: Linux + Android (no macOS lane while iOS is deferred → lower cost).
+- **Stacks**: set per workflow in `bitrise.yml` — Linux + Android for `release-android` /
+  `promote-production`, macOS + Xcode for `release-ios`.
 - Connect the GitHub repo. Add the `activate-ssh-key` step's `SSH_RSA_PRIVATE_KEY` only if private.
 - Import `bitrise.yml`; the workflow editor validates step `@version` pins — fix any it flags.
 - No Gradle build-cache steps are used: the `restore/save-gradle-cache` steps require Bitrise's paid
   Build Cache add-on, and a tag-only release build is too infrequent to benefit. Kept free.
+
+### Apple (App Store Connect + Developer portal)
+- Team ID `36N7FDX928` is committed as `DEVELOPMENT_TEAM` in `iosApp.xcodeproj` (not a secret).
+- Register App ID `pm.bam.gamedeals.ios` (Identifiers) and create the app record in App Store Connect.
+- **Team** API key, **Admin** role (Users and Access → Integrations → App Store Connect API → Team Keys)
+  → add to Bitrise as the Apple service connection. The `.p8` downloads once — keep it in a password
+  manager.
+- **Apple Distribution certificate** → export as `.p12` → Bitrise Code Signing tab. Can be made without a
+  Mac: `openssl` CSR → upload at Certificates → **+** → Apple Distribution → download `.cer` →
+  combine with the key into a `.p12`. Expires after a year; re-upload when renewed.
+- The scheme `iosApp` is shared (`xcshareddata/xcschemes/`) — CI can't build a user-only scheme.
 
 ### Play Console + Google Cloud
 - Create the app in Play Console; accept agreements; complete the required listing/content forms.
@@ -223,13 +261,15 @@ generate the mapping and skip the upload.
 1. Land changes on `dev`/`main`; confirm GHA is green (including `release-verify`).
 2. Update `whatsnew/whatsnew-en-US` with real notes.
 3. Tag and push: `git tag v1.0.7 && git push origin v1.0.7`.
-4. Bitrise `release-android` runs automatically → signed AAB on the Play **internal** track.
+4. Bitrise pipeline `release` runs automatically → signed AAB on the Play **internal** track and a
+   build in **TestFlight** (after Apple's processing, typically 5–30 min).
 5. QA from internal (install; sanity-check signing + that IGDB/ITAD keys work at runtime).
 6. Promote to production, either:
    - Play Console → release → **Promote release** (Internal → Production), set rollout %; or
    - Bitrise `promote-production` (manual) with `PROMOTE_BUILD_SLUG` set to the `release-android`
      build being promoted — ships at 10% staged.
 7. Bump the rollout to 100% in Play Console after monitoring vitals.
+8. iOS: in App Store Connect create the version, attach the TestFlight build, submit for review.
 
 ---
 
@@ -238,6 +278,9 @@ generate the mapping and skip the upload.
 - ✅ `VERSION_NAME=1.0.7 VERSION_CODE=10007 ./gradlew :app:bundleRelease` → merged manifest
   `versionCode=10007` / `versionName=1.0.7`; R8 + baseline profile + signing all green (~1m52s).
 - ✅ `bitrise.yml` and `android.yml` parse as valid YAML.
+- ✅ `bitrise validate` passes (pipeline, step bundle, `release-ios`).
+- ⏳ `release-ios` is unverified until its first run: the Xcode project changes (shared scheme,
+  `DEVELOPMENT_TEAM`, `JAVA_HOME` fallback) were made on Linux without an Xcode build.
 - ⏳ The Bitrise step wiring and the Play upload can only be confirmed once the UI setup (§6) is done
   and a release runs (try a throwaway `v0.0.1-rc1` tag first). The *build* it runs is the same
   `:app:bundleRelease` verified above.

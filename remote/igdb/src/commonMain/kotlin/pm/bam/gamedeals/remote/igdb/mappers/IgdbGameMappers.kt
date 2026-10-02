@@ -4,9 +4,11 @@ import kotlin.time.Instant
 import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.IGDB_EROTIC_THEME_ID
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbAgeRating
+import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbExternalGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbGame
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbInvolvedCompany
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbSimilarGame
@@ -57,10 +59,7 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
     ageRatings = ageRatings.mapNotNull { it.toIgdbAgeRatingOrNull() }.distinct().toImmutableList(),
     gameModes = gameModes.mapNotNull { it.name?.takeIf(String::isNotBlank) }.distinct().toImmutableList(),
     // timeToBeat is fetched separately (/v4/game_time_to_beats) and merged by the consumer — left null here.
-    steamAppId = externalGames
-        .firstOrNull { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID }
-        ?.uid
-        ?.toIntOrNull(),
+    steamAppId = steamAppIdFor(name, externalGames),
     totalRatingCount = totalRatingCount,
 )
 
@@ -76,10 +75,17 @@ internal fun RemoteIgdbGame.toReleaseOrNull(): Release? {
         title = name,
         date = firstReleaseDate?.toInt() ?: 0,
         image = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
+        isMature = themes.any { it.id == IGDB_EROTIC_THEME_ID },
     )
 }
 
 private const val STEAM_EXTERNAL_GAME_SOURCE_ID = 1L
+
+// IGDB can list several Steam entries for one game (Portal also carries "Mac Portal"); prefer the one named like the game.
+private fun steamAppIdFor(gameName: String, externalGames: List<RemoteIgdbExternalGame>): Int? {
+    val steam = externalGames.filter { it.externalGameSource == STEAM_EXTERNAL_GAME_SOURCE_ID && it.uid?.toIntOrNull() != null }
+    return (steam.firstOrNull { it.name.equals(gameName, ignoreCase = true) } ?: steam.firstOrNull())?.uid?.toIntOrNull()
+}
 
 private fun RemoteIgdbInvolvedCompany.toRoles(): List<IgdbGame.IgdbCompanyRole> {
     val companyName = company?.name ?: return emptyList()

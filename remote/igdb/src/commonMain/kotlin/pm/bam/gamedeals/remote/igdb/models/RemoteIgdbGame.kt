@@ -96,6 +96,7 @@ data class RemoteIgdbTimeToBeat(
 @Serializable
 data class RemoteIgdbExternalGame(
     val uid: String? = null,
+    val name: String? = null,
     @SerialName("external_game_source") val externalGameSource: Long? = null,
 )
 

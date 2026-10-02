@@ -186,8 +186,8 @@ internal fun ItadGameSearchResult.toGame(): Game = Game(
     artwork = artwork,
 )
 
-internal fun ItadGamePrices.toGameDetails(title: String, artwork: GameArtwork): GameDetails = GameDetails(
-    info = GameDetails.GameInfo(title = title, steamAppID = null, artwork = artwork),
+internal fun ItadGamePrices.toGameDetails(title: String, artwork: GameArtwork, steamAppId: Int?): GameDetails = GameDetails(
+    info = GameDetails.GameInfo(title = title, steamAppID = steamAppId, artwork = artwork),
     cheapestPriceEver = GameDetails.GameCheapestPriceEver(
         priceValue = historyLowAll?.amount ?: 0.0,
         priceDenominated = historyLowAll?.denominated().orEmpty(),
