@@ -20,6 +20,12 @@ data class IgdbTag(
  * are small curated enums (`/v4/genres` etc.); keywords are a huge community list, so only a
  * hand-curated allow-list of keyword slugs is included (see `CuratedKeywords`).
  */
+/** IGDB's "Erotic" theme, hidden unless the user opted into mature content. */
+const val IGDB_EROTIC_THEME_ID = 42L
+
+val IgdbTag.isMature: Boolean
+    get() = dimension == IgdbTagDimension.Theme && igdbId == IGDB_EROTIC_THEME_ID
+
 enum class IgdbTagDimension {
     Genre,
     Theme,

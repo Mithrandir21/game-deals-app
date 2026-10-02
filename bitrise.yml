@@ -9,20 +9,17 @@ app:
   - APP_PACKAGE_NAME: pm.bam.gamedeals
 trigger_map:
 - tag: v*.*.*
-  workflow: release-android
-workflows:
-  release-android:
-    summary: Build a signed release AAB from a v*.*.* tag and ship it to the Play
-      Store internal track.
-    description: |
-      Triggered by pushing a tag like `v1.0.7`. Derives the version from the tag, builds a
-      signed AAB (signing config in app/build.gradle.kts reads RELEASE_* env vars + the keystore
-      at the repo root), uploads to the Play Store `internal` track with the R8 mapping + release
-      notes, and archives the AAB/mapping as Bitrise build artifacts.
+  pipeline: release
+pipelines:
+  release:
+    summary: Ship a v*.*.* tag to both stores — Play internal and TestFlight, in parallel.
+    workflows:
+      release-android: {}
+      release-ios: {}
+step_bundles:
+  derive-version:
+    summary: VERSION_NAME / VERSION_CODE from the pushed v*.*.* tag (Play versionCode = iOS CFBundleVersion).
     steps:
-    - activate-ssh-key@4:
-        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
-    - git-clone@8: {}
     - script@1:
         title: Derive version from tag
         inputs:
@@ -53,6 +50,20 @@ workflows:
             echo "VERSION_NAME=$VERSION_NAME  VERSION_CODE=$VERSION_CODE"
             envman add --key VERSION_NAME --value "$VERSION_NAME"
             envman add --key VERSION_CODE --value "$VERSION_CODE"
+workflows:
+  release-android:
+    summary: Build a signed release AAB from a v*.*.* tag and ship it to the Play
+      Store internal track.
+    description: |
+      Triggered by pushing a tag like `v1.0.7`. Derives the version from the tag, builds a
+      signed AAB (signing config in app/build.gradle.kts reads RELEASE_* env vars + the keystore
+      at the repo root), uploads to the Play Store `internal` track with the R8 mapping + release
+      notes, and archives the AAB/mapping as Bitrise build artifacts.
+    steps:
+    - activate-ssh-key@4:
+        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+    - git-clone@8: {}
+    - bundle::derive-version: {}
     - script@1:
         title: Run unit tests
         inputs:
@@ -105,6 +116,82 @@ workflows:
       bitrise.io:
         stack: ubuntu-resolute-26.04-bitrise-2026-android
         machine_type_id: standard
+  release-ios:
+    summary: Build a signed App Store IPA from a v*.*.* tag and upload it to TestFlight.
+    description: |
+      Runs alongside release-android in the `release` pipeline. Same tag-derived version
+      (MARKETING_VERSION = VERSION_NAME, CURRENT_PROJECT_VERSION = VERSION_CODE). Signing uses the
+      project's Apple service connection (App Store Connect team API key, Admin role) plus the Apple
+      Distribution certificate uploaded on the Code Signing tab; xcode-archive fetches/creates the App
+      Store provisioning profile. The shared Kotlin framework is built by the Xcode "Compile Kotlin
+      Framework" phase (Gradle) — hence the JDK step. No caches (see docs/ci-cd.md §6), so each run
+      downloads the Kotlin/Native toolchain cold.
+    steps:
+    - activate-ssh-key@4:
+        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+    - git-clone@8: {}
+    - bundle::derive-version: {}
+    - set-java-version@1:
+        inputs:
+        - set_java_version: '21'
+    - script@1:
+        title: Write Secrets.xcconfig
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -euo pipefail
+            # The Xcode project bases both configurations on iosApp/Secrets.xcconfig (gitignored);
+            # Info.plist reads these values at build time. Same secrets as the Android build.
+            # SENTRY_DSN_IOS, if set, points iOS at its own Sentry project.
+            dsn="${SENTRY_DSN_IOS:-${SENTRY_DSN:-}}"
+            # xcconfig treats `//` as a comment start — rebuild the scheme's `//` from $(SLASH).
+            dsn="${dsn//\/\//\$(SLASH)\$(SLASH)}"
+            cat > "$BITRISE_SOURCE_DIR/iosApp/Secrets.xcconfig" <<EOF
+            SLASH = /
+            IGDB_CLIENT_ID = ${IGDB_CLIENT_ID:?missing IGDB_CLIENT_ID}
+            IGDB_CLIENT_SECRET = ${IGDB_CLIENT_SECRET:?missing IGDB_CLIENT_SECRET}
+            ITAD_API_KEY = ${ITAD_API_KEY:?missing ITAD_API_KEY}
+            ITAD_OAUTH_CLIENT_ID = ${ITAD_OAUTH_CLIENT_ID:?missing ITAD_OAUTH_CLIENT_ID}
+            SENTRY_DSN = ${dsn}
+            EOF
+    - script@1:
+        title: Install sentry-cli (dSYM upload)
+        run_if: '{{getenv "SENTRY_AUTH_TOKEN" | ne ""}}'
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -euo pipefail
+            # The Xcode "Upload dSYMs to Sentry" phase no-ops unless sentry-cli is on PATH and
+            # SENTRY_AUTH_TOKEN is set; it reads SENTRY_ORG / SENTRY_PROJECT from env.
+            mkdir -p "$HOME/.local/bin"
+            curl -fsSL https://sentry.io/get-cli/ | INSTALL_DIR="$HOME/.local/bin" sh
+            envman add --key PATH --value "$HOME/.local/bin:$PATH"
+            if [[ -n "${SENTRY_PROJECT_IOS:-}" ]]; then
+              envman add --key SENTRY_PROJECT --value "$SENTRY_PROJECT_IOS"
+            fi
+    - xcode-archive@5:
+        title: Archive + export App Store IPA
+        inputs:
+        - project_path: "$BITRISE_SOURCE_DIR/iosApp/iosApp.xcodeproj"
+        - scheme: iosApp
+        - configuration: Release
+        - distribution_method: app-store
+        - automatic_code_signing: api-key
+        - xcconfig_content: |-
+            COMPILER_INDEX_STORE_ENABLE = NO
+            MARKETING_VERSION = $VERSION_NAME
+            CURRENT_PROJECT_VERSION = $VERSION_CODE
+    - deploy-to-itunesconnect-application-loader@1:
+        title: Upload to App Store Connect (TestFlight)
+        inputs:
+        - connection: api_key
+        - ipa_path: "$BITRISE_IPA_PATH"
+        - platform: ios
+    - deploy-to-bitrise-io@2: {}
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.6.x
+        machine_type_id: g2.mac.medium
   promote-production:
     summary: Promote a release already on the Play internal track to production (10%
       staged rollout).

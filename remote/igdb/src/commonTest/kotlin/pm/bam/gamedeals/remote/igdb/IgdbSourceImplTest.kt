@@ -571,6 +571,23 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun releases_tagged_with_the_erotic_theme_map_as_mature() = runTest {
+        val recorded = mutableListOf<HttpRequestData>()
+        val impl = rig(recorded) { _ ->
+            respond(
+                content = THEMED_RELEASES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = impl.fetchNewReleases()
+
+        assertEquals(listOf("Adult Game" to true, "Fantasy Game" to false), result.map { it.title to it.isMature })
+        assertTrue("themes.id" in (recorded.single().body as TextContent).text)
+    }
+
+    @Test
     fun fetchTimeToBeat_posts_query_to_game_time_to_beats_and_maps_seconds() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -638,6 +655,12 @@ class IgdbSourceImplTest {
                 {"id":13860,"uid":"52003","name":"Mac Portal","external_game_source":1},
                 {"id":15156,"uid":"400","name":"Portal","external_game_source":1}
             ]}
+        ]"""
+
+        // language=JSON
+        const val THEMED_RELEASES_BODY = """[
+            {"id":601,"name":"Adult Game","cover":{"id":9,"image_id":"adult"},"first_release_date":1700000000,"themes":[{"id":27},{"id":42}]},
+            {"id":602,"name":"Fantasy Game","cover":{"id":10,"image_id":"fantasy"},"first_release_date":1700000000,"themes":[{"id":17}]}
         ]"""
 
         // language=JSON

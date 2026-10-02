@@ -38,7 +38,18 @@ internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+/**
+ * v2 → v3: add `Release.isMature`. Cached rows are expired so the next refresh refetches them with the flag set, rather
+ * than showing mature releases as not mature until the 24-hour TTL lapses.
+ */
+internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Release` ADD COLUMN `isMature` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("UPDATE `Release` SET `expires` = 0")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
 /** Auto-migrations (`@AutoMigration` spec pairs) — none today; add alongside [DOMAIN_MIGRATIONS]. */
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

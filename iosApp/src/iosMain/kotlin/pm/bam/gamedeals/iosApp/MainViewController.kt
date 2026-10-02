@@ -189,9 +189,7 @@ private fun bootstrapKoin() {
         // GameDealsApplication; deliberately separate from AnalyticsConfig so a gating decision never reads
         // out of the analytics namespace.
         //
-        // AppStoreId is the app's numeric App Store id, used to open the store listing. It is absent until the
-        // app is registered with App Store Connect, and an empty value makes openStoreListing a no-op — the
-        // prompt still shows, the Update button just does nothing. Fill the Info.plist key in when known.
+        // AppStoreId (Info.plist) is the app's numeric App Store id, used by the Update button to open the store listing.
         single {
             AppInfo(
                 versionName = infoPlistString("CFBundleShortVersionString").ifEmpty { "0" },
