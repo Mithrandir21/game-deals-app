@@ -11,6 +11,7 @@
 		B100000000000000000000B2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* ContentView.swift */; };
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
 		B100000000000000000000B4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Preview Assets.xcassets */; };
+		B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* PrivacyInfo.xcprivacy */; };
 		B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = S100000000000000000000P1 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
@@ -20,6 +21,7 @@
 		A100000000000000000000A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A100000000000000000000A3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A100000000000000000000A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A100000000000000000000A6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A100000000000000000000A5 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -50,6 +52,7 @@
 				A100000000000000000000A1 /* iOSApp.swift */,
 				A100000000000000000000A2 /* ContentView.swift */,
 				A100000000000000000000A3 /* Assets.xcassets */,
+				A100000000000000000000A6 /* PrivacyInfo.xcprivacy */,
 				G100000000000000000000C4 /* Preview Content */,
 			);
 			path = iosApp;
@@ -140,6 +143,7 @@
 			files = (
 				B100000000000000000000B4 /* Preview Assets.xcassets in Resources */,
 				B100000000000000000000B3 /* Assets.xcassets in Resources */,
+				B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
