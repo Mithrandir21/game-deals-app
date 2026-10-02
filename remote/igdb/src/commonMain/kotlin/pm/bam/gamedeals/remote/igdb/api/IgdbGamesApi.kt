@@ -320,7 +320,7 @@ class IgdbGamesApi(
                 game.franchises.id, game.franchises.name, game.franchises.games.id, game.franchises.games.name, game.franchises.games.cover.image_id,
                 game.age_ratings.organization, game.age_ratings.rating_category,
                 game.game_modes.name,
-                game.external_games.uid, game.external_games.external_game_source;
+                game.external_games.uid, game.external_games.name, game.external_games.external_game_source;
             where uid = "$steamAppId" & external_game_source = 1; limit 1;
         """.trimIndent()
 
@@ -349,7 +349,7 @@ class IgdbGamesApi(
                 franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
                 age_ratings.organization, age_ratings.rating_category,
                 game_modes.name,
-                external_games.uid, external_games.external_game_source;
+                external_games.uid, external_games.name, external_games.external_game_source;
             where id = $igdbGameId; limit 1;
         """.trimIndent()
 
@@ -363,6 +363,7 @@ class IgdbGamesApi(
         // `game_type`, but its id values are not the same and aren't documented as stable. We
         // accept that the exact-name + search-fallback chain may occasionally resolve to a DLC
         // when the deal title literally matches one — the details screen still renders correctly.
+        // Several games can share a name exactly ("God of War" 2005/2009/2018); the most-rated one is the likeliest intent.
         internal fun buildExactNameLookupDetailsQuery(title: String): String {
             val escaped = escapeApicalypseString(title)
             return """
@@ -388,7 +389,7 @@ class IgdbGamesApi(
                     franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
                     age_ratings.organization, age_ratings.rating_category,
                     game_modes.name;
-                where name = "$escaped"; limit 1;
+                where name = "$escaped"; sort total_rating_count desc; limit 1;
             """.trimIndent()
         }
 
@@ -479,7 +480,7 @@ class IgdbGamesApi(
             )
             val whereClause = (tagClauses + "cover != null").joinToString(" & ")
             return """
-                fields id,name,cover.image_id,total_rating_count,external_games.uid,external_games.external_game_source;
+                fields id,name,cover.image_id,total_rating_count,external_games.uid,external_games.name,external_games.external_game_source;
                 where $whereClause;
                 sort total_rating_count desc;
                 limit $limit; offset $offset;
@@ -491,7 +492,7 @@ class IgdbGamesApi(
         // so the most relevant entries lead the followed-series list and the deal check's per-franchise cap.
         internal fun buildFranchiseGamesQuery(franchiseId: Long, limit: Int): String =
             """
-            fields id,name,cover.image_id,external_games.uid,external_games.external_game_source;
+            fields id,name,cover.image_id,external_games.uid,external_games.name,external_games.external_game_source;
             where franchises = ($franchiseId);
             sort total_rating_count desc;
             limit $limit;

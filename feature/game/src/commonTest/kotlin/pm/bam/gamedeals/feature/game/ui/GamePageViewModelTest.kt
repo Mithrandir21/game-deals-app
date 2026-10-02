@@ -51,6 +51,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -110,8 +111,8 @@ class GamePageViewModelTest : MainDispatcherTest() {
         recentlyViewedRepository = recentlyViewedRepository,
     )
 
-    private fun igdb(id: Long = 100L, steamAppId: Int? = null) =
-        IgdbGame(id = id, name = "Halo Infinite", summary = "Master Chief returns", steamAppId = steamAppId)
+    private fun igdb(id: Long = 100L, steamAppId: Int? = null, name: String = "Halo Infinite") =
+        IgdbGame(id = id, name = name, summary = "Master Chief returns", steamAppId = steamAppId)
 
     /** Subscribe, let the load flow run to completion on the test dispatcher, return the final state. */
     private fun TestScope.loadState(args: Map<String, Any?>): GamePageViewModel.GamePageData {
@@ -149,7 +150,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         assertEquals(listOf(bundle), state.bundles)
         assertNotNull(state.igdbGameOrNull)
         // IGDB enrichment came via Steam-appid, not title → no fuzzy-match warning.
-        assertEquals(false, state.resolvedByTitle)
+        assertEquals(false, state.isUncertainMatch)
     }
 
     @Test
@@ -371,5 +372,53 @@ class GamePageViewModelTest : MainDispatcherTest() {
         assertTrue(recovered.deals is SectionState.Loaded)
         assertEquals(details, recovered.gameDetailsOrNull)
         assertEquals(1, recovered.dealDetails.size)
+    }
+
+    @Test
+    fun steam_id_join_wins_over_the_title_lookup_and_is_certain() = runTest {
+        // God of War: the title alone resolves the 2005 game; ITAD's Steam id 1593500 is the 2018 PC release.
+        val details = gameDetails(info = GameDetails.GameInfo(title = "God of War", steamAppID = 1593500, artwork = GameArtwork(banner300 = "t")))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        everySuspend { igdbRepository.fetchGameDetailsBySteamId(1593500) } returns igdb(id = 19560, steamAppId = 1593500, name = "God of War")
+        everySuspend { igdbRepository.fetchGameDetailsByTitle("God of War") } returns igdb(id = 549, name = "God of War")
+
+        val state = loadState(mapOf("gameId" to "g1")) as GamePageViewModel.GamePageData.Data
+
+        assertEquals(19560L, state.igdbGameOrNull?.id)
+        assertEquals(false, state.isUncertainMatch)
+    }
+
+    @Test
+    fun exact_title_match_without_a_steam_id_is_certain() = runTest {
+        val info = GameDetails.GameInfo(title = "Ghost of Tsushima DIRECTOR'S CUT", steamAppID = null, artwork = GameArtwork(banner300 = "t"))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns gameDetails(info = info)
+        everySuspend { igdbRepository.fetchGameDetailsByTitle("Ghost of Tsushima DIRECTOR'S CUT") } returns igdb(name = "Ghost of Tsushima: Director's Cut")
+
+        val state = loadState(mapOf("gameId" to "g1")) as GamePageViewModel.GamePageData.Data
+
+        assertEquals(false, state.isUncertainMatch)
+    }
+
+    @Test
+    fun different_title_match_is_flagged_uncertain() = runTest {
+        val info = GameDetails.GameInfo(title = "Portal", steamAppID = null, artwork = GameArtwork(banner300 = "t"))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns gameDetails(info = info)
+        everySuspend { igdbRepository.fetchGameDetailsByTitle("Portal") } returns igdb(name = "Mac Portal")
+
+        val state = loadState(mapOf("gameId" to "g1")) as GamePageViewModel.GamePageData.Data
+
+        assertEquals(true, state.isUncertainMatch)
+    }
+
+    @Test
+    fun isSameTitle_ignores_case_punctuation_and_trademarks() {
+        assertTrue(isSameTitle("Clair Obscur: Expedition 33", "Clair Obscur: Expedition 33"))
+        assertTrue(isSameTitle("No Man's Sky", "No Man's Sky"))
+        assertTrue(isSameTitle("The Last of Us™ Part I", "The Last of Us Part I"))
+        assertTrue(isSameTitle("Ghost of Tsushima DIRECTOR'S CUT", "Ghost of Tsushima: Director's Cut"))
+        assertTrue(isSameTitle("Stray", "Stray"))
+        assertFalse(isSameTitle("Portal", "Mac Portal"))
+        assertFalse(isSameTitle("Portal", "Portal 2"))
+        assertFalse(isSameTitle("™", "®"))
     }
 }

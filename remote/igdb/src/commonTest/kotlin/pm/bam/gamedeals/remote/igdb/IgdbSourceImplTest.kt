@@ -216,6 +216,27 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun exact_name_lookup_prefers_the_most_rated_of_same_named_games() {
+        // IGDB has four games named exactly "God of War"; unsorted, limit 1 returned a 2009 port instead of the 2018 game.
+        val query = buildExactNameLookupDetailsQuery("God of War")
+
+        assertTrue("""where name = "God of War"; sort total_rating_count desc; limit 1;""" in query, query)
+    }
+
+    @Test
+    fun steam_app_id_prefers_the_steam_entry_named_like_the_game() = runTest {
+        val impl = rig(mutableListOf()) { _ ->
+            respond(
+                content = PORTAL_EXTERNAL_GAMES_BODY,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        assertEquals(400, impl.fetchGameDetailsByIgdbId(71L)?.steamAppId) // not 52003 "Mac Portal", which IGDB lists first
+    }
+
+    @Test
     fun fetchGameDetailsByIgdbId_returns_null_when_response_is_empty_list() = runTest {
         val recorded = mutableListOf<HttpRequestData>()
         val impl = rig(recorded) { _ ->
@@ -626,6 +647,14 @@ class IgdbSourceImplTest {
         const val NEW_RELEASES_BODY = """[
             {"id":501,"name":"Some Game","cover":{"id":7,"image_id":"abc123"},"first_release_date":1700000000},
             {"id":502,"name":"No Cover Game","first_release_date":1699000000}
+        ]"""
+
+        // language=JSON
+        const val PORTAL_EXTERNAL_GAMES_BODY = """[
+            {"id":71,"name":"Portal","external_games":[
+                {"id":13860,"uid":"52003","name":"Mac Portal","external_game_source":1},
+                {"id":15156,"uid":"400","name":"Portal","external_game_source":1}
+            ]}
         ]"""
 
         // language=JSON

@@ -85,7 +85,7 @@ class IgdbTagDiscoveryTest {
             limit = 25,
             offset = 50,
         )
-        assertTrue("fields id,name,cover.image_id,total_rating_count,external_games.uid,external_games.external_game_source;" in q, q)
+        assertTrue("fields id,name,cover.image_id,total_rating_count,external_games.uid,external_games.name,external_games.external_game_source;" in q, q)
         assertTrue("game_modes = [2,3]" in q, q)
         assertTrue("keywords = [99]" in q, q)
         assertTrue("sort total_rating_count desc;" in q, q)

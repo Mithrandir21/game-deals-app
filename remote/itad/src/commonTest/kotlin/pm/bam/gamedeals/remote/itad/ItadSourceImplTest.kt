@@ -534,6 +534,7 @@ class ItadSourceImplTest {
         val details = impl.fetchGameDetails("uuid-1")
 
         assertEquals("Halo", details.info.title)
+        assertEquals(1240, details.info.steamAppID) // from info `appid`, so the game page can join IGDB by Steam id
         assertEquals(4.99, details.cheapestPriceEver.priceValue)
         assertEquals(1, details.deals.size)
         assertEquals(35, details.deals.first().storeID)
