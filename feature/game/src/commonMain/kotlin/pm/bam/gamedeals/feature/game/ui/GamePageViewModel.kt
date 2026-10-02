@@ -211,7 +211,7 @@ internal class GamePageViewModel(
                 bundles = bundles,
                 igdb = igdbResolution.state,
                 websites = websites,
-                resolvedByTitle = igdbResolution.resolvedByTitle,
+                isUncertainMatch = igdbResolution.isUncertainMatch,
             )
         )
     }.catch { emit(GamePageData.Error) }
@@ -240,7 +240,7 @@ internal class GamePageViewModel(
         SectionState.Error
     }
 
-    private data class IgdbResolution(val state: SectionState<IgdbGame?>, val resolvedByTitle: Boolean)
+    private data class IgdbResolution(val state: SectionState<IgdbGame?>, val isUncertainMatch: Boolean)
 
     /**
      * Resolves (and HowLongToBeat-enriches) the IGDB side for the current navigation args, capturing the
@@ -259,30 +259,30 @@ internal class GamePageViewModel(
                 val lookupTitle = titleArg ?: gameDetails?.info?.title
                 val bySteam = steamAppId?.let { igdbRepository.fetchGameDetailsBySteamId(it) }
                 if (bySteam != null) bySteam to false
-                else lookupTitle?.let { t -> igdbRepository.fetchGameDetailsByTitle(t) }?.let { it to true } ?: (null to false)
+                else lookupTitle?.let { t -> igdbRepository.fetchGameDetailsByTitle(t)?.let { it to !isSameTitle(t, it.name) } } ?: (null to false)
             } else when {
                 igdbGameIdArg != null -> igdbRepository.fetchGameDetailsByIgdbId(igdbGameIdArg) to false
                 steamAppIdArg != null -> {
                     val bySteam = igdbRepository.fetchGameDetailsBySteamId(steamAppIdArg)
                     if (bySteam != null) bySteam to false
-                    else titleArg?.let { t -> igdbRepository.fetchGameDetailsByTitle(t) }?.let { it to true } ?: (null to false)
+                    else titleArg?.let { t -> igdbRepository.fetchGameDetailsByTitle(t)?.let { it to !isSameTitle(t, it.name) } } ?: (null to false)
                 }
-                titleArg != null -> igdbRepository.fetchGameDetailsByTitle(titleArg)?.let { it to true } ?: (null to false)
+                titleArg != null -> igdbRepository.fetchGameDetailsByTitle(titleArg)?.let { it to !isSameTitle(titleArg, it.name) } ?: (null to false)
                 else -> null to false
             }
         }
     }
 
-    /** Runs an IGDB [resolve] (returning `game to resolvedByTitle`), merges HowLongToBeat, and captures Error-on-throw. */
+    /** Runs an IGDB [resolve] (returning `game to isUncertainMatch`), merges HowLongToBeat, and captures Error-on-throw. */
     private suspend fun resolveIgdb(resolve: suspend () -> Pair<IgdbGame?, Boolean>): IgdbResolution = try {
-        val (game, byTitle) = resolve()
+        val (game, uncertain) = resolve()
         // HowLongToBeat is a separate IGDB endpoint; merge it onto the game (best-effort).
         val enriched = game?.let { g -> g.copy(timeToBeat = fetchOrNull { igdbRepository.fetchTimeToBeat(g.id) }) }
-        IgdbResolution(SectionState.Loaded(enriched), resolvedByTitle = byTitle && enriched != null)
+        IgdbResolution(SectionState.Loaded(enriched), isUncertainMatch = uncertain && enriched != null)
     } catch (ce: CancellationException) {
         throw ce
     } catch (_: Throwable) {
-        IgdbResolution(SectionState.Error, resolvedByTitle = false)
+        IgdbResolution(SectionState.Error, isUncertainMatch = false)
     }
 
     /** Re-fetch only the deal side (Prices + History's cheapest-ever) after a failure. */
@@ -331,7 +331,7 @@ internal class GamePageViewModel(
             val igdbGame = (resolution.state as? SectionState.Loaded)?.value
             val websites = igdbGame?.websites?.map { it.toUi() }?.toImmutableList() ?: persistentListOf()
             val after = uiState.value as? GamePageData.Data ?: return@launch
-            uiState.value = after.copy(igdb = resolution.state, websites = websites, resolvedByTitle = resolution.resolvedByTitle)
+            uiState.value = after.copy(igdb = resolution.state, websites = websites, isUncertainMatch = resolution.isUncertainMatch)
         }
     }
 
@@ -411,7 +411,7 @@ internal class GamePageViewModel(
 
     fun onWarningTap() {
         val current = uiState.value as? GamePageData.Data ?: return
-        if (!current.resolvedByTitle) return
+        if (!current.isUncertainMatch) return
         val title = current.title.takeIf { it.isNotBlank() } ?: return
 
         uiState.value = current.copy(showPicker = true)
@@ -540,7 +540,7 @@ internal class GamePageViewModel(
             /** IGDB metadata side. `Loaded(null)` when no IGDB record matched (deals-only page); [SectionState.Error] on failure. */
             val igdb: SectionState<IgdbGame?> = SectionState.Loaded(null),
             val websites: ImmutableList<WebsiteUiModel> = persistentListOf(),
-            val resolvedByTitle: Boolean = false,
+            val isUncertainMatch: Boolean = false,
             val candidatesState: CandidatesState = CandidatesState.Idle,
             val showPicker: Boolean = false,
             val regionalPricesState: RegionalPricesState = RegionalPricesState.Idle,
@@ -563,4 +563,10 @@ internal class GamePageViewModel(
             }
         }
     }
+}
+
+// A title lookup counts as certain when the names match once case, punctuation and ™/®/© are ignored.
+internal fun isSameTitle(requested: String, matched: String): Boolean {
+    fun normalize(title: String) = title.lowercase().filter { it.isLetterOrDigit() }
+    return normalize(requested).isNotEmpty() && normalize(requested) == normalize(matched)
 }

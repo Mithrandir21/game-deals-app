@@ -139,7 +139,7 @@ internal class ItadSourceImpl(
         val info = fetchGameInfo(id)
         val prices = fetchGamePrices(listOf(id), country = regionRepository.getSelectedCountryCode()).firstOrNull()
             ?: ItadGamePrices(gameId = id, historyLowAll = null, deals = persistentListOf())
-        return prices.toGameDetails(title = info.title, artwork = info.artwork)
+        return prices.toGameDetails(title = info.title, artwork = info.artwork, steamAppId = info.steamAppId)
     }
 
     override suspend fun fetchGame(gameId: String): Game = fetchGameInfo(gameId).toGame()
