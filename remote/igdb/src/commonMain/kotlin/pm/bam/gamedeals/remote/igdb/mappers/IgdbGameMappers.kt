@@ -4,6 +4,7 @@ import kotlin.time.Instant
 import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.IGDB_EROTIC_THEME_ID
 import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.remote.igdb.models.RemoteIgdbAgeRating
@@ -76,12 +77,11 @@ internal fun RemoteIgdbGame.toReleaseOrNull(): Release? {
         title = name,
         date = firstReleaseDate?.toInt() ?: 0,
         image = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
-        isMature = themes.any { it.id == EROTIC_THEME_ID },
+        isMature = themes.any { it.id == IGDB_EROTIC_THEME_ID },
     )
 }
 
 private const val STEAM_EXTERNAL_GAME_SOURCE_ID = 1L
-private const val EROTIC_THEME_ID = 42L
 
 private fun RemoteIgdbInvolvedCompany.toRoles(): List<IgdbGame.IgdbCompanyRole> {
     val companyName = company?.name ?: return emptyList()
