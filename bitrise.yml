@@ -169,7 +169,7 @@ workflows:
             if [[ -n "${SENTRY_PROJECT_IOS:-}" ]]; then
               envman add --key SENTRY_PROJECT --value "$SENTRY_PROJECT_IOS"
             fi
-    - xcode-archive@5:
+    - xcode-archive@6:
         title: Archive + export App Store IPA
         inputs:
         - project_path: "$BITRISE_SOURCE_DIR/iosApp/iosApp.xcodeproj"
@@ -181,12 +181,15 @@ workflows:
             COMPILER_INDEX_STORE_ENABLE = NO
             MARKETING_VERSION = $VERSION_NAME
             CURRENT_PROJECT_VERSION = $VERSION_CODE
-    - deploy-to-itunesconnect-application-loader@1:
+    - deploy-to-itunesconnect-application-loader@2:
         title: Upload to App Store Connect (TestFlight)
         inputs:
         - connection: api_key
         - ipa_path: "$BITRISE_IPA_PATH"
         - platform: ios
+        # App Store Connect Apple ID of the app. v2 uses `altool --upload-package` with it, which
+        # avoids Xcode 26 builds that upload fine but never appear in App Store Connect.
+        - app_id: '6818586859'
     - deploy-to-bitrise-io@2: {}
     meta:
       bitrise.io:
