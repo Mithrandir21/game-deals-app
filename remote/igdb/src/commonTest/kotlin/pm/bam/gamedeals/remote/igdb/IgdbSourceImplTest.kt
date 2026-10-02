@@ -216,6 +216,14 @@ class IgdbSourceImplTest {
     }
 
     @Test
+    fun exact_name_lookup_prefers_the_most_rated_of_same_named_games() {
+        // IGDB has four games named exactly "God of War"; unsorted, limit 1 returned a 2009 port instead of the 2018 game.
+        val query = buildExactNameLookupDetailsQuery("God of War")
+
+        assertTrue("""where name = "God of War"; sort total_rating_count desc; limit 1;""" in query, query)
+    }
+
+    @Test
     fun steam_app_id_prefers_the_steam_entry_named_like_the_game() = runTest {
         val impl = rig(mutableListOf()) { _ ->
             respond(

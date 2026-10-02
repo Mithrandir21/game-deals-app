@@ -363,6 +363,7 @@ class IgdbGamesApi(
         // `game_type`, but its id values are not the same and aren't documented as stable. We
         // accept that the exact-name + search-fallback chain may occasionally resolve to a DLC
         // when the deal title literally matches one — the details screen still renders correctly.
+        // Several games can share a name exactly ("God of War" 2005/2009/2018); the most-rated one is the likeliest intent.
         internal fun buildExactNameLookupDetailsQuery(title: String): String {
             val escaped = escapeApicalypseString(title)
             return """
@@ -388,7 +389,7 @@ class IgdbGamesApi(
                     franchises.id, franchises.name, franchises.games.id, franchises.games.name, franchises.games.cover.image_id,
                     age_ratings.organization, age_ratings.rating_category,
                     game_modes.name;
-                where name = "$escaped"; limit 1;
+                where name = "$escaped"; sort total_rating_count desc; limit 1;
             """.trimIndent()
         }
 
