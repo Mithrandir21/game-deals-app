@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -62,13 +63,19 @@ fun PriceBlock(
                 text = salePrice,
                 style = salePriceStyle,
                 color = salePriceColor,
+                maxLines = 1,
+                softWrap = false,
             )
+            // At large text sizes the struck price yields its width and ellipsizes rather than wrapping a character per line.
             if (regularPrice != null && regularPrice != salePrice) {
                 Text(
                     text = regularPrice,
+                    modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.bodySmall,
                     color = regularPriceColor,
                     textDecoration = TextDecoration.LineThrough,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

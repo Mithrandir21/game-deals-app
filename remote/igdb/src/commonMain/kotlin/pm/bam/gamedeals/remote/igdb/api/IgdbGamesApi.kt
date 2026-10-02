@@ -440,7 +440,7 @@ class IgdbGamesApi(
         // cutoff keeps out not-yet-released (future-dated) games. Sorted newest-first.
         internal fun buildNewReleasesQuery(nowEpochSeconds: Long, limit: Int): String =
             """
-            fields name, cover.image_id, first_release_date;
+            fields name, cover.image_id, first_release_date, themes.id;
             where first_release_date != null & first_release_date <= $nowEpochSeconds & cover != null;
             sort first_release_date desc;
             limit $limit;
@@ -450,7 +450,7 @@ class IgdbGamesApi(
         // ranked by IGDB `hypes` desc. `hypes != null` drops the long tail of future stubs nobody follows.
         internal fun buildMostAnticipatedQuery(nowEpochSeconds: Long, limit: Int): String =
             """
-            fields name, cover.image_id, first_release_date;
+            fields name, cover.image_id, first_release_date, themes.id;
             where first_release_date != null & first_release_date > $nowEpochSeconds & cover != null & hypes != null;
             sort hypes desc;
             limit $limit;

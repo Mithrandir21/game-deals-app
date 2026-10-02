@@ -11,6 +11,7 @@
 		B100000000000000000000B2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* ContentView.swift */; };
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
 		B100000000000000000000B4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Preview Assets.xcassets */; };
+		B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* PrivacyInfo.xcprivacy */; };
 		B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = S100000000000000000000P1 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
@@ -20,6 +21,7 @@
 		A100000000000000000000A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A100000000000000000000A3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A100000000000000000000A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A100000000000000000000A6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A100000000000000000000A5 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -50,6 +52,7 @@
 				A100000000000000000000A1 /* iOSApp.swift */,
 				A100000000000000000000A2 /* ContentView.swift */,
 				A100000000000000000000A3 /* Assets.xcassets */,
+				A100000000000000000000A6 /* PrivacyInfo.xcprivacy */,
 				G100000000000000000000C4 /* Preview Content */,
 			);
 			path = iosApp;
@@ -108,6 +111,7 @@
 				TargetAttributes = {
 					T100000000000000000000D1 = {
 						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 36N7FDX928;
 					};
 				};
 			};
@@ -139,6 +143,7 @@
 			files = (
 				B100000000000000000000B4 /* Preview Assets.xcassets in Resources */,
 				B100000000000000000000B3 /* Assets.xcassets in Resources */,
+				B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -162,7 +167,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\nexport JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\"\n./gradlew :iosApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "cd \"$SRCROOT/..\"\n# CI provides JAVA_HOME; locally fall back to Android Studio's bundled JDK.\nexport JAVA_HOME=\"${JAVA_HOME:-/Applications/Android Studio.app/Contents/jbr/Contents/Home}\"\n./gradlew :iosApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 		P100000000000000000000E5 /* Upload dSYMs to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -323,8 +328,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36N7FDX928;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
@@ -346,7 +353,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -358,8 +365,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36N7FDX928;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
@@ -381,7 +390,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

@@ -29,4 +29,9 @@ data class Release(
     @SerialName("expires")
     @ColumnInfo(defaultValue = "0")
     val expires: Long = 0L,
+
+    /** IGDB tags the game with the Erotic theme; hidden unless the user opted into mature content. */
+    @SerialName("isMature")
+    @ColumnInfo(defaultValue = "0")
+    val isMature: Boolean = false,
 )
