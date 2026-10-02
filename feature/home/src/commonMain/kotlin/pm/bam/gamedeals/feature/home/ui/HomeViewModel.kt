@@ -57,6 +57,7 @@ import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedReposit
 import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -108,6 +109,7 @@ internal class HomeViewModel(
     private val igdbRepository: IgdbRepository,
     private val recommendationsRepository: RecommendationsRepository,
     private val recentlyViewedRepository: RecentlyViewedRepository,
+    private val settingsRepository: SettingsRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -173,11 +175,10 @@ internal class HomeViewModel(
     private var loadJob: Job? = null
 
     init {
-        // Initial load, then reload whenever the selected region changes. Home reads deals via the
+        // Initial load, then reload whenever the selected region or the mature opt-in changes. Home reads deals via the
         // un-cached getDeals passthrough, so the reload always fetches the new region's prices.
         viewModelScope.launch {
-            regionRepository.observeSelectedCountry()
-                .map { it.code }
+            combine(regionRepository.observeSelectedCountry().map { it.code }, settingsRepository.observeMatureOptIn()) { region, mature -> region to mature }
                 .distinctUntilChanged()
                 .collect { load() }
         }
@@ -187,14 +188,17 @@ internal class HomeViewModel(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             uiState.update { it.copy(status = HomeScreenStatus.LOADING) }
+            val matureOptIn = settingsRepository.getMatureOptIn()
             val data = coroutineScope {
                 val hotDeals = async { section { dealsRepository.getDeals(DealsQuery(sortField = DealsSortField.Hottest, sortDirection = DealsSortDirection.Descending, limit = LIMIT_HERO + LIMIT_TRENDING)) } }
                 val mostWaitlisted = async { section { statsRepository.getMostWaitlisted(LIMIT_STATS) } }
                 val mostCollected = async { section { statsRepository.getMostCollected(LIMIT_STATS) } }
-                val releases = async { section { loadReleases() } }
+                val releases = async { section { loadReleases(matureOptIn) } }
                 // distinctBy title: the feed can repeat a title (editions/platforms) and the UI keys lazy
                 // items on title — a duplicate key would crash the Home tab. distinct before take to fill the limit.
-                val mostAnticipated = async { section { igdbRepository.fetchMostAnticipated().distinctBy { it.title }.take(LIMIT_ANTICIPATED) } }
+                val mostAnticipated = async {
+                    section { igdbRepository.fetchMostAnticipated().filter { matureOptIn || !it.isMature }.distinctBy { it.title }.take(LIMIT_ANTICIPATED) }
+                }
                 val bundles = async { section { bundlesRepository.getBundles().take(LIMIT_BUNDLES) } }
                 val recommendations = async { section { recommendationsRepository.getRecommendations(LIMIT_RECOMMENDATIONS) } }
 
@@ -286,11 +290,11 @@ internal class HomeViewModel(
         events.tryEmit(HomeUiEvent.ShareDeal(text))
     }
 
-    private suspend fun loadReleases(): List<Release> {
+    private suspend fun loadReleases(matureOptIn: Boolean): List<Release> {
         releasesRepository.refreshReleases()
         // distinctBy title: releases can repeat a title (same game across days/editions) and the UI keys
         // lazy items on title — a duplicate key would crash the Home tab. distinct before take to fill the limit.
-        return releasesRepository.observeReleases().first().distinctBy { it.title }.take(LIMIT_RELEASES)
+        return releasesRepository.observeReleases().first().filter { matureOptIn || !it.isMature }.distinctBy { it.title }.take(LIMIT_RELEASES)
     }
 
     /** One batched best-price lookup over the ranked games' ids; best-effort (empty on failure). */

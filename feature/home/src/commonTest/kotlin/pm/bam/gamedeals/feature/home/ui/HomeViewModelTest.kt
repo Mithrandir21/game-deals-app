@@ -25,6 +25,7 @@ import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.RankedGame
+import pm.bam.gamedeals.domain.models.Release
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
@@ -37,6 +38,7 @@ import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedReposit
 import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -100,6 +102,10 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val recentlyViewedRepository: RecentlyViewedRepository = mock(MockMode.autoUnit) {
         every { observeRecentlyViewed() } returns flowOf(persistentListOf())
     }
+    private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit) {
+        every { observeMatureOptIn() } returns flowOf(false)
+        everySuspend { getMatureOptIn() } returns false
+    }
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -121,6 +127,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         igdbRepository = igdbRepository,
         recommendationsRepository = recommendationsRepository,
         recentlyViewedRepository = recentlyViewedRepository,
+        settingsRepository = settingsRepository,
         logger = logger,
     )
 
@@ -258,6 +265,34 @@ class HomeViewModelTest : MainDispatcherTest() {
         assertEquals(1, events.size)
         assertEquals(HomeViewModel.HomeUiEvent.ShareDeal("Built share text"), events.first())
     }
+
+    @Test
+    fun mature_releases_hidden_unless_opted_in() = runTest {
+        every { releasesRepository.observeReleases() } returns flowOf(listOf(release("Safe"), release("Adult", isMature = true)))
+        everySuspend { igdbRepository.fetchMostAnticipated() } returns listOf(release("Soon"), release("Adult soon", isMature = true))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Safe"), vm.uiState.value.releases.map { it.title })
+        assertEquals(listOf("Soon"), vm.uiState.value.mostAnticipated.map { it.title })
+    }
+
+    @Test
+    fun mature_releases_shown_when_opted_in() = runTest {
+        every { settingsRepository.observeMatureOptIn() } returns flowOf(true)
+        everySuspend { settingsRepository.getMatureOptIn() } returns true
+        every { releasesRepository.observeReleases() } returns flowOf(listOf(release("Safe"), release("Adult", isMature = true)))
+        everySuspend { igdbRepository.fetchMostAnticipated() } returns listOf(release("Soon"), release("Adult soon", isMature = true))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("Safe", "Adult"), vm.uiState.value.releases.map { it.title })
+        assertEquals(listOf("Soon", "Adult soon"), vm.uiState.value.mostAnticipated.map { it.title })
+    }
+
+    private fun release(title: String, isMature: Boolean = false) = Release(title = title, date = 0, image = "", isMature = isMature)
 
     private fun peekData(gameId: String) = GamePeekSheetData.Data(
         gameId = gameId,

@@ -44,7 +44,7 @@ import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 // v1 is the clean pre-1.0 baseline — the prior v5–v21 history never shipped (see Migrations.kt).
 // From v1 forward, bumping this REQUIRES a real Migration(n, n+1) + a schema-diff test.
 // v2 (#211): adds the RecentlyViewedGame table (see MIGRATION_1_2).
-internal const val DOMAIN_DB_VERSION = 2
+internal const val DOMAIN_DB_VERSION = 3
 
 @Database(
     version = DOMAIN_DB_VERSION,
