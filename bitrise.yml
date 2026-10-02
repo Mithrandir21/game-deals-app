@@ -177,8 +177,13 @@ workflows:
         - configuration: Release
         - distribution_method: app-store
         - automatic_code_signing: api-key
+        # Sign the archive with the distribution identity. The project's automatic signing defaults to
+        # Apple Development, which makes Xcode want a development profile, and that needs a registered
+        # device. An App Store profile doesn't, so Xcode can create it from the API key.
         - xcconfig_content: |-
             COMPILER_INDEX_STORE_ENABLE = NO
+            CODE_SIGN_IDENTITY = Apple Distribution
+            CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
             MARKETING_VERSION = $VERSION_NAME
             CURRENT_PROJECT_VERSION = $VERSION_CODE
     - deploy-to-itunesconnect-application-loader@2:
