@@ -1,5 +1,5 @@
-A cleaner, more private update — plus a new way to find games.
+Smarter game pages and a tidier feed.
 
-• Discover by Tag: browse the catalogue by genre and theme from the Deals tab
-• We no longer collect usage analytics, so the analytics step and setting are gone
-• Privacy policy is now one tap away in Account
+• Game pages now find the right game far more reliably, and only show the "possible mismatch" warning when a match really is uncertain
+• The "Show adult titles" setting now also covers New Releases, Most Anticipated, Bundles on Home, and themes in Discover
+• Prices stay on one line at large text sizes
