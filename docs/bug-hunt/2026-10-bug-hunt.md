@@ -54,7 +54,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
   - **Where:** `Navigation.kt:30-57`, `MainViewController.kt:358-364,445-451`
   - **Fix:** Pop up to Home rather than the graph's start destination, or make Home the start destination once onboarding is done.
 
-- [ ] **H7. Release builds log full API responses to the console and to Sentry breadcrumbs.** Both platforms. Seen by A and B.
+- [x] **H7. Release builds log full API responses to the console and to Sentry breadcrumbs.** Both platforms. Seen by A and B.
   - **Problem:** `ApiResponse.log()` logs `"Success: ${this.data}"`, the whole response including private note text, the username, the waitlist and the collection. Every listener is enabled in release:
     - Android writes to logcat.
     - iOS writes to NSLog.

@@ -15,8 +15,9 @@ internal class SentryLoggingListener : LoggingInterface {
 
     override fun onLog(level: LogLevel, message: String, tag: String?, throwable: Throwable?) {
         when (level) {
+            // Developer chatter stays local: it would crowd the 100-slot trail and can carry payload detail.
             LogLevel.VERBOSE,
-            LogLevel.DEBUG,
+            LogLevel.DEBUG -> Unit
             LogLevel.INFO,
             LogLevel.WARN -> Sentry.addBreadcrumb(breadcrumb(level.toSentryLevel(), message, tag, throwable))
             // A connectivity failure isn't a defect — the app already degraded as designed and the user
