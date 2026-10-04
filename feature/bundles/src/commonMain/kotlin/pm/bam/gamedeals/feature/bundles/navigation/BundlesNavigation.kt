@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.bundles.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -13,7 +14,7 @@ fun NavGraphBuilder.bundlesScreen(
 ) {
     composable<Destination.Bundles> {
         BundlesScreen(
-            onBack = { navController.popBackStack() },
+            onBack = dropUnlessResumed { navController.popBackStack() },
             onBundleClick = goToBundle,
         )
     }
@@ -26,7 +27,7 @@ fun NavGraphBuilder.bundleDetailScreen(
 ) {
     composable<Destination.BundleDetail> {
         BundleDetailScreen(
-            onBack = { navController.popBackStack() },
+            onBack = dropUnlessResumed { navController.popBackStack() },
             goToWeb = goToWeb,
             onGameClick = goToGame,
         )

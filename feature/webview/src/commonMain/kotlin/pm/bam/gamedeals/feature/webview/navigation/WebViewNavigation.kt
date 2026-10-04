@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.webview.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
@@ -14,7 +15,7 @@ fun NavGraphBuilder.webViewScreen(
         WebView(
             url = args.url,
             gameTitle = args.gameTitle,
-            onBack = onBack
+            onBack = dropUnlessResumed(block = onBack),
         )
     }
 }

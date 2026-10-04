@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.store.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -13,7 +14,7 @@ fun NavGraphBuilder.storeScreen(
 ) {
     composable<Destination.Store> {
         StoreScreen(
-            onBack = { navController.popBackStack() },
+            onBack = dropUnlessResumed { navController.popBackStack() },
             goToWeb = goToWeb,
             goToGame = goToGame,
         )

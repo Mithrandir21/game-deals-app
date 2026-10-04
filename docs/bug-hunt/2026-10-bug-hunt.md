@@ -44,7 +44,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
   - **Where:** `AndroidAuthBrowserLauncher.kt:20-31`; UI at `AccountScreen.kt:325-331`, `SignInPromptHost.kt:97,112`, `OnboardingScreen.kt:611-635`
   - **Fix:** When the app returns to the foreground with no redirect (after a short grace period), complete the pending login as `Cancelled`.
 
-- [ ] **H5. Double-tapping a back arrow pops Home too and leaves a blank screen.** Both platforms, worse on iOS. Seen by N, A and B.
+- [x] **H5. Double-tapping a back arrow pops Home too and leaves a blank screen.** Both platforms, worse on iOS. Seen by N, A and B.
   - **Problem:** Every `onBack` is a bare `navController.popBackStack()`. During the exit animation, the outgoing screen's arrow is still tappable, so a second tap pops the start destination. The NavHost is then empty: no content and no bars. On iOS there is no system back, so the user must force-quit. Fast double taps on rows also push duplicate pages.
   - **Where:** every navigation `onBack`, e.g. `GamePageNavigation.kt:40`, `AccountNavigation.kt:51-86`, `BundlesNavigation.kt:16,29`, `DiscoverNavigation.kt:21,38`, `StoreNavigation.kt:16`, `DebugNavigation.kt:15`, `MainViewController.kt:480`
   - **Fix:** Only pop when the current entry is RESUMED and something is behind it, or use `dropUnlessResumed`.
@@ -141,6 +141,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
 | L30 | Notifications say "1 new deals", and the iOS notification text is hardcoded English | N | `strings.xml:5`, `IosNotificationPresenter.kt` | Use plurals and resources |
 | L31 | The force-update gate can't fire in shipped builds, because the flags are NoOp | N | `LoggingModule.kt`, `LoggingIosModule.kt` | Wire a flag provider, or document that the gate is inert |
 | L32 | Each Home load does full remote waitlist and collection syncs, which can undo a toggle made at the same time | B | `RecommendationsRepository` | Read the Room id sets instead |
+| L35 | Fast double taps on a row, card or button push the same page twice; split out of H5, whose fix guards only the back arrows | N A | `Navigation.kt:64-68`, `MainViewController.kt:402-477` | Use `launchSingleTop`, or drop pushes unless the current entry is RESUMED |
 
 ### Build and docs
 
