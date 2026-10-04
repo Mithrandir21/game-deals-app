@@ -12,6 +12,7 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -60,6 +61,41 @@ class ItadTokenProviderTest {
     }
 
     @Test
+    fun refresh_rejected_as_unauthorized_clears_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.Unauthorized), clock, logger).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+    }
+
+    @Test
+    fun transient_refresh_failures_keep_the_session() = runTest {
+        for (status in listOf(HttpStatusCode.InternalServerError, HttpStatusCode.ServiceUnavailable, HttpStatusCode.TooManyRequests)) {
+            val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+            val result = ItadTokenProvider(store, oauthAnswering(status), clock, logger).refresh()
+
+            assertNull(result, "status $status")
+            assertFalse(store.cleared, "status $status")
+            assertEquals("old-refresh", store.getRefreshToken(), "status $status")
+        }
+    }
+
+    @Test
+    fun network_failure_during_refresh_keeps_the_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+        val oauth = ItadOAuthClient(mockHttpClient(json) { _ -> throw IllegalStateException("connection reset") }, credentials)
+
+        val result = ItadTokenProvider(store, oauth, clock, logger).refresh()
+
+        assertNull(result)
+        assertFalse(store.cleared)
+        assertEquals("bob", store.getUsername())
+    }
+
+    @Test
     fun refresh_failure_clears_session() = runTest {
         val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
         // expectSuccess=true ⇒ a 400 throws inside refreshToken; the provider must catch + clear.
@@ -73,4 +109,7 @@ class ItadTokenProviderTest {
         assertNull(result)
         assertTrue(store.cleared)
     }
+
+    private fun oauthAnswering(status: HttpStatusCode) =
+        ItadOAuthClient(mockHttpClient(json) { _ -> respond("nope", status) }, credentials)
 }

@@ -31,7 +31,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
   - **Where:** `ItadAuthHttpClient.kt:76-81`, `AccountRepository.kt:64-67`, `ItadLoginSourceImpl.kt:56-71`
   - **Fix:** Invalidate the bearer cache whenever the stored tokens change (login, logout, refresh), or read the store on every request.
 
-- [ ] **H3. Any failed token refresh signs the user out and wipes the local library.** Both platforms. Seen by A and B.
+- [x] **H3. Any failed token refresh signs the user out and wipes the local library.** Both platforms. Seen by A and B.
   - **Problem:** `ItadTokenProvider.refresh()` clears the session on *any* throwable: a timeout, a dropped connection, or an ITAD 5xx or 429 on `/oauth/token`. The library lifecycle then wipes the local waitlist, collection and ignored lists. A coroutine cancelled mid-refresh can also lose a rotated refresh token.
   - **Where:** `ItadTokenProvider.kt:31-57`, `ItadAuthHttpClient.kt:76-81`
   - **Fix:** Clear the session only on a definitive OAuth rejection (400 or 401 from the token endpoint). For transport errors, 5xx and 429, return `null` without clearing, so the session survives for the next attempt. Set `nonCancellableRefresh = true`.
