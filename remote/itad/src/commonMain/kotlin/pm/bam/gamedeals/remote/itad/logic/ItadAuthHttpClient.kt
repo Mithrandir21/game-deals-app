@@ -75,6 +75,8 @@ internal fun itadAuthHttpClient(
         }
         install(Auth) {
             bearer {
+                // The token store is the only source of truth: a cached token would outlive logout and account switches.
+                cacheTokens = false
                 loadTokens { tokenProvider.currentBearerTokens() }
                 refreshTokens { tokenProvider.refresh() }
                 sendWithoutRequest { true }

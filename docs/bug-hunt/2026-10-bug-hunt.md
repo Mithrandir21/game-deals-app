@@ -22,7 +22,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
     - Callers: `HomeViewModel.kt:241,250`, `DealsViewModel.kt:403,412`, `GamePageViewModel.kt:338-368`, `BundleDetailViewModel.kt:106`, `DiscoverResultsViewModel.kt:171`, `StoreViewModel.kt:166`, `GamePeekDelegate.kt:73`
   - **Fix:** Add `RepoUpdateResult.FAILED`. Have the repositories catch non-cancellation throwables, log them and return `FAILED`. Show a "Couldn't update, try again" message on `FAILED`.
 
-- [ ] **H2. After sign-out and sign-in as another account, the app keeps using the first account's token.** Both platforms. Seen by A and B.
+- [x] **H2. After sign-out and sign-in as another account, the app keeps using the first account's token.** Both platforms. Seen by A and B.
   - **Problem:** Ktor's bearer plugin caches the token it loads (`cacheTokens = true` by default), and nothing ever calls `clearToken()`. After logout and login as account B in the same process:
     - `/user/info` is fetched with A's token, so A's username is stored.
     - The library sync pulls A's waitlist and collection.
