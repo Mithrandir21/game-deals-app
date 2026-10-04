@@ -167,29 +167,17 @@ internal class DiscoverResultsViewModel(
 
     /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
-        viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { waitlistRepository.toggleWaitlist(gameId) }
     }
 
     /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
     fun toggleCollection(gameId: String) {
-        viewModelScope.launch {
-            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { collectionRepository.toggleCollection(gameId) }
     }
 
     /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
-        viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { ignoredRepository.toggleIgnored(gameId) }
     }
 
     /** Open the game-centric peek sheet for a priced row (it carries the ITAD gameId + title + cover). */
@@ -226,9 +214,21 @@ internal class DiscoverResultsViewModel(
         enum class Status { LOADING, ERROR, EMPTY, DATA }
     }
 
+    /** Runs a remote-first library write, routing sign-in and failure outcomes to one-shot events. */
+    private fun launchLibraryWrite(write: suspend () -> RepoUpdateResult) {
+        viewModelScope.launch {
+            when (write()) {
+                RepoUpdateResult.NOT_LOGGED_IN -> events.tryEmit(DiscoverResultsUiEvent.SignInRequired)
+                RepoUpdateResult.FAILED -> events.tryEmit(DiscoverResultsUiEvent.ActionFailed)
+                RepoUpdateResult.UPDATED -> Unit
+            }
+        }
+    }
+
     sealed interface DiscoverResultsUiEvent {
         data object LoadMoreError : DiscoverResultsUiEvent
         data object SignInRequired : DiscoverResultsUiEvent
+        data object ActionFailed : DiscoverResultsUiEvent
         data class ShareDeal(val text: String) : DiscoverResultsUiEvent
     }
 }

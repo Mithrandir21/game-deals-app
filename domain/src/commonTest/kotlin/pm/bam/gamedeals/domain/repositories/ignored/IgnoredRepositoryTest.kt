@@ -13,6 +13,7 @@ import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAccountSource
 import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -29,6 +30,7 @@ class IgnoredRepositoryTest {
             FakeAuthTokenStore(access = null),
             dao,
             RecordingAnalytics(),
+            TestingLoggingListener(),
         )
         assertEquals(emptyList(), repo.getIgnored())
         assertEquals(persistentSetOf(), repo.observeIgnoredIds().first())
@@ -37,7 +39,7 @@ class IgnoredRepositoryTest {
     @Test
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeIgnoredDao(), RecordingAnalytics())
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = null), FakeIgnoredDao(), RecordingAnalytics(), TestingLoggingListener())
         assertEquals(RepoUpdateResult.NOT_LOGGED_IN, repo.toggleIgnored("a"))
         assertTrue(source.added.isEmpty())
         assertTrue(source.removed.isEmpty())
@@ -50,6 +52,7 @@ class IgnoredRepositoryTest {
             FakeAuthTokenStore(access = "token"),
             FakeIgnoredDao(),
             RecordingAnalytics(),
+            TestingLoggingListener(),
         )
         assertEquals(2, repo.getIgnored().size)
         assertEquals(setOf("a", "b"), repo.observeIgnoredIds().first().toSet())
@@ -63,6 +66,7 @@ class IgnoredRepositoryTest {
             FakeAuthTokenStore(access = "token"),
             FakeIgnoredDao(initial = listOf("a", "b")),
             RecordingAnalytics(),
+            TestingLoggingListener(),
         )
         assertEquals(setOf("a", "b"), repo.observeIgnoredIds().first().toSet())
     }
@@ -71,7 +75,7 @@ class IgnoredRepositoryTest {
     fun logged_in_toggle_adds_when_absent() = runTest {
         val source = FakeAccountSource()
         val analytics = RecordingAnalytics()
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics)
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics, TestingLoggingListener())
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))
 
@@ -81,10 +85,21 @@ class IgnoredRepositoryTest {
     }
 
     @Test
+    fun logged_in_toggle_failure_returns_failed_and_leaves_the_cache_unchanged() = runTest {
+        val analytics = RecordingAnalytics()
+        val repo = IgnoredRepositoryImpl(FakeAccountSource(failWrites = true), FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics, TestingLoggingListener())
+
+        assertEquals(RepoUpdateResult.FAILED, repo.toggleIgnored("a"))
+
+        assertFalse(repo.observeIsIgnored("a").first())
+        assertTrue(analytics.events.isEmpty())
+    }
+
+    @Test
     fun logged_in_toggle_removes_when_present() = runTest {
         val source = FakeAccountSource(ignored = listOf(IgnoredEntry("a", "A")))
         val analytics = RecordingAnalytics()
-        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics)
+        val repo = IgnoredRepositoryImpl(source, FakeAuthTokenStore(access = "token"), FakeIgnoredDao(), analytics, TestingLoggingListener())
         repo.getIgnored() // seed cache with "a"
 
         assertEquals(RepoUpdateResult.UPDATED, repo.toggleIgnored("a"))

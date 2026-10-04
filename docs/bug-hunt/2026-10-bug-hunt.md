@@ -15,7 +15,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
 
 ## High
 
-- [ ] **H1. A failed waitlist, collection, ignore or note action crashes the app.** Both platforms. Seen by B.
+- [x] **H1. A failed waitlist, collection, ignore or note action crashes the app.** Both platforms. Seen by B.
   - **Problem:** A signed-in user taps one of these while offline, on a flaky connection, or during an ITAD 5xx or 429. The repositories are remote-first and rethrow (`getOrThrow()`), and `RepoUpdateResult` has no failure value. The feature view models launch the call bare on `viewModelScope`, and there is no `CoroutineExceptionHandler`, so the exception reaches the platform's uncaught handler. The Account-hub view models already wrap the same calls in `runCatchingLogged`.
   - **Where:**
     - Repositories: `WaitlistRepository.kt:160-175`, `CollectionRepository.kt:95-107`, `IgnoredRepository.kt:70-82`, `NotesRepository.kt:62-76`

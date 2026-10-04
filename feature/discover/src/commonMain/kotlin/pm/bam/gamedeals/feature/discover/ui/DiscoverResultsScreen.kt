@@ -50,6 +50,8 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.feature.discover.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_navigation_back
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_empty
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_error
@@ -74,6 +76,7 @@ internal fun DiscoverResultsScreen(
     viewModel: DiscoverResultsViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
@@ -87,6 +90,7 @@ internal fun DiscoverResultsScreen(
         when (event) {
             DiscoverResultsViewModel.DiscoverResultsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> SignInPromptController.request()
+            DiscoverResultsViewModel.DiscoverResultsUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
             is DiscoverResultsViewModel.DiscoverResultsUiEvent.ShareDeal -> platformActions.share(event.text)
         }
     }
@@ -107,6 +111,7 @@ internal fun DiscoverResultsScreen(
 
         val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
         GamePeekSheet(
+            snackbarHostState = snackbarHostState,
             data = gamePeek,
             isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
             isCollected = peekGameId?.let { it in collectionIds } == true,

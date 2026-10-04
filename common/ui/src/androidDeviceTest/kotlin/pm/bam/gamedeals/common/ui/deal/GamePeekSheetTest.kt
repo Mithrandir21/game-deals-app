@@ -1,6 +1,8 @@
 package pm.bam.gamedeals.common.ui.deal
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -36,6 +38,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.game_peek_more_actions
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_no_deals_label
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_other_stores_label
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_store_row_description
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 
 /**
  * Device UI test for the shared [GamePeekSheet] — the quick-peek surface opened from every deal/game
@@ -72,11 +75,12 @@ class GamePeekSheetTest {
         upcoming = false,
     )
 
-    private fun setContent(data: GamePeekSheetData) {
+    private fun setContent(data: GamePeekSheetData, snackbarHostState: SnackbarHostState? = null) {
         composeTestRule.setContent {
             labels = Labels.load()
             GameDealsTheme {
                 GamePeekSheet(
+                    snackbarHostState = snackbarHostState,
                     data = data,
                     isWaitlisted = false,
                     isCollected = false,
@@ -90,6 +94,7 @@ class GamePeekSheetTest {
                     onViewGamePage = onViewGamePage,
                     onRetry = onRetry,
                 )
+                snackbarHostState?.let { state -> LaunchedEffect(state) { state.showSnackbar(labels.actionFailed) } }
             }
         }
     }
@@ -170,6 +175,14 @@ class GamePeekSheetTest {
     }
 
     @Test
+    fun actionFailedMessageShowsInsideTheSheet() {
+        val snackbarHostState = SnackbarHostState()
+        setContent(dataState, snackbarHostState)
+
+        composeTestRule.onNodeWithText(labels.actionFailed).assertIsDisplayed()
+    }
+
+    @Test
     fun upcomingStateShowsNoDealsAndHidesGoToDeal() {
         setContent(
             GamePeekSheetData.Data(
@@ -218,6 +231,7 @@ class GamePeekSheetTest {
         val loading: String,
         val errorMessage: String,
         val retry: String,
+        val actionFailed: String,
     ) {
         companion object {
             @Composable
@@ -236,6 +250,7 @@ class GamePeekSheetTest {
                 loading = stringResource(Res.string.deal_details_loading_indicator),
                 errorMessage = stringResource(Res.string.deal_details_data_loading_error_msg),
                 retry = stringResource(Res.string.deal_details_data_loading_error_retry),
+                actionFailed = stringResource(Res.string.library_action_failed),
             )
         }
     }

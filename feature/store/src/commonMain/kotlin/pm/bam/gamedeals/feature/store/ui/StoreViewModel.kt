@@ -153,29 +153,17 @@ internal class StoreViewModel(
 
     /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
-        viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(StoreUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { ignoredRepository.toggleIgnored(gameId) }
     }
 
     /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
-        viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(StoreUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { waitlistRepository.toggleWaitlist(gameId) }
     }
 
     /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
     fun toggleCollection(gameId: String) {
-        viewModelScope.launch {
-            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(StoreUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { collectionRepository.toggleCollection(gameId) }
     }
 
     fun dismissPeek() {
@@ -198,9 +186,21 @@ internal class StoreViewModel(
         events.tryEmit(StoreUiEvent.ShareDeal(text))
     }
 
+    /** Runs a remote-first library write, routing sign-in and failure outcomes to one-shot events. */
+    private fun launchLibraryWrite(write: suspend () -> RepoUpdateResult) {
+        viewModelScope.launch {
+            when (write()) {
+                RepoUpdateResult.NOT_LOGGED_IN -> events.tryEmit(StoreUiEvent.SignInRequired)
+                RepoUpdateResult.FAILED -> events.tryEmit(StoreUiEvent.ActionFailed)
+                RepoUpdateResult.UPDATED -> Unit
+            }
+        }
+    }
+
     internal sealed interface StoreUiEvent {
         data class ShareDeal(val text: String) : StoreUiEvent
         data object SignInRequired : StoreUiEvent
+        data object ActionFailed : StoreUiEvent
     }
 
     sealed class StoreScreenData {

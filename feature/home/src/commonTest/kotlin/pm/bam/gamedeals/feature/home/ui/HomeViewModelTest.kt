@@ -253,6 +253,20 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun toggleWaitlist_failure_emits_ActionFailed() = runTest {
+        everySuspend { waitlistRepository.toggleWaitlist("42") } returns RepoUpdateResult.FAILED
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        val events = vm.events.observeEmissions(this.backgroundScope, testDispatcher)
+
+        vm.toggleWaitlist("42")
+        advanceUntilIdle()
+
+        assertEquals(listOf<HomeViewModel.HomeUiEvent>(HomeViewModel.HomeUiEvent.ActionFailed), events)
+    }
+
+    @Test
     fun onShareClicked_emits_ShareDeal_event() = runTest {
         every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
 

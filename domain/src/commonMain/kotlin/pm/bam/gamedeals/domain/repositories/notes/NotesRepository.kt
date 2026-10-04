@@ -18,8 +18,10 @@ import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.logging.runCatchingLogged
 
 /**
  * The user's per-game ITAD notes (epic #272, P4 #282/#283). No Room cache (schema: none) — the whole
@@ -43,6 +45,7 @@ internal class NotesRepositoryImpl(
     private val authTokenStore: AuthTokenStore,
     private val dealsSource: DealsSource,
     private val analytics: Analytics,
+    private val logger: Logger,
 ) : NotesRepository {
 
     // gameId -> note text for the signed-in user. null = not yet loaded this session.
@@ -61,18 +64,22 @@ internal class NotesRepositoryImpl(
 
     override suspend fun setNote(gameId: String, note: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
-        accountSource.setNote(gameId, note)
-        notes.update { (it ?: emptyMap()) + (gameId to note) }
-        analytics.capture(AnalyticsEvents.NOTE_SAVED, mapOf("game_id" to gameId))
-        return RepoUpdateResult.UPDATED
+        return runCatchingLogged(logger) {
+            accountSource.setNote(gameId, note)
+            notes.update { (it ?: emptyMap()) + (gameId to note) }
+            analytics.capture(AnalyticsEvents.NOTE_SAVED, mapOf("game_id" to gameId))
+            RepoUpdateResult.UPDATED
+        }.getOrDefault(RepoUpdateResult.FAILED)
     }
 
     override suspend fun deleteNote(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
-        accountSource.removeNote(gameId)
-        notes.update { (it ?: emptyMap()) - gameId }
-        analytics.capture(AnalyticsEvents.NOTE_DELETED, mapOf("game_id" to gameId))
-        return RepoUpdateResult.UPDATED
+        return runCatchingLogged(logger) {
+            accountSource.removeNote(gameId)
+            notes.update { (it ?: emptyMap()) - gameId }
+            analytics.capture(AnalyticsEvents.NOTE_DELETED, mapOf("game_id" to gameId))
+            RepoUpdateResult.UPDATED
+        }.getOrDefault(RepoUpdateResult.FAILED)
     }
 
     /**

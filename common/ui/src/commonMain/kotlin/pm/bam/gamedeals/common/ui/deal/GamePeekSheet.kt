@@ -35,6 +35,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -108,6 +110,8 @@ fun GamePeekSheet(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewGamePage: (data: GamePeekSheetData.Data) -> Unit,
     onRetry: () -> Unit,
+    // The sheet is a separate window that covers the screen's own snackbar, so action feedback is shown in here too.
+    snackbarHostState: SnackbarHostState? = null,
 ) {
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     if (data != null) {
@@ -116,7 +120,10 @@ fun GamePeekSheet(
             sheetState = modalBottomSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
-            GamePeekContent(data, isWaitlisted, isCollected, isIgnored, onShare, onToggleWaitlist, onToggleCollection, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
+            Box {
+                GamePeekContent(data, isWaitlisted, isCollected, isIgnored, onShare, onToggleWaitlist, onToggleCollection, onToggleIgnore, goToWeb, onViewGamePage, onRetry)
+                snackbarHostState?.let { SnackbarHost(hostState = it, modifier = Modifier.align(Alignment.BottomCenter)) }
+            }
         }
     }
 }

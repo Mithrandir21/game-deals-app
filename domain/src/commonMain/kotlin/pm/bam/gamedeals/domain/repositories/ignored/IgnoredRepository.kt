@@ -13,8 +13,10 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.IgnoredEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.logging.runCatchingLogged
 
 /**
  * The user's ITAD ignore list (epic #272, P3 #279). A 1:1 mirror of
@@ -35,7 +37,8 @@ interface IgnoredRepository {
 
     /**
      * Adds/removes [gameId] on the user's ITAD ignore list, returning [RepoUpdateResult]. When logged
-     * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route to sign in.
+     * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route to sign in. A failed
+     * remote write returns [RepoUpdateResult.FAILED] rather than throwing.
      */
     suspend fun toggleIgnored(gameId: String): RepoUpdateResult
 }
@@ -45,6 +48,7 @@ internal class IgnoredRepositoryImpl(
     private val authTokenStore: AuthTokenStore,
     private val ignoredDao: IgnoredDao,
     private val analytics: Analytics,
+    private val logger: Logger,
 ) : IgnoredRepository {
 
     override fun observeIgnoredIds(): Flow<ImmutableSet<String>> =
@@ -69,17 +73,19 @@ internal class IgnoredRepositoryImpl(
 
     override suspend fun toggleIgnored(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
-        // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
-        if (ignoredDao.contains(gameId)) {
-            accountSource.removeFromIgnored(gameId)
-            ignoredDao.delete(gameId)
-            analytics.capture(AnalyticsEvents.IGNORED_REMOVED, mapOf("game_id" to gameId))
-        } else {
-            accountSource.addToIgnored(gameId)
-            ignoredDao.add(IgnoredGameIdEntry(gameId))
-            analytics.capture(AnalyticsEvents.IGNORED_ADDED, mapOf("game_id" to gameId))
-        }
-        return RepoUpdateResult.UPDATED
+        return runCatchingLogged(logger) {
+            // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
+            if (ignoredDao.contains(gameId)) {
+                accountSource.removeFromIgnored(gameId)
+                ignoredDao.delete(gameId)
+                analytics.capture(AnalyticsEvents.IGNORED_REMOVED, mapOf("game_id" to gameId))
+            } else {
+                accountSource.addToIgnored(gameId)
+                ignoredDao.add(IgnoredGameIdEntry(gameId))
+                analytics.capture(AnalyticsEvents.IGNORED_ADDED, mapOf("game_id" to gameId))
+            }
+            RepoUpdateResult.UPDATED
+        }.getOrDefault(RepoUpdateResult.FAILED)
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

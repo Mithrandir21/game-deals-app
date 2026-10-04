@@ -59,6 +59,7 @@ import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
@@ -84,6 +85,7 @@ internal fun StoreScreen(
     viewModel: StoreViewModel = koinViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deals: ImmutableList<Deal> by viewModel.deals.collectAsStateWithLifecycle()
     val favouriteIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
@@ -100,6 +102,7 @@ internal fun StoreScreen(
         when (event) {
             is StoreViewModel.StoreUiEvent.ShareDeal -> platformActions.share(event.text)
             StoreViewModel.StoreUiEvent.SignInRequired -> SignInPromptController.request()
+            StoreViewModel.StoreUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }
     }
 
@@ -207,6 +210,7 @@ private fun StoreDeals(
 
         val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
         GamePeekSheet(
+            snackbarHostState = snackbarHostState,
             data = gamePeek,
             isWaitlisted = peekGameId?.let { it in favouriteIds } == true,
             isCollected = peekGameId?.let { it in collectionIds } == true,

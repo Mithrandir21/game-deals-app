@@ -115,6 +115,8 @@ import pm.bam.gamedeals.domain.models.SavedSearch
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.deals.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_detail_pane_empty_label
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_discover_by_tag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_all_stores
@@ -208,6 +210,7 @@ internal fun DealsScreen(
     viewModel: DealsViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
     val data by viewModel.uiState.collectAsStateWithLifecycle()
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
@@ -240,6 +243,7 @@ internal fun DealsScreen(
             is DealsViewModel.DealsUiEvent.ShareDeal -> platformActions.share(event.text)
             DealsViewModel.DealsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DealsViewModel.DealsUiEvent.SignInRequired -> SignInPromptController.request()
+            DealsViewModel.DealsUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
             DealsViewModel.DealsUiEvent.SearchSaved -> snackbarHostState.showSnackbar(searchSavedConfirmation)
         }
     }
@@ -505,6 +509,7 @@ internal fun DealsContent(
 
                 val peekGameId = gamePeek?.gameId?.takeIf { it.isNotEmpty() }
                 GamePeekSheet(
+                    snackbarHostState = snackbarHostState,
                     data = gamePeek,
                     isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
                     isCollected = peekGameId?.let { it in collectionIds } == true,

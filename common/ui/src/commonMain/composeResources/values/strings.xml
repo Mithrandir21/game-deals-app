@@ -43,6 +43,9 @@
     <!-- Shown when a logged-out user taps a waitlist/collection action (epic #219, Phase 3/4 follow-up). -->
     <string name="deal_waitlist_sign_in_required">Sign in from the Account tab to save deals</string>
 
+    <!-- Shown when a waitlist/collection/ignore/note write fails (offline, server error); nothing was changed. -->
+    <string name="library_action_failed">Couldn't update. Check your connection and try again.</string>
+
     <string name="deal_details_game_image">%1$s Game image</string>
 
     <string name="deal_details_cheapest_ever_label">Cheapest Ever: </string>

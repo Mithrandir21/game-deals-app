@@ -306,6 +306,22 @@ class GamePageViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun failed_library_writes_emit_ActionFailed() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        everySuspend { waitlistRepository.toggleWaitlist("g1") } returns RepoUpdateResult.FAILED
+        everySuspend { notesRepository.setNote("g1", "text") } returns RepoUpdateResult.FAILED
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+
+        vm.toggleWaitlist()
+        vm.setNote("text")
+        advanceUntilIdle()
+
+        assertEquals(listOf(GamePageViewModel.GameUiEvent.ActionFailed, GamePageViewModel.GameUiEvent.ActionFailed), events)
+    }
+
+    @Test
     fun deal_fetch_failure_surfaces_error_on_deals_facet_but_page_still_renders() = runTest {
         // Deals throw, but a title resolves IGDB → the page is still Data with the deal side in Error.
         everySuspend { gamesRepository.getGameDetails("g1") } calls { throw Exception("deals down") }

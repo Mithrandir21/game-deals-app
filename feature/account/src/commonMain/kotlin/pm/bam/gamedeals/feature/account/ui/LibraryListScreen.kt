@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -85,6 +86,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sor
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_price_low_high
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_recently_added
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /**
@@ -183,10 +185,13 @@ private fun LibraryPeekHost(
     val collectionIds by peek.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by peek.ignoredIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
     SingleEventEffect(peek.events) { event ->
         when (event) {
             GamePeekEvent.SignInRequired -> SignInPromptController.request()
+            GamePeekEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
             is GamePeekEvent.ShareDeal -> platformActions.share(event.text)
         }
     }
@@ -195,6 +200,7 @@ private fun LibraryPeekHost(
         content()
         val peekGameId = peekData?.gameId?.takeIf { it.isNotEmpty() }
         GamePeekSheet(
+            snackbarHostState = snackbarHostState,
             data = peekData,
             isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
             isCollected = peekGameId?.let { it in collectionIds } == true,

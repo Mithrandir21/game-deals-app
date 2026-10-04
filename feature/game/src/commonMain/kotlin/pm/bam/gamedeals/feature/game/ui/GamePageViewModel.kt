@@ -338,49 +338,29 @@ internal class GamePageViewModel(
     fun toggleWaitlist() {
         if (uiState.value !is GamePageData.Data) return
         val id = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(id) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(GameUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { waitlistRepository.toggleWaitlist(id) }
     }
 
     fun toggleCollection() {
         if (uiState.value !is GamePageData.Data) return
         val id = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            if (collectionRepository.toggleCollection(id) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(GameUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { collectionRepository.toggleCollection(id) }
     }
 
     fun toggleIgnore() {
         if (uiState.value !is GamePageData.Data) return
         val id = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(id) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(GameUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { ignoredRepository.toggleIgnored(id) }
     }
 
     fun setNote(text: String) {
         val id = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            if (notesRepository.setNote(id, text) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(GameUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { notesRepository.setNote(id, text) }
     }
 
     fun deleteNote() {
         val id = gameIdFlow.value ?: return
-        viewModelScope.launch {
-            if (notesRepository.deleteNote(id) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(GameUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { notesRepository.deleteNote(id) }
     }
 
     /** Follow/unfollow a franchise/series (#7). */
@@ -498,9 +478,21 @@ internal class GamePageViewModel(
         return WebsiteUiModel(url = url, category = category, faviconUrl = ref.url, faviconCacheKey = ref.cacheKey)
     }
 
+    /** Runs a remote-first library write, routing sign-in and failure outcomes to one-shot events. */
+    private fun launchLibraryWrite(write: suspend () -> RepoUpdateResult) {
+        viewModelScope.launch {
+            when (write()) {
+                RepoUpdateResult.NOT_LOGGED_IN -> events.tryEmit(GameUiEvent.SignInRequired)
+                RepoUpdateResult.FAILED -> events.tryEmit(GameUiEvent.ActionFailed)
+                RepoUpdateResult.UPDATED -> Unit
+            }
+        }
+    }
+
     internal sealed interface GameUiEvent {
         data class ShareDeal(val text: String) : GameUiEvent
         data object SignInRequired : GameUiEvent
+        data object ActionFailed : GameUiEvent
     }
 
     sealed class CandidatesState {

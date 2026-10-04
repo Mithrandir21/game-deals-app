@@ -16,6 +16,7 @@ import pm.bam.gamedeals.domain.repositories.waitlist.FakeAuthTokenStore
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -73,6 +74,17 @@ class CollectionRepositoryTest {
     }
 
     @Test
+    fun logged_in_toggle_failure_returns_failed_and_leaves_the_cache_unchanged() = runTest {
+        val analytics = RecordingAnalytics()
+        val repo = repo(FakeAccountSource(failWrites = true), FakeAuthTokenStore(access = "token"), FakeCollectionDao(), analytics)
+
+        assertEquals(RepoUpdateResult.FAILED, repo.toggleCollection("a"))
+
+        assertTrue(!repo.observeIsCollected("a").first())
+        assertTrue(analytics.captured.isEmpty())
+    }
+
+    @Test
     fun logged_out_toggle_is_a_no_op() = runTest {
         val source = FakeAccountSource()
         val analytics = RecordingAnalytics()
@@ -118,7 +130,7 @@ class CollectionRepositoryTest {
         dao: CollectionDao,
         analytics: Analytics = RecordingAnalytics(),
         displayStore: CollectionDisplayStore = FakeCollectionDisplayStore(),
-    ) = CollectionRepositoryImpl(source, auth, dao, analytics, displayStore)
+    ) = CollectionRepositoryImpl(source, auth, dao, analytics, displayStore, TestingLoggingListener())
 }
 
 private class FakeCollectionDisplayStore : CollectionDisplayStore {

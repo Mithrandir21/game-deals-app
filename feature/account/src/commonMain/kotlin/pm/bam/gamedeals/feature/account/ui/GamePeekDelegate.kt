@@ -72,7 +72,11 @@ internal class GamePeekDelegate(
 
     private fun toggle(action: suspend () -> RepoUpdateResult) {
         scope.launch {
-            if (action() == RepoUpdateResult.NOT_LOGGED_IN) events.tryEmit(GamePeekEvent.SignInRequired)
+            when (action()) {
+                RepoUpdateResult.NOT_LOGGED_IN -> events.tryEmit(GamePeekEvent.SignInRequired)
+                RepoUpdateResult.FAILED -> events.tryEmit(GamePeekEvent.ActionFailed)
+                RepoUpdateResult.UPDATED -> Unit
+            }
         }
     }
 
@@ -91,5 +95,6 @@ internal class GamePeekDelegate(
 
 internal sealed interface GamePeekEvent {
     data object SignInRequired : GamePeekEvent
+    data object ActionFailed : GamePeekEvent
     data class ShareDeal(val text: String) : GamePeekEvent
 }
