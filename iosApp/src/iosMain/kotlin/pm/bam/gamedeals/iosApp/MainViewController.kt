@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -353,11 +352,11 @@ private fun AppNavHost(startDestination: Destination) {
         }
     }
 
-    // Top-level (bottom-nav tab) navigation: pop to start saving state, single-top, restore — mirrors
-    // the Android `NavigationActions.navigateTopLevel`.
+    // Top-level (bottom-nav tab) navigation: pop to Home saving state, single-top, restore — mirrors the Android
+    // `NavigationActions.navigateTopLevel`. Home, not the graph's start destination, which is Onboarding on first run.
     fun navigateTopLevel(destination: Destination) {
         navController.navigate(destination) {
-            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            popUpTo(Destination.Home) { saveState = true }
             launchSingleTop = true
             restoreState = true
         }

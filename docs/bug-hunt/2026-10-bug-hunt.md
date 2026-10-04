@@ -49,7 +49,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
   - **Where:** every navigation `onBack`, e.g. `GamePageNavigation.kt:40`, `AccountNavigation.kt:51-86`, `BundlesNavigation.kt:16,29`, `DiscoverNavigation.kt:21,38`, `StoreNavigation.kt:16`, `DebugNavigation.kt:15`, `MainViewController.kt:480`
   - **Fix:** Only pop when the current entry is RESUMED and something is behind it, or use `dropUnlessResumed`.
 
-- [ ] **H6. In the first session after install, the bottom tabs pile up instead of switching.** Both platforms. Seen by N and B.
+- [x] **H6. In the first session after install, the bottom tabs pile up instead of switching.** Both platforms. Seen by N and B.
   - **Problem:** On first run, the NavHost start destination is Onboarding, and finishing onboarding removes it from the stack. `navigateTopLevel` pops up to `graph.findStartDestination()`, which is still Onboarding. That target is no longer on the stack, so nothing is popped or saved. Each tab tap pushes a new copy, Back walks through every tab visited, and returning to a tab reloads it. This lasts until the app process restarts.
   - **Where:** `Navigation.kt:30-57`, `MainViewController.kt:358-364,445-451`
   - **Fix:** Pop up to Home rather than the graph's start destination, or make Home the start destination once onboarding is done.
