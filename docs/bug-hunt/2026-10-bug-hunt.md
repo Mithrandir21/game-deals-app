@@ -36,7 +36,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
   - **Where:** `ItadTokenProvider.kt:31-57`, `ItadAuthHttpClient.kt:76-81`
   - **Fix:** Clear the session only on a definitive OAuth rejection (400 or 401 from the token endpoint). For transport errors, 5xx and 429, return `null` without clearing, so the session survives for the next attempt. Set `nonCancellableRefresh = true`.
 
-- [ ] **H4. Backing out of the sign-in browser leaves the app stuck "signing in".** Android. Seen by N, A and B.
+- [x] **H4. Backing out of the sign-in browser leaves the app stuck "signing in".** Android. Seen by N, A and B.
   - **Problem:** The launcher awaits a `CompletableDeferred` that only the redirect activity completes. If the user abandons the browser, it never completes:
     - On the Account tab the spinner never stops.
     - The sign-in sheet keeps both buttons disabled.
