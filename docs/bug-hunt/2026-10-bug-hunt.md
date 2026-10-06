@@ -142,6 +142,7 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
 | L31 | The force-update gate can't fire in shipped builds, because the flags are NoOp | N | `LoggingModule.kt`, `LoggingIosModule.kt` | Wire a flag provider, or document that the gate is inert |
 | L32 | Each Home load does full remote waitlist and collection syncs, which can undo a toggle made at the same time | B | `RecommendationsRepository` | Read the Room id sets instead |
 | L35 | Fast double taps on a row, card or button push the same page twice; split out of H5, whose fix guards only the back arrows | N A | `Navigation.kt:64-68`, `MainViewController.kt:402-477` | Use `launchSingleTop`, or drop pushes unless the current entry is RESUMED |
+| L36 | "Show adult titles" never shows adult bundles: the bundles request doesn't ask for them, and ITAD leaves them out unless asked (found 2026-10-06) | follow-up | `ItadBundlesApi.kt`, `ItadSourceImpl.kt` | Send `mature=true` and keep filtering by the opt-in, as the screens already do |
 
 ### Build and docs
 
