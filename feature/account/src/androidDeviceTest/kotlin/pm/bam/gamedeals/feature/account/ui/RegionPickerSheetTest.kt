@@ -13,6 +13,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.collections.immutable.persistentListOf
@@ -96,6 +99,21 @@ class RegionPickerSheetTest {
         composeTestRule.onNode(hasText(REST_OF_WORLD.name) and isRadio).performClick()
 
         verify(exactly = 1) { onSelect(REST_OF_WORLD) }
+    }
+
+    @Test
+    fun scrollingTheListUpAndDownKeepsTheSheetOpen() {
+        setContent()
+
+        // The regions fit on most phones, so the list can't scroll; these drags used to pull the whole sheet
+        // down and close it on release.
+        val row = composeTestRule.onNode(hasText(CANADA.name) and isRadio)
+        row.performTouchInput { swipeUp(startY = centerY, endY = centerY - 400f, durationMillis = 600) }
+        row.performTouchInput { swipeDown(startY = centerY, endY = centerY + 400f, durationMillis = 600) }
+        composeTestRule.waitForIdle()
+
+        verify(exactly = 0) { onDismiss() }
+        composeTestRule.onNodeWithText(title).assertIsDisplayed()
     }
 
     private companion object {

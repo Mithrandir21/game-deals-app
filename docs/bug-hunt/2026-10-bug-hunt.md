@@ -177,6 +177,7 @@ M13 (max-price tiers) belongs to this group too.
 | C6 | The shop list and the Game page's "in bundles" call send no country. ITAD returns the same data for every country today | Low | `ItadSourceImpl.kt:86,174` | **Fixed.** Pass the country |
 | C7 | Large amounts have no thousands separator ("81199.00 IDR") | Low | `MoneyFormatting.kt` | **Fixed.** Prices group digits in threes ("81,199 IDR", "$1,299.00") and rupiah drop the unused decimals; the cost-per-hour figure reads and writes grouped prices |
 | C8 | The Bundles tab shows at most 20 bundles, ITAD's default page size; 36 are active. A Game page bundle outside those 20 probably opens as an error | Low | `ItadSourceImpl.kt:158`, `BundlesRepository.kt:79` | **Fixed.** Page through bundles 50 at a time, and refetch the list once when a bundle id isn't in it |
+| C9 | The region sheet closes when you try to scroll it: with 18 regions the list fits most phones, so it can't scroll and every drag on it pulls the whole sheet, which closes on release (found on the Pixel 5 after C3, 2026-10-06) | Medium | `RegionPicker.kt`, `OnboardingScreen.kt` | **Fixed.** Drags on the list stay in the list; the sheet still closes from its handle, Back or a tap outside |
 
 Table items are ticked by starting their Fix cell with **Fixed.**
 

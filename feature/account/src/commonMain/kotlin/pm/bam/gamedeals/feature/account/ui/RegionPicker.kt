@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
+import pm.bam.gamedeals.common.ui.scrollWithoutDraggingSheet
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -48,7 +49,8 @@ internal fun RegionPickerSheet(
                 .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
                 .semantics { heading() },
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        // The regions fit on most phones, so the list rarely scrolls: keep drags on it from closing the sheet.
+        LazyColumn(modifier = Modifier.fillMaxWidth().scrollWithoutDraggingSheet()) {
             items(countries, key = { it.id }) { country ->
                 CountryRow(
                     country = country,

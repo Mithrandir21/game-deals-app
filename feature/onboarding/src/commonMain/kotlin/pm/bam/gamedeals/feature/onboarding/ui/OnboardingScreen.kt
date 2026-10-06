@@ -74,6 +74,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
+import pm.bam.gamedeals.common.ui.scrollWithoutDraggingSheet
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
@@ -653,7 +654,8 @@ internal fun OnboardingRegionPicker(
                 .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
                 .semantics { heading() },
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        // The regions fit on most phones, so the list rarely scrolls: keep drags on it from closing the sheet.
+        LazyColumn(modifier = Modifier.fillMaxWidth().scrollWithoutDraggingSheet()) {
             items(countries, key = { it.id }) { country ->
                 Row(
                     modifier = Modifier
