@@ -141,8 +141,9 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
 | L30 | Notifications say "1 new deals", and the iOS notification text is hardcoded English | N | `strings.xml:5`, `IosNotificationPresenter.kt` | Use plurals and resources |
 | L31 | The force-update gate can't fire in shipped builds, because the flags are NoOp | N | `LoggingModule.kt`, `LoggingIosModule.kt` | Wire a flag provider, or document that the gate is inert |
 | L32 | Each Home load does full remote waitlist and collection syncs, which can undo a toggle made at the same time | B | `RecommendationsRepository` | Read the Room id sets instead |
-| L35 | Fast double taps on a row, card or button push the same page twice; split out of H5, whose fix guards only the back arrows | N A | `Navigation.kt:64-68`, `MainViewController.kt:402-477` | Use `launchSingleTop`, or drop pushes unless the current entry is RESUMED |
+| L35 | Fast double taps on a row, card or button push the same page twice; split out of H5, whose fix guards only the back arrows | N A | `Navigation.kt:64-68`, `MainViewController.kt:402-477` | **Fixed.** Every tap-driven push in the shared feature navigation is wrapped so it runs only while its screen is resumed, the same guard H5 put on the back arrows; covers Android and iOS in one place |
 | L36 | "Show adult titles" never shows adult bundles: the bundles request doesn't ask for them, and ITAD leaves them out unless asked (found 2026-10-06) | follow-up | `ItadBundlesApi.kt`, `ItadSourceImpl.kt` | **Fixed.** The list is fetched with `mature=true` and the screens still hide adult bundles unless opted in; lists cached before the fix catch up at their next refresh, within 12 hours |
+| L37 | A second quick tap can land on whatever moves under the finger as the old screen leaves: double tapping "Discover by tag" opens Discover once but also opens the first deal's preview sheet on Deals, found behind it on Back (found 2026-10-06 while checking L35) | follow-up | `NavGraph.kt`, `MainViewController.kt` | Ignore pointer input on a screen once it is no longer resumed, for example with a modifier on each NavHost destination |
 
 ### Build and docs
 

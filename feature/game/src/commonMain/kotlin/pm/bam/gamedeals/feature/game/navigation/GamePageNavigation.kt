@@ -7,6 +7,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.dropUnlessResumed
 import pm.bam.gamedeals.feature.game.ui.GamePageScreen
 
 /**
@@ -39,10 +40,11 @@ fun NavGraphBuilder.gamePageScreen(
         }
         GamePageScreen(
             onBack = dropUnlessResumed { if (!navController.popBackStack()) onExit() },
-            goToWeb = goToWeb,
-            onSimilarGameClick = { igdbGameId -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) },
-            onSearchDealsByTitle = goToSearchByTitle,
-            onBundleClick = goToBundle,
+            goToWeb = goToWeb.dropUnlessResumed(),
+            onSimilarGameClick = { igdbGameId: Long -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) }
+                .dropUnlessResumed(),
+            onSearchDealsByTitle = goToSearchByTitle.dropUnlessResumed(),
+            onBundleClick = goToBundle.dropUnlessResumed(),
             showBackButton = showBackButton,
         )
     }
