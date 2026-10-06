@@ -152,6 +152,34 @@ Issues are grouped by severity so each group can be worked as one batch. Tick an
 
 ---
 
+## Country and currency
+
+A follow-up on 2026-10-06 looked at what the in-app country setting changes. A live check priced two games in all 74 picker countries.
+
+ITAD prices only 17 regions: US, CA, BR, AR, GB, FR, PL, AU, NZ, TR, CN, IN, KR, JP, ID, TW and PH. Every other country silently gets another region's prices:
+- 26 countries get US prices in USD, among them MX, ZA, SG, RU and UA.
+- 28 European countries get France's EUR prices, among them CH, NO, SE and DK.
+- EC and GT get Argentina's prices in ARS.
+
+The ITAD website keeps country and currency as two separate settings. The app has only country, and its country is not the ITAD account's country.
+
+M13 (max-price tiers) belongs to this group too.
+
+| # | Issue | Severity | Where | Fix |
+|---|---|---|---|---|
+| C1 | Bundle "savings" divides a bundle price in one currency by game prices in another. ITAD prices most bundle tiers in USD whatever the country, so India and Japan show about 99% savings | Medium-high | `BundleDetailViewModel.kt:186-203` | Compute savings only when the bundle and game prices share a currency |
+| C2 | Followed-series alerts are keyed on game and price, so a country switch re-alerts every on-sale game. The Followed series screen keeps the old currency's prices until pull-to-refresh | Medium | `FranchiseSaleGame.kt:27`, `FollowedFranchiseChecker.kt:53-57` | Remember the country with the seen set, re-baseline silently when it changes, and drop a snapshot from another country |
+| C3 | The picker offers 74 countries with no hint that 57 fall back to another region. Onboarding promises that "prices and currency match your stores" | Medium | `Country.kt:36-125`, onboarding `strings.xml:35` | Product call: label fallback countries or regroup the picker, and reword the copy |
+| C4 | Signed-in waitlist alerts follow the ITAD account's region and currency, not the app's, so an alert can say € while the app shows $ | Medium | `NotificationDayScreen.kt`, `NotificationSync.kt` | No API to sync it; tell signed-in users and link to ITAD's region settings |
+| C5 | The Bundles tab, an open Game page or peek sheet, and Discover results keep the old country's prices after a switch | Low-medium | `BundlesViewModel.kt:59-61` | Reload on country change as Home, Deals and Store do |
+| C6 | The shop list and the Game page's "in bundles" call send no country. ITAD returns the same data for every country today | Low | `ItadSourceImpl.kt:86,174` | Pass the country |
+| C7 | Large amounts have no thousands separator ("81199.00 IDR") | Low | `MoneyFormatting.kt` | Group digits; drop decimals for IDR |
+| C8 | The Bundles tab shows at most 20 bundles, ITAD's default page size; 36 are active. A Game page bundle outside those 20 probably opens as an error | Low | `ItadSourceImpl.kt:158`, `BundlesRepository.kt:79` | Request `limit=50`, and fall back when a bundle id isn't in the list |
+
+Table items are ticked by starting their Fix cell with **Fixed.**
+
+---
+
 ## Already tracked, still present
 - **#325:** API secrets are still in both binaries.
 - **#324:** the Store and WebView routes are unreachable.
