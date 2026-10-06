@@ -159,9 +159,12 @@ internal class ItadSourceImpl(
     override suspend fun fetchBundles(): List<Bundle> {
         val country = regionRepository.getSelectedCountryCode()
         // ITAD sends 20 bundles unless asked for more, and at most 50 a page: page until a short page.
+        // It also leaves adult bundles out unless asked. Fetch them too; the screens hide them unless the
+        // user opted in, so one cached list serves both settings.
         val remote = buildList {
             for (page in 0 until BUNDLE_PAGES_MAX) {
-                val batch = bundlesApi.getBundles(country = country, offset = page * BUNDLE_PAGE_SIZE, limit = BUNDLE_PAGE_SIZE)
+                val batch = bundlesApi
+                    .getBundles(country = country, offset = page * BUNDLE_PAGE_SIZE, limit = BUNDLE_PAGE_SIZE, mature = true)
                     .log(logger, tag = TAG)
                     .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
                     .getOrThrow()

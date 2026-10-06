@@ -336,6 +336,7 @@ class ItadSourceImplTest {
         assertEquals("/bundles/v1", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
         assertEquals("50", recordedRequests.single().url.parameters["limit"]) // ITAD's default is only 20
+        assertEquals("true", recordedRequests.single().url.parameters["mature"]) // else ITAD drops adult bundles
     }
 
     @Test

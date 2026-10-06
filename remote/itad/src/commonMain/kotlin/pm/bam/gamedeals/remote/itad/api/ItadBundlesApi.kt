@@ -11,7 +11,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
 /**
  * ITAD bundles endpoint (`/bundles/v1`, epic #205 Phase 3c). Returns a bare JSON array of active
  * bundles for the given [country]; `parameter(name, value)` drops nulls so optional params need no
- * guards. The HttpClient uses `expectSuccess = true`, so 4xx/5xx throw and are mapped downstream.
+ * guards. ITAD leaves adult bundles out unless [mature] is true. The HttpClient uses `expectSuccess = true`, so 4xx/5xx throw and are mapped downstream.
  */
 class ItadBundlesApi(private val httpClient: HttpClient) {
 
@@ -20,6 +20,7 @@ class ItadBundlesApi(private val httpClient: HttpClient) {
         offset: Int? = null,
         limit: Int? = null,
         sort: String? = null,
+        mature: Boolean? = null,
     ): ApiResponse<List<RemoteItadBundle>> = try {
         ApiResponse.Success(
             httpClient.get("/bundles/v1") {
@@ -27,6 +28,7 @@ class ItadBundlesApi(private val httpClient: HttpClient) {
                 parameter("offset", offset)
                 parameter("limit", limit)
                 parameter("sort", sort)
+                parameter("mature", mature)
             }.body<List<RemoteItadBundle>>()
         )
     } catch (e: CancellationException) {
