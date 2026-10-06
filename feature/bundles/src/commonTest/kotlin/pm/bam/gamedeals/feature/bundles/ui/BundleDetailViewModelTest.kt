@@ -120,7 +120,7 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         val summary = assertIs<BundleDetailViewModel.BundleDetailScreenData.Data>(viewModel.uiState.value).valueSummary
-        assertEquals("₹1000.00", summary?.currentValueDenominated)
+        assertEquals("₹1,000.00", summary?.currentValueDenominated)
         assertEquals("$5.00", summary?.bundlePriceDenominated)
         assertNull(summary?.savingsPercent) // not (1000 - 5) / 1000 = 100%
     }
