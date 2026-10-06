@@ -132,6 +132,7 @@ class ItadSourceImplTest {
         assertEquals(61, stores.first().storeID)
         assertEquals("Steam", stores.first().storeName)
         assertEquals("/service/shops/v1", recordedRequests.single().url.encodedPath)
+        assertEquals("US", recordedRequests.single().url.parameters["country"])
     }
 
     @Test
@@ -597,6 +598,7 @@ class ItadSourceImplTest {
         val recorded = recordedRequests.single().url
         assertEquals("/games/bundles/v2", recorded.encodedPath)
         assertEquals("uuid-1", recorded.parameters["id"])
+        assertEquals("US", recorded.parameters["country"])
     }
 
     @Test

@@ -50,10 +50,11 @@ class ItadGamesApi(private val httpClient: HttpClient) {
     }
 
     /** Bundles that contain the given game — `/games/bundles/v2?id=<uuid>` returns the same bundle shape as `/bundles/v1`. */
-    suspend fun getBundlesForGame(id: String): ApiResponse<List<RemoteItadBundle>> = try {
+    suspend fun getBundlesForGame(id: String, country: String? = null): ApiResponse<List<RemoteItadBundle>> = try {
         ApiResponse.Success(
             httpClient.get("/games/bundles/v2") {
                 parameter("id", id)
+                parameter("country", country)
             }.body<List<RemoteItadBundle>>()
         )
     } catch (e: CancellationException) {

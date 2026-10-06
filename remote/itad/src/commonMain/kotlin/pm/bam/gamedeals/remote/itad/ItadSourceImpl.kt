@@ -82,8 +82,10 @@ internal class ItadSourceImpl(
 
     // --- DealsSource (implemented) ---
 
+    // The shop cache isn't keyed by country: shop ids and names don't vary by region, and a shop the cache
+    // lacks after a country switch forces a refresh on lookup (StoresRepository.getStore).
     override suspend fun fetchStores(): List<Store> =
-        shopsApi.getShops()
+        shopsApi.getShops(country = regionRepository.getSelectedCountryCode())
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
@@ -172,7 +174,7 @@ internal class ItadSourceImpl(
             .toGameMeta()
 
     override suspend fun fetchBundlesForGame(gameId: String): List<Bundle> =
-        gamesApi.getBundlesForGame(gameId)
+        gamesApi.getBundlesForGame(gameId, country = regionRepository.getSelectedCountryCode())
             .log(logger, tag = TAG)
             .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
             .getOrThrow()
