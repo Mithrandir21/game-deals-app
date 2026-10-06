@@ -83,6 +83,8 @@
     <string name="account_notification_historical_low">All-time low %1$s</string>
     <string name="account_notification_deal_expired">Deal expired</string>
     <string name="account_notification_open_game">Open game</string>
+    <string name="account_notification_region_note">These alerts use the region on your IsThereAnyDeal account, priced in %1$s. This app shows %2$s prices, so a game's page can show different deals.</string>
+    <string name="account_notification_region_change">Change it on IsThereAnyDeal</string>
     <!-- Marks the highlighted (lowest-price) row as the deal the user was notified about. -->
     <string name="account_notification_best_deal">Best price</string>
 

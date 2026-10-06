@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.runCatchingLogged
 
@@ -32,10 +33,15 @@ import pm.bam.gamedeals.logging.runCatchingLogged
  * ([onGameViewed], fired as it scrolls into view) **all** that game's source entries are marked read, deduped
  * so each entry is marked at most once. Each card lists **all** its shop deals with the best (lowest) price
  * highlighted as "the deal you were notified about".
+ *
+ * ITAD prices alerts in the region set on the user's website account, which the API can't read or change. When
+ * the alerts come in another currency than the app's region, [NotificationDayScreenData.regionNote] says so,
+ * since the game page the user opens next shows the app region's prices.
  */
 internal class NotificationDayViewModel(
     savedStateHandle: SavedStateHandle,
     private val notificationsRepository: NotificationsRepository,
+    private val regionRepository: RegionRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -81,7 +87,7 @@ internal class NotificationDayViewModel(
             // One card per game (a game may be referenced by several entries the same day) — distinct ids
             // also keep the LazyColumn keys unique.
             val games = pairs.map { it.second }.distinctBy { it.gameId }
-            uiState.update { it.copy(loading = false, games = games.toImmutableList()) }
+            uiState.update { it.copy(loading = false, games = games.toImmutableList(), regionNote = regionNote(games)) }
         }
     }
 
@@ -96,6 +102,14 @@ internal class NotificationDayViewModel(
         }
     }
 
+    private suspend fun regionNote(games: List<NotificationDealGame>): RegionNote? {
+        val alertCurrency = games.flatMap { it.deals }.firstNotNullOfOrNull { deal -> deal.currency.takeIf { it.isNotBlank() } }
+            ?: return null
+        val appCurrency = runCatchingLogged(logger) { regionRepository.observeSelectedCountry().first().currency }.getOrNull()
+            ?: return null
+        return if (alertCurrency.equals(appCurrency, ignoreCase = true)) null else RegionNote(alertCurrency, appCurrency)
+    }
+
     fun onOpenGame(gameId: String) {
         events.tryEmit(NotificationDayEvent.OpenGame(gameId))
     }
@@ -104,7 +118,12 @@ internal class NotificationDayViewModel(
     data class NotificationDayScreenData(
         val loading: Boolean = false,
         val games: ImmutableList<NotificationDealGame> = persistentListOf(),
+        val regionNote: RegionNote? = null,
     )
+
+    /** The alerts are priced in [alertCurrency] (the ITAD website account's region), the app in [appCurrency]. */
+    @Immutable
+    data class RegionNote(val alertCurrency: String, val appCurrency: String)
 
     sealed interface NotificationDayEvent {
         data class OpenGame(val gameId: String) : NotificationDayEvent

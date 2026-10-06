@@ -80,7 +80,11 @@ fun NavGraphBuilder.accountScreen(
     }
 
     composable<Destination.NotificationDay> {
-        NotificationDayScreen(onBack = dropUnlessResumed { navController.popBackStack() }, onGameClick = goToGame.dropUnlessResumed())
+        NotificationDayScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onGameClick = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
+        )
     }
 
     composable<Destination.IgnoredGames> {
