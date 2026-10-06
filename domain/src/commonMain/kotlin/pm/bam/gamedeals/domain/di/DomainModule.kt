@@ -162,7 +162,7 @@ val domainModule = module {
     // One impl instance backs both the background checker and the follow-time seeder (seed-on-follow
     // suppresses the existing on-sale back-catalog from the tray; the Followed-series screen still shows it).
     single {
-        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
+        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
             "$gameTitle is $cutPercent% off in $franchiseName — now $priceDenominated"
         }
     }

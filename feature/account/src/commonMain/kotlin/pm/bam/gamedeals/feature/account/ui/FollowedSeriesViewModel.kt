@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositor
 import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
 
@@ -90,6 +91,7 @@ internal class FollowedSeriesViewModel(
     private val igdbRepository: IgdbRepository,
     private val snapshotStore: FranchiseSaleSnapshotStore,
     private val franchiseChecker: FollowedFranchiseChecker,
+    private val regionRepository: RegionRepository,
     private val collectionRepository: CollectionRepository,
     private val accountRepository: AccountRepository,
     private val gamesRepository: GamesRepository,
@@ -106,7 +108,12 @@ internal class FollowedSeriesViewModel(
 
     init {
         viewModelScope.launch {
-            snapshot.value = loadSnapshot()
+            val saved = runCatching { snapshotStore.get() }.getOrDefault(emptyList())
+            val country = regionRepository.getSelectedCountryCode()
+            val current = saved.filter { it.country == country }
+            snapshot.value = current.associate { it.igdbGameId to (it.cutPercent to it.priceDenominated) }
+            // Sales saved for another country (or before sales recorded one) are in the wrong currency: recompute.
+            if (current.size < saved.size) refresh()
         }
         viewModelScope.launch {
             combine(
@@ -166,10 +173,6 @@ internal class FollowedSeriesViewModel(
             uiState.update { it.copy(refreshing = false) }
         }
     }
-
-    private suspend fun loadSnapshot(): Map<Long, Pair<Int, String>> =
-        runCatching { snapshotStore.get() }.getOrDefault(emptyList())
-            .associate { it.igdbGameId to (it.cutPercent to it.priceDenominated) }
 
     private suspend fun gamesFor(franchiseId: Long): List<FollowedSeriesGame> =
         gamesCache.getOrElse(franchiseId) {

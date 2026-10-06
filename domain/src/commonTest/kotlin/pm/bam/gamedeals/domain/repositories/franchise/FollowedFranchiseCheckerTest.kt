@@ -15,6 +15,7 @@ import pm.bam.gamedeals.domain.models.FranchiseSaleGame
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,9 +25,14 @@ class FollowedFranchiseCheckerTest {
     private val followedRepository: FollowedFranchiseRepository = mock(MockMode.autoUnit)
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
-    private val seenStore: FollowedDealSeenStore = mock(MockMode.autoUnit)
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
+        everySuspend { getSelectedCountryCode() } returns "US"
+    }
+    private val seenStore: FollowedDealSeenStore = mock(MockMode.autoUnit) {
+        everySuspend { country() } returns "US"
+    }
     private val snapshotStore: FranchiseSaleSnapshotStore = mock(MockMode.autoUnit)
-    private val checker = FollowedFranchiseCheckerImpl(followedRepository, igdbRepository, gamesRepository, seenStore, snapshotStore) { game, franchise, cut, price ->
+    private val checker = FollowedFranchiseCheckerImpl(followedRepository, igdbRepository, gamesRepository, regionRepository, seenStore, snapshotStore) { game, franchise, cut, price ->
         "$game|$franchise|$cut|$price"
     }
 
@@ -72,7 +78,7 @@ class FollowedFranchiseCheckerTest {
                 listOf(
                     FranchiseSaleGame(
                         franchiseId = 1L, franchiseName = "Halo", igdbGameId = 10L, itadGameId = "itad-10",
-                        title = "Halo 5", cutPercent = 75, priceValue = 7.49, priceDenominated = "\$7.49",
+                        title = "Halo 5", cutPercent = 75, priceValue = 7.49, priceDenominated = "\$7.49", country = "US",
                     ),
                 )
             )
@@ -91,7 +97,7 @@ class FollowedFranchiseCheckerTest {
 
         // The franchise's currently-on-sale signature is baselined so the next poll won't tray-alert it,
         // while other franchises' already-seen signatures survive.
-        verifySuspend(exactly(1)) { seenStore.replace(setOf("other@1.0", "itad-10@7.49")) }
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("other@1.0", "itad-10@7.49"), "US") }
     }
 
     @Test
@@ -107,7 +113,7 @@ class FollowedFranchiseCheckerTest {
         assertEquals(1, alerts.size)
         assertEquals("itad-10", alerts.first().gameId)
         assertEquals("Halo 5|Halo|75|\$7.49", alerts.first().title)
-        verifySuspend(exactly(1)) { seenStore.replace(setOf("itad-10@7.49")) }
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("itad-10@7.49"), "US") }
     }
 
     @Test
@@ -120,7 +126,7 @@ class FollowedFranchiseCheckerTest {
 
         assertTrue(checker.collectCrossedAlerts().isEmpty())
         // Still pruned to the current on-sale set, so an ended-then-returned deal re-alerts later.
-        verifySuspend(exactly(1)) { seenStore.replace(setOf("itad-10@7.49")) }
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("itad-10@7.49"), "US") }
     }
 
     @Test
@@ -146,7 +152,7 @@ class FollowedFranchiseCheckerTest {
         everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = null, cut = null))
 
         assertTrue(checker.collectCrossedAlerts().isEmpty())
-        verifySuspend(exactly(1)) { seenStore.replace(emptySet()) }
+        verifySuspend(exactly(1)) { seenStore.replace(emptySet(), "US") }
     }
 
     @Test
@@ -180,5 +186,48 @@ class FollowedFranchiseCheckerTest {
         everySuspend { seenStore.get() } returns emptySet()
 
         assertTrue(checker.collectCrossedAlerts().isEmpty())
+    }
+
+    @Test
+    fun the_first_poll_after_a_country_switch_takes_note_without_alerting() = runTest {
+        everySuspend { followedRepository.getFollowed() } returns listOf(franchise(1L, "Halo"))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5", steamAppId = 500))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(any(), any()) } returns "itad-10"
+        // Seen in the US at $7.49; the same deal now prices at ¥750 in Japan.
+        everySuspend { seenStore.get() } returns setOf("itad-10@7.49")
+        everySuspend { seenStore.country() } returns "US"
+        everySuspend { regionRepository.getSelectedCountryCode() } returns "JP"
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = 750.0, cut = 75))
+
+        assertTrue(checker.collectCrossedAlerts().isEmpty())
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("itad-10@750.0"), "JP") }
+    }
+
+    @Test
+    fun a_seen_set_without_a_country_still_alerts_on_new_deals() = runTest {
+        // Sets saved before the country was recorded compare as before, rather than swallowing a real alert.
+        everySuspend { followedRepository.getFollowed() } returns listOf(franchise(1L, "Halo"))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5", steamAppId = 500))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(any(), any()) } returns "itad-10"
+        everySuspend { seenStore.get() } returns emptySet()
+        everySuspend { seenStore.country() } returns null
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = 7.49, cut = 75))
+
+        assertEquals(1, checker.collectCrossedAlerts().size)
+    }
+
+    @Test
+    fun seedSeen_keeps_the_stored_country_so_a_pending_switch_is_not_lost() = runTest {
+        everySuspend { followedRepository.getFollowed() } returns listOf(franchise(1L, "Halo"))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5", steamAppId = 500))
+        everySuspend { gamesRepository.findGameIdBySteamAppId(any(), any()) } returns "itad-10"
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(price("itad-10", best = 750.0, cut = 75))
+        everySuspend { seenStore.get() } returns setOf("other@1.0")
+        everySuspend { seenStore.country() } returns "US"
+        everySuspend { regionRepository.getSelectedCountryCode() } returns "JP"
+
+        checker.seedSeen(1L)
+
+        verifySuspend(exactly(1)) { seenStore.replace(setOf("other@1.0", "itad-10@750.0"), "US") }
     }
 }

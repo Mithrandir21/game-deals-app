@@ -11,6 +11,9 @@ import kotlinx.serialization.Serializable
  *
  * [signature] keys the background-alert dedup on the *price* (`itadGameId@priceValue`): a deeper or
  * returned deal produces a new signature and re-alerts, while a still-running deal stays suppressed.
+ *
+ * [country] is the region the price was fetched for, so a snapshot from before a country switch can be told
+ * apart; empty in snapshots saved before it was recorded.
  */
 @Immutable
 @Serializable
@@ -23,6 +26,7 @@ data class FranchiseSaleGame(
     val cutPercent: Int,
     val priceValue: Double,
     val priceDenominated: String,
+    val country: String = "",
 ) {
     val signature: String get() = "$itadGameId@$priceValue"
 }

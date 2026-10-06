@@ -19,11 +19,21 @@ class FranchiseStoresTest {
     fun seen_store_replace_round_trips_and_overwrites() = runTest {
         val store = FollowedDealSeenStoreImpl(FakeFranchiseStorage())
 
-        store.replace(setOf("itad-1@5.0", "itad-2@9.99"))
+        store.replace(setOf("itad-1@5.0", "itad-2@9.99"), "US")
         assertEquals(setOf("itad-1@5.0", "itad-2@9.99"), store.get())
 
-        store.replace(setOf("itad-3@1.0")) // replace, not append — pruned each poll
+        store.replace(setOf("itad-3@1.0"), "US") // replace, not append — pruned each poll
         assertEquals(setOf("itad-3@1.0"), store.get())
+    }
+
+    @Test
+    fun seen_store_remembers_the_country_of_its_signatures() = runTest {
+        val store = FollowedDealSeenStoreImpl(FakeFranchiseStorage())
+        assertEquals(null, store.country())
+
+        store.replace(setOf("itad-1@750.0"), "JP")
+
+        assertEquals("JP", store.country())
     }
 
     @Test
