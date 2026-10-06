@@ -139,7 +139,16 @@ data class Deal(
      */
     @SerialName("country")
     @ColumnInfo(defaultValue = "US")
-    val country: String = DEFAULT_COUNTRY.code
+    val country: String = DEFAULT_COUNTRY.code,
+
+    /**
+     * ISO 4217 code of [salePriceValue]/[normalPriceValue]. A [country] doesn't pin it: ITAD prices
+     * untracked countries in another region's currency (Mexico in USD, Ecuador in ARS). Empty for rows
+     * cached before v4 (`MIGRATION_3_4` expires those so they refetch).
+     */
+    @SerialName("currency")
+    @ColumnInfo(defaultValue = "")
+    val currency: String = "",
 )
 
 @Immutable

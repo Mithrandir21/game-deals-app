@@ -196,7 +196,6 @@ private const val LOAD_MORE_THRESHOLD = 5
 
 // Preset thresholds for the single-select filter chip rows (see DealsFilterSheet).
 private val CUT_TIERS = listOf(25, 50, 75, 90)
-private val PRICE_TIERS = listOf(5, 10, 20, 50)
 private val STEAM_TIERS = listOf(70, 80, 90)
 
 @Composable
@@ -537,9 +536,7 @@ internal fun DealsContent(
                 onToggleShop = onToggleShop,
                 onClearShops = onClearShops,
                 filter = filter,
-                // The currency symbol/affix for price-bucket labels is read from a loaded deal's
-                // pre-formatted price (ITAD denominates per region); null until the first page loads.
-                currencySample = visibleDeals.firstOrNull()?.salePriceDenominated,
+                priceCurrency = data.priceCurrency,
                 onSetMinCut = onSetMinCut,
                 onSetMaxPrice = onSetMaxPrice,
                 onToggleType = onToggleType,
@@ -1011,7 +1008,7 @@ private fun DealsFilterSheet(
     onToggleShop: (Int) -> Unit,
     onClearShops: () -> Unit,
     filter: DealsFilter,
-    currencySample: String?,
+    priceCurrency: String?,
     onSetMinCut: (Int?) -> Unit,
     onSetMaxPrice: (Double?) -> Unit,
     onToggleType: (ProductType) -> Unit,
@@ -1123,11 +1120,11 @@ private fun DealsFilterSheet(
                     onClick = { onSetMaxPrice(0.0) },
                     label = { Text(stringResource(Res.string.deals_filter_price_free)) },
                 )
-                PRICE_TIERS.forEach { tier ->
+                priceTiers(priceCurrency).forEach { tier ->
                     FilterChip(
                         selected = filter.maxPrice == tier.toDouble(),
                         onClick = { onSetMaxPrice(tier.toDouble()) },
-                        label = { Text(stringResource(Res.string.deals_filter_price_under, priceLabel(tier, currencySample))) },
+                        label = { Text(stringResource(Res.string.deals_filter_price_under, priceTierLabel(tier, priceCurrency))) },
                     )
                 }
             }
@@ -1237,15 +1234,6 @@ private fun FilterToggleRow(
             onCheckedChange = onCheckedChange,
         )
     }
-}
-
-// Formats a price-bucket threshold with the region currency affix derived from a sample denominated
-// price ("$7.49" -> "$5"; "7.49 PLN" -> "5 PLN"); falls back to the bare number before any deal loads.
-private fun priceLabel(threshold: Int, sample: String?): String {
-    if (sample.isNullOrBlank()) return threshold.toString()
-    val prefix = sample.takeWhile { !it.isDigit() }
-    val suffix = sample.takeLastWhile { !it.isDigit() }
-    return "$prefix$threshold$suffix"
 }
 
 private fun DealsSortField.labelRes(): StringResource = when (this) {

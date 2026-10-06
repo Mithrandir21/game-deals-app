@@ -45,7 +45,8 @@ import pm.bam.gamedeals.domain.utils.StoreImagesConverter
 // From v1 forward, bumping this REQUIRES a real Migration(n, n+1) + a schema-diff test.
 // v2 (#211): adds the RecentlyViewedGame table (see MIGRATION_1_2).
 // v3: adds Release.isMature (see MIGRATION_2_3).
-internal const val DOMAIN_DB_VERSION = 3
+// v4: adds Deal.currency (see MIGRATION_3_4).
+internal const val DOMAIN_DB_VERSION = 4
 
 @Database(
     version = DOMAIN_DB_VERSION,

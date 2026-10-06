@@ -60,6 +60,7 @@ internal fun ItadDeal.toDeal(): Deal {
         isNewHistoricalLow = isNewHistoricalLow,
         isStoreLow = isStoreLow,
         hasVoucher = hasVoucher,
+        currency = price.currency,
         // CheapShark-only fields (internalName, metacritic*, steamRating*, releaseDate, lastChange,
         // dealRating) are nullable and default to null — ITAD does not provide them.
     )

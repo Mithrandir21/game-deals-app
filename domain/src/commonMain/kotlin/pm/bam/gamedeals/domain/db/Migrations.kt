@@ -49,7 +49,18 @@ internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
     }
 }
 
-internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+/**
+ * v3 → v4: add `Deal.currency`. Cached store deals are expired so the next refresh refetches them with their
+ * currency, as [MIGRATION_2_3] does for releases.
+ */
+internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `Deal` ADD COLUMN `currency` TEXT NOT NULL DEFAULT ''")
+        connection.execSQL("UPDATE `Deal` SET `expires` = 0")
+    }
+}
+
+internal val DOMAIN_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
 /** Auto-migrations (`@AutoMigration` spec pairs) — none today; add alongside [DOMAIN_MIGRATIONS]. */
 internal val DOMAIN_AUTO_MIGRATIONS: Set<Pair<Int, Int>> = emptySet()

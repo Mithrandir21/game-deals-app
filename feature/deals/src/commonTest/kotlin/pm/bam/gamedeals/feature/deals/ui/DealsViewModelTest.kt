@@ -24,12 +24,14 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
+import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.SavedSearch
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -52,6 +54,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DealsViewModelTest : MainDispatcherTest() {
@@ -67,8 +70,11 @@ class DealsViewModelTest : MainDispatcherTest() {
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
         every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
+    private val countryFlow = MutableStateFlow(DEFAULT_COUNTRY)
+    private val japan = Country("JP", "Japan", Region.ASIA)
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
-        every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
+        every { observeSelectedCountry() } returns countryFlow
+        everySuspend { getSelectedCountryCode() } calls { countryFlow.value.code }
     }
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf())
@@ -468,5 +474,75 @@ class DealsViewModelTest : MainDispatcherTest() {
 
         verifySuspend(exactly(0)) { searchHistoryRepository.saveSearch(any(), any(), any()) }
         assertFalse(vm.currentSearchSaved.value)
+    }
+
+    @Test
+    fun a_price_cap_applies_only_in_the_country_it_was_set_in() = runTest {
+        val queries = mutableListOf<DealsQuery>()
+        everySuspend { dealsRepository.getDeals(any()) } calls { (query: DealsQuery) -> queries += query; listOf(deal("d1")) }
+        val vm = createViewModel()
+        val filters = vm.filter.observeEmissions(this.backgroundScope, testDispatcher)
+        advanceUntilIdle()
+
+        vm.setMaxPrice(20.0)
+        advanceUntilIdle()
+        assertEquals(DealsFilter(maxPrice = 20.0, maxPriceCountry = "US"), dealsFilterFlow.value)
+        assertEquals(20.0, queries.last().filter?.maxPrice)
+
+        // "Under 20" in Japan would mean under ¥20, so the cap is not sent or shown there...
+        countryFlow.value = japan
+        advanceUntilIdle()
+        assertNull(queries.last().filter?.maxPrice)
+        assertNull(vm.uiState.value.filter.maxPrice)
+        assertNull(filters.last().maxPrice)
+
+        // ...but it is still saved, and comes back in the US.
+        countryFlow.value = DEFAULT_COUNTRY
+        advanceUntilIdle()
+        assertEquals(20.0, queries.last().filter?.maxPrice)
+        assertEquals(20.0, filters.last().maxPrice)
+    }
+
+    @Test
+    fun clearing_the_price_cap_forgets_its_country() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+        dealsFilterFlow.value = DealsFilter(maxPrice = 20.0, maxPriceCountry = "US")
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.setMaxPrice(null)
+        advanceUntilIdle()
+
+        assertEquals(DealsFilter(), dealsFilterFlow.value)
+    }
+
+    @Test
+    fun a_price_cap_saved_without_a_country_is_taken_to_be_in_the_current_one() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
+        dealsFilterFlow.value = DealsFilter(maxPrice = 10.0)
+
+        createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(DealsFilter(maxPrice = 10.0, maxPriceCountry = "US"), dealsFilterFlow.value)
+    }
+
+    @Test
+    fun the_price_currency_comes_from_the_deals_and_survives_an_empty_page() = runTest {
+        everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1").copy(currency = "JPY"))
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertEquals("JPY", vm.uiState.value.priceCurrency)
+
+        // A tight filter empties the list; the filter steps stay in yen.
+        everySuspend { dealsRepository.getDeals(any()) } returns emptyList()
+        vm.setMinCut(90)
+        advanceUntilIdle()
+        assertEquals("JPY", vm.uiState.value.priceCurrency)
+
+        // Another country's currency is unknown until its deals arrive.
+        countryFlow.value = Country("GB", "United Kingdom", Region.EUROPE)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.priceCurrency)
     }
 }
