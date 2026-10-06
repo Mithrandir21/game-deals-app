@@ -108,6 +108,41 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun savings_are_left_out_when_the_bundle_is_priced_in_another_currency() = runTest {
+        // India: the store prices the bundle at $5, the games are priced in rupees.
+        everySuspend { bundlesRepository.getBundle(7) } returns bundleWithGames(7)
+        everySuspend { bundlesRepository.getBundleGamePrices(listOf("g1", "g2")) } returns listOf(
+            price("g1", best = 400.0, bestDenominated = "₹400.00", cut = 80, low = 300.0, lowDenominated = "₹300.00", currency = "INR"),
+            price("g2", best = 600.0, bestDenominated = "₹600.00", cut = 50, low = 500.0, lowDenominated = "₹500.00", currency = "INR"),
+        )
+
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, collectionRepository, ignoredRepository, dealShareTextBuilder)
+        advanceUntilIdle()
+
+        val summary = assertIs<BundleDetailViewModel.BundleDetailScreenData.Data>(viewModel.uiState.value).valueSummary
+        assertEquals("₹1000.00", summary?.currentValueDenominated)
+        assertEquals("$5.00", summary?.bundlePriceDenominated)
+        assertNull(summary?.savingsPercent) // not (1000 - 5) / 1000 = 100%
+    }
+
+    @Test
+    fun savings_are_left_out_when_the_bundle_currency_is_unknown() = runTest {
+        // A bundle cached before the currency was recorded.
+        everySuspend { bundlesRepository.getBundle(7) } returns bundleWithGames(7).copy(currency = null)
+        everySuspend { bundlesRepository.getBundleGamePrices(listOf("g1", "g2")) } returns listOf(
+            price("g1", best = 4.0, bestDenominated = "$4.00", cut = 80, low = 3.0, lowDenominated = "$3.00"),
+            price("g2", best = 6.0, bestDenominated = "$6.00", cut = 50, low = 5.0, lowDenominated = "$5.00"),
+        )
+
+        val viewModel = BundleDetailViewModel(SavedStateHandle(mapOf("bundleId" to 7)), TestingLoggingListener(), bundlesRepository, gamesRepository, storesRepository, waitlistRepository, collectionRepository, ignoredRepository, dealShareTextBuilder)
+        advanceUntilIdle()
+
+        val summary = assertIs<BundleDetailViewModel.BundleDetailScreenData.Data>(viewModel.uiState.value).valueSummary
+        assertEquals("$10.00", summary?.currentValueDenominated)
+        assertNull(summary?.savingsPercent)
+    }
+
+    @Test
     fun price_fetch_failure_still_shows_bundle_with_empty_prices() = runTest {
         everySuspend { bundlesRepository.getBundle(7) } returns bundleWithGames(7)
         everySuspend { bundlesRepository.getBundleGamePrices(listOf("g1", "g2")) } throws RuntimeException("boom")
@@ -145,10 +180,11 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
             games = games,
             priceValue = 5.0,
             tiers = persistentListOf(Bundle.Tier(priceDenominated = "$5.00", priceValue = 5.0, games = games)),
+            currency = "USD",
         )
     }
 
-    private fun price(gameId: String, best: Double, bestDenominated: String, cut: Int, low: Double, lowDenominated: String) =
+    private fun price(gameId: String, best: Double, bestDenominated: String, cut: Int, low: Double, lowDenominated: String, currency: String = "USD") =
         BundleGamePrice(
             gameId = gameId,
             bestShopName = "GOG",
@@ -157,6 +193,6 @@ class BundleDetailViewModelTest : MainDispatcherTest() {
             bestCutPercent = cut,
             historicalLowValue = low,
             historicalLowDenominated = lowDenominated,
-            currency = "USD",
+            currency = currency,
         )
 }

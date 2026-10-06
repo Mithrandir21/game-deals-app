@@ -182,6 +182,9 @@ internal class BundleDetailViewModel(
      * games, vs. the bundle price. Games with no current deal are skipped, so the totals (and therefore the
      * savings %) are a lower bound — [BundleValueSummary.pricedGames] vs [BundleValueSummary.totalGames]
      * lets the UI flag that. Returns null when nothing could be priced.
+     *
+     * Savings are left out unless the bundle is priced in the games' currency: stores often price bundles
+     * in USD whatever the region, and dividing yen by dollars reads as ~99% off.
      */
     private fun buildValueSummary(bundle: Bundle, prices: Map<String, BundleGamePrice>): BundleValueSummary? {
         val priced = prices.values
@@ -189,7 +192,7 @@ internal class BundleDetailViewModel(
         val currentSum = priced.mapNotNull { it.bestPriceValue }.takeIf { it.isNotEmpty() }?.sum()
         val lowSum = priced.mapNotNull { it.historicalLowValue }.takeIf { it.isNotEmpty() }?.sum()
         if (currentSum == null && lowSum == null) return null
-        val savings = bundle.priceValue?.let { bundlePrice ->
+        val savings = bundle.priceValue?.takeIf { bundle.currency == currency }?.let { bundlePrice ->
             if (currentSum != null && currentSum > 0.0) (((currentSum - bundlePrice) / currentSum) * 100).roundToInt() else null
         }
         return BundleValueSummary(

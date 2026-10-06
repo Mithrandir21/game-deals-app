@@ -26,6 +26,9 @@ import pm.bam.gamedeals.domain.utils.ImmutableListSerializer
  * [url] is the store's affiliate link (opened to claim the bundle — ITAD's ToS requires the link be kept
  * intact). [details] is an optional store-supplied blurb; [isMature] gates the bundle behind the mature
  * opt-in setting; [publishEpochMs] backs the "Newest" sort and the published-date footer.
+ *
+ * [currency] is the ISO code of [priceValue]. A store prices its bundle in its own currency (often USD
+ * whatever the region), so it can differ from the region's game prices; null for blobs cached before it.
  */
 @Immutable
 @Serializable
@@ -43,6 +46,7 @@ data class Bundle(
     val details: String? = null,
     val priceValue: Double? = null,
     val tiers: ImmutableList<Tier> = persistentListOf(),
+    val currency: String? = null,
 ) {
     @Immutable
     @Serializable

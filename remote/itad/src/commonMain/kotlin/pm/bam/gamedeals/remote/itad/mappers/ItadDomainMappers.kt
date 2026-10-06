@@ -94,7 +94,7 @@ private fun ItadPriceHistoryEntry.toPricePoint(): PriceHistory.PricePoint? {
  * ITAD `/bundles/v1` bundle → domain [Bundle] (#205 Phase 3c; expanded in the Bundles redesign). The tier
  * structure is preserved one-to-one (each [Bundle.Tier] keeps its denominated + raw price and its games);
  * [Bundle.games] is the deduped union across all tiers, kept for the compact list row's cover-art strip.
- * The headline [Bundle.priceDenominated]/[Bundle.priceValue] is the cheapest tier. Expiry/publish are
+ * The headline [Bundle.priceDenominated]/[Bundle.priceValue]/[Bundle.currency] is the cheapest tier. Expiry/publish are
  * parsed from ISO-8601 (with offset) via [Instant]; an unparseable value becomes null.
  */
 internal fun RemoteItadBundle.toBundle(): Bundle {
@@ -128,6 +128,7 @@ internal fun RemoteItadBundle.toBundle(): Bundle {
         details = details?.takeIf { it.isNotBlank() },
         priceValue = cheapest?.amount,
         tiers = mappedTiers,
+        currency = cheapest?.currency?.takeIf { it.isNotBlank() },
     )
 }
 
