@@ -26,7 +26,6 @@ import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
@@ -245,7 +244,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
             deals = persistentListOf(gameDeal()),
         )
         everySuspend { gamesRepository.getRegionalPrices("g1") } returns listOf(
-            RegionalPrice(Country("US", "United States", Region.AMERICAS), 9.99, "$9.99", "https://store/x"),
+            RegionalPrice(Country("US", "United States", "USD"), 9.99, "$9.99", "https://store/x"),
         )
         val vm = viewModel(mapOf("gameId" to "g1"))
         val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
@@ -303,6 +302,22 @@ class GamePageViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(listOf(GamePageViewModel.GameUiEvent.SignInRequired), events)
+    }
+
+    @Test
+    fun failed_library_writes_emit_ActionFailed() = runTest {
+        val details = gameDetails(info = GameDetails.GameInfo(title = "Halo", steamAppID = 1240440, artwork = GameArtwork(banner300 = "t")), deals = persistentListOf(gameDeal()))
+        everySuspend { gamesRepository.getGameDetails("g1") } returns details
+        val vm = viewModel(mapOf("gameId" to "g1"))
+        everySuspend { waitlistRepository.toggleWaitlist("g1") } returns RepoUpdateResult.FAILED
+        everySuspend { notesRepository.setNote("g1", "text") } returns RepoUpdateResult.FAILED
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+
+        vm.toggleWaitlist()
+        vm.setNote("text")
+        advanceUntilIdle()
+
+        assertEquals(listOf(GamePageViewModel.GameUiEvent.ActionFailed, GamePageViewModel.GameUiEvent.ActionFailed), events)
     }
 
     @Test

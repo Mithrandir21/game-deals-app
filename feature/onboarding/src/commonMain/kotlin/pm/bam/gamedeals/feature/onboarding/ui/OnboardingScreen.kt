@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,9 +74,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionGranted
 import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequester
+import pm.bam.gamedeals.common.ui.scrollWithoutDraggingSheet
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.countriesByRegion
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_back
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_discover_body
@@ -95,8 +94,6 @@ import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_open_s
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_page_indicator
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_body
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_change
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_picker_no_matches
-import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_picker_search_hint
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_picker_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_region_title
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_save_body
@@ -444,10 +441,10 @@ private fun RegionSlide(
         Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.large))
         if (selected != null) {
             Text(
-                text = "${flagEmoji(selected.code)}  ${selected.name}",
+                text = "${regionFlag(selected)}  ${selected.name} (${selected.priceNote})",
                 style = MaterialTheme.typography.titleMedium,
                 // The leading flag emoji would otherwise be read as a second country name.
-                modifier = Modifier.clearAndSetSemantics { contentDescription = selected.name },
+                modifier = Modifier.clearAndSetSemantics { contentDescription = "${selected.name} (${selected.priceNote})" },
             )
             Spacer(modifier = Modifier.size(GameDealsCustomTheme.spacing.medium))
         }
@@ -459,7 +456,7 @@ private fun RegionSlide(
     if (showPicker) {
         OnboardingRegionPicker(
             countries = countries,
-            selectedCode = selected?.code,
+            selectedId = selected?.id,
             onSelect = {
                 onCountrySelected(it)
                 showPicker = false
@@ -642,19 +639,10 @@ internal fun SignInSlide(
 @Composable
 internal fun OnboardingRegionPicker(
     countries: ImmutableList<Country>,
-    selectedCode: String?,
+    selectedId: String?,
     onSelect: (Country) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
-    val grouped = remember(countries, query) {
-        val q = query.trim()
-        val filtered = countries.filter {
-            q.isBlank() || it.name.contains(q, ignoreCase = true) || it.code.contains(q, ignoreCase = true)
-        }
-        countriesByRegion(filtered)
-    }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -666,69 +654,43 @@ internal fun OnboardingRegionPicker(
                 .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
                 .semantics { heading() },
         )
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text(stringResource(Res.string.onboarding_region_picker_search_hint)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
-        )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            if (grouped.isEmpty()) {
-                item {
+        // The regions fit on most phones, so the list rarely scrolls: keep drags on it from closing the sheet.
+        LazyColumn(modifier = Modifier.fillMaxWidth().scrollWithoutDraggingSheet()) {
+            items(countries, key = { it.id }) { country ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = country.id == selectedId,
+                            role = Role.RadioButton,
+                            onClick = { onSelect(country) },
+                        )
+                        .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                ) {
+                    // Click + selection are owned by the row's `selectable`, so the RadioButton is a
+                    // non-interactive visual; the flag emoji is decorative (the region name carries it).
+                    RadioButton(selected = country.id == selectedId, onClick = null)
                     Text(
-                        text = stringResource(Res.string.onboarding_region_picker_no_matches),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(
-                            horizontal = GameDealsCustomTheme.spacing.large,
-                            vertical = GameDealsCustomTheme.spacing.medium,
-                        ),
+                        text = regionFlag(country),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.clearAndSetSemantics {},
                     )
-                }
-            }
-            grouped.forEach { (region, entries) ->
-                item(key = "header_${region.name}") {
-                    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = region.displayName,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-                                .semantics { heading() },
-                        )
-                    }
-                }
-                items(entries, key = { it.code }) { country ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = country.code == selectedCode,
-                                role = Role.RadioButton,
-                                onClick = { onSelect(country) },
-                            )
-                            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                    ) {
-                        // Click + selection are owned by the row's `selectable`, so the RadioButton is a
-                        // non-interactive visual; the flag emoji is decorative (the country name carries it).
-                        RadioButton(selected = country.code == selectedCode, onClick = null)
-                        Text(
-                            text = flagEmoji(country.code),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.clearAndSetSemantics {},
-                        )
-                        Text(text = country.name, style = MaterialTheme.typography.bodyLarge)
-                    }
+                    Text(text = country.name, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = country.priceNote,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
     }
 }
+
+/** A region's flag: Europe's id "EU" has a flag of its own, and "Rest of world" gets a globe. */
+private fun regionFlag(country: Country): String = flagEmoji(country.id).ifEmpty { "🌐" }
 
 /**
  * The flag emoji for a 2-letter ISO country code (two Regional Indicator Symbols, each a UTF-16 surrogate

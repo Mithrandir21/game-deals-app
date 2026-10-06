@@ -75,8 +75,12 @@ internal fun itadAuthHttpClient(
         }
         install(Auth) {
             bearer {
+                // The token store is the only source of truth: a cached token would outlive logout and account switches.
+                cacheTokens = false
                 loadTokens { tokenProvider.currentBearerTokens() }
                 refreshTokens { tokenProvider.refresh() }
+                // ITAD rotates the refresh token, so a refresh cancelled after the server answered would lose the new one.
+                nonCancellableRefresh = true
                 sendWithoutRequest { true }
             }
         }

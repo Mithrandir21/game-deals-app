@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.feature.debug.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -12,6 +13,6 @@ import pm.bam.gamedeals.feature.debug.ui.DebugScreen
  */
 fun NavGraphBuilder.debugScreen(navController: NavController) {
     composable<Destination.Debug> {
-        DebugScreen(onBack = { navController.popBackStack() })
+        DebugScreen(onBack = dropUnlessResumed { navController.popBackStack() })
     }
 }

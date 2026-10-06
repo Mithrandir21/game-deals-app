@@ -4,18 +4,15 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
-import pm.bam.gamedeals.domain.auth.AuthTokenStore
-import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -64,6 +61,41 @@ class ItadTokenProviderTest {
     }
 
     @Test
+    fun refresh_rejected_as_unauthorized_clears_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.Unauthorized), clock, logger).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+    }
+
+    @Test
+    fun transient_refresh_failures_keep_the_session() = runTest {
+        for (status in listOf(HttpStatusCode.InternalServerError, HttpStatusCode.ServiceUnavailable, HttpStatusCode.TooManyRequests)) {
+            val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+            val result = ItadTokenProvider(store, oauthAnswering(status), clock, logger).refresh()
+
+            assertNull(result, "status $status")
+            assertFalse(store.cleared, "status $status")
+            assertEquals("old-refresh", store.getRefreshToken(), "status $status")
+        }
+    }
+
+    @Test
+    fun network_failure_during_refresh_keeps_the_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+        val oauth = ItadOAuthClient(mockHttpClient(json) { _ -> throw IllegalStateException("connection reset") }, credentials)
+
+        val result = ItadTokenProvider(store, oauth, clock, logger).refresh()
+
+        assertNull(result)
+        assertFalse(store.cleared)
+        assertEquals("bob", store.getUsername())
+    }
+
+    @Test
     fun refresh_failure_clears_session() = runTest {
         val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
         // expectSuccess=true ⇒ a 400 throws inside refreshToken; the provider must catch + clear.
@@ -78,41 +110,6 @@ class ItadTokenProviderTest {
         assertTrue(store.cleared)
     }
 
-    private class FakeAuthTokenStore(
-        private var access: String? = null,
-        private var refresh: String? = null,
-        private var expiresAt: Long = 0L,
-        private var username: String? = null,
-        private var scopeVersion: Int = 0,
-    ) : AuthTokenStore {
-        var cleared = false
-            private set
-
-        override fun observeAuthState(): Flow<AuthState> =
-            flowOf(username?.let { AuthState.LoggedIn(it) } ?: AuthState.LoggedOut)
-
-        override suspend fun getAccessToken(): String? = access
-        override suspend fun getRefreshToken(): String? = refresh
-        override suspend fun getUsername(): String? = username
-        override suspend fun getExpiresAtEpochMs(): Long = expiresAt
-        override suspend fun getScopeVersion(): Int = scopeVersion
-
-        override suspend fun saveTokens(accessToken: String, refreshToken: String, expiresAtEpochMs: Long, username: String, scopeVersion: Int) {
-            access = accessToken
-            refresh = refreshToken
-            expiresAt = expiresAtEpochMs
-            this.username = username
-            this.scopeVersion = scopeVersion
-        }
-
-        override suspend fun updateUsername(username: String) { this.username = username }
-
-        override suspend fun clear() {
-            access = null
-            refresh = null
-            expiresAt = 0L
-            username = null
-            cleared = true
-        }
-    }
+    private fun oauthAnswering(status: HttpStatusCode) =
+        ItadOAuthClient(mockHttpClient(json) { _ -> respond("nope", status) }, credentials)
 }

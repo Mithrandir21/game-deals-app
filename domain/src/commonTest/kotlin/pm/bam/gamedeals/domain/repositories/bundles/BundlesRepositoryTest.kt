@@ -82,6 +82,24 @@ class BundlesRepositoryTest {
     }
 
     @Test
+    fun get_bundle_refetches_once_when_the_cached_list_lacks_it() = runTest {
+        // A fresh cache from before bundle 2 was published, which the Game page already links to.
+        everySuspend { bundlesCacheDao.get(country) } returns entryFor(listOf(bundle(1)), expires = now + 10_000)
+        everySuspend { dealsSource.fetchBundles() } returns listOf(bundle(1), bundle(2))
+
+        assertEquals(2, repository.getBundle(2)?.id)
+        verifySuspend(exactly(1)) { dealsSource.fetchBundles() }
+    }
+
+    @Test
+    fun get_bundle_found_in_the_cache_does_not_refetch() = runTest {
+        everySuspend { bundlesCacheDao.get(country) } returns entryFor(listOf(bundle(1)), expires = now + 10_000)
+
+        assertEquals(1, repository.getBundle(1)?.id)
+        verifySuspend(exactly(0)) { dealsSource.fetchBundles() }
+    }
+
+    @Test
     fun get_bundle_returns_null_when_absent() = runTest {
         everySuspend { bundlesCacheDao.get(country) } returns null
         everySuspend { dealsSource.fetchBundles() } returns listOf(bundle(1))

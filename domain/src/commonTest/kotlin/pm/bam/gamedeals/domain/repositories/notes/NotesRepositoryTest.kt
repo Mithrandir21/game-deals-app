@@ -21,6 +21,7 @@ import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.game
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -33,7 +34,7 @@ class NotesRepositoryTest {
     private val dealsSource: DealsSource = mock(MockMode.autoUnit)
     private val analytics = RecordingAnalytics()
 
-    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore, dealsSource, analytics)
+    private fun repo() = NotesRepositoryImpl(accountSource, authTokenStore, dealsSource, analytics, TestingLoggingListener())
 
     private fun loggedIn(loggedIn: Boolean) {
         every { authTokenStore.observeAuthState() } returns
@@ -84,6 +85,23 @@ class NotesRepositoryTest {
         assertNull(repo.observeNote("g1").first())
         verifySuspend(exactly(1)) { accountSource.removeNote("g1") }
         assertEquals(mapOf("game_id" to "g1"), analytics.propsOf(AnalyticsEvents.NOTE_DELETED))
+    }
+
+    @Test
+    fun failed_writes_return_failed_and_keep_the_observed_note() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotes() } returns listOf(ItadNote("g1", "note"))
+        everySuspend { accountSource.setNote(any(), any()) } calls { throw Exception("offline") }
+        everySuspend { accountSource.removeNote(any()) } calls { throw Exception("offline") }
+
+        val repo = repo()
+        assertEquals("note", repo.observeNote("g1").first()) // load
+        assertEquals(RepoUpdateResult.FAILED, repo.setNote("g1", "new"))
+        assertEquals(RepoUpdateResult.FAILED, repo.deleteNote("g1"))
+
+        assertEquals("note", repo.observeNote("g1").first())
+        assertNull(analytics.propsOf(AnalyticsEvents.NOTE_SAVED))
+        assertNull(analytics.propsOf(AnalyticsEvents.NOTE_DELETED))
     }
 
     @Test

@@ -9,16 +9,10 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -26,33 +20,24 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
+import pm.bam.gamedeals.common.ui.scrollWithoutDraggingSheet
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.countriesByRegion
 import pm.bam.gamedeals.feature.account.generated.resources.Res
-import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_no_matches
-import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_search_hint
 import pm.bam.gamedeals.feature.account.generated.resources.account_region_picker_title
 
 /**
- * Bottom-sheet region picker (#276): countries are grouped into continent sections (Africa, Americas, …)
- * with sticky headers, each row shown with its flag emoji (derived from the ISO code). A search field
- * filters by name/code. Selecting a country persists the region and dismisses the sheet.
+ * Bottom-sheet price-region picker (#276): ITAD's price regions plus "Rest of world", each row shown with
+ * its flag emoji and the currency it prices in. Selecting a region persists it and dismisses the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RegionPickerSheet(
     countries: ImmutableList<Country>,
-    selectedCode: String?,
+    selectedId: String?,
     onSelect: (Country) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
-    val grouped = remember(countries, query) {
-        val filtered = countries.filter { it.matches(query) }
-        countriesByRegion(filtered)
-    }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -64,59 +49,16 @@ internal fun RegionPickerSheet(
                 .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
                 .semantics { heading() },
         )
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text(stringResource(Res.string.account_region_picker_search_hint)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small),
-        )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            if (grouped.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(Res.string.account_region_picker_no_matches),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(
-                            horizontal = GameDealsCustomTheme.spacing.large,
-                            vertical = GameDealsCustomTheme.spacing.medium,
-                        ),
-                    )
-                }
-            }
-            grouped.forEach { (region, entries) ->
-                item(key = "header_${region.name}") { RegionHeader(region.displayName) }
-                items(entries, key = { it.code }) { country ->
-                    CountryRow(
-                        country = country,
-                        selected = country.code == selectedCode,
-                        onClick = { onSelect(country) },
-                    )
-                }
+        // The regions fit on most phones, so the list rarely scrolls: keep drags on it from closing the sheet.
+        LazyColumn(modifier = Modifier.fillMaxWidth().scrollWithoutDraggingSheet()) {
+            items(countries, key = { it.id }) { country ->
+                CountryRow(
+                    country = country,
+                    selected = country.id == selectedId,
+                    onClick = { onSelect(country) },
+                )
             }
         }
-    }
-}
-
-private fun Country.matches(query: String): Boolean {
-    if (query.isBlank()) return true
-    val q = query.trim()
-    return name.contains(q, ignoreCase = true) || code.contains(q, ignoreCase = true)
-}
-
-@Composable
-private fun RegionHeader(title: String) {
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.small)
-                .semantics { heading() },
-        )
     }
 }
 
@@ -133,10 +75,18 @@ private fun CountryRow(country: Country, selected: Boolean, onClick: () -> Unit)
         // Click + selection state are owned by the row's `selectable`, so the RadioButton is a
         // non-interactive visual (onClick = null) — the standard Material a11y pattern.
         RadioButton(selected = selected, onClick = null)
-        Text(text = flagEmoji(country.code), style = MaterialTheme.typography.titleMedium)
+        Text(text = regionFlag(country), style = MaterialTheme.typography.titleMedium)
         Text(text = country.name, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = country.priceNote,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
+
+/** A region's flag: Europe's id "EU" has a flag of its own, and "Rest of world" gets a globe. */
+internal fun regionFlag(country: Country): String = flagEmoji(country.id).ifEmpty { "🌐" }
 
 /**
  * The flag emoji for a 2-letter ISO country code, formed from the two Regional Indicator Symbols

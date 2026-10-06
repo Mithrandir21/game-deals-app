@@ -15,8 +15,10 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.logging.runCatchingLogged
 
 /**
  * The user's ITAD collection (epic #219, Phase 2). Backed by [ItadAccountSource] over a Room-persisted
@@ -50,6 +52,7 @@ internal class CollectionRepositoryImpl(
     private val collectionDao: CollectionDao,
     private val analytics: Analytics,
     private val displayStore: CollectionDisplayStore,
+    private val logger: Logger,
 ) : CollectionRepository {
 
     private val displayFlow = MutableStateFlow<List<CollectionEntry>?>(null)
@@ -94,17 +97,19 @@ internal class CollectionRepositoryImpl(
 
     override suspend fun toggleCollection(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
-        // Remote-first: confirm the ITAD write before mutating Room.
-        if (collectionDao.contains(gameId)) {
-            accountSource.removeFromCollection(gameId)
-            collectionDao.delete(gameId)
-            analytics.capture(AnalyticsEvents.COLLECTION_REMOVED, mapOf("game_id" to gameId))
-        } else {
-            accountSource.addToCollection(gameId)
-            collectionDao.add(CollectionGameIdEntry(gameId))
-            analytics.capture(AnalyticsEvents.COLLECTION_ADDED, mapOf("game_id" to gameId))
-        }
-        return RepoUpdateResult.UPDATED
+        return runCatchingLogged(logger) {
+            // Remote-first: confirm the ITAD write before mutating Room.
+            if (collectionDao.contains(gameId)) {
+                accountSource.removeFromCollection(gameId)
+                collectionDao.delete(gameId)
+                analytics.capture(AnalyticsEvents.COLLECTION_REMOVED, mapOf("game_id" to gameId))
+            } else {
+                accountSource.addToCollection(gameId)
+                collectionDao.add(CollectionGameIdEntry(gameId))
+                analytics.capture(AnalyticsEvents.COLLECTION_ADDED, mapOf("game_id" to gameId))
+            }
+            RepoUpdateResult.UPDATED
+        }.getOrDefault(RepoUpdateResult.FAILED)
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

@@ -50,7 +50,16 @@ internal class BundlesRepositoryImpl(
      * cache falls back to the cached list on a failed refresh; a cold cache surfaces the failure (the
      * caller treats the bundles section as best-effort).
      */
-    override suspend fun getBundles(): List<Bundle> {
+    override suspend fun getBundles(): List<Bundle> = bundles(force = false)
+
+    /**
+     * Looks the bundle up in the cached list, refetching it once on a miss: the Game page lists a game's
+     * bundles live, so it can link one published since the list was cached.
+     */
+    override suspend fun getBundle(id: Int): Bundle? =
+        bundles(force = false).firstOrNull { it.id == id } ?: bundles(force = true).firstOrNull { it.id == id }
+
+    private suspend fun bundles(force: Boolean): List<Bundle> {
         val country = regionRepository.getSelectedCountryCode()
         val cachedEntry = bundlesCacheDao.get(country)
         var refreshed: List<Bundle>? = null
@@ -72,11 +81,9 @@ internal class BundlesRepositoryImpl(
                 )
             },
         )
-        cache.refreshIfNeeded()
+        cache.refreshIfNeeded(force)
         return refreshed ?: cachedEntry?.let { json.decodeOffMain(serializer, it.json) } ?: emptyList()
     }
-
-    override suspend fun getBundle(id: Int): Bundle? = getBundles().firstOrNull { it.id == id }
 
     override suspend fun getBundleGamePrices(gameIds: List<String>): List<BundleGamePrice> =
         dealsSource.fetchBundleGamePrices(gameIds)

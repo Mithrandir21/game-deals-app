@@ -28,7 +28,6 @@ import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.common.version.AppInfo
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_followed_series
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_how_it_works
@@ -59,7 +58,7 @@ class AccountScreenTest {
 
     private fun setContent() {
         every { viewModel.uiState } returns MutableStateFlow(
-            AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", Region.AMERICAS)),
+            AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", "USD")),
         )
         every { viewModel.countries } returns persistentListOf(US, UK)
         // The hub collects `events` for the login-failure snackbar. A relaxed mock can't stand in here:
@@ -158,8 +157,8 @@ class AccountScreenTest {
     }
 
     companion object {
-        private val US = Country("US", "United States", Region.AMERICAS)
-        private val UK = Country("GB", "United Kingdom", Region.EUROPE)
+        private val US = Country("US", "United States", "USD")
+        private val UK = Country("GB", "United Kingdom", "GBP")
 
         // DebugEntryRow (the hub's last row) resolves AppInfo via koinInject(), so scrolling far enough to reach
         // it needs a graph. Kept up for the whole class (not per-test) so a late resolution during Compose

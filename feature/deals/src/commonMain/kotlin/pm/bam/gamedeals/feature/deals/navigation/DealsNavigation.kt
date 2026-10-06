@@ -1,9 +1,11 @@
 package pm.bam.gamedeals.feature.deals.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.dropUnlessResumed
 import pm.bam.gamedeals.feature.deals.ui.DealsScreen
 
 /**
@@ -21,9 +23,9 @@ fun NavGraphBuilder.dealsScreen(
 ) {
     composable<Destination.Deals> {
         DealsScreen(
-            goToWeb = goToWeb,
-            goToGame = goToGame,
-            goToDiscover = goToDiscover,
+            goToWeb = goToWeb.dropUnlessResumed(),
+            goToGame = goToGame.dropUnlessResumed(),
+            goToDiscover = dropUnlessResumed(block = goToDiscover),
             gameDetailPane = gameDetailPane,
         )
     }

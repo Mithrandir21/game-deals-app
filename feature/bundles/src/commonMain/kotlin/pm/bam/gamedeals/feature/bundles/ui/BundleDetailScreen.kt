@@ -100,6 +100,7 @@ import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_navig
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleDetailScreenData
 import pm.bam.gamedeals.feature.bundles.ui.BundleDetailViewModel.BundleValueSummary
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -117,6 +118,7 @@ internal fun BundleDetailScreen(
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
     BundleDetailScreenContent(
         state = state,
@@ -147,6 +149,7 @@ internal fun BundleDetailScreen(
         when (event) {
             is BundleDetailViewModel.BundleDetailUiEvent.ShareDeal -> platformActions.share(event.text)
             BundleDetailViewModel.BundleDetailUiEvent.SignInRequired -> SignInPromptController.request()
+            BundleDetailViewModel.BundleDetailUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }
     }
 }
@@ -238,6 +241,7 @@ private fun BundleDetailScreenContent(
 
                 // The shared game-centric peek sheet — opened by tapping a bundle game row, same as Home/Deals.
                 GamePeekSheet(
+                    snackbarHostState = snackbarHostState,
                     data = gamePeek,
                     isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
                     isCollected = peekGameId?.let { it in collectionIds } == true,

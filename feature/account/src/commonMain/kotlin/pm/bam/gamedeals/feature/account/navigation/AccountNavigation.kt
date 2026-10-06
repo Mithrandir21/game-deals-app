@@ -1,10 +1,12 @@
 package pm.bam.gamedeals.feature.account.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.dropUnlessResumed
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_row_linked
 import pm.bam.gamedeals.feature.account.ui.AccountScreen
@@ -31,58 +33,70 @@ fun NavGraphBuilder.accountScreen(
 ) {
     composable<Destination.Account> {
         AccountScreen(
-            onOpenWaitlist = { navController.navigate(Destination.WaitlistList) },
-            onOpenCollection = { navController.navigate(Destination.CollectionList) },
-            onOpenNotifications = { navController.navigate(Destination.Notifications) },
-            onOpenIgnored = { navController.navigate(Destination.IgnoredGames) },
-            onOpenMyNotes = { navController.navigate(Destination.MyNotes) },
-            onOpenFollowedSeries = { navController.navigate(Destination.FollowedSeriesList) },
-            onOpenLinkedAccounts = { navController.navigate(Destination.LinkedAccounts) },
-            onOpenWebsite = goToWeb,
-            onReplayOnboarding = onReplayOnboarding,
+            onOpenWaitlist = dropUnlessResumed { navController.navigate(Destination.WaitlistList) },
+            onOpenCollection = dropUnlessResumed { navController.navigate(Destination.CollectionList) },
+            onOpenNotifications = dropUnlessResumed { navController.navigate(Destination.Notifications) },
+            onOpenIgnored = dropUnlessResumed { navController.navigate(Destination.IgnoredGames) },
+            onOpenMyNotes = dropUnlessResumed { navController.navigate(Destination.MyNotes) },
+            onOpenFollowedSeries = dropUnlessResumed { navController.navigate(Destination.FollowedSeriesList) },
+            onOpenLinkedAccounts = dropUnlessResumed { navController.navigate(Destination.LinkedAccounts) },
+            onOpenWebsite = goToWeb.dropUnlessResumed(),
+            onReplayOnboarding = dropUnlessResumed(block = onReplayOnboarding),
             // The row itself is debug-gated; the route is registered by :feature:debug in every build type.
-            onOpenDebug = { navController.navigate(Destination.Debug) },
+            onOpenDebug = dropUnlessResumed { navController.navigate(Destination.Debug) },
         )
     }
 
     composable<Destination.WaitlistList> {
         // A tap opens the shared game-centric peek sheet (same as Home/Deals); the sheet routes to the full
         // game page via goToGame and to store deals via goToWeb.
-        WaitlistListScreen(onBack = { navController.popBackStack() }, goToGame = goToGame, goToWeb = goToWeb)
+        WaitlistListScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            goToGame = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
+        )
     }
     composable<Destination.CollectionList> {
-        CollectionListScreen(onBack = { navController.popBackStack() }, goToGame = goToGame, goToWeb = goToWeb)
+        CollectionListScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            goToGame = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
+        )
     }
     composable<Destination.FollowedSeriesList> {
         // Followed-series tiles carry IGDB ids, so they open the game page by IGDB id (a Steam-id detour
         // would silently drop console/indie titles), mirroring the game page's series row.
         FollowedSeriesScreen(
-            onBack = { navController.popBackStack() },
-            onGameClick = { igdbGameId -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) },
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onGameClick = { igdbGameId: Long -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) }.dropUnlessResumed(),
         )
     }
 
     composable<Destination.Notifications> {
         NotificationsScreen(
-            onBack = { navController.popBackStack() },
-            onOpenDay = { date -> navController.navigate(Destination.NotificationDay(date)) },
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onOpenDay = { date: String -> navController.navigate(Destination.NotificationDay(date)) }.dropUnlessResumed(),
         )
     }
 
     composable<Destination.NotificationDay> {
-        NotificationDayScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+        NotificationDayScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onGameClick = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
+        )
     }
 
     composable<Destination.IgnoredGames> {
-        IgnoredScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+        IgnoredScreen(onBack = dropUnlessResumed { navController.popBackStack() }, onGameClick = goToGame.dropUnlessResumed())
     }
 
     composable<Destination.MyNotes> {
-        MyNotesScreen(onBack = { navController.popBackStack() }, onGameClick = goToGame)
+        MyNotesScreen(onBack = dropUnlessResumed { navController.popBackStack() }, onGameClick = goToGame.dropUnlessResumed())
     }
 
     // Placeholder routes — not yet implemented.
     composable<Destination.LinkedAccounts> {
-        ComingSoonScreen(title = stringResource(Res.string.account_row_linked), onBack = { navController.popBackStack() })
+        ComingSoonScreen(title = stringResource(Res.string.account_row_linked), onBack = dropUnlessResumed { navController.popBackStack() })
     }
 }

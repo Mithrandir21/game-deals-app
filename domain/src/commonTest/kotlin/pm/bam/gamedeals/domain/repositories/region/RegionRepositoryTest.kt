@@ -5,8 +5,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import pm.bam.gamedeals.common.storage.Storage
-import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
+import pm.bam.gamedeals.domain.models.EUROPE
+import pm.bam.gamedeals.domain.models.REST_OF_WORLD
 import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import kotlin.test.Test
@@ -43,14 +43,33 @@ class RegionRepositoryTest {
     }
 
     @Test
-    fun set_country_persists_and_is_reflected() = runTest {
-        val germany = Country("DE", "Germany", Region.EUROPE)
-        repository.setSelectedCountry(germany)
+    fun set_region_persists_its_id_and_is_reflected() = runTest {
+        repository.setSelectedCountry(EUROPE)
 
-        assertEquals("DE", repository.getSelectedCountryCode())
-        assertEquals(germany, repository.observeSelectedCountry().first())
-        assertEquals("DE", backing[SELECTED_COUNTRY_KEY])
-        assertEquals(mapOf("country" to "DE"), analytics.propsOf(AnalyticsEvents.REGION_CHANGED))
+        assertEquals("FR", repository.getSelectedCountryCode()) // Europe is priced as France
+        assertEquals(EUROPE, repository.observeSelectedCountry().first())
+        assertEquals("EU", backing[SELECTED_COUNTRY_KEY])
+        assertEquals(mapOf("country" to "EU"), analytics.propsOf(AnalyticsEvents.REGION_CHANGED))
+    }
+
+    @Test
+    fun rest_of_world_is_kept_apart_from_the_US_although_both_get_US_prices() = runTest {
+        repository.setSelectedCountry(REST_OF_WORLD)
+
+        assertEquals("US", repository.getSelectedCountryCode())
+        assertEquals(REST_OF_WORLD, RegionRepositoryImpl(storage, analytics).observeSelectedCountry().first())
+    }
+
+    @Test
+    fun a_country_saved_before_the_picker_listed_regions_carries_over_to_its_price_region() = runTest {
+        backing[SELECTED_COUNTRY_KEY] = "DE"
+        assertEquals(EUROPE, RegionRepositoryImpl(storage, analytics).observeSelectedCountry().first())
+
+        backing[SELECTED_COUNTRY_KEY] = "MX"
+        assertEquals(REST_OF_WORLD, RegionRepositoryImpl(storage, analytics).observeSelectedCountry().first())
+
+        backing[SELECTED_COUNTRY_KEY] = "EC"
+        assertEquals("AR", RegionRepositoryImpl(storage, analytics).getSelectedCountryCode())
     }
 
     @Test
@@ -63,9 +82,9 @@ class RegionRepositoryTest {
     }
 
     @Test
-    fun unknown_stored_code_falls_back_to_default() = runTest {
+    fun unknown_stored_code_gets_rest_of_world() = runTest {
         backing[SELECTED_COUNTRY_KEY] = "ZZ"
 
-        assertEquals("US", repository.getSelectedCountryCode())
+        assertEquals(REST_OF_WORLD, repository.observeSelectedCountry().first())
     }
 }

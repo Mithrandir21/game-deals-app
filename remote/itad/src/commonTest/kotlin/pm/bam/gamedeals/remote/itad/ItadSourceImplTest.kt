@@ -29,7 +29,6 @@ import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ReleaseWindow
 import pm.bam.gamedeals.domain.models.SUPPORTED_COUNTRIES
 import pm.bam.gamedeals.domain.models.SearchParameters
@@ -133,6 +132,7 @@ class ItadSourceImplTest {
         assertEquals(61, stores.first().storeID)
         assertEquals("Steam", stores.first().storeName)
         assertEquals("/service/shops/v1", recordedRequests.single().url.encodedPath)
+        assertEquals("US", recordedRequests.single().url.parameters["country"])
     }
 
     @Test
@@ -335,6 +335,39 @@ class ItadSourceImplTest {
         assertEquals("cs-box.png", bundle.games.first().artwork.thumbnail)
         assertEquals("/bundles/v1", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
+        assertEquals("50", recordedRequests.single().url.parameters["limit"]) // ITAD's default is only 20
+        assertEquals("true", recordedRequests.single().url.parameters["mature"]) // else ITAD drops adult bundles
+    }
+
+    @Test
+    fun fetchBundles_pages_until_a_short_page() = runTest {
+        val json = Json { ignoreUnknownKeys = true }
+        val client = mockHttpClient(json) { request ->
+            recordedRequests += request
+            // A full first page of 50, then one more bundle on the second.
+            val ids = if (request.url.parameters["offset"] == "0") 1..50 else 51..51
+            respond(
+                content = ids.joinToString(prefix = "[", postfix = "]") { id ->
+                    """{"id": $id, "title": "Bundle $id", "url": "https://b/$id", "tiers": [{"games": [{"id": "g$id", "title": "Game $id", "type": "game"}]}]}"""
+                },
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val localImpl = ItadSourceImpl(
+            logger = logger,
+            shopsApi = ItadShopsApi(client),
+            dealsApi = ItadDealsApi(client),
+            gamesApi = ItadGamesApi(client),
+            bundlesApi = ItadBundlesApi(client),
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            regionRepository = regionRepository,
+        )
+
+        val bundles = localImpl.fetchBundles()
+
+        assertEquals((1..51).toList(), bundles.map { it.id })
+        assertEquals(listOf("0", "50"), recordedRequests.map { it.url.parameters["offset"] })
     }
 
     @Test
@@ -547,7 +580,7 @@ class ItadSourceImplTest {
 
     @Test
     fun fetchRegionalPrices_queries_each_country_and_maps_cheapest_deal() = runTest {
-        val regions = listOf(Country("US", "United States", Region.AMERICAS), Country("GB", "United Kingdom", Region.EUROPE))
+        val regions = listOf(Country("US", "United States", "USD"), Country("GB", "United Kingdom", "GBP"))
 
         val prices = impl.fetchRegionalPrices("uuid-1", regions)
 
@@ -598,6 +631,7 @@ class ItadSourceImplTest {
         val recorded = recordedRequests.single().url
         assertEquals("/games/bundles/v2", recorded.encodedPath)
         assertEquals("uuid-1", recorded.parameters["id"])
+        assertEquals("US", recorded.parameters["country"])
     }
 
     @Test

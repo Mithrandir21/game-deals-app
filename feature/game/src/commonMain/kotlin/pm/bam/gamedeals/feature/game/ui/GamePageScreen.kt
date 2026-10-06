@@ -140,6 +140,7 @@ import pm.bam.gamedeals.feature.game.ui.GamePageViewModel.GamePageData
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 import androidx.compose.runtime.getValue
@@ -179,11 +180,13 @@ internal fun GamePageScreen(
     val followedFranchiseIds = viewModel.followedFranchiseIds.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             is GamePageViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
             GamePageViewModel.GameUiEvent.SignInRequired -> SignInPromptController.request()
+            GamePageViewModel.GameUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }
     }
 

@@ -21,8 +21,10 @@ import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.logging.runCatchingLogged
 
 /**
  * The user's ITAD waitlist (epic #219). Replaces the removed local Favourites (Phase 3); the heart is
@@ -62,7 +64,8 @@ interface WaitlistRepository {
     /**
      * Adds/removes [gameId] on the user's ITAD waitlist, returning [RepoUpdateResult]. When logged
      * out this is a no-op and returns [RepoUpdateResult.NOT_LOGGED_IN] so the UI can route the user
-     * to sign in (the heart is login-gated — there is no local waitlist).
+     * to sign in (the heart is login-gated — there is no local waitlist). A failed remote write returns
+     * [RepoUpdateResult.FAILED] rather than throwing.
      */
     suspend fun toggleWaitlist(gameId: String): RepoUpdateResult
 }
@@ -79,6 +82,7 @@ internal class WaitlistRepositoryImpl(
     private val regionRepository: RegionRepository,
     private val displayStore: WaitlistDisplayStore,
     private val clock: Clock,
+    private val logger: Logger,
 ) : WaitlistRepository {
 
     // Hot snapshot of the enriched list, seeded lazily from persistent storage on first collection.
@@ -159,19 +163,21 @@ internal class WaitlistRepositoryImpl(
 
     override suspend fun toggleWaitlist(gameId: String): RepoUpdateResult {
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
-        // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
-        if (waitlistDao.contains(gameId)) {
-            accountSource.removeFromWaitlist(gameId)
-            waitlistDao.delete(gameId)
-            // Recorded only after the remote+local write succeeds, so failed toggles aren't counted. The base
-            // props (environment/app_version) are merged by the Analytics impl.
-            analytics.capture(AnalyticsEvents.WAITLIST_REMOVED, mapOf("game_id" to gameId))
-        } else {
-            accountSource.addToWaitlist(gameId)
-            waitlistDao.add(WaitlistGameIdEntry(gameId))
-            analytics.capture(AnalyticsEvents.WAITLIST_ADDED, mapOf("game_id" to gameId))
-        }
-        return RepoUpdateResult.UPDATED
+        return runCatchingLogged(logger) {
+            // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
+            if (waitlistDao.contains(gameId)) {
+                accountSource.removeFromWaitlist(gameId)
+                waitlistDao.delete(gameId)
+                // Recorded only after the remote+local write succeeds, so failed toggles aren't counted. The base
+                // props (environment/app_version) are merged by the Analytics impl.
+                analytics.capture(AnalyticsEvents.WAITLIST_REMOVED, mapOf("game_id" to gameId))
+            } else {
+                accountSource.addToWaitlist(gameId)
+                waitlistDao.add(WaitlistGameIdEntry(gameId))
+                analytics.capture(AnalyticsEvents.WAITLIST_ADDED, mapOf("game_id" to gameId))
+            }
+            RepoUpdateResult.UPDATED
+        }.getOrDefault(RepoUpdateResult.FAILED)
     }
 
     private suspend fun loggedIn(): Boolean = authTokenStore.getAccessToken() != null

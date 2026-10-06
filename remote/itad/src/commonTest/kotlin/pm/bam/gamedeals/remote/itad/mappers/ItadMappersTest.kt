@@ -137,6 +137,23 @@ class ItadMappersTest {
         assertTrue(bundle.games.isEmpty()) // fetchBundles then drops the now-empty bundle
     }
 
+    @Test
+    fun toBundle_keeps_the_cheapest_tier_currency() {
+        val game = searchGame("g1", "Real Game", type = "game")
+        val bundle = RemoteItadBundle(
+            id = 3,
+            title = "Tiered Bundle",
+            url = "https://b/3",
+            tiers = listOf(
+                RemoteItadBundleTier(price = RemoteItadPrice(amount = 12.0, currency = "USD"), games = listOf(game)),
+                RemoteItadBundleTier(price = RemoteItadPrice(amount = 1.0, currency = "USD"), games = listOf(game)),
+            ),
+        ).toBundle()
+
+        assertEquals(1.0, bundle.priceValue)
+        assertEquals("USD", bundle.currency)
+    }
+
     private fun dealEntry(flag: String?, voucher: String?): RemoteItadDealEntry =
         RemoteItadDealEntry(
             shop = RemoteItadShopRef(id = 61, name = "Steam"),

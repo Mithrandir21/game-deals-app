@@ -65,14 +65,11 @@ class SentryLoggingListenerTest {
     }
 
     @Test
-    fun verbose_and_debug_both_map_to_debug_breadcrumbs() {
-        val crumbs = mutableListOf<Breadcrumb>()
-
+    fun verbose_and_debug_are_not_sent_to_sentry() {
         listener.onLog(LogLevel.VERBOSE, "v", tag = null, throwable = null)
         listener.onLog(LogLevel.DEBUG, "d", tag = null, throwable = null)
 
-        verify(exactly = 2) { Sentry.addBreadcrumb(capture(crumbs)) }
-        assertEquals(listOf(SentryLevel.DEBUG, SentryLevel.DEBUG), crumbs.map { it.level })
+        verify(exactly = 0) { Sentry.addBreadcrumb(any()) }
     }
 
     @Test

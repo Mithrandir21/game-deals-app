@@ -135,7 +135,9 @@ internal class DealsViewModel(
      * recency) applied to `/deals/v2`; default empty. Persisted via [SettingsRepository] so it survives
      * relaunches (Deals-only — not shared with Bundles). Changing it reloads the list from offset 0.
      */
-    val filter: StateFlow<DealsFilter> = settingsRepository.observeDealsFilter()
+    val filter: StateFlow<DealsFilter> = combine(settingsRepository.observeDealsFilter(), regionRepository.observeSelectedCountry()) { filter, country ->
+        filter.forCountry(country.code)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DealsFilter())
 
     /** Recently submitted search terms (most-recent first) — quick re-run chips in the blank search state (#6). */
@@ -196,6 +198,10 @@ internal class DealsViewModel(
 
     private var appendJob: Job? = null
 
+    // The last currency a page came back in, with the country it was for. Kept so the price-filter steps
+    // stay in that currency while a filter empties the list.
+    private var lastPriceCurrency: Pair<String, String>? = null
+
     init {
         // First load + reload whenever the sort, the shop filter, the mature toggle, the region, or the
         // server-side deal filter changes. The region flow emits its seeded value immediately, so this
@@ -208,10 +214,18 @@ internal class DealsViewModel(
                 settingsRepository.observeMatureOptIn(),
                 regionRepository.observeSelectedCountry().map { it.code }.distinctUntilChanged(),
                 settingsRepository.observeDealsFilter(),
-            ) { selectedSort, shops, mature, _, dealsFilter ->
-                BrowseParams(selectedSort.field, selectedSort.direction, shops, mature, dealsFilter)
+            ) { selectedSort, shops, mature, region, dealsFilter ->
+                BrowseParams(selectedSort.field, selectedSort.direction, shops, mature, dealsFilter.forCountry(region), region)
             }
                 .collectLatest { loadFirstPage(it) }
+        }
+
+        // A price cap saved before caps recorded their country is taken to be in the current one.
+        viewModelScope.launch {
+            val filter = settingsRepository.getDealsFilter()
+            if (filter.maxPrice != null && filter.maxPriceCountry == null) {
+                settingsRepository.setDealsFilter(filter.copy(maxPriceCountry = regionRepository.getSelectedCountryCode()))
+            }
         }
 
         // Title search: a blank query yields the browse list (Idle); a non-blank query shows a brief
@@ -260,7 +274,12 @@ internal class DealsViewModel(
     fun setMinCut(percent: Int?) = updateFilter { it.copy(minCutPercent = percent) }
 
     /** Maximum sale price in the region's currency (0.0 = Free), or null for no price cap. */
-    fun setMaxPrice(maxPrice: Double?) = updateFilter { it.copy(maxPrice = maxPrice) }
+    fun setMaxPrice(maxPrice: Double?) {
+        viewModelScope.launch {
+            val country = regionRepository.getSelectedCountryCode()
+            settingsRepository.setDealsFilter(settingsRepository.getDealsFilter().copy(maxPrice = maxPrice, maxPriceCountry = maxPrice?.let { country }))
+        }
+    }
 
     /** Toggle a product type in/out of the filter; an empty selection means "all types". */
     fun toggleType(type: ProductType) = updateFilter { current ->
@@ -320,12 +339,14 @@ internal class DealsViewModel(
 
     fun retry() {
         viewModelScope.launch {
-            loadFirstPage(BrowseParams(sortSelection.value.field, sortSelection.value.direction, selectedShopIds.value, settingsRepository.getMatureOptIn(), filter.value))
+            val region = regionRepository.getSelectedCountryCode()
+            loadFirstPage(BrowseParams(sortSelection.value.field, sortSelection.value.direction, selectedShopIds.value, settingsRepository.getMatureOptIn(), settingsRepository.getDealsFilter().forCountry(region), region))
         }
     }
 
     private suspend fun loadFirstPage(params: BrowseParams) {
         appendJob?.cancel()
+        val knownCurrency = lastPriceCurrency?.takeIf { it.first == params.region }?.second
         uiState.update {
             DealsScreenData(
                 status = DealsScreenData.Status.LOADING,
@@ -334,10 +355,13 @@ internal class DealsViewModel(
                 shopIds = params.shopIds.toImmutableSet(),
                 mature = params.mature,
                 filter = params.filter,
+                priceCurrency = knownCurrency,
             )
         }
         try {
             val page = dealsRepository.getDeals(DealsQuery(sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toList(), mature = params.mature, filter = params.filter, offset = 0))
+            val currency = page.firstOrNull { it.currency.isNotEmpty() }?.currency ?: knownCurrency
+            currency?.let { lastPriceCurrency = params.region to it }
             uiState.update {
                 DealsScreenData(
                     status = DealsScreenData.Status.DATA,
@@ -349,6 +373,7 @@ internal class DealsViewModel(
                     deals = page.distinctBy { it.dealID }.toImmutableList(),
                     endReached = page.size < DealsQuery.DEALS_PAGE_SIZE,
                     loadedCount = page.size,
+                    priceCurrency = currency,
                 )
             }
         } catch (c: CancellationException) {
@@ -356,7 +381,7 @@ internal class DealsViewModel(
         } catch (t: Throwable) {
             error(logger, t) { "Failed to load deals (sort=${params.sortField}/${params.sortDirection}, shops=${params.shopIds}, mature=${params.mature}, filter=${params.filter})" }
             uiState.update {
-                DealsScreenData(status = DealsScreenData.Status.ERROR, sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter)
+                DealsScreenData(status = DealsScreenData.Status.ERROR, sortField = params.sortField, sortDirection = params.sortDirection, shopIds = params.shopIds.toImmutableSet(), mature = params.mature, filter = params.filter, priceCurrency = knownCurrency)
             }
         }
     }
@@ -401,29 +426,17 @@ internal class DealsViewModel(
 
     /** Toggle a game on/off the waitlist from the peek sheet; prompts sign-in when logged out. */
     fun toggleWaitlist(gameId: String) {
-        viewModelScope.launch {
-            if (waitlistRepository.toggleWaitlist(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DealsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { waitlistRepository.toggleWaitlist(gameId) }
     }
 
     /** Toggle a game in/out of the collection from the peek sheet; prompts sign-in when logged out. */
     fun toggleCollection(gameId: String) {
-        viewModelScope.launch {
-            if (collectionRepository.toggleCollection(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DealsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { collectionRepository.toggleCollection(gameId) }
     }
 
     /** Toggle a game on/off the ignore list from the peek sheet; prompts sign-in when logged out. */
     fun toggleIgnore(gameId: String) {
-        viewModelScope.launch {
-            if (ignoredRepository.toggleIgnored(gameId) == RepoUpdateResult.NOT_LOGGED_IN) {
-                events.tryEmit(DealsUiEvent.SignInRequired)
-            }
-        }
+        launchLibraryWrite { ignoredRepository.toggleIgnored(gameId) }
     }
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
@@ -440,12 +453,24 @@ internal class DealsViewModel(
 
     private data class SortSelection(val field: DealsSortField, val direction: DealsSortDirection)
 
-    private data class BrowseParams(val sortField: DealsSortField, val sortDirection: DealsSortDirection, val shopIds: Set<Int>, val mature: Boolean, val filter: DealsFilter)
+    private data class BrowseParams(val sortField: DealsSortField, val sortDirection: DealsSortDirection, val shopIds: Set<Int>, val mature: Boolean, val filter: DealsFilter, val region: String)
+
+    /** Runs a remote-first library write, routing sign-in and failure outcomes to one-shot events. */
+    private fun launchLibraryWrite(write: suspend () -> RepoUpdateResult) {
+        viewModelScope.launch {
+            when (write()) {
+                RepoUpdateResult.NOT_LOGGED_IN -> events.tryEmit(DealsUiEvent.SignInRequired)
+                RepoUpdateResult.FAILED -> events.tryEmit(DealsUiEvent.ActionFailed)
+                RepoUpdateResult.UPDATED -> Unit
+            }
+        }
+    }
 
     internal sealed interface DealsUiEvent {
         data class ShareDeal(val text: String) : DealsUiEvent
         data object LoadMoreError : DealsUiEvent
         data object SignInRequired : DealsUiEvent
+        data object ActionFailed : DealsUiEvent
         data object SearchSaved : DealsUiEvent
     }
 
@@ -476,6 +501,8 @@ internal class DealsViewModel(
          * so the two diverge as soon as the feed re-serves a row we already hold.
          */
         val loadedCount: Int = 0,
+        /** ISO code of this country's prices, which sets the price-filter steps; null until a page shows it. */
+        val priceCurrency: String? = null,
     ) {
         enum class Status { LOADING, ERROR, DATA }
     }

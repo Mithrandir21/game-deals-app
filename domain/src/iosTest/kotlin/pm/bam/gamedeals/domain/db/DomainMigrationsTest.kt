@@ -47,6 +47,21 @@ class DomainMigrationsTest {
     }
 
     @Test
+    fun migration_3_4_keeps_deals_and_expires_them_with_no_currency() {
+        helper.createDatabase(3).use { connection ->
+            connection.execSQL(
+                "INSERT INTO `Deal` (`dealID`, `title`, `storeID`, `gameID`, `salePriceValue`, `salePriceDenominated`, " +
+                    "`normalPriceValue`, `normalPriceDenominated`, `isOnSale`, `savings`, `url`, `expires`) " +
+                    "VALUES ('g1:61', 'Some Game', 61, 'g1', 4.99, '4.99', 9.99, '9.99', 1, 50.0, 'https://s', 9999999999999)"
+            )
+        }
+
+        helper.runMigrationsAndValidate(4, listOf(MIGRATION_3_4)).use { connection ->
+            assertEquals(listOf(Triple("g1:61", 0L, "")), connection.deals())
+        }
+    }
+
+    @Test
     fun every_registered_migration_reaches_the_current_schema() {
         helper.createDatabase(1).close()
 
@@ -56,5 +71,10 @@ class DomainMigrationsTest {
     private fun SQLiteConnection.releases(): List<Triple<String, Long, Long>> =
         prepare("SELECT `title`, `expires`, `isMature` FROM `Release`").use { statement ->
             buildList { while (statement.step()) add(Triple(statement.getText(0), statement.getLong(1), statement.getLong(2))) }
+        }
+
+    private fun SQLiteConnection.deals(): List<Triple<String, Long, String>> =
+        prepare("SELECT `dealID`, `expires`, `currency` FROM `Deal`").use { statement ->
+            buildList { while (statement.step()) add(Triple(statement.getText(0), statement.getLong(1), statement.getText(2))) }
         }
 }

@@ -190,6 +190,7 @@ class ItadAccountSourceImplTest {
         assertTrue(deal.isNewHistoricalLow) // flag "N"
         assertTrue(deal.hasVoucher)         // non-blank voucher
         assertFalse(deal.isStoreLow)        // flag is "N", not "S"
+        assertEquals("EUR", deal.currency)  // the website account's currency, kept to compare with the app's
 
         assertEquals("/notifications/waitlist/v1", recorded.single().url.encodedPath)
         assertEquals("n1", recorded.single().url.parameters["id"])

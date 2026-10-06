@@ -57,11 +57,11 @@ internal const val GAME_ID_MAPPING_TTL_MILLIS = millisInDay * 30
 /**
  * Curated regions for the Game Page's "Regions" tab (epic #291, Phase 7). Each is a separate
  * `/games/prices/v3` round-trip, so the set is kept small and skewed to regions whose pricing differs
- * most (cheap: TR/BR/IN/AR; reference: US/GB/DE/JP). Drawn from [SUPPORTED_COUNTRIES].
+ * most (cheap: TR/BR/IN/AR; reference: US/GB/Europe/JP). Drawn from [SUPPORTED_COUNTRIES] by id.
  */
 internal val REGIONAL_COMPARISON_COUNTRIES: List<Country> =
-    listOf("US", "GB", "DE", "BR", "TR", "IN", "AR", "JP")
-        .mapNotNull { code -> SUPPORTED_COUNTRIES.firstOrNull { it.code == code } }
+    listOf("US", "GB", "EU", "BR", "TR", "IN", "AR", "JP")
+        .mapNotNull { id -> SUPPORTED_COUNTRIES.firstOrNull { it.id == id } }
 
 interface GamesRepository {
     fun observeGames(): Flow<List<Game>>

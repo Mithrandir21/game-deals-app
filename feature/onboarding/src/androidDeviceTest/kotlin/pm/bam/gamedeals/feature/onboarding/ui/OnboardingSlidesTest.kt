@@ -13,6 +13,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.junit.Assert.assertTrue
@@ -20,7 +23,6 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.feature.onboarding.generated.resources.Res
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_done
 import pm.bam.gamedeals.feature.onboarding.generated.resources.onboarding_notifications_decline
@@ -44,8 +46,8 @@ class OnboardingSlidesTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val us = Country("US", "United States", Region.AMERICAS)
-    private val gb = Country("GB", "United Kingdom", Region.EUROPE)
+    private val us = Country("US", "United States", "USD")
+    private val gb = Country("GB", "United Kingdom", "GBP")
 
     private lateinit var sem: Semantics
 
@@ -167,7 +169,7 @@ class OnboardingSlidesTest {
         setContent {
             OnboardingRegionPicker(
                 countries = persistentListOf(us, gb),
-                selectedCode = us.code,
+                selectedId = us.id,
                 onSelect = { selected = it },
                 onDismiss = {},
             )
@@ -179,6 +181,28 @@ class OnboardingSlidesTest {
 
         composeTestRule.onNodeWithText(gb.name).performClick()
         assertTrue(selected == gb)
+    }
+
+    @Test
+    fun region_picker_stays_open_when_its_list_is_dragged() {
+        var dismissed = false
+        setContent {
+            OnboardingRegionPicker(
+                countries = persistentListOf(us, gb),
+                selectedId = us.id,
+                onSelect = {},
+                onDismiss = { dismissed = true },
+            )
+        }
+
+        // The list can't scroll; these drags used to pull the whole sheet down and close it on release.
+        val row = composeTestRule.onNodeWithText(gb.name)
+        row.performTouchInput { swipeUp(startY = centerY, endY = centerY - 400f, durationMillis = 600) }
+        row.performTouchInput { swipeDown(startY = centerY, endY = centerY + 400f, durationMillis = 600) }
+        composeTestRule.waitForIdle()
+
+        assertTrue(!dismissed)
+        composeTestRule.onNodeWithText(gb.name).assertIsDisplayed()
     }
 
     private fun setContent(content: @Composable () -> Unit) {

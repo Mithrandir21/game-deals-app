@@ -94,6 +94,8 @@ import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.feature.home.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_all_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_bundles_label
 import pm.bam.gamedeals.feature.home.generated.resources.home_screen_data_loading_error_msg
@@ -159,6 +161,7 @@ internal fun HomeScreen(
     val recentlyViewed = viewModel.recentlyViewed.collectAsStateWithLifecycle()
     val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val actionFailed = stringResource(CommonRes.string.library_action_failed)
     val widthClass = rememberWidthSizeClass()
 
     HomeScreenContent(
@@ -202,6 +205,7 @@ internal fun HomeScreen(
         when (event) {
             is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
             HomeViewModel.HomeUiEvent.SignInRequired -> SignInPromptController.request()
+            HomeViewModel.HomeUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }
     }
 }
@@ -279,6 +283,7 @@ private fun HomeScreenContent(
                 }
 
                 GamePeekSheet(
+                    snackbarHostState = snackbarHostState,
                     data = gamePeek,
                     isWaitlisted = peekGameId?.let { it in waitlistIds } == true,
                     isCollected = peekGameId?.let { it in collectionIds } == true,

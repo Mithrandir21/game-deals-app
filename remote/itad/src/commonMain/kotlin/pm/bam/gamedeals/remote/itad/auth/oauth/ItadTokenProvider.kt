@@ -1,6 +1,8 @@
 package pm.bam.gamedeals.remote.itad.auth.oauth
 
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.http.HttpStatusCode
 import kotlin.coroutines.cancellation.CancellationException
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
@@ -11,8 +13,8 @@ import pm.bam.gamedeals.logging.error
  * Bridges the persisted [AuthTokenStore] and the [ItadOAuthClient] for Ktor's `Auth { bearer }` plugin
  * (epic #219, Phase 2): supplies the current access token and transparently refreshes on 401.
  *
- * On refresh success the new tokens are persisted (preserving the stored username); on refresh failure
- * the session is cleared so the UI reverts to logged-out and prompts a fresh login.
+ * On refresh success the new tokens are persisted (preserving the stored username). The session is cleared
+ * only when ITAD rejects the refresh token; a network, server or rate-limit failure keeps it for the next attempt.
  */
 class ItadTokenProvider(
     private val authTokenStore: AuthTokenStore,
@@ -45,14 +47,30 @@ class ItadTokenProvider(
             BearerTokens(token.accessToken, newRefresh)
         } catch (ce: CancellationException) {
             throw ce
+        } catch (e: ClientRequestException) {
+            if (e.response.status in DEFINITIVE_REJECTIONS) {
+                error(logger, throwable = e) { "ITAD rejected the refresh token; clearing session" }
+                clearAndNull()
+            } else {
+                keepSession(e)
+            }
         } catch (t: Throwable) {
-            error(logger, throwable = t) { "ITAD token refresh failed; clearing session" }
-            clearAndNull()
+            keepSession(t)
         }
+    }
+
+    private fun keepSession(t: Throwable): BearerTokens? {
+        error(logger, throwable = t) { "ITAD token refresh failed; keeping the session for the next attempt" }
+        return null
     }
 
     private suspend fun clearAndNull(): BearerTokens? {
         authTokenStore.clear()
         return null
+    }
+
+    private companion object {
+        // OAuth answers a revoked or expired refresh token with 400 (invalid_grant) or 401 (invalid_client).
+        val DEFINITIVE_REJECTIONS = setOf(HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized)
     }
 }

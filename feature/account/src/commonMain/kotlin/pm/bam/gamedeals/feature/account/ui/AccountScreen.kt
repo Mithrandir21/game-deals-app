@@ -63,7 +63,6 @@ import pm.bam.gamedeals.common.ui.platform.rememberNotificationPermissionRequest
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ThemeMode
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_linked_steam_connected
@@ -187,7 +186,7 @@ private fun AccountScreenContent(
     val onOpenRegion = { showRegionPicker = true }
     val onOpenTheme = { showThemePicker = true }
     val onOpenPrivacyPolicy = { onOpenWebsite(PRIVACY_POLICY_URL) }
-    val regionName = data.selectedCountry?.name
+    val regionName = data.selectedCountry?.let { "${it.name} (${it.priceNote})" }
     val themeName = themeModeLabel(data.themeMode)
 
     // The app shell owns the top bar + bottom nav and provides outer padding; zero this Scaffold's
@@ -243,7 +242,7 @@ private fun AccountScreenContent(
         if (showRegionPicker) {
             RegionPickerSheet(
                 countries = countries,
-                selectedCode = data.selectedCountry?.code,
+                selectedId = data.selectedCountry?.id,
                 onSelect = { onCountrySelected(it); showRegionPicker = false },
                 onDismiss = { showRegionPicker = false },
             )
@@ -597,8 +596,8 @@ private fun HubRow(
 }
 
 private val previewCountries = persistentListOf(
-    Country("US", "United States", Region.AMERICAS),
-    Country("GB", "United Kingdom", Region.EUROPE),
+    Country("US", "United States", "USD"),
+    Country("GB", "United Kingdom", "GBP"),
 )
 
 @Composable
@@ -630,7 +629,7 @@ private fun AccountScreenContentPreview(data: AccountScreenData) {
 @Composable
 private fun AccountScreen_LoggedOut_Preview() {
     AccountScreenContentPreview(
-        AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", Region.AMERICAS)),
+        AccountScreenData(loggedIn = false, selectedCountry = Country("US", "United States", "USD")),
     )
 }
 
@@ -645,7 +644,7 @@ private fun AccountScreen_LoggedIn_Preview() {
             collectionCount = 34,
             unreadGames = 3,
             linkedSteam = true,
-            selectedCountry = Country("US", "United States", Region.AMERICAS),
+            selectedCountry = Country("US", "United States", "USD"),
             matureOptIn = true,
         ),
     )

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -61,15 +62,22 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_notification
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_title
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_historical_low
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_open_game
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_region_change
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_region_note
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayEvent
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayScreenData
+import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.RegionNote
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+
+/** The website setting ITAD prices waitlist alerts by; the API can't read or change it. */
+private const val ITAD_REGION_SETTINGS_URL = "https://isthereanydeal.com/settings/region/"
 
 @Composable
 internal fun NotificationDayScreen(
     onBack: () -> Unit,
     onGameClick: (gameId: String) -> Unit,
+    goToWeb: (url: String) -> Unit = {},
     viewModel: NotificationDayViewModel = koinViewModel(),
 ) {
     val data by viewModel.uiState.collectAsStateWithLifecycle()
@@ -85,6 +93,7 @@ internal fun NotificationDayScreen(
         onBack = onBack,
         onGameViewed = viewModel::onGameViewed,
         onOpenGame = viewModel::onOpenGame,
+        onChangeRegion = { goToWeb(ITAD_REGION_SETTINGS_URL) },
     )
 }
 
@@ -95,6 +104,7 @@ private fun NotificationDayScreenContent(
     onBack: () -> Unit,
     onGameViewed: (gameId: String) -> Unit,
     onOpenGame: (gameId: String) -> Unit,
+    onChangeRegion: () -> Unit = {},
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -135,12 +145,38 @@ private fun NotificationDayScreenContent(
                     contentPadding = PaddingValues(GameDealsCustomTheme.spacing.medium),
                     verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
+                    data.regionNote?.let { note ->
+                        item(key = "region-note") { RegionNoteCard(note = note, onChangeRegion = onChangeRegion) }
+                    }
                     items(data.games, key = { it.gameId }) { game ->
                         // Viewing a game's card is the per-game read action — fires once the card composes.
                         LaunchedEffect(game.gameId) { onGameViewed(game.gameId) }
                         GameDealCard(game = game, onOpenGame = { onOpenGame(game.gameId) })
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Says why these prices can differ from the rest of the app, with a link to the website setting behind them. */
+@Composable
+private fun RegionNoteCard(note: RegionNote, onChangeRegion: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium)) {
+            Text(
+                text = stringResource(Res.string.account_notification_region_note, note.alertCurrency, note.appCurrency),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            TextButton(
+                onClick = onChangeRegion,
+                contentPadding = PaddingValues(vertical = GameDealsCustomTheme.spacing.extraSmall),
+            ) {
+                Text(stringResource(Res.string.account_notification_region_change))
             }
         }
     }
@@ -268,7 +304,7 @@ private val previewDayGames = persistentListOf(
 private fun NotificationDayScreenPreview() {
     GameDealsTheme {
         NotificationDayScreenContent(
-            data = NotificationDayScreenData(loading = false, games = previewDayGames),
+            data = NotificationDayScreenData(loading = false, games = previewDayGames, regionNote = RegionNote("EUR", "USD")),
             onBack = {},
             onGameViewed = {},
             onOpenGame = {},

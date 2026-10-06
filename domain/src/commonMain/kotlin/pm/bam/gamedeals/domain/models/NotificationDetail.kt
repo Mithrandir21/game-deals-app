@@ -49,7 +49,9 @@ fun List<NotificationDealGame>.mergedByGameId(): List<NotificationDealGame> =
 /**
  * A single shop's offer on a notification game, with prices pre-formatted for display ([salePriceValue]
  * is retained only to pick the cheapest). The flags drive the same deal badges as the rest of the app
- * ([isNewHistoricalLow] → "N", [isStoreLow] → "S", [hasVoucher] → scissors).
+ * ([isNewHistoricalLow] → "N", [isStoreLow] → "S", [hasVoucher] → scissors). [currency] is the ISO 4217 code
+ * of the sale price: ITAD prices alerts in the region set on the user's website account, which may not be the
+ * app's region.
  */
 @Immutable
 data class NotificationShopDeal(
@@ -62,4 +64,5 @@ data class NotificationShopDeal(
     val isNewHistoricalLow: Boolean = false,
     val isStoreLow: Boolean = false,
     val hasVoucher: Boolean = false,
+    val currency: String = "",
 )

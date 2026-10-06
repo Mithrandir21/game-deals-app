@@ -15,11 +15,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationShopDeal
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayEvent
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -29,11 +31,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NotificationDayViewModelTest : MainDispatcherTest() {
 
     private val notificationsRepository: NotificationsRepository = mock(MockMode.autoUnit)
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
+        every { observeSelectedCountry() } returns flowOf(Country("US", "United States", "USD"))
+    }
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -43,14 +49,52 @@ class NotificationDayViewModelTest : MainDispatcherTest() {
         NotificationDayViewModel(
             savedStateHandle = SavedStateHandle(buildMap { date?.let { put("date", it) } }),
             notificationsRepository = notificationsRepository,
+            regionRepository = regionRepository,
             logger = logger,
         )
 
     private fun notification(id: String, day: String = DAY, read: Boolean = false) =
         ItadNotification(id = id, type = "waitlist", title = "t$id", timestamp = "${day}T09:30:00+00:00", read = read)
 
-    private fun deal(shop: String, price: Double) =
-        NotificationShopDeal(shopName = shop, salePriceValue = price, salePriceDenominated = "$price", regularPriceDenominated = null, cutPercent = 50, url = "u")
+    private fun deal(shop: String, price: Double, currency: String = "USD") =
+        NotificationShopDeal(shopName = shop, salePriceValue = price, salePriceDenominated = "$price", regularPriceDenominated = null, cutPercent = 50, url = "u", currency = currency)
+
+    private fun dayWithDeals(vararg deals: NotificationShopDeal) {
+        every { notificationsRepository.observeNotifications() } returns flowOf(listOf(notification("n1")))
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns
+            NotificationDetail("n1", listOf(NotificationDealGame(gameId = "g1", title = "Halo", deals = deals.toList())))
+    }
+
+    @Test
+    fun alerts_priced_in_another_currency_than_the_app_get_a_region_note() = runTest {
+        dayWithDeals(deal("GOG", 12.49, currency = "EUR"))
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(NotificationDayViewModel.RegionNote(alertCurrency = "EUR", appCurrency = "USD"), vm.uiState.value.regionNote)
+    }
+
+    @Test
+    fun alerts_in_the_apps_currency_get_no_note() = runTest {
+        dayWithDeals(deal("GOG", 12.49, currency = "USD"))
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.regionNote)
+    }
+
+    @Test
+    fun no_note_when_the_alert_currency_is_unknown() = runTest {
+        // Expired deals (no prices) or deals mapped before the currency was kept say nothing either way.
+        dayWithDeals(deal("GOG", 12.49, currency = ""))
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.regionNote)
+    }
 
     @Test
     fun open_aggregates_the_days_entries_and_tags_each_game_with_its_source_entry() = runTest {

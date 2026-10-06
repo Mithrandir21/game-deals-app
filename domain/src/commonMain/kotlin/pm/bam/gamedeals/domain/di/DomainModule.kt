@@ -141,8 +141,8 @@ val domainModule = module {
     // lookup (dealsSource) keyed to the user's region; collection is price-less.
     single<WaitlistDisplayStore> { WaitlistDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
-    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
-    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get()) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
@@ -162,7 +162,7 @@ val domainModule = module {
     // One impl instance backs both the background checker and the follow-time seeder (seed-on-follow
     // suppresses the existing on-sale back-catalog from the tray; the Followed-series screen still shows it).
     single {
-        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
+        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
             "$gameTitle is $cutPercent% off in $franchiseName — now $priceDenominated"
         }
     }
@@ -170,8 +170,8 @@ val domainModule = module {
     single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
-    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get()) }
-    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get()) }
+    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.
     single<CacheMaintenance> {

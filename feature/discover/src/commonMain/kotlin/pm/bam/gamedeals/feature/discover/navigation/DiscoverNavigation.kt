@@ -1,9 +1,11 @@
 package pm.bam.gamedeals.feature.discover.navigation
 
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.dropUnlessResumed
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.feature.discover.ui.DiscoverPickerScreen
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsScreen
@@ -18,8 +20,8 @@ fun NavGraphBuilder.discoverScreen(
 ) {
     composable<Destination.Discover> {
         DiscoverPickerScreen(
-            onBack = { navController.popBackStack() },
-            onShowResults = goToResults,
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onShowResults = goToResults.dropUnlessResumed(),
         )
     }
 }
@@ -35,9 +37,9 @@ fun NavGraphBuilder.discoverResultsScreen(
 ) {
     composable<Destination.DiscoverResults> {
         DiscoverResultsScreen(
-            onBack = { navController.popBackStack() },
-            goToGame = goToGame,
-            goToWeb = goToWeb,
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            goToGame = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
         )
     }
 }

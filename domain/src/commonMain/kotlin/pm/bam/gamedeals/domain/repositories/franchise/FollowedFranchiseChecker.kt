@@ -9,6 +9,7 @@ import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 
 /**
  * The client-side half of followed-franchise notifications: for each franchise the user follows, fetch its
@@ -39,22 +40,29 @@ internal class FollowedFranchiseCheckerImpl(
     private val followedFranchiseRepository: FollowedFranchiseRepository,
     private val igdbRepository: IgdbRepository,
     private val gamesRepository: GamesRepository,
+    private val regionRepository: RegionRepository,
     private val seenStore: FollowedDealSeenStore,
     private val snapshotStore: FranchiseSaleSnapshotStore,
     private val franchiseAlertTitle: (gameTitle: String, franchiseName: String, cutPercent: Int, priceDenominated: String) -> String,
 ) : FollowedFranchiseChecker, FranchiseFollowSeeder {
 
     override suspend fun collectCrossedAlerts(): List<PendingNotificationAlert> {
-        val onSale = currentOnSale()
+        val country = regionRepository.getSelectedCountryCode()
+        val onSale = onSaleIn(country)
         // Persist the full snapshot every poll (regardless of deltas) so the Followed-series screen always
         // has fresh "current sales" to render. Best-effort — a write failure must not fail the poll.
         runCatching { snapshotStore.replace(onSale) }
 
         val seen = seenStore.get()
+        val seenCountry = seenStore.country()
         val currentSignatures = onSale.map { it.signature }.toSet()
         val new = onSale.filter { it.signature !in seen }.distinctBy { it.signature }
         // Prune the remembered set to what's on sale right now, so an ended-then-returned deal re-alerts.
-        seenStore.replace(currentSignatures)
+        seenStore.replace(currentSignatures, country)
+
+        // Signatures carry the price, which is in the country's currency. After a country switch every one
+        // of them is new although no deal changed, so the first poll there only takes note of what's on sale.
+        if (seenCountry != null && seenCountry != country) return emptyList()
 
         return new.map { game ->
             PendingNotificationAlert(
@@ -66,7 +74,9 @@ internal class FollowedFranchiseCheckerImpl(
         }
     }
 
-    override suspend fun currentOnSale(): List<FranchiseSaleGame> = coroutineScope {
+    override suspend fun currentOnSale(): List<FranchiseSaleGame> = onSaleIn(regionRepository.getSelectedCountryCode())
+
+    private suspend fun onSaleIn(country: String): List<FranchiseSaleGame> = coroutineScope {
         // Newest-followed first, bounded — a heavily-followed user can't fan out into hundreds of round-trips.
         val followed = followedFranchiseRepository.getFollowed()
             .sortedByDescending { it.addedAtMs }
@@ -74,7 +84,7 @@ internal class FollowedFranchiseCheckerImpl(
         if (followed.isEmpty()) return@coroutineScope emptyList()
 
         followed
-            .map { franchise -> async { runCatching { onSaleGamesFor(franchise) }.getOrDefault(emptyList()) } }
+            .map { franchise -> async { runCatching { onSaleGamesFor(franchise, country) }.getOrDefault(emptyList()) } }
             .awaitAll()
             .flatten()
     }
@@ -83,16 +93,18 @@ internal class FollowedFranchiseCheckerImpl(
         // Use the real follow (for name) if present, else a minimal stand-in — only the signature matters here.
         val franchise = followedFranchiseRepository.getFollowed().firstOrNull { it.franchiseId == franchiseId }
             ?: FollowedFranchise(franchiseId, "", 0L)
-        val signatures = runCatching { onSaleGamesFor(franchise) }.getOrDefault(emptyList())
+        val country = regionRepository.getSelectedCountryCode()
+        val signatures = runCatching { onSaleGamesFor(franchise, country) }.getOrDefault(emptyList())
             .map { it.signature }
             .toSet()
         if (signatures.isNotEmpty()) {
-            // Merge (not replace): other franchises' already-seen signatures must survive.
-            runCatching { seenStore.replace(seenStore.get() + signatures) }
+            // Merge (not replace): other franchises' already-seen signatures must survive. The stored country is
+            // kept, so a switch the next poll hasn't seen yet still makes it take note rather than alert.
+            runCatching { seenStore.replace(seenStore.get() + signatures, seenStore.country() ?: country) }
         }
     }
 
-    private suspend fun onSaleGamesFor(franchise: FollowedFranchise): List<FranchiseSaleGame> = coroutineScope {
+    private suspend fun onSaleGamesFor(franchise: FollowedFranchise, country: String): List<FranchiseSaleGame> = coroutineScope {
         val games = igdbRepository.fetchFranchiseGames(franchise.franchiseId, FRANCHISE_GAMES_LIMIT)
 
         // Drop untracked games up front — no Steam app id means no possible ITAD lookup.
@@ -123,6 +135,7 @@ internal class FollowedFranchiseCheckerImpl(
                 cutPercent = cut,
                 priceValue = priceValue,
                 priceDenominated = price.bestPriceDenominated.orEmpty(),
+                country = country,
             )
         }
     }

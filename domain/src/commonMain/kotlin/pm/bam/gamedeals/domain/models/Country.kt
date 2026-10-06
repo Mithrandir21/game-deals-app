@@ -4,124 +4,80 @@ package pm.bam.gamedeals.domain.models
 import androidx.compose.runtime.Immutable
 
 /**
- * A geographic grouping for the region picker. ITAD has no region API — currency and prices are keyed off
- * the country [code] alone — so this is purely a display grouping (headers) mirroring ITAD's region page.
- */
-@Immutable
-enum class Region(val displayName: String) {
-    AFRICA("Africa"),
-    AMERICAS("Americas"),
-    ASIA("Asia"),
-    EUROPE("Europe"),
-    OCEANIA("Oceania"),
-}
-
-/**
- * A storefront region for regional pricing (epic #205, Phase 3b — #212). [code] is the ISO 3166-1
- * alpha-2 country code passed to ITAD's `country=` parameter; [name] is the display label; [region] is
- * the continent group the picker files it under.
+ * A price region the user can pick (epic #205, Phase 3b — #212). ITAD prices only a handful of regions
+ * directly and silently falls back to one of them for every other country, so the picker offers exactly
+ * those regions instead of a list of countries whose prices it can't deliver.
+ *
+ * [code] is the ISO 3166-1 alpha-2 country code sent as ITAD's `country=`, and keys every region cache;
+ * [id] identifies the choice itself, which differs from [code] only where one region stands for several
+ * countries ([EUROPE], [REST_OF_WORLD]). [currency] is the ISO 4217 code ITAD prices the region in.
  */
 @Immutable
 data class Country(
     val code: String,
     val name: String,
-    val region: Region,
-)
+    val currency: String,
+    val id: String = code,
+) {
+    /** What the picker shows beside [name]: the currency, or for [REST_OF_WORLD] whose prices it uses. */
+    val priceNote: String
+        get() = if (id == REST_OF_WORLD.id) "US prices" else currency
+}
 
 /** The default region — ITAD prices were fixed to the US before regional pricing (#212). */
-val DEFAULT_COUNTRY: Country = Country("US", "United States", Region.AMERICAS)
+val DEFAULT_COUNTRY: Country = Country("US", "United States", "USD")
+
+/** The euro region. ITAD gives France's prices to most of Europe, so it is priced as France. */
+val EUROPE: Country = Country(code = "FR", name = "Europe", currency = "EUR", id = "EU")
+
+/** Every country ITAD doesn't price directly and doesn't map elsewhere gets US prices in US dollars. */
+val REST_OF_WORLD: Country = Country(code = "US", name = "Rest of world", currency = "USD", id = "WORLD")
 
 /**
- * The regions offered in the country picker — the set of ITAD-supported `country` values ITAD reliably
- * prices, sorted by display name. ITAD returns prices (and currency) for the chosen region; the picker
- * groups these by [Country.region] via [countriesByRegion].
+ * The regions offered in the picker: the 17 ITAD prices directly (the same set as the region switcher
+ * on isthereanydeal.com, checked against the live API in October 2026), by name, then [REST_OF_WORLD].
  */
 val SUPPORTED_COUNTRIES: List<Country> = listOf(
-    // Africa
-    Country("EG", "Egypt", Region.AFRICA),
-    Country("KE", "Kenya", Region.AFRICA),
-    Country("MA", "Morocco", Region.AFRICA),
-    Country("NG", "Nigeria", Region.AFRICA),
-    Country("ZA", "South Africa", Region.AFRICA),
-    // Americas
-    Country("AR", "Argentina", Region.AMERICAS),
-    Country("BR", "Brazil", Region.AMERICAS),
-    Country("CA", "Canada", Region.AMERICAS),
-    Country("CL", "Chile", Region.AMERICAS),
-    Country("CO", "Colombia", Region.AMERICAS),
-    Country("CR", "Costa Rica", Region.AMERICAS),
-    Country("EC", "Ecuador", Region.AMERICAS),
-    Country("GT", "Guatemala", Region.AMERICAS),
-    Country("MX", "Mexico", Region.AMERICAS),
-    Country("PE", "Peru", Region.AMERICAS),
-    Country("UY", "Uruguay", Region.AMERICAS),
+    Country("AR", "Argentina", "ARS"),
+    Country("AU", "Australia", "AUD"),
+    Country("BR", "Brazil", "BRL"),
+    Country("CA", "Canada", "CAD"),
+    Country("CN", "China", "CNY"),
+    EUROPE,
+    Country("IN", "India", "INR"),
+    Country("ID", "Indonesia", "IDR"),
+    Country("JP", "Japan", "JPY"),
+    Country("NZ", "New Zealand", "NZD"),
+    Country("PH", "Philippines", "PHP"),
+    Country("PL", "Poland", "PLN"),
+    Country("KR", "South Korea", "KRW"),
+    Country("TW", "Taiwan", "TWD"),
+    Country("TR", "Türkiye", "TRY"),
+    Country("GB", "United Kingdom", "GBP"),
     DEFAULT_COUNTRY,
-    // Asia
-    Country("AE", "United Arab Emirates", Region.ASIA),
-    Country("CN", "China", Region.ASIA),
-    Country("HK", "Hong Kong", Region.ASIA),
-    Country("ID", "Indonesia", Region.ASIA),
-    Country("IL", "Israel", Region.ASIA),
-    Country("IN", "India", Region.ASIA),
-    Country("JP", "Japan", Region.ASIA),
-    Country("KR", "South Korea", Region.ASIA),
-    Country("KW", "Kuwait", Region.ASIA),
-    Country("KZ", "Kazakhstan", Region.ASIA),
-    Country("MY", "Malaysia", Region.ASIA),
-    Country("PH", "Philippines", Region.ASIA),
-    Country("PK", "Pakistan", Region.ASIA),
-    Country("QA", "Qatar", Region.ASIA),
-    Country("SA", "Saudi Arabia", Region.ASIA),
-    Country("SG", "Singapore", Region.ASIA),
-    Country("TH", "Thailand", Region.ASIA),
-    Country("TR", "Türkiye", Region.ASIA),
-    Country("TW", "Taiwan", Region.ASIA),
-    Country("VN", "Vietnam", Region.ASIA),
-    // Europe
-    Country("AT", "Austria", Region.EUROPE),
-    Country("BE", "Belgium", Region.EUROPE),
-    Country("BG", "Bulgaria", Region.EUROPE),
-    Country("CH", "Switzerland", Region.EUROPE),
-    Country("CY", "Cyprus", Region.EUROPE),
-    Country("CZ", "Czechia", Region.EUROPE),
-    Country("DE", "Germany", Region.EUROPE),
-    Country("DK", "Denmark", Region.EUROPE),
-    Country("EE", "Estonia", Region.EUROPE),
-    Country("ES", "Spain", Region.EUROPE),
-    Country("FI", "Finland", Region.EUROPE),
-    Country("FR", "France", Region.EUROPE),
-    Country("GB", "United Kingdom", Region.EUROPE),
-    Country("GR", "Greece", Region.EUROPE),
-    Country("HR", "Croatia", Region.EUROPE),
-    Country("HU", "Hungary", Region.EUROPE),
-    Country("IE", "Ireland", Region.EUROPE),
-    Country("IS", "Iceland", Region.EUROPE),
-    Country("IT", "Italy", Region.EUROPE),
-    Country("LT", "Lithuania", Region.EUROPE),
-    Country("LU", "Luxembourg", Region.EUROPE),
-    Country("LV", "Latvia", Region.EUROPE),
-    Country("MT", "Malta", Region.EUROPE),
-    Country("NL", "Netherlands", Region.EUROPE),
-    Country("NO", "Norway", Region.EUROPE),
-    Country("PL", "Poland", Region.EUROPE),
-    Country("PT", "Portugal", Region.EUROPE),
-    Country("RO", "Romania", Region.EUROPE),
-    Country("RS", "Serbia", Region.EUROPE),
-    Country("RU", "Russia", Region.EUROPE),
-    Country("SE", "Sweden", Region.EUROPE),
-    Country("SI", "Slovenia", Region.EUROPE),
-    Country("SK", "Slovakia", Region.EUROPE),
-    Country("UA", "Ukraine", Region.EUROPE),
-    // Oceania
-    Country("AU", "Australia", Region.OCEANIA),
-    Country("NZ", "New Zealand", Region.OCEANIA),
-).sortedBy { it.name }
+    REST_OF_WORLD,
+)
+
+/** Countries ITAD prices as France, seen on the live API in October 2026. */
+private val EUROPE_MEMBERS: Set<String> = setOf(
+    "AT", "BE", "BG", "CH", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU",
+    "IE", "IT", "LT", "LU", "LV", "MT", "NL", "NO", "PT", "RO", "RS", "SE", "SI", "SK",
+)
+
+/** Countries ITAD prices as Argentina (its website names them as Argentina's fallback countries). */
+private val ARGENTINA_MEMBERS: Set<String> = setOf("BO", "BZ", "EC", "GT", "GY", "HN", "PA", "PY", "SR", "SV", "VE")
 
 /**
- * Groups [countries] by [Region] for the picker's section headers: regions appear in [Region] declaration
- * order, each region's countries sorted by name, and regions with no matching country are omitted.
+ * The region whose prices ITAD gives [countryCode] (an ISO country code, any case): its own region where
+ * it has one, else [EUROPE] or Argentina for the countries ITAD maps there, else [REST_OF_WORLD]. Used to
+ * pick a region from the device's country, and to carry over a country saved before the picker listed
+ * regions, so nobody's prices change.
  */
-fun countriesByRegion(countries: List<Country> = SUPPORTED_COUNTRIES): List<Pair<Region, List<Country>>> =
-    Region.entries
-        .map { region -> region to countries.filter { it.region == region }.sortedBy { it.name } }
-        .filter { (_, entries) -> entries.isNotEmpty() }
+fun regionForCountry(countryCode: String): Country {
+    val code = countryCode.uppercase()
+    return when (code) {
+        in EUROPE_MEMBERS -> EUROPE
+        in ARGENTINA_MEMBERS -> SUPPORTED_COUNTRIES.first { it.code == "AR" }
+        else -> SUPPORTED_COUNTRIES.firstOrNull { it.id == code } ?: REST_OF_WORLD
+    }
+}

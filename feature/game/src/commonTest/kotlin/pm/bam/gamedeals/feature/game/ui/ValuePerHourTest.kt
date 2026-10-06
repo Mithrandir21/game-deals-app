@@ -25,8 +25,16 @@ class ValuePerHourTest {
 
     @Test
     fun zero_decimal_currency_stays_whole() {
-        // ¥6800 over 30h (108000s) → ¥227/h (no minor unit)
-        assertEquals("¥227", perHourDenominated("¥6800", 6800.0, 108_000))
+        // ¥6,800 over 30h (108000s) → ¥227/h (no minor unit)
+        assertEquals("¥227", perHourDenominated("¥6,800", 6800.0, 108_000))
+    }
+
+    @Test
+    fun grouped_prices_are_read_whole_and_the_result_is_grouped() {
+        // 1,071,247 IDR over 10h → 107,125 IDR/h; $1,299.00 over 1000h → $1.30/h
+        assertEquals("107,125 IDR", perHourDenominated("1,071,247 IDR", 1_071_247.0, 36_000))
+        assertEquals("$1.30", perHourDenominated("$1,299.00", 1299.0, 3_600_000))
+        assertEquals("1,519.82 ARS", perHourDenominated("91,189.40 ARS", 91_189.4, 216_000))
     }
 
     @Test

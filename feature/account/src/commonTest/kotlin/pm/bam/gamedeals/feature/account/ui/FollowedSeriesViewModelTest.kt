@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositor
 import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.AfterTest
@@ -42,6 +43,9 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
     private val igdbRepository: IgdbRepository = mock(MockMode.autoUnit)
     private val snapshotStore: FranchiseSaleSnapshotStore = mock(MockMode.autoUnit)
     private val franchiseChecker: FollowedFranchiseChecker = mock(MockMode.autoUnit)
+    private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
+        everySuspend { getSelectedCountryCode() } returns "US"
+    }
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
     private val accountRepository: AccountRepository = mock(MockMode.autoUnit)
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
@@ -60,7 +64,7 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun viewModel() = FollowedSeriesViewModel(
-        followedRepository, igdbRepository, snapshotStore, franchiseChecker,
+        followedRepository, igdbRepository, snapshotStore, franchiseChecker, regionRepository,
         collectionRepository, accountRepository, gamesRepository, logger,
     )
 
@@ -103,7 +107,7 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
         every { followedRepository.observeFollowed() } returns flowOf(listOf(franchise(1L, "Halo", addedAtMs = 0L)))
         everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5"), igdbGame(11L, "Halo Infinite"))
         everySuspend { snapshotStore.get() } returns listOf(
-            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 11L, itadGameId = "itad-11", title = "Halo Infinite", cutPercent = 80, priceValue = 5.0, priceDenominated = "\$5"),
+            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 11L, itadGameId = "itad-11", title = "Halo Infinite", cutPercent = 80, priceValue = 5.0, priceDenominated = "\$5", country = "US"),
         )
 
         val vm = viewModel()
@@ -114,6 +118,27 @@ class FollowedSeriesViewModelTest : MainDispatcherTest() {
         assertEquals(80, games.first().cutPercent)
         assertEquals("\$5", games.first().priceDenominated)
         assertNull(games.last().cutPercent) // game 10 not on sale
+        verifySuspend(exactly(0)) { franchiseChecker.currentOnSale() }
+    }
+
+    @Test
+    fun sales_saved_for_another_country_are_hidden_and_recomputed() = runTest {
+        every { followedRepository.observeFollowed() } returns flowOf(listOf(franchise(1L, "Halo", addedAtMs = 0L)))
+        everySuspend { igdbRepository.fetchFranchiseGames(any(), any()) } returns listOf(igdbGame(10L, "Halo 5"))
+        everySuspend { regionRepository.getSelectedCountryCode() } returns "JP"
+        everySuspend { snapshotStore.get() } returns listOf(
+            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 10L, itadGameId = "itad-10", title = "Halo 5", cutPercent = 60, priceValue = 9.0, priceDenominated = "\$9", country = "US"),
+        )
+        val inYen = listOf(
+            FranchiseSaleGame(franchiseId = 1L, franchiseName = "Halo", igdbGameId = 10L, itadGameId = "itad-10", title = "Halo 5", cutPercent = 60, priceValue = 900.0, priceDenominated = "¥900", country = "JP"),
+        )
+        everySuspend { franchiseChecker.currentOnSale() } returns inYen
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { snapshotStore.replace(inYen) }
+        assertEquals("¥900", vm.uiState.value.items.single().games.single().priceDenominated)
     }
 
     @Test

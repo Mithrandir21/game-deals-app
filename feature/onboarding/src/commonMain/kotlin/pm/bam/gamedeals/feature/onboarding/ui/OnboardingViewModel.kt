@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.regionForCountry
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
@@ -54,12 +55,11 @@ internal class OnboardingViewModel(
     val countries: ImmutableList<Country> = regionRepository.supportedCountries.toImmutableList()
 
     init {
-        // On a true first run, pre-select the storefront region from the device locale (a replay from the
-        // Account hub leaves an already-chosen region untouched).
+        // On a true first run, pre-select the price region ITAD uses for the device's country (a replay from
+        // the Account hub leaves an already-chosen region untouched).
         viewModelScope.launch {
             if (!settingsRepository.getOnboardingCompleted()) {
-                val detected = regionDetector.detectCountryCode()
-                    ?.let { code -> countries.firstOrNull { it.code.equals(code, ignoreCase = true) } }
+                val detected = regionDetector.detectCountryCode()?.let(::regionForCountry)
                 if (detected != null) regionRepository.setSelectedCountry(detected)
             }
         }

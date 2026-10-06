@@ -42,6 +42,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.domain.utils.groupThousands
 import pm.bam.gamedeals.feature.game.generated.resources.Res
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_cover_image_cd
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_critic_rating_label
@@ -184,11 +185,11 @@ internal fun hoursFromSeconds(seconds: Long): String = ((seconds + 1800) / 3600)
 /**
  * Scales an already-denominated price to a per-hour figure using the playtime in seconds, inheriting the
  * currency symbol/suffix and decimal convention straight from [priceDenominated] (the deal carries no raw
- * currency code). `formatMoney` emits no thousands separators, so the price is a single `digits[.digits]?`
- * token we splice the scaled value back into. Returns null when playtime is missing/zero.
- * E.g. ("$59.99", 59.99, 540000) → "$0.40"; ("¥6800", 6800.0, 108000) → "¥227".
+ * currency code). `formatMoney` writes the price as one number token, its whole units grouped with commas,
+ * which we splice the scaled (and likewise grouped) value back into. Returns null when playtime is
+ * missing/zero. E.g. ("$59.99", 59.99, 540000) → "$0.40"; ("¥6,800", 6800.0, 108000) → "¥227".
  */
-private val PRICE_TOKEN_REGEX = Regex("""\d+(\.\d+)?""")
+private val PRICE_TOKEN_REGEX = Regex("""\d{1,3}(,\d{3})+(\.\d+)?|\d+(\.\d+)?""")
 
 internal fun perHourDenominated(priceDenominated: String, priceValue: Double, playtimeSeconds: Long): String? {
     if (playtimeSeconds <= 0L || priceValue <= 0.0) return null
@@ -197,11 +198,11 @@ internal fun perHourDenominated(priceDenominated: String, priceValue: Double, pl
     val match = PRICE_TOKEN_REGEX.find(priceDenominated) ?: return null
     val decimals = match.value.substringAfter('.', "").length
     val scaled = if (decimals == 0) {
-        round(perHour).toLong().toString()
+        groupThousands(round(perHour).toLong())
     } else {
         val unit = LongArray(decimals) { 10L }.fold(1L) { acc, ten -> acc * ten }
         val minor = round(perHour * unit).toLong()
-        "${minor / unit}.${(minor % unit).toString().padStart(decimals, '0')}"
+        "${groupThousands(minor / unit)}.${(minor % unit).toString().padStart(decimals, '0')}"
     }
     return priceDenominated.replaceRange(match.range, scaled)
 }

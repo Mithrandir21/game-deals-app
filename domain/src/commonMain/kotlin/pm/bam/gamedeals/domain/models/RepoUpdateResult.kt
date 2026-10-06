@@ -7,4 +7,7 @@ enum class RepoUpdateResult {
 
     /** No-op: the user is logged out. Callers should prompt the user to sign in. */
     NOT_LOGGED_IN,
+
+    /** The remote write failed (offline, server error); nothing changed locally. Callers should tell the user. */
+    FAILED,
 }

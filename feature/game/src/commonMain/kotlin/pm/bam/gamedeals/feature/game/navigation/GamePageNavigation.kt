@@ -1,11 +1,13 @@
 package pm.bam.gamedeals.feature.game.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.ui.dropUnlessResumed
 import pm.bam.gamedeals.feature.game.ui.GamePageScreen
 
 /**
@@ -37,11 +39,12 @@ fun NavGraphBuilder.gamePageScreen(
             navController.previousBackStackEntry != null || canReturnToList()
         }
         GamePageScreen(
-            onBack = { if (!navController.popBackStack()) onExit() },
-            goToWeb = goToWeb,
-            onSimilarGameClick = { igdbGameId -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) },
-            onSearchDealsByTitle = goToSearchByTitle,
-            onBundleClick = goToBundle,
+            onBack = dropUnlessResumed { if (!navController.popBackStack()) onExit() },
+            goToWeb = goToWeb.dropUnlessResumed(),
+            onSimilarGameClick = { igdbGameId: Long -> navController.navigate(Destination.GameDetailsByIgdbId(igdbGameId)) }
+                .dropUnlessResumed(),
+            onSearchDealsByTitle = goToSearchByTitle.dropUnlessResumed(),
+            onBundleClick = goToBundle.dropUnlessResumed(),
             showBackButton = showBackButton,
         )
     }

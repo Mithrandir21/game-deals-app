@@ -32,11 +32,9 @@
 
     <!-- 5. Region (interactive) -->
     <string name="onboarding_region_title">Prices for your region</string>
-    <string name="onboarding_region_body">We've set your region from your device. Change it any time so prices and currency match your stores.</string>
+    <string name="onboarding_region_body">We picked the price region IsThereAnyDeal uses for your device's country. Change it any time.</string>
     <string name="onboarding_region_change">Change region</string>
-    <string name="onboarding_region_picker_title">Choose your region</string>
-    <string name="onboarding_region_picker_search_hint">Search countries</string>
-    <string name="onboarding_region_picker_no_matches">No matching countries</string>
+    <string name="onboarding_region_picker_title">Choose your price region</string>
 
     <!-- 6. Notifications (interactive) -->
     <string name="onboarding_notifications_title">Get sale alerts</string>

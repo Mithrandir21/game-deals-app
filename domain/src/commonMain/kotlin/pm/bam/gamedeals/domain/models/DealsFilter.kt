@@ -22,6 +22,11 @@ data class DealsFilter(
     val minCutPercent: Int? = null,
     /** Maximum sale price in the region's currency (0.0 = Free); maps to ITAD `price {min:null,max}`. */
     val maxPrice: Double? = null,
+    /**
+     * The country [maxPrice] was set in. "20" is $20 in the US but ¥20 in Japan, so [forCountry] drops the
+     * cap anywhere else. Null on filters saved before this was recorded; those apply everywhere.
+     */
+    val maxPriceCountry: String? = null,
     /** Product types to include (empty = all); maps to ITAD `type [..]`. */
     val types: Set<ProductType> = emptySet(),
     /** When true, restrict to DRM-free titles; maps to ITAD `drm [1000]`. */
@@ -47,6 +52,13 @@ data class DealsFilter(
             minSteamPercent != null,
             release != null,
         ).count { it }
+
+    /**
+     * This filter as it applies in [countryCode]: without a price cap set in another country. The cap stays
+     * saved, so it comes back on returning to that country.
+     */
+    fun forCountry(countryCode: String): DealsFilter =
+        if (maxPrice != null && maxPriceCountry != null && maxPriceCountry != countryCode) copy(maxPrice = null) else this
 }
 
 /*

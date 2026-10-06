@@ -18,9 +18,9 @@ val accountModule = module {
     viewModel { AccountViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WaitlistListViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { CollectionListViewModel(get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { FollowedSeriesViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { FollowedSeriesViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }
-    viewModel { NotificationDayViewModel(get(), get(), get()) }
+    viewModel { NotificationDayViewModel(get(), get(), get(), get()) }
     viewModel { NotificationBellViewModel(get(), get()) }
     viewModel { IgnoredViewModel(get(), get()) }
     viewModel { MyNotesViewModel(get(), get()) }

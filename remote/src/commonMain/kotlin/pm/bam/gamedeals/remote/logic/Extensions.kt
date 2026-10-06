@@ -38,7 +38,15 @@ fun <T> ApiResponse<T>.mapAnyFailure(transformer: Throwable.() -> Throwable): Ap
 fun <T> ApiResponse<T>.log(logger: Logger, logLevel: LogLevel = LogLevel.DEBUG, tag: String? = null): ApiResponse<T> {
     this.onError { logger.log(logLevel, tag) { "Error: $this" } }
     this.onException { logger.log(logLevel, tag, this.throwable) { "Exception message: ${this.message}" } }
-    this.onSuccess { logger.log(logLevel, tag) { "Success: ${this.data}" } }
+    this.onSuccess { logger.log(logLevel, tag) { "Success: ${data.logSummary()}" } }
 
     return this
+}
+
+// Response bodies carry user content (notes, usernames, library lists), so only their shape is logged.
+internal fun Any?.logSummary(): String = when (this) {
+    null -> "no body"
+    is Collection<*> -> "$size items"
+    is Map<*, *> -> "$size entries"
+    else -> this::class.simpleName ?: "body"
 }

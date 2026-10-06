@@ -23,7 +23,9 @@ import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_empty
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_open_game
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_region_change
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.NotificationDayScreenData
+import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel.RegionNote
 
 /**
  * Device UI coverage for [NotificationDayScreen]: the empty state, a game deal card, the per-card
@@ -37,6 +39,7 @@ class NotificationDayScreenTest {
 
     private val viewModel: NotificationDayViewModel = mockk(relaxed = true)
     private val onBack = mockk<() -> Unit>(relaxed = true)
+    private val goToWeb = mockk<(String) -> Unit>(relaxed = true)
 
     private lateinit var labels: Labels
 
@@ -53,7 +56,7 @@ class NotificationDayScreenTest {
         composeTestRule.setContent {
             labels = Labels.load()
             GameDealsTheme {
-                NotificationDayScreen(onBack = onBack, onGameClick = {}, viewModel = viewModel)
+                NotificationDayScreen(onBack = onBack, onGameClick = {}, goToWeb = goToWeb, viewModel = viewModel)
             }
         }
     }
@@ -91,6 +94,24 @@ class NotificationDayScreenTest {
     }
 
     @Test
+    fun regionNoteNamesBothCurrenciesAndLinksToTheWebsiteSetting() {
+        setContent(NotificationDayScreenData(loading = false, games = persistentListOf(game), regionNote = RegionNote("EUR", "USD")))
+
+        composeTestRule.onNodeWithText("priced in EUR", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("shows USD prices", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.changeRegion).performClick()
+
+        verify(exactly = 1) { goToWeb("https://isthereanydeal.com/settings/region/") }
+    }
+
+    @Test
+    fun noRegionNoteWhenTheCurrenciesMatch() {
+        setContent(NotificationDayScreenData(loading = false, games = persistentListOf(game)))
+
+        composeTestRule.onNodeWithText(labels.changeRegion).assertDoesNotExist()
+    }
+
+    @Test
     fun backIconDispatchesOnBack() {
         setContent(NotificationDayScreenData(loading = false, games = persistentListOf(game)))
 
@@ -103,6 +124,7 @@ class NotificationDayScreenTest {
         val empty: String,
         val openGame: String,
         val back: String,
+        val changeRegion: String,
     ) {
         companion object {
             @Composable
@@ -110,6 +132,7 @@ class NotificationDayScreenTest {
                 empty = stringResource(Res.string.account_notification_detail_empty),
                 openGame = stringResource(Res.string.account_notification_open_game),
                 back = stringResource(Res.string.account_navigation_back),
+                changeRegion = stringResource(Res.string.account_notification_region_change),
             )
         }
     }

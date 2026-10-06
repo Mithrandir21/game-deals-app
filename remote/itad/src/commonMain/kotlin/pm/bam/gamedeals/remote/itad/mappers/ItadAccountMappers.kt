@@ -61,6 +61,7 @@ private fun RemoteItadDealEntry.toNotificationShopDeal(): NotificationShopDeal =
         isNewHistoricalLow = flag.isNewHistoryLowFlag(),
         isStoreLow = flag.isStoreLowFlag(),
         hasVoucher = voucher.isVoucherPresent(),
+        currency = price.currency,
     )
 
 internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =

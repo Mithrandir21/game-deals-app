@@ -24,7 +24,6 @@ import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
@@ -35,6 +34,7 @@ import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -118,6 +118,17 @@ class WaitlistRepositoryTest {
     }
 
     @Test
+    fun logged_in_toggle_failure_returns_failed_and_leaves_the_cache_unchanged() = runTest {
+        val analytics = RecordingAnalytics()
+        val repo = repo(FakeAccountSource(failWrites = true), FakeAuthTokenStore(access = "token"), FakeWaitlistDao(), analytics)
+
+        assertEquals(RepoUpdateResult.FAILED, repo.toggleWaitlist("a"))
+
+        assertFalse(repo.observeIsWaitlisted("a").first())
+        assertTrue(analytics.events.isEmpty())
+    }
+
+    @Test
     fun refresh_merges_prices_region_and_caches_snapshot() = runTest {
         val source = FakeAccountSource(waitlist = listOf(WaitlistEntry("a", "A"), WaitlistEntry("b", "B")))
         val deals = mock<DealsSource>(MockMode.autoUnit)
@@ -169,12 +180,12 @@ class WaitlistRepositoryTest {
         region: RegionRepository = FakeRegionRepository(),
         displayStore: WaitlistDisplayStore = FakeWaitlistDisplayStore(),
         clock: Clock = Clock { 0L },
-    ) = WaitlistRepositoryImpl(source, auth, dao, analytics, dealsSource, region, displayStore, clock)
+    ) = WaitlistRepositoryImpl(source, auth, dao, analytics, dealsSource, region, displayStore, clock, TestingLoggingListener())
 }
 
 private class FakeRegionRepository(private val code: String = "US") : RegionRepository {
-    override val supportedCountries: List<Country> = listOf(Country(code, code, Region.EUROPE))
-    override fun observeSelectedCountry(): Flow<Country> = flowOf(Country(code, code, Region.EUROPE))
+    override val supportedCountries: List<Country> = listOf(Country(code, code, "EUR"))
+    override fun observeSelectedCountry(): Flow<Country> = flowOf(Country(code, code, "EUR"))
     override suspend fun getSelectedCountryCode(): String = code
     override suspend fun setSelectedCountry(country: Country) = Unit
 }
@@ -190,25 +201,31 @@ internal class FakeAccountSource(
     private val waitlist: List<WaitlistEntry> = emptyList(),
     private val collection: List<CollectionEntry> = emptyList(),
     private val ignored: List<IgnoredEntry> = emptyList(),
+    private val failWrites: Boolean = false,
 ) : ItadAccountSource {
     val added = mutableListOf<String>()
     val removed = mutableListOf<String>()
 
+    private fun write(into: MutableList<String>, gameId: String) {
+        if (failWrites) throw IllegalStateException("offline")
+        into += gameId
+    }
+
     override suspend fun getUserInfo(): ItadUser = ItadUser("user")
     override suspend fun getWaitlist(): List<WaitlistEntry> = waitlist
-    override suspend fun addToWaitlist(gameId: String) { added += gameId }
-    override suspend fun removeFromWaitlist(gameId: String) { removed += gameId }
+    override suspend fun addToWaitlist(gameId: String) = write(added, gameId)
+    override suspend fun removeFromWaitlist(gameId: String) = write(removed, gameId)
     override suspend fun getCollection(): List<CollectionEntry> = collection
-    override suspend fun addToCollection(gameId: String) { added += gameId }
-    override suspend fun removeFromCollection(gameId: String) { removed += gameId }
+    override suspend fun addToCollection(gameId: String) = write(added, gameId)
+    override suspend fun removeFromCollection(gameId: String) = write(removed, gameId)
     override suspend fun getNotifications(): List<ItadNotification> = emptyList()
     override suspend fun markNotificationRead(id: String) = Unit
     override suspend fun markAllNotificationsRead() = Unit
     override suspend fun getWaitlistNotificationGames(id: String): List<NotificationGame> = emptyList()
     override suspend fun getWaitlistNotificationDetail(id: String): NotificationDetail = NotificationDetail(id, emptyList())
     override suspend fun getIgnored(): List<IgnoredEntry> = ignored
-    override suspend fun addToIgnored(gameId: String) { added += gameId }
-    override suspend fun removeFromIgnored(gameId: String) { removed += gameId }
+    override suspend fun addToIgnored(gameId: String) = write(added, gameId)
+    override suspend fun removeFromIgnored(gameId: String) = write(removed, gameId)
     override suspend fun getNotes(): List<ItadNote> = emptyList()
     override suspend fun setNote(gameId: String, note: String) = Unit
     override suspend fun removeNote(gameId: String) = Unit
