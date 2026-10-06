@@ -335,6 +335,38 @@ class ItadSourceImplTest {
         assertEquals("cs-box.png", bundle.games.first().artwork.thumbnail)
         assertEquals("/bundles/v1", recordedRequests.single().url.encodedPath)
         assertEquals("US", recordedRequests.single().url.parameters["country"])
+        assertEquals("50", recordedRequests.single().url.parameters["limit"]) // ITAD's default is only 20
+    }
+
+    @Test
+    fun fetchBundles_pages_until_a_short_page() = runTest {
+        val json = Json { ignoreUnknownKeys = true }
+        val client = mockHttpClient(json) { request ->
+            recordedRequests += request
+            // A full first page of 50, then one more bundle on the second.
+            val ids = if (request.url.parameters["offset"] == "0") 1..50 else 51..51
+            respond(
+                content = ids.joinToString(prefix = "[", postfix = "]") { id ->
+                    """{"id": $id, "title": "Bundle $id", "url": "https://b/$id", "tiers": [{"games": [{"id": "g$id", "title": "Game $id", "type": "game"}]}]}"""
+                },
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val localImpl = ItadSourceImpl(
+            logger = logger,
+            shopsApi = ItadShopsApi(client),
+            dealsApi = ItadDealsApi(client),
+            gamesApi = ItadGamesApi(client),
+            bundlesApi = ItadBundlesApi(client),
+            remoteExceptionTransformer = RemoteExceptionTransformer { it },
+            regionRepository = regionRepository,
+        )
+
+        val bundles = localImpl.fetchBundles()
+
+        assertEquals((1..51).toList(), bundles.map { it.id })
+        assertEquals(listOf("0", "50"), recordedRequests.map { it.url.parameters["offset"] })
     }
 
     @Test

@@ -174,7 +174,7 @@ M13 (max-price tiers) belongs to this group too.
 | C5 | The Bundles tab, an open Game page or peek sheet, and Discover results keep the old country's prices after a switch | Low-medium | `BundlesViewModel.kt:59-61` | **Not an issue.** Only the four tab roots show the tab bar, so these screens are always closed before the country can be changed; Home and Deals already reload |
 | C6 | The shop list and the Game page's "in bundles" call send no country. ITAD returns the same data for every country today | Low | `ItadSourceImpl.kt:86,174` | **Fixed.** Pass the country |
 | C7 | Large amounts have no thousands separator ("81199.00 IDR") | Low | `MoneyFormatting.kt` | Group digits; drop decimals for IDR |
-| C8 | The Bundles tab shows at most 20 bundles, ITAD's default page size; 36 are active. A Game page bundle outside those 20 probably opens as an error | Low | `ItadSourceImpl.kt:158`, `BundlesRepository.kt:79` | Request `limit=50`, and fall back when a bundle id isn't in the list |
+| C8 | The Bundles tab shows at most 20 bundles, ITAD's default page size; 36 are active. A Game page bundle outside those 20 probably opens as an error | Low | `ItadSourceImpl.kt:158`, `BundlesRepository.kt:79` | **Fixed.** Page through bundles 50 at a time, and refetch the list once when a bundle id isn't in it |
 
 Table items are ticked by starting their Fix cell with **Fixed.**
 

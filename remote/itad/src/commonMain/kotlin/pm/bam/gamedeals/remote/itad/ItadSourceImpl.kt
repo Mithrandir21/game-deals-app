@@ -156,15 +156,26 @@ internal class ItadSourceImpl(
             since = Instant.fromEpochMilliseconds(since ?: 0L).toString(),
         ).toPriceHistory(gameId)
 
-    override suspend fun fetchBundles(): List<Bundle> =
-        bundlesApi.getBundles(country = regionRepository.getSelectedCountryCode())
-            .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
-            .getOrThrow()
+    override suspend fun fetchBundles(): List<Bundle> {
+        val country = regionRepository.getSelectedCountryCode()
+        // ITAD sends 20 bundles unless asked for more, and at most 50 a page: page until a short page.
+        val remote = buildList {
+            for (page in 0 until BUNDLE_PAGES_MAX) {
+                val batch = bundlesApi.getBundles(country = country, offset = page * BUNDLE_PAGE_SIZE, limit = BUNDLE_PAGE_SIZE)
+                    .log(logger, tag = TAG)
+                    .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+                    .getOrThrow()
+                addAll(batch)
+                if (batch.size < BUNDLE_PAGE_SIZE) break
+            }
+        }
+        return remote
+            .distinctBy { it.id }
             .map { it.toBundle() }
             // After stripping software/hardware tier games, a bundle left with no games is a non-game
             // bundle (e.g. a Fanatical software bundle) — drop it from the games-only Bundles surfaces.
             .filter { it.games.isNotEmpty() }
+    }
 
     override suspend fun fetchGameMeta(gameId: String): GameMeta =
         gamesApi.getInfo(gameId)
@@ -303,6 +314,10 @@ internal class ItadSourceImpl(
 
     private companion object {
         private val TAG: String = ItadSourceImpl::class.simpleName.orEmpty()
+
+        /** ITAD's largest `/bundles/v1` page, and how many pages to read at most (200 active bundles). */
+        private const val BUNDLE_PAGE_SIZE = 50
+        private const val BUNDLE_PAGES_MAX = 4
 
         /** ITAD `type` ids the app surfaces — Game/DLC/Bundle ([ProductType]); excludes Software(7)/Hardware(9). */
         private val GAME_LIKE_TYPE_IDS: List<Int> = ProductType.entries.map { it.apiValue }.sorted()

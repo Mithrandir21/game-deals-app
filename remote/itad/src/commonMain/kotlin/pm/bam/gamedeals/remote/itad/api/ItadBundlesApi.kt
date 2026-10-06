@@ -17,12 +17,14 @@ class ItadBundlesApi(private val httpClient: HttpClient) {
 
     suspend fun getBundles(
         country: String? = null,
+        offset: Int? = null,
         limit: Int? = null,
         sort: String? = null,
     ): ApiResponse<List<RemoteItadBundle>> = try {
         ApiResponse.Success(
             httpClient.get("/bundles/v1") {
                 parameter("country", country)
+                parameter("offset", offset)
                 parameter("limit", limit)
                 parameter("sort", sort)
             }.body<List<RemoteItadBundle>>()
