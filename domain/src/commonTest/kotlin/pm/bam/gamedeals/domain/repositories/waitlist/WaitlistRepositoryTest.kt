@@ -24,7 +24,6 @@ import pm.bam.gamedeals.domain.models.ItadNote
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
@@ -185,8 +184,8 @@ class WaitlistRepositoryTest {
 }
 
 private class FakeRegionRepository(private val code: String = "US") : RegionRepository {
-    override val supportedCountries: List<Country> = listOf(Country(code, code, Region.EUROPE))
-    override fun observeSelectedCountry(): Flow<Country> = flowOf(Country(code, code, Region.EUROPE))
+    override val supportedCountries: List<Country> = listOf(Country(code, code, "EUR"))
+    override fun observeSelectedCountry(): Flow<Country> = flowOf(Country(code, code, "EUR"))
     override suspend fun getSelectedCountryCode(): String = code
     override suspend fun setSelectedCountry(country: Country) = Unit
 }

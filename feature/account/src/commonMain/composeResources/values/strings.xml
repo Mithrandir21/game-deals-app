@@ -45,9 +45,7 @@
     <string name="account_linked_steam_connected">Steam connected</string>
 
     <!-- Region picker bottom sheet -->
-    <string name="account_region_picker_title">Select region</string>
-    <string name="account_region_picker_search_hint">Search countries</string>
-    <string name="account_region_picker_no_matches">No matching countries</string>
+    <string name="account_region_picker_title">Select price region</string>
 
     <!-- Theme picker bottom sheet (#193) -->
     <string name="account_theme_picker_title">Theme</string>

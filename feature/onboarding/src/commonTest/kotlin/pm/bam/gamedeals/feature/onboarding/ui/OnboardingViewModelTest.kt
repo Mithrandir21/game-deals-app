@@ -17,7 +17,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Country
-import pm.bam.gamedeals.domain.models.Region
+import pm.bam.gamedeals.domain.models.EUROPE
+import pm.bam.gamedeals.domain.models.REST_OF_WORLD
 import pm.bam.gamedeals.domain.models.ItadUser
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
@@ -36,8 +37,8 @@ import kotlin.test.assertTrue
 
 class OnboardingViewModelTest : MainDispatcherTest() {
 
-    private val us = Country("US", "United States", Region.AMERICAS)
-    private val gb = Country("GB", "United Kingdom", Region.EUROPE)
+    private val us = Country("US", "United States", "USD")
+    private val gb = Country("GB", "United Kingdom", "GBP")
 
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit)
     private val settingsRepository: SettingsRepository = mock(MockMode.autoUnit)
@@ -105,13 +106,23 @@ class OnboardingViewModelTest : MainDispatcherTest() {
     }
 
     @Test
-    fun unsupported_detected_region_is_not_applied() = runTest {
-        detectedCountryCode = "ZZ"
+    fun a_country_itad_prices_as_europe_gets_the_europe_region() = runTest {
+        detectedCountryCode = "DE"
 
         viewModel()
         advanceUntilIdle()
 
-        verifySuspend(exactly(0)) { regionRepository.setSelectedCountry(any()) }
+        verifySuspend(exactly(1)) { regionRepository.setSelectedCountry(EUROPE) }
+    }
+
+    @Test
+    fun an_untracked_country_gets_rest_of_world() = runTest {
+        detectedCountryCode = "MX"
+
+        viewModel()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { regionRepository.setSelectedCountry(REST_OF_WORLD) }
     }
 
     @Test

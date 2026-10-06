@@ -31,7 +31,6 @@ import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSortDirection
 import pm.bam.gamedeals.domain.models.DealsSortField
 import pm.bam.gamedeals.domain.models.ProductType
-import pm.bam.gamedeals.domain.models.Region
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.SavedSearch
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
@@ -71,7 +70,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
     private val countryFlow = MutableStateFlow(DEFAULT_COUNTRY)
-    private val japan = Country("JP", "Japan", Region.ASIA)
+    private val japan = Country("JP", "Japan", "JPY")
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns countryFlow
         everySuspend { getSelectedCountryCode() } calls { countryFlow.value.code }
@@ -541,7 +540,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         assertEquals("JPY", vm.uiState.value.priceCurrency)
 
         // Another country's currency is unknown until its deals arrive.
-        countryFlow.value = Country("GB", "United Kingdom", Region.EUROPE)
+        countryFlow.value = Country("GB", "United Kingdom", "GBP")
         advanceUntilIdle()
         assertNull(vm.uiState.value.priceCurrency)
     }
