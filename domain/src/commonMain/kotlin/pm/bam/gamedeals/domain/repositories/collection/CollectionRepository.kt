@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.repositories.cache.LIBRARY_REUSE_MILLIS
+import pm.bam.gamedeals.domain.repositories.cache.RecentResult
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
@@ -52,10 +55,14 @@ internal class CollectionRepositoryImpl(
     private val collectionDao: CollectionDao,
     private val analytics: Analytics,
     private val displayStore: CollectionDisplayStore,
+    private val clock: Clock,
     private val logger: Logger,
 ) : CollectionRepository {
 
     private val displayFlow = MutableStateFlow<List<CollectionEntry>?>(null)
+
+    // App start asks for the collection from several places within seconds (library sync, Home recommendations); one fetch serves them.
+    private val recentCollection = RecentResult<List<CollectionEntry>>(clock, LIBRARY_REUSE_MILLIS)
 
     override fun observeCollectionIds(): Flow<ImmutableSet<String>> =
         combine(authTokenStore.observeAuthState(), collectionDao.observeAll()) { authState, rows ->
@@ -70,12 +77,13 @@ internal class CollectionRepositoryImpl(
 
     override suspend fun getCollection(): List<CollectionEntry> {
         if (!loggedIn()) {
+            recentCollection.invalidate()
             collectionDao.clear()
             return emptyList()
         }
-        val entries = accountSource.getCollection()
-        collectionDao.replaceAll(entries.map { it.gameId })
-        return entries
+        return recentCollection.get {
+            accountSource.getCollection().also { entries -> collectionDao.replaceAll(entries.map { it.gameId }) }
+        }
     }
 
     override suspend fun refreshCollectionDisplay() {
@@ -90,6 +98,7 @@ internal class CollectionRepositoryImpl(
     }
 
     override suspend fun clearLocal() {
+        recentCollection.invalidate()
         collectionDao.clear()
         displayStore.clear()
         displayFlow.value = null
@@ -99,6 +108,7 @@ internal class CollectionRepositoryImpl(
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         return runCatchingLogged(logger) {
             // Remote-first: confirm the ITAD write before mutating Room.
+            recentCollection.invalidate()
             if (collectionDao.contains(gameId)) {
                 accountSource.removeFromCollection(gameId)
                 collectionDao.delete(gameId)

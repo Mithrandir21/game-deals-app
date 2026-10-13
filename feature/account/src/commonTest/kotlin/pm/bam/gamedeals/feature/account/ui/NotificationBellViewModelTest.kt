@@ -7,6 +7,7 @@ import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verify.VerifyMode.Companion.not
@@ -40,7 +41,7 @@ class NotificationBellViewModelTest : MainDispatcherTest() {
     fun setUp() {
         installMainDispatcher()
         every { notificationsRepository.observeUnreadGameCount() } returns flowOf(0)
-        everySuspend { notificationsRepository.getNotifications() } returns emptyList()
+        everySuspend { notificationsRepository.getNotifications(any()) } returns emptyList()
     }
 
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -97,7 +98,7 @@ class NotificationBellViewModelTest : MainDispatcherTest() {
         viewModel()
         advanceUntilIdle()
 
-        verifySuspend(exactly(1)) { notificationsRepository.getNotifications() }
+        verifySuspend(exactly(1)) { notificationsRepository.getNotifications(any()) }
         verifySuspend(exactly(1)) { notificationsRepository.resolveUnreadGames() }
     }
 
@@ -108,7 +109,7 @@ class NotificationBellViewModelTest : MainDispatcherTest() {
         viewModel()
         advanceUntilIdle()
 
-        verifySuspend(not) { notificationsRepository.getNotifications() }
+        verifySuspend(not) { notificationsRepository.getNotifications(any()) }
         verifySuspend(not) { notificationsRepository.resolveUnreadGames() }
     }
 
@@ -116,7 +117,7 @@ class NotificationBellViewModelTest : MainDispatcherTest() {
     @Test
     fun a_failing_refresh_leaves_the_bell_visible() = runTest {
         every { accountRepository.observeAuthState() } returns flowOf(AuthState.LoggedIn("tester"))
-        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("network down")
+        everySuspend { notificationsRepository.getNotifications(any()) } throws IllegalStateException("network down")
         every { notificationsRepository.observeUnreadGameCount() } returns flowOf(2)
 
         val vm = viewModel()

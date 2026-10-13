@@ -274,7 +274,7 @@ private fun startNotificationLifecycle() {
     notificationLifecycleScope.launch {
         koin.get<AuthTokenStore>().observeAuthState().collect { state ->
             try {
-                applyNotificationLifecycle(state, koin.get(), koin.get(), koin.get())
+                applyNotificationLifecycle(state, koin.get(), koin.get(), koin.get(), koin.get())
             } catch (ce: CancellationException) {
                 throw ce
             } catch (t: Throwable) {

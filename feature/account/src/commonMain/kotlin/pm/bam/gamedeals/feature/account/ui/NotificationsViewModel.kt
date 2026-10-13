@@ -71,7 +71,13 @@ internal class NotificationsViewModel(
     /** Retries a load that failed with nothing to show. */
     fun onRetry() {
         uiState.update { it.copy(loading = true, error = false) }
-        load()
+        load(force = true)
+    }
+
+    /** Pull-to-refresh: checks ITAD now, even if the kept list isn't due for a refresh yet. */
+    fun onRefresh() {
+        uiState.update { it.copy(refreshing = true) }
+        load(force = true)
     }
 
     /**
@@ -79,7 +85,7 @@ internal class NotificationsViewModel(
      * already in memory is resolved first, so days whose details are cached (e.g. by the bell) fill in without waiting. A failed
      * reload keeps showing that list; only with nothing to show is it an [NotificationsScreenData.error].
      */
-    private fun load() {
+    private fun load(force: Boolean = false) {
         loadJob?.cancel()
         resolution.value = Resolution()
         loadJob = viewModelScope.launch {
@@ -95,8 +101,8 @@ internal class NotificationsViewModel(
                 }
                 val shown = runCatchingLogged(logger) { notificationsRepository.observeNotifications().first() }.getOrElse { emptyList() }
                 resolve(shown)
-                val list = runCatchingLogged(logger) { notificationsRepository.getNotifications() }.getOrNull()
-                uiState.update { it.copy(loading = false, error = list == null && shown.isEmpty()) }
+                val list = runCatchingLogged(logger) { notificationsRepository.getNotifications(force) }.getOrNull()
+                uiState.update { it.copy(loading = false, refreshing = false, error = list == null && shown.isEmpty()) }
                 resolve(list ?: shown)
             }
             resolution.update { it.copy(resolving = false) }
@@ -143,6 +149,8 @@ internal class NotificationsViewModel(
     @Immutable
     data class NotificationsScreenData(
         val loading: Boolean = false,
+        /** A pull-to-refresh is in flight. */
+        val refreshing: Boolean = false,
         /** The list couldn't be loaded and there was none to fall back on — distinct from an empty list. */
         val error: Boolean = false,
         val days: ImmutableList<NotificationDay> = persistentListOf(),

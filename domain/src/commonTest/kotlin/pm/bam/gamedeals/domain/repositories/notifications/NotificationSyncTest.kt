@@ -50,14 +50,14 @@ class NotificationSyncTest {
 
         assertTrue(sync().syncAndCollectNew().isEmpty())
 
-        verifySuspend(exactly(0)) { repository.getNotifications() }
+        verifySuspend(exactly(0)) { repository.getNotifications(any()) }
         verifySuspend(exactly(0)) { surfacedStore.replace(any()) }
     }
 
     @Test
     fun read_notifications_are_filtered_out() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = true))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false), notif("n2", read = true))
 
         val alerts = sync().syncAndCollectNew()
 
@@ -67,7 +67,7 @@ class NotificationSyncTest {
     @Test
     fun already_surfaced_notifications_are_filtered_out() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false), notif("n2", read = false))
         everySuspend { surfacedStore.get() } returns setOf("n1")
 
         val alerts = sync().syncAndCollectNew()
@@ -78,7 +78,7 @@ class NotificationSyncTest {
     @Test
     fun first_run_surfaces_all_unread_with_their_games() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false), notif("n2", read = false))
         everySuspend { repository.getNotificationDetail("n1") } returns
             NotificationDetail("n1", listOf(NotificationDealGame("g1", "Halo")))
         everySuspend { repository.getNotificationDetail("n2") } returns
@@ -94,7 +94,7 @@ class NotificationSyncTest {
     @Test
     fun games_are_only_fetched_for_waitlist_type() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false, type = "other"))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false, type = "other"))
 
         val alerts = sync().syncAndCollectNew()
 
@@ -106,7 +106,7 @@ class NotificationSyncTest {
     @Test
     fun an_alert_whose_games_are_all_unfollowed_is_dropped_but_still_marked_surfaced() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false), notif("n2", read = false))
         everySuspend { repository.getNotificationDetail("n1") } returns NotificationDetail("n1", listOf(NotificationDealGame("g1", "Halo")))
         everySuspend { repository.getNotificationDetail("n2") } returns NotificationDetail("n2", listOf(NotificationDealGame("gone", "Unfollowed")))
 
@@ -119,7 +119,7 @@ class NotificationSyncTest {
     @Test
     fun unfollowed_games_are_left_out_of_a_mixed_alert() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false))
         everySuspend { repository.getNotificationDetail("n1") } returns
             NotificationDetail("n1", listOf(NotificationDealGame("g1", "Halo"), NotificationDealGame("gone", "Unfollowed")))
 
@@ -131,7 +131,7 @@ class NotificationSyncTest {
     @Test
     fun an_alert_whose_games_failed_to_load_is_still_shown() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false))
         everySuspend { repository.getNotificationDetail("n1") } throws IllegalStateException("boom")
 
         val alerts = sync().syncAndCollectNew()
@@ -144,7 +144,7 @@ class NotificationSyncTest {
         loggedIn(true)
         everySuspend { waitlistRepository.getWaitlist() } throws IllegalStateException("offline")
         every { waitlistRepository.observeWaitlistIds() } returns flowOf(persistentSetOf("g1"))
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false))
         everySuspend { repository.getNotificationDetail("n1") } returns
             NotificationDetail("n1", listOf(NotificationDealGame("g1", "Halo"), NotificationDealGame("g2", "Hades")))
 
@@ -156,11 +156,12 @@ class NotificationSyncTest {
     @Test
     fun surfaced_set_is_replaced_with_the_current_server_set() = runTest {
         loggedIn(true)
-        everySuspend { repository.getNotifications() } returns listOf(notif("n1", read = false), notif("n2", read = true))
+        everySuspend { repository.getNotifications(any()) } returns listOf(notif("n1", read = false), notif("n2", read = true))
 
         sync().syncAndCollectNew()
 
         // Pruned to exactly the current server ids (drops anything no longer returned).
         verifySuspend(exactly(1)) { surfacedStore.replace(setOf("n1", "n2")) }
+        verifySuspend(exactly(1)) { repository.getNotifications(true) } // the poll always checks ITAD
     }
 }

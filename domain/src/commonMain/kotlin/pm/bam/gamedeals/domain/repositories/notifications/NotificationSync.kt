@@ -48,7 +48,7 @@ internal class NotificationSyncImpl(
     override suspend fun syncAndCollectNew(): List<PendingNotificationAlert> {
         if (authTokenStore.getAccessToken() == null) return emptyList() // login gate
 
-        val all = repository.getNotifications()
+        val all = repository.getNotifications(force = true) // the background poll is what keeps the kept list current
         val surfaced = surfacedStore.get()
         val new = all.filter { !it.read && it.id !in surfaced }
         val followed = if (new.any { it.type == WAITLIST_TYPE }) followedGameIds() else emptySet()

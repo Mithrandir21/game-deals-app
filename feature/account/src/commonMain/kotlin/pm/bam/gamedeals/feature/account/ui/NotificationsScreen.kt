@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,6 +97,7 @@ internal fun NotificationsScreen(
         onDayClick = { day -> onOpenDay(day.date) },
         onMarkAllRead = viewModel::onMarkAllRead,
         onRetry = viewModel::onRetry,
+        onRefresh = viewModel::onRefresh,
     )
 }
 
@@ -107,6 +109,7 @@ private fun NotificationsScreenContent(
     onDayClick: (day: NotificationDay) -> Unit,
     onMarkAllRead: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -161,11 +164,17 @@ private fun NotificationsScreenContent(
                     )
                 }
 
-                else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                    itemsIndexed(data.days, key = { _, day -> day.date }) { index, day ->
-                        NotificationDayRow(day = day, onClick = { onDayClick(day) })
-                        // Separate each day from the next; no trailing divider after the last row.
-                        if (index < data.days.lastIndex) HorizontalDivider()
+                else -> PullToRefreshBox(
+                    isRefreshing = data.refreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        itemsIndexed(data.days, key = { _, day -> day.date }) { index, day ->
+                            NotificationDayRow(day = day, onClick = { onDayClick(day) })
+                            // Separate each day from the next; no trailing divider after the last row.
+                            if (index < data.days.lastIndex) HorizontalDivider()
+                        }
                     }
                 }
             }
@@ -366,6 +375,7 @@ private fun NotificationsScreenPreview() {
             onDayClick = {},
             onMarkAllRead = {},
             onRetry = {},
+            onRefresh = {},
         )
     }
 }
@@ -380,6 +390,7 @@ private fun NotificationsScreenEmptyPreview() {
             onDayClick = {},
             onMarkAllRead = {},
             onRetry = {},
+            onRefresh = {},
         )
     }
 }
