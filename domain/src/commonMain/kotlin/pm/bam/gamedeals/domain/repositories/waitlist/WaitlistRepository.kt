@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.repositories.cache.LIBRARY_REUSE_MILLIS
+import pm.bam.gamedeals.domain.repositories.cache.RecentResult
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.cache.WaitlistGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.WaitlistDao
@@ -88,6 +90,9 @@ internal class WaitlistRepositoryImpl(
     // Hot snapshot of the enriched list, seeded lazily from persistent storage on first collection.
     private val displayFlow = MutableStateFlow<WaitlistDisplaySnapshot?>(null)
 
+    // App start asks for the waitlist from several places within seconds (library sync, Home recommendations); one fetch serves them.
+    private val recentWaitlist = RecentResult<List<WaitlistEntry>>(clock, LIBRARY_REUSE_MILLIS)
+
     // Auth-gated so the persisted id set is never surfaced while logged out (it is also cleared on logout,
     // but this guards the window before a reconcile and any cross-account switch).
     override fun observeWaitlistIds(): Flow<ImmutableSet<String>> =
@@ -103,12 +108,13 @@ internal class WaitlistRepositoryImpl(
 
     override suspend fun getWaitlist(): List<WaitlistEntry> {
         if (!loggedIn()) {
+            recentWaitlist.invalidate()
             waitlistDao.clear()
             return emptyList()
         }
-        val entries = accountSource.getWaitlist()
-        waitlistDao.replaceAll(entries.map { it.gameId })
-        return entries
+        return recentWaitlist.get {
+            accountSource.getWaitlist().also { entries -> waitlistDao.replaceAll(entries.map { it.gameId }) }
+        }
     }
 
     override suspend fun refreshWaitlistDisplay() {
@@ -129,6 +135,7 @@ internal class WaitlistRepositoryImpl(
     }
 
     override suspend fun clearLocal() {
+        recentWaitlist.invalidate()
         waitlistDao.clear()
         displayStore.clear()
         displayFlow.value = null
@@ -165,6 +172,7 @@ internal class WaitlistRepositoryImpl(
         if (!loggedIn()) return RepoUpdateResult.NOT_LOGGED_IN
         return runCatchingLogged(logger) {
             // Remote-first: confirm the ITAD write before mutating Room, so the cache can't drift from remote.
+            recentWaitlist.invalidate()
             if (waitlistDao.contains(gameId)) {
                 accountSource.removeFromWaitlist(gameId)
                 waitlistDao.delete(gameId)

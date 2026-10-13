@@ -35,6 +35,7 @@ import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.domain.repositories.cache.LIBRARY_REUSE_MILLIS
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,6 +77,26 @@ class WaitlistRepositoryTest {
         )
         assertEquals(2, repo.getWaitlist().size)
         assertEquals(setOf("a", "b"), repo.observeWaitlistIds().first().toSet())
+    }
+
+    @Test
+    fun requests_within_30_seconds_share_one_download_and_a_toggle_forces_a_fresh_one() = runTest {
+        var now = 0L
+        val source = FakeAccountSource(waitlist = listOf(WaitlistEntry("a", "A")))
+        val repo = repo(source, FakeAuthTokenStore(access = "token"), FakeWaitlistDao(), clock = Clock { now })
+
+        repo.getWaitlist() // library sync at app start
+        now += 2_000
+        repo.getWaitlist() // Home recommendations a couple of seconds later
+        assertEquals(1, source.waitlistFetches)
+
+        repo.toggleWaitlist("b")
+        repo.getWaitlist()
+        assertEquals(2, source.waitlistFetches)
+
+        now += LIBRARY_REUSE_MILLIS
+        repo.getWaitlist()
+        assertEquals(3, source.waitlistFetches)
     }
 
     @Test
@@ -205,6 +226,8 @@ internal class FakeAccountSource(
 ) : ItadAccountSource {
     val added = mutableListOf<String>()
     val removed = mutableListOf<String>()
+    var waitlistFetches = 0
+    var collectionFetches = 0
 
     private fun write(into: MutableList<String>, gameId: String) {
         if (failWrites) throw IllegalStateException("offline")
@@ -212,10 +235,10 @@ internal class FakeAccountSource(
     }
 
     override suspend fun getUserInfo(): ItadUser = ItadUser("user")
-    override suspend fun getWaitlist(): List<WaitlistEntry> = waitlist
+    override suspend fun getWaitlist(): List<WaitlistEntry> = waitlist.also { waitlistFetches++ }
     override suspend fun addToWaitlist(gameId: String) = write(added, gameId)
     override suspend fun removeFromWaitlist(gameId: String) = write(removed, gameId)
-    override suspend fun getCollection(): List<CollectionEntry> = collection
+    override suspend fun getCollection(): List<CollectionEntry> = collection.also { collectionFetches++ }
     override suspend fun addToCollection(gameId: String) = write(added, gameId)
     override suspend fun removeFromCollection(gameId: String) = write(removed, gameId)
     override suspend fun getNotifications(): List<ItadNotification> = emptyList()

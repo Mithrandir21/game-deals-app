@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.db.cache.CollectionGameIdEntry
 import pm.bam.gamedeals.domain.db.dao.CollectionDao
@@ -124,13 +125,30 @@ class CollectionRepositoryTest {
         assertTrue(repo.observeCollectionDisplay().first()!!.isEmpty())
     }
 
+    @Test
+    fun requests_within_30_seconds_share_one_download_and_a_toggle_forces_a_fresh_one() = runTest {
+        var now = 0L
+        val source = FakeAccountSource(collection = listOf(CollectionEntry("a", "A")))
+        val repo = repo(source, FakeAuthTokenStore(access = "token"), FakeCollectionDao(), clock = Clock { now })
+
+        repo.getCollection()
+        now += 2_000
+        repo.getCollection()
+        assertEquals(1, source.collectionFetches)
+
+        repo.toggleCollection("b")
+        repo.getCollection()
+        assertEquals(2, source.collectionFetches)
+    }
+
     private fun repo(
         source: ItadAccountSource,
         auth: AuthTokenStore,
         dao: CollectionDao,
         analytics: Analytics = RecordingAnalytics(),
         displayStore: CollectionDisplayStore = FakeCollectionDisplayStore(),
-    ) = CollectionRepositoryImpl(source, auth, dao, analytics, displayStore, TestingLoggingListener())
+        clock: Clock = Clock { 0L },
+    ) = CollectionRepositoryImpl(source, auth, dao, analytics, displayStore, clock, TestingLoggingListener())
 }
 
 private class FakeCollectionDisplayStore : CollectionDisplayStore {
