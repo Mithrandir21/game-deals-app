@@ -12,6 +12,8 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.client.request.url
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.sync.Semaphore
@@ -59,9 +61,11 @@ internal fun itadHttpClient(
         // must be weathered rather than surfaced as an error. Retry transparently on 429 only —
         // safe for any HTTP method since the request was throttled, not processed — honoring the
         // server's `Retry-After` header and otherwise backing off exponentially.
+        // A longer `Retry-After` fails at once: the request timeout spans every retry, so waiting it out only
+        // holds a concurrency permit until a retry that has already timed out.
         install(HttpRequestRetry) {
             maxRetries = ITAD_MAX_RETRIES
-            retryIf { _, response -> response.status == HttpStatusCode.TooManyRequests }
+            retryIf { _, response -> response.status == HttpStatusCode.TooManyRequests && response.retryAfterFitsTimeout() }
             exponentialDelay(respectRetryAfterHeader = true)
         }
 
@@ -87,6 +91,15 @@ internal const val ITAD_BASE_URL = "https://api.isthereanydeal.com"
 
 /** Retry attempts after the initial request when ITAD returns 429 (see [itadHttpClient]). */
 private const val ITAD_MAX_RETRIES = 3
+
+/** The longest `Retry-After` still waited out; [ITAD_MAX_RETRIES] such waits must fit the 30 s request timeout. */
+internal const val ITAD_MAX_RETRY_AFTER_SECONDS = 5L
+
+/** A missing or non-numeric (HTTP-date) `Retry-After` falls back to the short exponential backoff, so it still retries. */
+private fun HttpResponse.retryAfterFitsTimeout(): Boolean {
+    val seconds = headers[HttpHeaders.RetryAfter]?.toLongOrNull() ?: return true
+    return seconds <= ITAD_MAX_RETRY_AFTER_SECONDS
+}
 
 /** Default cap on simultaneous in-flight ITAD requests (see [ItadConcurrencyLimiter]). */
 private const val ITAD_MAX_CONCURRENCY = 5

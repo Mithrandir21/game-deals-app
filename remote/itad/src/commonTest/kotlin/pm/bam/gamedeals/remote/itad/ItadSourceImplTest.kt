@@ -18,6 +18,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.Country
@@ -41,6 +42,7 @@ import pm.bam.gamedeals.remote.itad.api.ItadGamesApi
 import pm.bam.gamedeals.remote.itad.api.ItadShopsApi
 import pm.bam.gamedeals.remote.itad.models.RemoteItadDealsRequest
 import pm.bam.gamedeals.remote.itad.logic.ITAD_HOST
+import pm.bam.gamedeals.remote.itad.logic.ITAD_MAX_RETRY_AFTER_SECONDS
 import pm.bam.gamedeals.remote.itad.logic.itadHttpClient
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
@@ -713,6 +715,51 @@ class ItadSourceImplTest {
 
         // 1 initial attempt + 3 retries (ITAD_MAX_RETRIES)
         assertEquals(4, attempts)
+    }
+
+    @Test
+    fun itadHttpClient_fails_at_once_when_retry_after_exceeds_what_the_timeout_allows() = runTest {
+        var attempts = 0
+        val engine = MockEngine { _ ->
+            attempts++
+            respond(content = "", status = HttpStatusCode.TooManyRequests, headers = headersOf(HttpHeaders.RetryAfter, "138"))
+        }
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = engine,
+        )
+
+        val start = TimeSource.Monotonic.markNow()
+        assertFailsWith<Throwable> { ItadShopsApi(client).getShops().getOrThrow() }
+        val elapsed = start.elapsedNow()
+
+        assertEquals(1, attempts) // no retry: waiting 138 s would outlast the request timeout anyway
+        assertTrue(elapsed < 5.seconds, "should not wait out Retry-After, took $elapsed")
+    }
+
+    @Test
+    fun itadHttpClient_still_retries_a_retry_after_within_the_limit() = runTest {
+        var attempts = 0
+        val engine = MockEngine { _ ->
+            attempts++
+            if (attempts == 1) {
+                respond(content = "", status = HttpStatusCode.TooManyRequests, headers = headersOf(HttpHeaders.RetryAfter, "$ITAD_MAX_RETRY_AFTER_SECONDS"))
+            } else {
+                respond(content = SHOPS_BODY, status = HttpStatusCode.OK, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+            }
+        }
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = engine,
+        )
+
+        ItadShopsApi(client).getShops().getOrThrow()
+
+        assertEquals(2, attempts)
     }
 
     @Test
