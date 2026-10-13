@@ -218,7 +218,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         applicationScope.launch {
             get<AuthTokenStore>().observeAuthState().collect { state ->
                 try {
-                    applyNotificationLifecycle(state, get(), get(), get())
+                    applyNotificationLifecycle(state, get(), get(), get(), get())
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (t: Throwable) {

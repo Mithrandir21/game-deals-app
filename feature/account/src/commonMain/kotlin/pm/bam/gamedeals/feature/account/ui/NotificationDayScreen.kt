@@ -55,6 +55,7 @@ import pm.bam.gamedeals.domain.models.NotificationShopDeal
 import pm.bam.gamedeals.domain.models.hero
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
+import pm.bam.gamedeals.feature.account.generated.resources.account_notification_alert_time_prices
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_best_deal
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_deal_expired
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_detail_empty
@@ -145,6 +146,14 @@ private fun NotificationDayScreenContent(
                     contentPadding = PaddingValues(GameDealsCustomTheme.spacing.medium),
                     verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                 ) {
+                    // The deals are a snapshot from when ITAD sent the alert, not live prices.
+                    item(key = "alert-time-note") {
+                        Text(
+                            text = stringResource(Res.string.account_notification_alert_time_prices),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     data.regionNote?.let { note ->
                         item(key = "region-note") { RegionNoteCard(note = note, onChangeRegion = onChangeRegion) }
                     }

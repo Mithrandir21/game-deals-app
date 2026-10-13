@@ -82,6 +82,7 @@
     <!-- Notification day detail: the games + deals notified on one calendar day (#7 notification revamp) -->
     <string name="account_notification_detail_title">New deals</string>
     <string name="account_notification_detail_empty">No deals for this day.</string>
+    <string name="account_notification_alert_time_prices">Prices from when you were alerted. Some deals may have ended since.</string>
     <string name="account_notification_detail_image">Cover art for %1$s</string>
     <string name="account_notification_historical_low">All-time low %1$s</string>
     <string name="account_notification_deal_expired">Deal expired</string>

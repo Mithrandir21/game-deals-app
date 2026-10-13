@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.models
 
 import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 
 /**
  * The full deal content of one waitlist notification (from `/notifications/waitlist/v1`), mirroring the
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Immutable
  * the user's waitlist in the repository layer (the only cheap art source).
  */
 @Immutable
+@Serializable
 data class NotificationDetail(
     val notificationId: String,
     val games: List<NotificationDealGame>,
@@ -23,6 +25,7 @@ data class NotificationDetail(
  * game (with a "deal expired" note) rather than hiding it.
  */
 @Immutable
+@Serializable
 data class NotificationDealGame(
     val gameId: String,
     val title: String,
@@ -54,6 +57,7 @@ fun List<NotificationDealGame>.mergedByGameId(): List<NotificationDealGame> =
  * app's region.
  */
 @Immutable
+@Serializable
 data class NotificationShopDeal(
     val shopName: String,
     val salePriceValue: Double,

@@ -54,6 +54,8 @@ import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepos
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettingsImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationCacheStore
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationCacheStoreImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSyncImpl
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
@@ -142,8 +144,9 @@ val domainModule = module {
     single<WaitlistDisplayStore> { WaitlistDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get()) }
-    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
+    single<NotificationCacheStore> { NotificationCacheStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }

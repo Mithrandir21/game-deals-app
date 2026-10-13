@@ -41,7 +41,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
     fun setUp() {
         installMainDispatcher()
         every { notificationsRepository.observeNotifications() } returns flowOf(emptyList())
-        everySuspend { notificationsRepository.getNotifications() } returns emptyList()
+        everySuspend { notificationsRepository.getNotifications(any()) } returns emptyList()
         // autoUnit only auto-returns Unit; the detail (NotificationDetail) needs an explicit default.
         everySuspend { notificationsRepository.getNotificationDetail(any()) } returns NotificationDetail("", emptyList())
     }
@@ -70,7 +70,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
             notification("n3", day = "2026-06-12", read = true),
         )
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
         everySuspend { notificationsRepository.getNotificationDetail("n2") } returns detail("n2", "gA" to "A", "gB" to "B")
         everySuspend { notificationsRepository.getNotificationDetail("n3") } returns detail("n3", "gC" to "C")
@@ -90,7 +90,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
         assertTrue(vm.uiState.value.days.first().hasUnread)
         assertFalse(vm.uiState.value.days.last().hasUnread)
         assertTrue(vm.uiState.value.hasUnread)
-        verifySuspend(exactly(1)) { notificationsRepository.getNotifications() }
+        verifySuspend(exactly(1)) { notificationsRepository.getNotifications(any()) }
     }
 
     @Test
@@ -98,7 +98,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
         // The original bug: one notification (one "entry") whose digest covers two games.
         val list = listOf(notification("n1"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A", "gB" to "B")
 
         val vm = viewModel()
@@ -112,7 +112,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
     fun rows_show_before_their_games_resolve_then_fill_in_per_day() = runTest {
         val list = listOf(notification("n1", day = "2026-06-13"), notification("n2", day = "2026-06-13"), notification("n3", day = "2026-06-12"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         val slow = CompletableDeferred<Unit>()
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
         everySuspend { notificationsRepository.getNotificationDetail("n2") } calls { slow.await(); detail("n2", "gB" to "B") }
@@ -141,7 +141,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
         val list = listOf(notification("n1"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
         val reload = CompletableDeferred<List<ItadNotification>>()
-        everySuspend { notificationsRepository.getNotifications() } calls { reload.await() }
+        everySuspend { notificationsRepository.getNotifications(any()) } calls { reload.await() }
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
 
         val vm = viewModel()
@@ -159,7 +159,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
     fun a_day_never_shows_a_partial_count_when_its_last_entries_resolve_together() = runTest {
         val list = listOf(notification("n1"), notification("n2"), notification("n3"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         val gate = CompletableDeferred<Unit>()
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
         everySuspend { notificationsRepository.getNotificationDetail("n2") } calls { gate.await(); detail("n2", "gB" to "B") }
@@ -180,7 +180,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
     fun a_day_whose_games_fail_to_load_stops_loading_with_no_games() = runTest {
         val list = listOf(notification("n1"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         everySuspend { notificationsRepository.getNotificationDetail("n1") } throws IllegalStateException("boom")
 
         val vm = viewModel()
@@ -194,7 +194,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
     fun a_failed_reload_still_resolves_the_list_already_shown() = runTest {
         val list = listOf(notification("n1"))
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
-        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("offline")
+        everySuspend { notificationsRepository.getNotifications(any()) } throws IllegalStateException("offline")
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
 
         val vm = viewModel()
@@ -208,7 +208,7 @@ class NotificationsViewModelTest : MainDispatcherTest() {
 
     @Test
     fun a_failed_load_with_nothing_to_show_is_an_error_not_an_empty_list() = runTest {
-        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("429")
+        everySuspend { notificationsRepository.getNotifications(any()) } throws IllegalStateException("429")
 
         val vm = viewModel()
         advanceUntilIdle()
@@ -229,19 +229,32 @@ class NotificationsViewModelTest : MainDispatcherTest() {
 
     @Test
     fun retry_after_a_failed_load_shows_the_list() = runTest {
-        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("429")
+        everySuspend { notificationsRepository.getNotifications(any()) } throws IllegalStateException("429")
         val vm = viewModel()
         advanceUntilIdle()
 
         val list = listOf(notification("n1"))
-        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotifications(any()) } returns list
         every { notificationsRepository.observeNotifications() } returns flowOf(list)
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
         vm.onRetry()
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.error)
-        verifySuspend(exactly(2)) { notificationsRepository.getNotifications() }
+        verifySuspend(exactly(2)) { notificationsRepository.getNotifications(any()) }
+    }
+
+    @Test
+    fun opening_reuses_the_kept_list_while_pull_to_refresh_forces_a_check() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+        verifySuspend(exactly(1)) { notificationsRepository.getNotifications(false) }
+
+        vm.onRefresh()
+        advanceUntilIdle()
+
+        verifySuspend(exactly(1)) { notificationsRepository.getNotifications(true) }
+        assertFalse(vm.uiState.value.refreshing)
     }
 
     @Test
