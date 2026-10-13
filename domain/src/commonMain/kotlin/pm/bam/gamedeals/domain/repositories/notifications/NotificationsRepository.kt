@@ -17,6 +17,7 @@ import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.ItadNotification
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
@@ -63,8 +64,8 @@ interface NotificationsRepository {
     /**
      * The full deal content of a waitlist notification (games + deals + joined banner art) for the in-app
      * detail screen. Cached in-memory: a second open is served from cache, and the per-game art is joined
-     * (and itself cached) from the user's waitlist — the only cheap art source. A fresh [getNotifications]
-     * (remote-as-truth reload) invalidates these caches. Empty when logged out.
+     * (and itself cached) from the user's waitlist, falling back to a per-game lookup for games no longer on it.
+     * A fresh [getNotifications] (remote-as-truth reload) invalidates these caches. Empty when logged out.
      */
     suspend fun getNotificationDetail(notificationId: String): NotificationDetail
 }
@@ -74,6 +75,7 @@ internal const val RETENTION_MILLIS = 7L * 24 * 60 * 60 * 1000
 
 internal class NotificationsRepositoryImpl(
     private val accountSource: ItadAccountSource,
+    private val dealsSource: DealsSource,
     private val authTokenStore: AuthTokenStore,
     private val clock: Clock,
     private val analytics: Analytics,
@@ -94,6 +96,11 @@ internal class NotificationsRepositoryImpl(
     private val cacheMutex = Mutex()
     private val detailCache = mutableMapOf<String, NotificationDetail>()
     private var waitlistArt: Map<String, GameArtwork>? = null
+
+    // Art for notified games that aren't on the waitlist (e.g. unfollowed since). A game's art doesn't change, so
+    // this is kept across reloads. Guarded by its own lock so details resolving in parallel share one lookup per game.
+    private val artLookupMutex = Mutex()
+    private val lookedUpArt = mutableMapOf<String, GameArtwork>()
 
     override fun observeNotifications(): Flow<List<ItadNotification>> =
         combine(authTokenStore.observeAuthState(), notifications) { authState, list ->
@@ -164,8 +171,9 @@ internal class NotificationsRepositoryImpl(
         // process); join art by game id, then memoise the joined detail.
         val detail = accountSource.getWaitlistNotificationDetail(notificationId)
         val art = cachedWaitlistArt()
+        val lookedUp = lookUpArt(detail.games.map { it.gameId }.filter { it !in art }.distinct())
         val joined = detail.copy(
-            games = detail.games.map { game -> game.copy(artwork = art[game.gameId] ?: game.artwork) },
+            games = detail.games.map { game -> game.copy(artwork = art[game.gameId] ?: lookedUp[game.gameId] ?: game.artwork) },
         )
         cacheMutex.withLock { detailCache[notificationId] = joined }
         recordGameIds(joined)
@@ -183,6 +191,21 @@ internal class NotificationsRepositoryImpl(
                 .getOrDefault(emptyMap())
                 .also { waitlistArt = it }
         }
+
+    /** Best-effort `/games/info` art for [gameIds]; a failed lookup is left out (placeholder art) and retried next time. */
+    private suspend fun lookUpArt(gameIds: List<String>): Map<String, GameArtwork> {
+        if (gameIds.isEmpty()) return emptyMap()
+        return artLookupMutex.withLock {
+            val fetched = coroutineScope {
+                gameIds.filter { it !in lookedUpArt }
+                    .map { id -> async { runCatching { id to dealsSource.fetchGame(id).artwork }.getOrNull() } }
+                    .awaitAll()
+                    .filterNotNull()
+            }
+            lookedUpArt += fetched
+            lookedUpArt.filterKeys { it in gameIds }
+        }
+    }
 
     private suspend fun invalidateDetailCache() = cacheMutex.withLock {
         detailCache.clear()

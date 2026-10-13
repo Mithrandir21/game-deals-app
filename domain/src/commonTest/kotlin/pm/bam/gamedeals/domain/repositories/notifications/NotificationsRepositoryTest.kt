@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.repositories.notifications
 
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.answering.throws
 import dev.mokkery.every
@@ -9,6 +10,7 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -22,9 +24,11 @@ import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.models.NotificationGame
 import pm.bam.gamedeals.domain.models.WaitlistEntry
+import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.domain.RecordingAnalytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.testing.fixtures.game
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,6 +36,9 @@ import kotlin.test.assertTrue
 class NotificationsRepositoryTest {
 
     private val accountSource: ItadAccountSource = mock(MockMode.autoUnit)
+    private val dealsSource: DealsSource = mock(MockMode.autoUnit) {
+        everySuspend { fetchGame(any()) } throws IllegalStateException("no art")
+    }
     private val authTokenStore: AuthTokenStore = mock(MockMode.autoUnit)
     private val analytics = RecordingAnalytics()
 
@@ -39,7 +46,7 @@ class NotificationsRepositoryTest {
     private val now = Instant.parse("2026-06-13T00:00:00Z").toEpochMilliseconds()
     private val clock = Clock { now }
 
-    private fun repo() = NotificationsRepositoryImpl(accountSource, authTokenStore, clock, analytics)
+    private fun repo() = NotificationsRepositoryImpl(accountSource, dealsSource, authTokenStore, clock, analytics)
 
     private fun notification(id: String, read: Boolean) =
         ItadNotification(id = id, type = "waitlist", title = id, timestamp = "2026-06-12T00:00:00+00:00", read = read)
@@ -178,6 +185,72 @@ class NotificationsRepositoryTest {
         assertEquals(first, second)                                    // served from cache
         verifySuspend(exactly(1)) { accountSource.getWaitlistNotificationDetail("n1") }
         verifySuspend(exactly(1)) { accountSource.getWaitlist() }
+        verifySuspend(exactly(0)) { dealsSource.fetchGame(any()) } // waitlisted → no per-game lookup
+    }
+
+    @Test
+    fun getNotificationDetail_looks_up_art_for_games_no_longer_on_the_waitlist() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g1", "g2")
+        everySuspend { accountSource.getWaitlist() } returns
+            listOf(WaitlistEntry(gameId = "g1", title = "g1", artwork = GameArtwork(banner400 = "art-g1")))
+        everySuspend { dealsSource.fetchGame("g2") } returns game(gameID = "g2", thumb = "art-g2")
+
+        val games = repo().getNotificationDetail("n1").games
+
+        assertEquals("art-g1", games.first { it.gameId == "g1" }.artwork.banner400)
+        assertEquals("art-g2", games.first { it.gameId == "g2" }.artwork.banner300)
+        verifySuspend(exactly(0)) { dealsSource.fetchGame("g1") }
+    }
+
+    @Test
+    fun looked_up_art_is_kept_across_a_reload() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("n1", read = false))
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g2")
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { dealsSource.fetchGame("g2") } returns game(gameID = "g2", thumb = "art-g2")
+
+        val repo = repo()
+        repo.getNotificationDetail("n1")
+        repo.getNotifications() // remote-as-truth reload drops the detail cache
+        val reloaded = repo.getNotificationDetail("n1")
+
+        assertEquals("art-g2", reloaded.games.single().artwork.banner300)
+        verifySuspend(exactly(2)) { accountSource.getWaitlistNotificationDetail("n1") }
+        verifySuspend(exactly(1)) { dealsSource.fetchGame("g2") }
+    }
+
+    @Test
+    fun details_resolving_in_parallel_share_one_art_lookup_per_game() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("a", read = false), notification("b", read = false))
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g2")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g2")
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+        everySuspend { dealsSource.fetchGame("g2") } calls { delay(100); game(gameID = "g2", thumb = "art-g2") }
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.resolveUnreadGames()
+
+        verifySuspend(exactly(1)) { dealsSource.fetchGame("g2") }
+    }
+
+    @Test
+    fun a_failed_art_lookup_shows_no_art_and_is_retried_after_a_reload() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("n1", read = false))
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g2")
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+
+        val repo = repo()
+        assertEquals(GameArtwork(), repo.getNotificationDetail("n1").games.single().artwork)
+
+        everySuspend { dealsSource.fetchGame("g2") } returns game(gameID = "g2", thumb = "art-g2")
+        repo.getNotifications()
+
+        assertEquals("art-g2", repo.getNotificationDetail("n1").games.single().artwork.banner300)
     }
 
     @Test

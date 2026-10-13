@@ -143,12 +143,12 @@ val domainModule = module {
     single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get()) }
-    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get()) }
+    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
     // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
     single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
-    single<NotificationSync> { NotificationSyncImpl(get(), get(), get()) }
+    single<NotificationSync> { NotificationSyncImpl(get(), get(), get(), get()) }
     // Followed franchises/series (#7) — client-side, Storage-backed.
     single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
     // Recent + saved Deals searches (#6) — client-side, Storage-backed.
