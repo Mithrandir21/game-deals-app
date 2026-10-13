@@ -43,7 +43,7 @@ class NotificationsRepositoryTest {
     private val analytics = RecordingAnalytics()
 
     // Fixed "now" one day after the sample notifications, so they sit inside the 7-day retention window.
-    private val now = Instant.parse("2026-06-13T00:00:00Z").toEpochMilliseconds()
+    private var now = Instant.parse("2026-06-13T00:00:00Z").toEpochMilliseconds()
     private val clock = Clock { now }
 
     private fun repo() = NotificationsRepositoryImpl(accountSource, dealsSource, authTokenStore, clock, analytics)
@@ -213,7 +213,8 @@ class NotificationsRepositoryTest {
 
         val repo = repo()
         repo.getNotificationDetail("n1")
-        repo.getNotifications() // remote-as-truth reload drops the detail cache
+        now += DETAIL_TTL_MILLIS // the detail expires, the looked-up art doesn't
+        repo.getNotifications()
         val reloaded = repo.getNotificationDetail("n1")
 
         assertEquals("art-g2", reloaded.games.single().artwork.banner300)
@@ -248,9 +249,82 @@ class NotificationsRepositoryTest {
         assertEquals(GameArtwork(), repo.getNotificationDetail("n1").games.single().artwork)
 
         everySuspend { dealsSource.fetchGame("g2") } returns game(gameID = "g2", thumb = "art-g2")
+        now += DETAIL_TTL_MILLIS
         repo.getNotifications()
 
         assertEquals("art-g2", repo.getNotificationDetail("n1").games.single().artwork.banner300)
+    }
+
+    @Test
+    fun a_reload_within_the_ttl_reuses_details_and_waitlist_art() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("n1", read = false))
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g1")
+        everySuspend { accountSource.getWaitlist() } returns listOf(WaitlistEntry(gameId = "g1", title = "g1"))
+
+        val repo = repo()
+        repo.getNotifications()
+        repo.getNotificationDetail("n1") // e.g. the bell resolving at launch
+        now += DETAIL_TTL_MILLIS - 1
+        repo.getNotifications()          // the list screen opening moments later
+        repo.getNotificationDetail("n1")
+
+        verifySuspend(exactly(1)) { accountSource.getWaitlistNotificationDetail("n1") }
+        verifySuspend(exactly(1)) { accountSource.getWaitlist() }
+    }
+
+    @Test
+    fun details_and_waitlist_art_are_refetched_once_the_ttl_passes() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g1")
+        everySuspend { accountSource.getWaitlist() } returns listOf(WaitlistEntry(gameId = "g1", title = "g1"))
+
+        val repo = repo()
+        repo.getNotificationDetail("n1")
+        now += DETAIL_TTL_MILLIS
+        repo.getNotificationDetail("n1")
+
+        verifySuspend(exactly(2)) { accountSource.getWaitlistNotificationDetail("n1") }
+        verifySuspend(exactly(2)) { accountSource.getWaitlist() }
+    }
+
+    @Test
+    fun a_failed_waitlist_fetch_skips_per_game_lookups_and_is_not_retried_by_every_detail() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getWaitlistNotificationDetail("a") } returns detail("a", "g1")
+        everySuspend { accountSource.getWaitlistNotificationDetail("b") } returns detail("b", "g2")
+        everySuspend { accountSource.getWaitlist() } throws IllegalStateException("429")
+
+        val repo = repo()
+        repo.getNotificationDetail("a")
+        repo.getNotificationDetail("b")
+
+        verifySuspend(exactly(1)) { accountSource.getWaitlist() }
+        verifySuspend(exactly(0)) { dealsSource.fetchGame(any()) } // unknown waitlist: don't look up every game
+
+        // Not cached art-less: once the failure is forgotten, the next open fetches again and gets the art.
+        everySuspend { accountSource.getWaitlist() } returns
+            listOf(WaitlistEntry(gameId = "g1", title = "g1", artwork = GameArtwork(banner400 = "art-g1")))
+        now += WAITLIST_ART_RETRY_MILLIS
+        assertEquals("art-g1", repo.getNotificationDetail("a").games.single().artwork.banner400)
+        verifySuspend(exactly(2)) { accountSource.getWaitlistNotificationDetail("a") }
+    }
+
+    @Test
+    fun logging_out_drops_cached_details() = runTest {
+        loggedIn(true)
+        everySuspend { accountSource.getNotifications() } returns listOf(notification("n1", read = false))
+        everySuspend { accountSource.getWaitlistNotificationDetail("n1") } returns detail("n1", "g1")
+        everySuspend { accountSource.getWaitlist() } returns emptyList()
+
+        val repo = repo()
+        repo.getNotificationDetail("n1")
+        loggedIn(false)
+        repo.getNotifications()
+        loggedIn(true)
+        repo.getNotificationDetail("n1")
+
+        verifySuspend(exactly(2)) { accountSource.getWaitlistNotificationDetail("n1") }
     }
 
     @Test

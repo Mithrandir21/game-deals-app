@@ -65,13 +65,21 @@ interface NotificationsRepository {
      * The full deal content of a waitlist notification (games + deals + joined banner art) for the in-app
      * detail screen. Cached in-memory: a second open is served from cache, and the per-game art is joined
      * (and itself cached) from the user's waitlist, falling back to a per-game lookup for games no longer on it.
-     * A fresh [getNotifications] (remote-as-truth reload) invalidates these caches. Empty when logged out.
+     * Details and the waitlist art are reused for [DETAIL_TTL_MILLIS] across [getNotifications] reloads. Empty when logged out.
      */
     suspend fun getNotificationDetail(notificationId: String): NotificationDetail
 }
 
 /** How far back notifications are kept; anything older is ignored at load. */
 internal const val RETENTION_MILLIS = 7L * 24 * 60 * 60 * 1000
+
+/** How long a fetched notification detail (and the waitlist art map) is reused before it is fetched again. */
+internal const val DETAIL_TTL_MILLIS = 15L * 60 * 1000
+
+/** How long a failed waitlist-art fetch is remembered, so parallel detail loads don't each retry it. */
+internal const val WAITLIST_ART_RETRY_MILLIS = 60L * 1000
+
+private class Timed<T>(val value: T, val fetchedAtMillis: Long)
 
 internal class NotificationsRepositoryImpl(
     private val accountSource: ItadAccountSource,
@@ -83,19 +91,17 @@ internal class NotificationsRepositoryImpl(
 
     private val notifications = MutableStateFlow<List<ItadNotification>>(emptyList())
 
-    // Notification id → the distinct game ids it refers to, recorded whenever a detail resolves. Deliberately
-    // NOT dropped by the [getNotifications] reload (unlike [detailCache]): a notification's game set never
-    // changes, and keeping it stops the badge flickering to 0 while the list screen re-resolves. Pruned to the
-    // loaded ids on reload; cleared on logout.
+    // Notification id → the distinct game ids it refers to, recorded whenever a detail resolves. Deliberately kept
+    // when that detail expires from [detailCache]: a notification's game set never changes, and keeping it stops the
+    // badge flickering to 0 while the list screen re-resolves. Pruned to the loaded ids on reload; cleared on logout.
     private val gameIdsByEntry = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
 
-    // Cache-from-sync + lazy-on-open: the per-notification detail is cached so a second open (or a tray
-    // tap that the sync already warmed) is free. [waitlistArt] is the one-shot game-id → art join source,
-    // cached for the process so a multi-notification sync fetches the waitlist once. Both are invalidated
-    // by [getNotifications] (the remote-as-truth reload) and on logout.
+    // Cache-from-sync + lazy-on-open: the per-notification detail is cached so a second open (or a tray tap the sync
+    // already warmed, or a list reload) is free for [DETAIL_TTL_MILLIS]. [waitlistArt] is the game-id → art join
+    // source; a null value records a failed fetch. Both are cleared on logout.
     private val cacheMutex = Mutex()
-    private val detailCache = mutableMapOf<String, NotificationDetail>()
-    private var waitlistArt: Map<String, GameArtwork>? = null
+    private val detailCache = mutableMapOf<String, Timed<NotificationDetail>>()
+    private var waitlistArt: Timed<Map<String, GameArtwork>?>? = null
 
     // Art for notified games that aren't on the waitlist (e.g. unfollowed since). A game's art doesn't change, so
     // this is kept across reloads. Guarded by its own lock so details resolving in parallel share one lookup per game.
@@ -111,8 +117,8 @@ internal class NotificationsRepositoryImpl(
         combine(observeNotifications(), gameIdsByEntry, ::unreadGameCount)
 
     override suspend fun getNotifications(): List<ItadNotification> {
-        invalidateDetailCache() // remote-as-truth reload: drop any stale detail/art so reopens re-fetch.
         if (!loggedIn()) {
+            invalidateDetailCache()
             notifications.value = emptyList()
             gameIdsByEntry.value = emptyMap()
             return emptyList()
@@ -121,6 +127,7 @@ internal class NotificationsRepositoryImpl(
         notifications.value = list
         val loadedIds = list.mapTo(mutableSetOf()) { it.id }
         gameIdsByEntry.update { resolved -> resolved.filterKeys { it in loadedIds } }
+        cacheMutex.withLock { detailCache.keys.retainAll(loadedIds) }
         return list
     }
 
@@ -165,17 +172,18 @@ internal class NotificationsRepositoryImpl(
             gameIdsByEntry.value = emptyMap()
             return NotificationDetail(notificationId, emptyList())
         }
-        cacheMutex.withLock { detailCache[notificationId] }?.let { return it.also(::recordGameIds) }
+        val cached = cacheMutex.withLock { detailCache[notificationId]?.takeIf { it.isFresh(DETAIL_TTL_MILLIS) }?.value }
+        cached?.let { return it.also(::recordGameIds) }
 
-        // Fetch the deal content and the art map outside the lock (the art map is fetched at most once per
-        // process); join art by game id, then memoise the joined detail.
+        // Fetch the deal content outside the lock, join art by game id, then memoise the joined detail. Without the
+        // waitlist there's no telling which games need a per-game lookup, so the detail goes out art-less and uncached.
         val detail = accountSource.getWaitlistNotificationDetail(notificationId)
         val art = cachedWaitlistArt()
-        val lookedUp = lookUpArt(detail.games.map { it.gameId }.filter { it !in art }.distinct())
+        val lookedUp = if (art == null) emptyMap() else lookUpArt(detail.games.map { it.gameId }.filter { it !in art }.distinct())
         val joined = detail.copy(
-            games = detail.games.map { game -> game.copy(artwork = art[game.gameId] ?: lookedUp[game.gameId] ?: game.artwork) },
+            games = detail.games.map { game -> game.copy(artwork = art?.get(game.gameId) ?: lookedUp[game.gameId] ?: game.artwork) },
         )
-        cacheMutex.withLock { detailCache[notificationId] = joined }
+        if (art != null) cacheMutex.withLock { detailCache[notificationId] = Timed(joined, clock.nowMillis()) }
         recordGameIds(joined)
         return joined
     }
@@ -185,12 +193,18 @@ internal class NotificationsRepositoryImpl(
         gameIdsByEntry.update { it + (detail.notificationId to ids) }
     }
 
-    private suspend fun cachedWaitlistArt(): Map<String, GameArtwork> =
+    /** The waitlist's art by game id, or null when the fetch failed (remembered for [WAITLIST_ART_RETRY_MILLIS]). */
+    private suspend fun cachedWaitlistArt(): Map<String, GameArtwork>? =
         cacheMutex.withLock {
-            waitlistArt ?: runCatching { accountSource.getWaitlist().associate { it.gameId to it.artwork } }
-                .getOrDefault(emptyMap())
-                .also { waitlistArt = it }
+            val cached = waitlistArt
+            if (cached != null && cached.isFresh(if (cached.value == null) WAITLIST_ART_RETRY_MILLIS else DETAIL_TTL_MILLIS)) {
+                return@withLock cached.value
+            }
+            runCatching { accountSource.getWaitlist().associate { it.gameId to it.artwork } }.getOrNull()
+                .also { waitlistArt = Timed(it, clock.nowMillis()) }
         }
+
+    private fun Timed<*>.isFresh(maxAgeMillis: Long): Boolean = clock.nowMillis() - fetchedAtMillis < maxAgeMillis
 
     /** Best-effort `/games/info` art for [gameIds]; a failed lookup is left out (placeholder art) and retried next time. */
     private suspend fun lookUpArt(gameIds: List<String>): Map<String, GameArtwork> {
