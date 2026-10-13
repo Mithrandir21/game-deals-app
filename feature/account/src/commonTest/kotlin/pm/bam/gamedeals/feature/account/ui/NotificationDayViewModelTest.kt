@@ -4,6 +4,7 @@ package pm.bam.gamedeals.feature.account.ui
 
 import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.everySuspend
@@ -12,8 +13,11 @@ import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.ItadNotification
@@ -63,6 +67,22 @@ class NotificationDayViewModelTest : MainDispatcherTest() {
         every { notificationsRepository.observeNotifications() } returns flowOf(listOf(notification("n1")))
         everySuspend { notificationsRepository.getNotificationDetail("n1") } returns
             NotificationDetail("n1", listOf(NotificationDealGame(gameId = "g1", title = "Halo", deals = deals.toList())))
+    }
+
+    @Test
+    fun the_days_entries_load_in_parallel() = runTest {
+        every { notificationsRepository.observeNotifications() } returns flowOf(listOf(notification("n1"), notification("n2")))
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } calls
+            { delay(100); NotificationDetail("n1", listOf(NotificationDealGame(gameId = "g1", title = "Halo"))) }
+        everySuspend { notificationsRepository.getNotificationDetail("n2") } calls
+            { delay(100); NotificationDetail("n2", listOf(NotificationDealGame(gameId = "g2", title = "Hades"))) }
+
+        val vm = viewModel()
+        advanceTimeBy(150) // one-by-one would still be waiting on n2 here
+        runCurrent()
+
+        assertFalse(vm.uiState.value.loading)
+        assertEquals(listOf("g1", "g2"), vm.uiState.value.games.map { it.gameId }) // order kept
     }
 
     @Test
