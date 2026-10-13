@@ -3,13 +3,16 @@
 package pm.bam.gamedeals.feature.account.ui
 
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
+import dev.mokkery.answering.throws
 import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -21,6 +24,7 @@ import pm.bam.gamedeals.domain.models.NotificationDetail
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.utils.observeEmissions
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -102,6 +106,142 @@ class NotificationsViewModelTest : MainDispatcherTest() {
 
         assertEquals(2, vm.uiState.value.days.single().count)
         assertEquals(listOf("A", "B"), vm.uiState.value.days.single().games.map { it.title })
+    }
+
+    @Test
+    fun rows_show_before_their_games_resolve_then_fill_in_per_day() = runTest {
+        val list = listOf(notification("n1", day = "2026-06-13"), notification("n2", day = "2026-06-13"), notification("n3", day = "2026-06-12"))
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        everySuspend { notificationsRepository.getNotifications() } returns list
+        val slow = CompletableDeferred<Unit>()
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
+        everySuspend { notificationsRepository.getNotificationDetail("n2") } calls { slow.await(); detail("n2", "gB" to "B") }
+        everySuspend { notificationsRepository.getNotificationDetail("n3") } returns detail("n3", "gC" to "C")
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        // No spinner while n2 is still loading: the 12th is complete, the 13th waits for n2 rather than showing a partial count.
+        assertFalse(vm.uiState.value.loading)
+        val (thirteenth, twelfth) = vm.uiState.value.days
+        assertTrue(thirteenth.loadingGames)
+        assertEquals(1, thirteenth.pendingEntries)
+        assertFalse(twelfth.loadingGames)
+        assertEquals(listOf("C"), twelfth.games.map { it.title })
+
+        slow.complete(Unit)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.days.first().loadingGames)
+        assertEquals(listOf("A", "B"), vm.uiState.value.days.first().games.map { it.title })
+    }
+
+    @Test
+    fun days_already_in_memory_fill_in_without_waiting_for_the_reload() = runTest {
+        val list = listOf(notification("n1"))
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        val reload = CompletableDeferred<List<ItadNotification>>()
+        everySuspend { notificationsRepository.getNotifications() } calls { reload.await() }
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.days.single().loadingGames) // resolved while the reload is still pending
+        assertEquals(listOf("A"), vm.uiState.value.days.single().games.map { it.title })
+
+        reload.complete(list)
+        advanceUntilIdle()
+        verifySuspend(exactly(1)) { notificationsRepository.getNotificationDetail("n1") } // not fetched again after the reload
+    }
+
+    @Test
+    fun a_day_never_shows_a_partial_count_when_its_last_entries_resolve_together() = runTest {
+        val list = listOf(notification("n1"), notification("n2"), notification("n3"))
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        everySuspend { notificationsRepository.getNotifications() } returns list
+        val gate = CompletableDeferred<Unit>()
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
+        everySuspend { notificationsRepository.getNotificationDetail("n2") } calls { gate.await(); detail("n2", "gB" to "B") }
+        everySuspend { notificationsRepository.getNotificationDetail("n3") } calls { gate.await(); detail("n3", "gC" to "C") }
+
+        val vm = viewModel()
+        val emissions = vm.uiState.observeEmissions(backgroundScope, testDispatcher)
+        advanceUntilIdle()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val shown = emissions.flatMap { it.days }.filterNot { it.loadingGames }
+        assertTrue(shown.isNotEmpty())
+        assertTrue(shown.all { it.count == 3 }, "a settled row showed a partial count: ${shown.map { it.count }}")
+    }
+
+    @Test
+    fun a_day_whose_games_fail_to_load_stops_loading_with_no_games() = runTest {
+        val list = listOf(notification("n1"))
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        everySuspend { notificationsRepository.getNotifications() } returns list
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } throws IllegalStateException("boom")
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.days.single().loadingGames)
+        assertEquals(0, vm.uiState.value.days.single().count)
+    }
+
+    @Test
+    fun a_failed_reload_still_resolves_the_list_already_shown() = runTest {
+        val list = listOf(notification("n1"))
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("offline")
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.loading)
+        assertFalse(vm.uiState.value.error) // the list already in memory is shown, not an error
+        assertFalse(vm.uiState.value.days.single().loadingGames)
+        assertEquals(listOf("A"), vm.uiState.value.days.single().games.map { it.title })
+    }
+
+    @Test
+    fun a_failed_load_with_nothing_to_show_is_an_error_not_an_empty_list() = runTest {
+        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("429")
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.loading)
+        assertTrue(vm.uiState.value.error)
+        assertTrue(vm.uiState.value.days.isEmpty())
+    }
+
+    @Test
+    fun a_successful_load_with_no_notifications_is_empty_not_an_error() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.error)
+        assertTrue(vm.uiState.value.days.isEmpty())
+    }
+
+    @Test
+    fun retry_after_a_failed_load_shows_the_list() = runTest {
+        everySuspend { notificationsRepository.getNotifications() } throws IllegalStateException("429")
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val list = listOf(notification("n1"))
+        everySuspend { notificationsRepository.getNotifications() } returns list
+        every { notificationsRepository.observeNotifications() } returns flowOf(list)
+        everySuspend { notificationsRepository.getNotificationDetail("n1") } returns detail("n1", "gA" to "A")
+        vm.onRetry()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.error)
+        verifySuspend(exactly(2)) { notificationsRepository.getNotifications() }
     }
 
     @Test

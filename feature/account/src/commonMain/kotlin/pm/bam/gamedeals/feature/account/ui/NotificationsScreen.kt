@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +51,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -63,10 +67,13 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_day_loading
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_day_more
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_day_subtitle
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_day_subtitle_one
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_empty
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_load_error
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_load_error_retry
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_mark_all_read
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_more_actions
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_unread_state
@@ -88,6 +95,7 @@ internal fun NotificationsScreen(
         onBack = onBack,
         onDayClick = { day -> onOpenDay(day.date) },
         onMarkAllRead = viewModel::onMarkAllRead,
+        onRetry = viewModel::onRetry,
     )
 }
 
@@ -98,6 +106,7 @@ private fun NotificationsScreenContent(
     onBack: () -> Unit,
     onDayClick: (day: NotificationDay) -> Unit,
     onMarkAllRead: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -127,6 +136,20 @@ private fun NotificationsScreenContent(
             when {
                 data.loading -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
+                }
+
+                data.error && data.days.isEmpty() -> Column(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding).padding(GameDealsCustomTheme.spacing.large).wrapContentSize(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                ) {
+                    Text(
+                        text = stringResource(Res.string.account_notifications_load_error),
+                        modifier = Modifier.politeLiveRegion(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = onRetry) { Text(stringResource(Res.string.account_notifications_load_error_retry)) }
                 }
 
                 data.days.isEmpty() -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -173,6 +196,8 @@ private fun NotificationDayRow(day: NotificationDay, onClick: () -> Unit) {
     // Unread is otherwise conveyed only by the dot + bold weight (both visual-only); announce it to
     // TalkBack so read/unread rows don't sound identical.
     val unreadState = stringResource(Res.string.account_notification_unread_state)
+    val loadingState = stringResource(Res.string.account_notifications_day_loading)
+    val state = listOfNotNull(unreadState.takeIf { day.hasUnread }, loadingState.takeIf { day.loadingGames }).joinToString(", ")
     val subtitle = if (day.count == 1) {
         stringResource(Res.string.account_notifications_day_subtitle_one, day.date)
     } else {
@@ -181,17 +206,25 @@ private fun NotificationDayRow(day: NotificationDay, onClick: () -> Unit) {
     ListItem(
         modifier = Modifier
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { if (day.hasUnread) stateDescription = unreadState },
+            .semantics { if (state.isNotEmpty()) stateDescription = state },
         headlineContent = {
-            Text(
-                text = dayTitle(day),
-                fontWeight = if (day.hasUnread) FontWeight.Bold else FontWeight.Normal,
-            )
+            if (day.loadingGames) {
+                TitlePlaceholder()
+            } else {
+                Text(
+                    text = dayTitle(day),
+                    fontWeight = if (day.hasUnread) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         },
         supportingContent = {
+            // While loading, the same lines as the loaded row (one-line title, date line, strip) so the row keeps its height when it
+            // fills in; a count or names now would be partial.
             Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
-                Text(subtitle)
-                GameThumbnailStrip(day.games)
+                Text(if (day.loadingGames) day.date else subtitle)
+                if (day.loadingGames) ThumbnailPlaceholders(day.games.size + day.pendingEntries) else GameThumbnailStrip(day.games)
             }
         },
         leadingContent = if (day.hasUnread) {
@@ -226,7 +259,44 @@ private fun GameThumbnailStrip(games: List<NotificationGameThumb>) {
     }
 }
 
+/** A grey bar exactly one title line tall: the blank [Text] takes the headline's line height. */
+@Composable
+private fun TitlePlaceholder() {
+    Box(contentAlignment = Alignment.CenterStart) {
+        Text(" ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(TITLE_PLACEHOLDER_WIDTH)
+                .height(TITLE_PLACEHOLDER_HEIGHT)
+                .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+    }
+}
+
+/** Grey tiles in the cover strip's shape, shown while a day's games load. Decorative. */
+@Composable
+private fun ThumbnailPlaceholders(count: Int) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+    ) {
+        repeat(count) {
+            Box(
+                modifier = Modifier
+                    .height(THUMBNAIL_HEIGHT)
+                    .aspectRatio(2.14f)
+                    .clip(RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+        }
+    }
+}
+
 private val THUMBNAIL_HEIGHT = 36.dp
+
+private const val TITLE_PLACEHOLDER_WIDTH = 0.6f
+private val TITLE_PLACEHOLDER_HEIGHT = 14.dp
 
 /** The games that dropped that day: the first [MAX_TITLE_NAMES] names, then a "+N more" overflow. Falls
  *  back to the date if the games couldn't be resolved (every detail fetch failed). */
@@ -289,11 +359,13 @@ private fun NotificationsScreenPreview() {
                         count = 1,
                         hasUnread = false,
                     ),
+                    NotificationDay(date = "2026-06-14", games = persistentListOf(), count = 0, hasUnread = false, pendingEntries = 2),
                 ),
             ),
             onBack = {},
             onDayClick = {},
             onMarkAllRead = {},
+            onRetry = {},
         )
     }
 }
@@ -307,6 +379,7 @@ private fun NotificationsScreenEmptyPreview() {
             onBack = {},
             onDayClick = {},
             onMarkAllRead = {},
+            onRetry = {},
         )
     }
 }
