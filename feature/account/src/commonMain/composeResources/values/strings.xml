@@ -75,6 +75,9 @@
     <string name="account_notifications_day_subtitle">%1$s · %2$d games</string>
     <string name="account_notifications_day_subtitle_one">%1$s · 1 game</string>
     <string name="account_notifications_day_more">+%1$d more</string>
+    <string name="account_notifications_day_loading">Loading games</string>
+    <string name="account_notifications_load_error">Couldn't load your notifications. Please try again.</string>
+    <string name="account_notifications_load_error_retry">Retry</string>
 
     <!-- Notification day detail: the games + deals notified on one calendar day (#7 notification revamp) -->
     <string name="account_notification_detail_title">New deals</string>

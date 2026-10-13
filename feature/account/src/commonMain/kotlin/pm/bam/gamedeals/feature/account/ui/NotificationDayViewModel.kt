@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -77,11 +80,15 @@ internal class NotificationDayViewModel(
             val entries = runCatchingLogged(logger) { notificationsRepository.observeNotifications().first() }
                 .getOrElse { emptyList() }
                 .filter { it.day == day }
-            // (entryId, game) pairs across all the day's entries.
-            val pairs = entries.flatMap { entry ->
-                runCatchingLogged(logger) { notificationsRepository.getNotificationDetail(entry.id).games }
-                    .getOrElse { emptyList() }
-                    .map { entry.id to it }
+            // (entryId, game) pairs across all the day's entries, fetched in parallel.
+            val pairs = coroutineScope {
+                entries.map { entry ->
+                    async {
+                        runCatchingLogged(logger) { notificationsRepository.getNotificationDetail(entry.id).games }
+                            .getOrElse { emptyList() }
+                            .map { entry.id to it }
+                    }
+                }.awaitAll().flatten()
             }
             sourceIdsByGameId = pairs.groupBy({ it.second.gameId }, { it.first })
             // One card per game (a game may be referenced by several entries the same day) — distinct ids

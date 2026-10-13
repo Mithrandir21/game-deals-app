@@ -23,6 +23,8 @@ import pm.bam.gamedeals.feature.account.generated.resources.Res
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
 import pm.bam.gamedeals.feature.account.generated.resources.account_notification_unread_state
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_empty
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_load_error
+import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_load_error_retry
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_mark_all_read
 import pm.bam.gamedeals.feature.account.generated.resources.account_notifications_more_actions
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel.NotificationDay
@@ -45,8 +47,8 @@ class NotificationsScreenTest {
 
     private lateinit var labels: Labels
 
-    private fun setup(days: ImmutableList<NotificationDay>) {
-        every { viewModel.uiState } returns MutableStateFlow(NotificationsScreenData(loading = false, days = days))
+    private fun setup(days: ImmutableList<NotificationDay>, error: Boolean = false) {
+        every { viewModel.uiState } returns MutableStateFlow(NotificationsScreenData(loading = false, error = error, days = days))
         composeTestRule.setContent {
             labels = Labels.load()
             GameDealsTheme {
@@ -84,6 +86,17 @@ class NotificationsScreenTest {
     }
 
     @Test
+    fun loadFailureShowsErrorWithRetryNotTheEmptyMessage() {
+        setup(persistentListOf(), error = true)
+
+        composeTestRule.onNodeWithText(labels.loadError).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.empty).assertDoesNotExist()
+        composeTestRule.onNodeWithText(labels.retry).performClick()
+
+        verify(exactly = 1) { viewModel.onRetry() }
+    }
+
+    @Test
     fun tappingDayRowOpensThatDay() {
         setup(persistentListOf(day(DATE, hasUnread = false, games = persistentListOf(NotificationGameThumb("g1", GAME_TITLE, null)))))
 
@@ -114,6 +127,8 @@ class NotificationsScreenTest {
     private data class Labels(
         val unread: String,
         val empty: String,
+        val loadError: String,
+        val retry: String,
         val moreActions: String,
         val markAllRead: String,
         val back: String,
@@ -123,6 +138,8 @@ class NotificationsScreenTest {
             fun load(): Labels = Labels(
                 unread = stringResource(Res.string.account_notification_unread_state),
                 empty = stringResource(Res.string.account_notifications_empty),
+                loadError = stringResource(Res.string.account_notifications_load_error),
+                retry = stringResource(Res.string.account_notifications_load_error_retry),
                 moreActions = stringResource(Res.string.account_notifications_more_actions),
                 markAllRead = stringResource(Res.string.account_notifications_mark_all_read),
                 back = stringResource(Res.string.account_navigation_back),
