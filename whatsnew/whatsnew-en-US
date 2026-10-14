@@ -1,5 +1,6 @@
-Smarter game pages and a tidier feed.
+Your region, notifications and bundles, all working better.
 
-• Game pages now find the right game far more reliably, and only show the "possible mismatch" warning when a match really is uncertain
-• The "Show adult titles" setting now also covers New Releases, Most Anticipated, Bundles on Home, and themes in Discover
-• Prices stay on one line at large text sizes
+• Pick from the price regions IsThereAnyDeal actually supports, with prices and filters in your currency
+• Notifications open instantly, stay on your device, and stop alerting for games you unfollowed
+• Bundles now list every active bundle, including adult ones when "Show adult titles" is on
+• Staying signed in is more reliable, plus many smaller fixes
