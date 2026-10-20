@@ -82,8 +82,11 @@ private object WaitlistWidgetExport {
                 .collect { (signedIn, ids, snapshot) ->
                     try {
                         // Waitlisting a game changes the ids but not the priced snapshot, so the new game would wait for
-                        // the stale refresh. Price it now, once per id set; the result comes back through this collector.
-                        if (widgetInstalled && signedIn && snapshot != null && snapshot.isMissingAny(ids) && refreshedForIds != ids) {
+                        // the stale refresh; and signing in with a widget already placed leaves no snapshot at all (the
+                        // launch-time refreshIfStale ran signed out). Price it now, once per id set; the result comes back
+                        // through this collector.
+                        val needsPricing = if (snapshot == null) ids.isNotEmpty() else snapshot.isMissingAny(ids)
+                        if (widgetInstalled && signedIn && needsPricing && refreshedForIds != ids) {
                             refreshedForIds = ids
                             launch { refreshQuietly() }
                         }
