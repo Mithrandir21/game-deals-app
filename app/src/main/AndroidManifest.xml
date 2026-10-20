@@ -71,6 +71,19 @@
                 android:resource="@xml/free_games_widget_info" />
         </receiver>
 
+        <!-- Waitlist deals home-screen widget (widget/WaitlistDealsWidget.kt). -->
+        <receiver
+            android:name=".widget.WaitlistDealsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_waitlist_deals_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/waitlist_deals_widget_info" />
+        </receiver>
+
         <profileable android:shell="true" />
     </application>
 

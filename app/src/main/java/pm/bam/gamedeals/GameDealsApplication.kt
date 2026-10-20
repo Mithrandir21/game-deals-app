@@ -3,6 +3,7 @@ package pm.bam.gamedeals
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
+import androidx.glance.appwidget.updateAll
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -12,7 +13,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
@@ -31,8 +38,10 @@ import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
+import pm.bam.gamedeals.widget.WaitlistDealsWidget
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.appupdate.di.appUpdateModule
 import pm.bam.gamedeals.feature.bundles.di.bundlesModule
@@ -138,6 +147,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
         runCacheMaintenance()
         runNotificationLifecycle()
         runLibraryLifecycle()
+        runWidgetUpdates()
         if (isDebuggable()) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
@@ -260,6 +270,38 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     }
 
     /**
+     * Redraws the Waitlist deals widget when sign-in, the waitlist, or its priced snapshot changes, so it doesn't wait
+     * for its 3-hour system refresh after the user signs out or waitlists a game. The first emission is dropped (it is
+     * the state the widget already shows) and bursts are debounced. A no-op when no widget is placed. The widget's own
+     * refresh updates the snapshot too, but its redraw then finds the snapshot fresh, so this can't loop.
+     */
+    @OptIn(FlowPreview::class)
+    private fun runWidgetUpdates() {
+        applicationScope.launch {
+            combine(
+                get<AuthTokenStore>().observeAuthState().map { it is AuthState.LoggedIn },
+                get<WaitlistRepository>().observeWaitlistIds(),
+                get<WaitlistRepository>().observeWaitlistDisplay(),
+            ) { loggedIn, ids, snapshot -> Triple(loggedIn, ids, snapshot) }
+                .distinctUntilChanged()
+                .drop(1)
+                .debounce(WIDGET_UPDATE_DEBOUNCE_MILLIS)
+                .collect {
+                    try {
+                        WaitlistDealsWidget().updateAll(this@GameDealsApplication)
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (t: Throwable) {
+                        try {
+                            error(logger, throwable = t) { "Waitlist deals widget update failed" }
+                        } catch (_: Throwable) {
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
      * Initialise the Sentry SDK as the very first thing in [onCreate], synchronously, so the crash and
      * ANR handlers are armed before any other startup work can throw. `sentry-android` init is only a few
      * milliseconds, so the cold-start cost is negligible and worth paying for startup-crash coverage.
@@ -313,6 +355,9 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
          * lower (~0.2) once production volume is understood.
          */
         const val TRACES_SAMPLE_RATE = 1.0
+
+        /** Collapses a burst of waitlist changes (e.g. a sign-in reconcile, then its priced snapshot) into one widget redraw. */
+        const val WIDGET_UPDATE_DEBOUNCE_MILLIS = 2_000L
     }
 }
 

@@ -82,14 +82,15 @@ internal fun NavGraph(
         }
     }
 
-    // Launcher shortcuts and the Free Games widget (shortcuts/AppShortcut.kt). Consume-once, like the bus above.
+    // Launcher shortcuts and the home-screen widgets (shortcuts/AppShortcut.kt). Consume-once, like the bus above.
     val authTokenStore: AuthTokenStore = koinInject()
     LaunchedEffect(Unit) {
         AppShortcutBus.requests.collect { shortcut ->
             when (shortcut) {
-                AppShortcut.GIVEAWAYS -> navActions.navigateToGiveaways()
-                AppShortcut.DEALS -> navActions.navigateTopLevel(Destination.Deals)
-                AppShortcut.WAITLIST -> {
+                AppShortcut.Giveaways -> navActions.navigateToGiveaways()
+                AppShortcut.Deals -> navActions.navigateTopLevel(Destination.Deals)
+                is AppShortcut.Game -> navActions.navigateToGame(shortcut.gameId)
+                AppShortcut.Waitlist -> {
                     navActions.navigateToWaitlist()
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
                     if (authTokenStore.observeAuthState().first() !is AuthState.LoggedIn) SignInPromptController.requestWhenReady()
