@@ -3,6 +3,7 @@ package pm.bam.gamedeals.widget
 import android.content.Context
 import android.graphics.Bitmap
 import android.text.format.DateUtils
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.dp
@@ -94,7 +95,8 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
         }
     }
 
-    private suspend fun load(context: Context): FreeGamesState {
+    @VisibleForTesting
+    internal suspend fun load(context: Context): FreeGamesState {
         val refreshFailed = try {
             giveawaysRepository.refreshGiveaways()
             false
