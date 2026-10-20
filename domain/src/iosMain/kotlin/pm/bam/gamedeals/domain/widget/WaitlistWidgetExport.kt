@@ -47,9 +47,10 @@ fun startWaitlistWidgetExport(reloadWidget: () -> Unit) = WaitlistWidgetExport.s
 /**
  * Swift-facing: a Waitlist deals widget is on the Home Screen. The widget can't fetch prices itself (they need the
  * user's ITAD sign-in), so the app refreshes the waitlist snapshot when it is older than [STALE_AFTER_MILLIS] or priced
- * for another region. Only called when a widget is placed, so users without one add no ITAD traffic.
+ * for another region, and from then on also when a newly waitlisted game has no price yet. Only called when a widget is
+ * placed, so users without one add no ITAD traffic.
  */
-fun onWaitlistWidgetInstalled() = WaitlistWidgetExport.refreshIfStale()
+fun onWaitlistWidgetInstalled() = WaitlistWidgetExport.onWidgetInstalled()
 
 private const val STALE_AFTER_MILLIS = 3 * 60 * 60 * 1000L
 
@@ -58,6 +59,13 @@ private object WaitlistWidgetExport {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val json = Json { encodeDefaults = true }
     private var started = false
+
+    // Set by onWidgetInstalled(); read on the collector's thread.
+    private var widgetInstalled = false
+
+    // The waitlist ids a "games missing from the snapshot" refresh last ran for. A game ITAD can't price would
+    // otherwise trigger a refresh on every emission.
+    private var refreshedForIds: Set<String>? = null
 
     fun start(reloadWidget: () -> Unit) {
         if (started) return
@@ -73,6 +81,12 @@ private object WaitlistWidgetExport {
                 .distinctUntilChanged()
                 .collect { (signedIn, ids, snapshot) ->
                     try {
+                        // Waitlisting a game changes the ids but not the priced snapshot, so the new game would wait for
+                        // the stale refresh. Price it now, once per id set; the result comes back through this collector.
+                        if (widgetInstalled && signedIn && snapshot != null && snapshot.isMissingAny(ids) && refreshedForIds != ids) {
+                            refreshedForIds = ids
+                            launch { refreshQuietly() }
+                        }
                         val region = koin.get<RegionRepository>().getSelectedCountryCode()
                         if (write(buildWaitlistWidgetData(signedIn, region, snapshot, ids))) {
                             withContext(Dispatchers.Main) { reloadWidget() }
@@ -86,7 +100,12 @@ private object WaitlistWidgetExport {
         }
     }
 
-    fun refreshIfStale() {
+    fun onWidgetInstalled() {
+        widgetInstalled = true
+        refreshIfStale()
+    }
+
+    private fun refreshIfStale() {
         scope.launch {
             val koin = KoinPlatform.getKoin()
             try {
@@ -102,6 +121,17 @@ private object WaitlistWidgetExport {
             } catch (t: Throwable) {
                 error(koin.get<Logger>(), t) { "Waitlist widget refresh failed." }
             }
+        }
+    }
+
+    private suspend fun refreshQuietly() {
+        val koin = KoinPlatform.getKoin()
+        try {
+            koin.get<WaitlistRepository>().refreshWaitlistDisplay()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            error(koin.get<Logger>(), t) { "Waitlist widget refresh for new games failed." }
         }
     }
 

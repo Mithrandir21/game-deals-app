@@ -75,3 +75,12 @@ fun buildWaitlistWidgetData(
         refreshedAtEpochMs = snapshot.refreshedAtEpochMs,
     )
 }
+
+/**
+ * True when [waitlistedIds] holds games the priced snapshot doesn't — the user waitlisted something since it was
+ * priced. The widgets then refresh the snapshot once for that id set, rather than wait for it to go stale.
+ */
+fun WaitlistDisplaySnapshot.isMissingAny(waitlistedIds: Set<String>): Boolean {
+    val priced = items.mapTo(HashSet()) { it.gameId }
+    return waitlistedIds.any { it !in priced }
+}

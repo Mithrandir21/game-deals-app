@@ -44,6 +44,7 @@ import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
 import pm.bam.gamedeals.domain.models.onSale
+import pm.bam.gamedeals.domain.widget.isMissingAny
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -87,7 +88,12 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
         if (authTokenStore.observeAuthState().first() !is AuthState.LoggedIn) return WaitlistDealsState.SignedOut
         val region = regionRepository.getSelectedCountryCode()
         var snapshot = waitlistRepository.observeWaitlistDisplay().first()
-        if (snapshot == null || snapshot.isStale(region)) {
+        val waitlisted = waitlistRepository.observeWaitlistIds().first()
+        // A just-waitlisted game isn't in the priced snapshot yet; refresh once per id set (a game ITAD can't price would
+        // otherwise refresh on every redraw, since each refresh redraws the widget).
+        val missingNewGames = snapshot != null && snapshot.isMissingAny(waitlisted) && refreshedForIds != waitlisted
+        if (snapshot == null || snapshot.isStale(region) || missingNewGames) {
+            if (missingNewGames) refreshedForIds = waitlisted
             try {
                 waitlistRepository.refreshWaitlistDisplay()
                 snapshot = waitlistRepository.observeWaitlistDisplay().first()
@@ -100,7 +106,6 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
         // A failed refresh with a usable snapshot still shows it; prices for another region are never shown.
         if (snapshot == null) return WaitlistDealsState.Error
         // The snapshot isn't refetched when a game is removed; drop rows that left the waitlist since (as the list screen does).
-        val waitlisted = waitlistRepository.observeWaitlistIds().first()
         val items = snapshot.items.filter { it.gameId in waitlisted }
         if (items.isEmpty()) return WaitlistDealsState.EmptyWaitlist
         val onSale = if (snapshot.regionCode == region) items.onSale() else emptyList()
@@ -124,6 +129,10 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
     private companion object {
         /** Matches the widget's system refresh period (res/xml/waitlist_deals_widget_info.xml). */
         const val STALE_AFTER_MILLIS = 3 * 60 * 60 * 1000L
+
+        /** The waitlist ids the last "new games" refresh ran for; process-wide, like the widget instances. */
+        @Volatile
+        var refreshedForIds: Set<String>? = null
     }
 }
 

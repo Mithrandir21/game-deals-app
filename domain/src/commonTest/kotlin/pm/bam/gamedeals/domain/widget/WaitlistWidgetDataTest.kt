@@ -53,4 +53,10 @@ class WaitlistWidgetDataTest {
         assertTrue(data.loaded)
         assertTrue(data.deals.isEmpty())
     }
+
+    @Test
+    fun spots_games_waitlisted_after_the_snapshot_was_priced() {
+        assertTrue(snapshot.isMissingAny(setOf("a", "new")))
+        assertFalse(snapshot.isMissingAny(setOf("a", "b")))
+    }
 }
