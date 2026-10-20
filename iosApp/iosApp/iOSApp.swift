@@ -53,7 +53,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if response.actionIdentifier == IosNotificationPresenterKt.MARK_READ_ACTION_ID {
-            MainViewControllerKt.markAllNotificationsRead(onDone: { completionHandler() })
+            // onDone arrives on a Kotlin background thread; iOS asserts the completion handler runs on main.
+            MainViewControllerKt.markAllNotificationsRead(onDone: { DispatchQueue.main.async { completionHandler() } })
             return
         }
         // The default tap, "View deals" and "View series" all open the summary's screen.
