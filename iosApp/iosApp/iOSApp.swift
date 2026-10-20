@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import WidgetKit
 import ComposeApp
 
 @main
@@ -10,11 +11,15 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                // The Free Games widget opens `pm.bam.gamedeals://giveaways`. The same scheme carries the ITAD
-                // OAuth redirect, but ASWebAuthenticationSession consumes that one itself, so it never lands here.
+                // Widget links: `pm.bam.gamedeals://giveaways` (Free Games), `://waitlist` and `://game/<id>` (Waitlist
+                // deals). The same scheme carries the ITAD OAuth redirect, but ASWebAuthenticationSession consumes that one
+                // itself, so it never lands here.
                 .onOpenURL { url in
-                    if url.host == "giveaways" {
-                        AppShortcutsKt.openGiveawaysShortcut()
+                    switch url.host {
+                    case "giveaways": AppShortcutsKt.openGiveawaysShortcut()
+                    case "waitlist": AppShortcutsKt.openWaitlistShortcut()
+                    case "game": AppShortcutsKt.openGameShortcut(gameId: url.lastPathComponent)
+                    default: break
                     }
                 }
         }
@@ -41,6 +46,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         MainViewControllerKt.startKoinIfNeeded()
         NotificationBackgroundPollKt.registerNotificationBackgroundPoll()
         IosNotificationPresenterKt.registerNotificationCategories()
+        // Keep the Waitlist deals widget's shared file current, and refresh stale prices only if one is placed.
+        WaitlistWidgetExportKt.startWaitlistWidgetExport(reloadWidget: {
+            WidgetCenter.shared.reloadTimelines(ofKind: WaitlistDealsKind)
+        })
+        WidgetCenter.shared.getCurrentConfigurations { result in
+            if case .success(let widgets) = result, widgets.contains(where: { $0.kind == WaitlistDealsKind }) {
+                WaitlistWidgetExportKt.onWaitlistWidgetInstalled()
+            }
+        }
         UNUserNotificationCenter.current().delegate = self
         return true
     }
@@ -72,3 +86,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         completionHandler([.banner, .list, .sound])
     }
 }
+
+/** WidgetKit kind of the Waitlist deals widget; must match `WaitlistDealsWidget.kind` in the widget extension. */
+private let WaitlistDealsKind = "WaitlistDealsWidget"

@@ -43,6 +43,7 @@ import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
+import pm.bam.gamedeals.domain.models.onSale
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
@@ -125,11 +126,6 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
         const val STALE_AFTER_MILLIS = 3 * 60 * 60 * 1000L
     }
 }
-
-/** On-sale rows, biggest discount first; ties go to the all-time lows. */
-internal fun List<WaitlistDisplayItem>.onSale(): List<WaitlistDisplayItem> =
-    filter { it.hasDeal && (it.discountPercent ?: 0) > 0 }
-        .sortedWith(compareByDescending<WaitlistDisplayItem> { it.discountPercent ?: 0 }.thenByDescending { it.isAtHistoricalLow })
 
 internal sealed interface WaitlistDealsState {
     data object SignedOut : WaitlistDealsState

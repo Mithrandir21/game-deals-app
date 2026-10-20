@@ -1,8 +1,7 @@
-package pm.bam.gamedeals.widget
+package pm.bam.gamedeals.domain.models
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
-import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class WaitlistOnSaleTest {
 

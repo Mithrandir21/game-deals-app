@@ -11,6 +11,7 @@ import WidgetKit
 struct GameDealsWidgetBundle: WidgetBundle {
     var body: some Widget {
         FreeGamesWidget()
+        WaitlistDealsWidget()
     }
 }
 
@@ -111,7 +112,7 @@ enum GamerPower {
                     title: giveaway.title.strippingGiveawaySuffix,
                     worth: giveaway.worth.flatMap { $0 == "N/A" ? nil : $0 },
                     ends: giveaway.end_date.flatMap(endDateFormatter.date(from:)),
-                    thumbnail: await thumbnail(giveaway.thumbnail)
+                    thumbnail: await WidgetImages.thumbnail(giveaway.thumbnail)
                 ))
             }
             return games
@@ -128,9 +129,11 @@ enum GamerPower {
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
+}
 
+enum WidgetImages {
     /// Downloads and shrinks a thumbnail. Widgets have a tight memory budget, so full-size images are never decoded.
-    private static func thumbnail(_ urlString: String?) async -> UIImage? {
+    static func thumbnail(_ urlString: String?) async -> UIImage? {
         guard let urlString, let url = URL(string: urlString),
               let download = try? await URLSession.shared.data(from: url),
               let source = CGImageSourceCreateWithData(download.0 as CFData, nil) else { return nil }
@@ -245,7 +248,7 @@ private struct Details: View {
     }
 }
 
-private struct Thumbnail: View {
+struct Thumbnail: View {
     let image: UIImage?
 
     var body: some View {
@@ -261,7 +264,7 @@ private struct Thumbnail: View {
     }
 }
 
-private extension View {
+extension View {
     /// iOS 17 requires a container background for widgets; earlier versions draw the system background themselves.
     @ViewBuilder func widgetBackground() -> some View {
         if #available(iOS 17.0, *) {

@@ -51,3 +51,11 @@ data class WaitlistDisplaySnapshot(
     val regionCode: String = "",
     val refreshedAtEpochMs: Long = 0L,
 )
+
+/**
+ * The waitlist rows on sale right now — a current deal with a real discount — biggest discount first, ties to the
+ * all-time lows. Shared by the Android and iOS Waitlist deals widgets.
+ */
+fun List<WaitlistDisplayItem>.onSale(): List<WaitlistDisplayItem> =
+    filter { it.hasDeal && (it.discountPercent ?: 0) > 0 }
+        .sortedWith(compareByDescending<WaitlistDisplayItem> { it.discountPercent ?: 0 }.thenByDescending { it.isAtHistoricalLow })

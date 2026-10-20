@@ -5,13 +5,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * Where a Siri / Shortcuts / Spotlight action (the Swift `AppIntent`s in `AppShortcuts.swift`) asks the app to go.
+ * Where a Siri / Shortcuts / Spotlight action (the Swift `AppIntent`s in `AppShortcuts.swift`) or a widget link
+ * (`pm.bam.gamedeals://…`, handled in `iOSApp.swift`) asks the app to go.
  * iOS-only: Android has no equivalent entry point yet.
  */
 internal sealed interface AppShortcut {
     data object Giveaways : AppShortcut
     data object Waitlist : AppShortcut
     data class SearchDeals(val query: String) : AppShortcut
+
+    /** A game's page — a row in the Waitlist deals widget. */
+    data class Game(val gameId: String) : AppShortcut
 }
 
 /**
@@ -35,3 +39,8 @@ fun openWaitlistShortcut() = AppShortcutBus.deliver(AppShortcut.Waitlist)
 
 /** Swift-facing: the "Search deals" intent. A blank query just opens the Deals tab. */
 fun searchDealsShortcut(query: String) = AppShortcutBus.deliver(AppShortcut.SearchDeals(query.trim()))
+
+/** Swift-facing: a Waitlist deals widget row (`pm.bam.gamedeals://game/<id>`). A blank id is ignored. */
+fun openGameShortcut(gameId: String) {
+    if (gameId.isNotBlank()) AppShortcutBus.deliver(AppShortcut.Game(gameId))
+}

@@ -12,6 +12,7 @@
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
 		B100000000000000000000B4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Preview Assets.xcassets */; };
 		B100000000000000000000B7 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* AppShortcuts.swift */; };
+		B100000000000000000000BA /* WaitlistDealsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AB /* WaitlistDealsWidget.swift */; };
 		B100000000000000000000B8 /* GameDealsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A8 /* GameDealsWidget.swift */; };
 		B100000000000000000000B9 /* GameDealsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AA /* GameDealsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* PrivacyInfo.xcprivacy */; };
@@ -26,6 +27,9 @@
 		A100000000000000000000A3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A100000000000000000000A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A100000000000000000000A6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A100000000000000000000AB /* WaitlistDealsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitlistDealsWidget.swift; sourceTree = "<group>"; };
+		A100000000000000000000AC /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
+		A100000000000000000000AD /* GameDealsWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GameDealsWidget.entitlements; sourceTree = "<group>"; };
 		A100000000000000000000A8 /* GameDealsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDealsWidget.swift; sourceTree = "<group>"; };
 		A100000000000000000000A9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A100000000000000000000AA /* GameDealsWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GameDealsWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -93,6 +97,7 @@
 				A100000000000000000000A7 /* AppShortcuts.swift */,
 				A100000000000000000000A3 /* Assets.xcassets */,
 				A100000000000000000000A6 /* PrivacyInfo.xcprivacy */,
+				A100000000000000000000AC /* iosApp.entitlements */,
 				G100000000000000000000C4 /* Preview Content */,
 			);
 			path = iosApp;
@@ -119,7 +124,9 @@
 			isa = PBXGroup;
 			children = (
 				A100000000000000000000A8 /* GameDealsWidget.swift */,
+				A100000000000000000000AB /* WaitlistDealsWidget.swift */,
 				A100000000000000000000A9 /* Info.plist */,
+				A100000000000000000000AD /* GameDealsWidget.entitlements */,
 			);
 			path = GameDealsWidget;
 			sourceTree = "<group>";
@@ -283,6 +290,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B100000000000000000000B8 /* GameDealsWidget.swift in Sources */,
+				B100000000000000000000BA /* WaitlistDealsWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,6 +432,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36N7FDX928;
@@ -461,6 +470,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36N7FDX928;
@@ -496,6 +506,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GameDealsWidget/GameDealsWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36N7FDX928;
@@ -521,6 +532,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = GameDealsWidget/GameDealsWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36N7FDX928;
