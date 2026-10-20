@@ -386,11 +386,12 @@ private fun AppNavHost(startDestination: Destination) {
         }
     }
 
-    // Siri / Shortcuts / Spotlight actions (AppShortcuts.swift). Consume-once, like the notification bus above.
+    // Siri / Shortcuts / Spotlight actions (AppShortcuts.swift) and widget links. Consume-once, like the notification bus above.
     LaunchedEffect(Unit) {
         AppShortcutBus.requests.collect { shortcut ->
             when (shortcut) {
                 AppShortcut.Giveaways -> navigateTopLevel(Destination.Giveaways)
+                is AppShortcut.Game -> navController.navigate(Destination.Game(shortcut.gameId))
                 AppShortcut.Waitlist -> {
                     navController.navigate(Destination.WaitlistList)
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
