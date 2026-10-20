@@ -28,6 +28,7 @@ sentry-kmp = "0.27.0"
 sentry-android-gradle = "6.22.0"
 kotlinx-datetime = "0.8.0"
 coil3 = "3.6.2"
+glance = "1.2.0"
 zoomable = "2.13.0"
 vico = "3.3.1"
 sandwich-ktor = "2.4.0"
@@ -151,6 +152,8 @@ sentry-kotlin-multiplatform = { group = "io.sentry", name = "sentry-kotlin-multi
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 # Coil 3 — image loading (KMP; replaced Coil 2).
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 coil3 = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil3" }
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }

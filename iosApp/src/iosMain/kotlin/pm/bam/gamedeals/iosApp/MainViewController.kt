@@ -395,7 +395,7 @@ private fun AppNavHost(startDestination: Destination) {
                     navController.navigate(Destination.WaitlistList)
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
                     val authState = KoinPlatform.getKoin().get<AuthTokenStore>().observeAuthState().first()
-                    if (authState !is AuthState.LoggedIn) SignInPromptController.request()
+                    if (authState !is AuthState.LoggedIn) SignInPromptController.requestWhenReady()
                 }
                 is AppShortcut.SearchDeals -> {
                     navigateTopLevel(Destination.Deals)

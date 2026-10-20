@@ -10,4 +10,24 @@
     <string name="notification_game_line">%1$s · -%2$d%% · %3$s</string>
     <string name="notification_game_line_expired">%1$s · deal expired</string>
     <string name="notification_more_games">+%1$d more</string>
+    <!-- Tray notification action buttons. -->
+    <string name="notification_action_view_deals">View deals</string>
+    <string name="notification_action_mark_read">Mark as read</string>
+    <string name="notification_action_view_series">View series</string>
+
+    <!-- Launcher shortcuts (res/xml/shortcuts.xml). Short labels must stay within about 10 characters. -->
+    <string name="shortcut_giveaways_short">Free games</string>
+    <string name="shortcut_giveaways_long">Show free games</string>
+    <string name="shortcut_deals_short">Deals</string>
+    <string name="shortcut_deals_long">Browse deals</string>
+    <string name="shortcut_waitlist_short">Waitlist</string>
+    <string name="shortcut_waitlist_long">My waitlist</string>
+
+    <!-- Free Games home-screen widget. -->
+    <string name="widget_free_games_name">Free Games</string>
+    <string name="widget_free_games_description">PC games that are free to keep right now.</string>
+    <string name="widget_free_games_header">Free to keep</string>
+    <string name="widget_free_games_error">Couldn\'t load giveaways. Tap to open the app.</string>
+    <string name="widget_free_games_empty">No free PC games right now. Check back soon.</string>
+    <string name="widget_free_games_ends">ends %1$s</string>
 </resources>

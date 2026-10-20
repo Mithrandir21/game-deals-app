@@ -4,6 +4,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 
 /**
  * Process-level, one-shot signal that a logged-out user attempted a sign-in-gated action (waitlist,
@@ -27,5 +28,15 @@ object SignInPromptController {
     /** Request the sign-in prompt (called by a screen when a gated action returns `NOT_LOGGED_IN`). */
     fun request() {
         _requests.tryEmit(Unit)
+    }
+
+    /**
+     * Like [request], but first waits for the shell host to start collecting. [request] is dropped while nothing is
+     * collecting (the buffer only holds values for existing subscribers), which is the case for a caller that runs
+     * before the shell has composed — a launcher shortcut or Siri intent on a cold start.
+     */
+    suspend fun requestWhenReady() {
+        _requests.subscriptionCount.first { it > 0 }
+        _requests.emit(Unit)
     }
 }

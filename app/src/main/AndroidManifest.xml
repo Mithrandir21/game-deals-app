@@ -28,6 +28,11 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Launcher shortcuts: Free games, Deals, Waitlist (shortcuts/AppShortcut.kt). -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- ITAD OAuth redirect target (epic #219, Phase 2.2): pm.bam.gamedeals://oauth/itad -->
@@ -47,6 +52,24 @@
                     android:host="oauth" />
             </intent-filter>
         </activity>
+
+        <!-- The waitlist alert's "Mark as read" button (notifications/NotificationActionReceiver.kt). -->
+        <receiver
+            android:name=".notifications.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!-- Free Games home-screen widget (widget/FreeGamesWidget.kt). -->
+        <receiver
+            android:name=".widget.FreeGamesWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_free_games_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/free_games_widget_info" />
+        </receiver>
 
         <profileable android:shell="true" />
     </application>
