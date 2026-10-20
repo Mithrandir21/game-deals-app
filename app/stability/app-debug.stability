@@ -26,3 +26,88 @@ internal fun pm.bam.gamedeals.navigation.NavGraph(modifier: androidx.compose.ui.
     - startDestination: UNKNOWN (interface or non-final class; concrete implementation unknown)
     - navActions: RUNTIME (requires runtime check)
 
+@Composable
+private fun pm.bam.gamedeals.widget.DealRow(deal: pm.bam.gamedeals.widget.WidgetDeal): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - deal: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.Details(game: pm.bam.gamedeals.widget.WidgetGame): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - game: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.FreeGamesContent(state: pm.bam.gamedeals.widget.FreeGamesState): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (class with no mutable properties)
+
+@Composable
+private fun pm.bam.gamedeals.widget.GameRow(game: pm.bam.gamedeals.widget.WidgetGame): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - game: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.LowestEver(): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+
+@Composable
+private fun pm.bam.gamedeals.widget.PriceLine(deal: pm.bam.gamedeals.widget.WidgetDeal): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - deal: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.SmallDeal(deal: pm.bam.gamedeals.widget.WidgetDeal): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - deal: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.SmallGame(game: pm.bam.gamedeals.widget.WidgetGame): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - game: STABLE (marked @Stable or @Immutable)
+
+@Composable
+private fun pm.bam.gamedeals.widget.WaitlistDealsContent(state: pm.bam.gamedeals.widget.WaitlistDealsState): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (class with no mutable properties)
+
+@Composable
+internal fun pm.bam.gamedeals.widget.WidgetHeader(text: kotlin.Int, icon: kotlin.Int): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - text: STABLE (primitive type)
+    - icon: STABLE (primitive type)
+
+@Composable
+internal fun pm.bam.gamedeals.widget.WidgetMessage(text: kotlin.Int): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - text: STABLE (primitive type)
+
+@Composable
+internal fun pm.bam.gamedeals.widget.WidgetThumbnail(bitmap: android.graphics.Bitmap?, modifier: androidx.glance.GlanceModifier): kotlin.Unit
+  skippable: false
+  restartable: true
+  params:
+    - bitmap: UNSTABLE (Java class; stability cannot be inferred)
+    - modifier: STABLE (marked @Stable or @Immutable)
+

@@ -2,7 +2,7 @@
 <!--
     Widget picker preview for the Free Games widget (android:previewLayout in xml/free_games_widget_info.xml), Android 12+.
     A static look-alike of widget/FreeGamesWidget.kt with sample games: the picker can't run Glance, so the real widget
-    can't draw its own preview here. Only RemoteViews-safe views (no plain View). Sample titles are made up; keep them
+    can't draw its own preview here. Only RemoteViews-safe views (no plain View), and android:tint rather than AppCompat's app:tint, which RemoteViews ignores. Sample titles are made up; keep them
     that way rather than naming real games.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -25,7 +25,8 @@
             android:layout_height="16dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_widget_gift"
-            android:tint="@android:color/system_accent1_600" />
+            android:tint="@android:color/system_accent1_600"
+            tools:ignore="UseAppTint" />
 
         <TextView
             android:layout_width="wrap_content"

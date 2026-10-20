@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -134,6 +135,8 @@ internal sealed interface FreeGamesState {
     data class Loaded(val games: List<WidgetGame>) : FreeGamesState
 }
 
+// Immutable: built once per widget update and never changed; the Bitmap is never mutated after decoding.
+@Immutable
 internal data class WidgetGame(
     val id: Int,
     val title: String,
