@@ -10,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -31,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
@@ -46,6 +46,7 @@ import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.common.navigation.SearchController
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.version.AppInfo
@@ -59,6 +60,7 @@ import pm.bam.gamedeals.domain.di.domainIosModule
 import pm.bam.gamedeals.domain.di.domainModule
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.ThemeMode
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
@@ -146,6 +148,26 @@ fun startSentry() {
 /** Swift-facing: a tapped notification's `userInfo[route]` → the shared bus the nav host collects. */
 fun deliverNotificationRoute(routeKey: String?) {
     NotificationRoute.fromKey(routeKey)?.let { NotificationRouteBus.deliver(it) }
+}
+
+/**
+ * Swift-facing: the waitlist alert's "Mark as read" action. iOS may run this with the app in the background, so
+ * [onDone] always runs — the app delegate hands it the notification completion handler, which lets iOS suspend
+ * the app again. A failure is logged and dropped: the alerts simply stay unread in the app.
+ */
+fun markAllNotificationsRead(onDone: () -> Unit) {
+    notificationLifecycleScope.launch {
+        val koin = KoinPlatform.getKoin()
+        try {
+            koin.get<NotificationsRepository>().markAllRead()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(koin.get<Logger>(), t) { "Mark-all-read from a notification action failed." } }
+        } finally {
+            onDone()
+        }
+    }
 }
 
 // Transaction sampling for performance tracing — mirrors Android; dial to ~0.2 once production volume is known.
@@ -339,7 +361,9 @@ private fun App() {
 @Composable
 private fun AppNavHost(startDestination: Destination) {
     val navController = rememberNavController()
-    val uriHandler = LocalUriHandler.current
+    // External / website links open in SFSafariViewController rather than the standalone Safari app, so the user
+    // stays in-context — mirrors the Android NavGraph's Custom Tab routing.
+    val platformActions = LocalPlatformActions.current
 
     // Route taps on background (OS-tray) notifications into the nav graph — mirrors the Android NavGraph.
     // The bus is consume-once, so this won't re-navigate.
@@ -359,6 +383,25 @@ private fun AppNavHost(startDestination: Destination) {
             popUpTo(Destination.Home) { saveState = true }
             launchSingleTop = true
             restoreState = true
+        }
+    }
+
+    // Siri / Shortcuts / Spotlight actions (AppShortcuts.swift). Consume-once, like the notification bus above.
+    LaunchedEffect(Unit) {
+        AppShortcutBus.requests.collect { shortcut ->
+            when (shortcut) {
+                AppShortcut.Giveaways -> navigateTopLevel(Destination.Giveaways)
+                AppShortcut.Waitlist -> {
+                    navController.navigate(Destination.WaitlistList)
+                    // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
+                    val authState = KoinPlatform.getKoin().get<AuthTokenStore>().observeAuthState().first()
+                    if (authState !is AuthState.LoggedIn) SignInPromptController.request()
+                }
+                is AppShortcut.SearchDeals -> {
+                    navigateTopLevel(Destination.Deals)
+                    if (shortcut.query.isNotEmpty()) SearchController.search(shortcut.query)
+                }
+            }
         }
     }
 
@@ -402,12 +445,12 @@ private fun AppNavHost(startDestination: Destination) {
             goToGameByTitle = { title -> navController.navigate(Destination.GameDetailsByTitle(title)) },
             goToWaitlist = { navController.navigate(Destination.WaitlistList) },
             goToCollection = { navController.navigate(Destination.CollectionList) },
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
         )
         dealsScreen(
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToDiscover = { navController.navigate(Destination.Discover) },
         )
@@ -428,12 +471,12 @@ private fun AppNavHost(startDestination: Destination) {
         discoverResultsScreen(
             navController = navController,
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
-            goToWeb = { url -> uriHandler.openUri(url) },
+            goToWeb = { url -> platformActions.openInApp(url) },
         )
         accountScreen(
             navController = navController,
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
-            goToWeb = { url -> uriHandler.openUri(url) },
+            goToWeb = { url -> platformActions.openInApp(url) },
             onReplayOnboarding = { navController.navigate(Destination.Onboarding) },
         )
         // Developer tools — mirrors the Android NavGraph. Entry point is debug-gated in the Account hub.
@@ -451,7 +494,7 @@ private fun AppNavHost(startDestination: Destination) {
         )
         gamePageScreen(
             navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
             goToSearchByTitle = { title ->
                 navigateTopLevel(Destination.Deals)
@@ -459,7 +502,7 @@ private fun AppNavHost(startDestination: Destination) {
             },
         )
         giveawaysScreen(
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
         )
         bundlesScreen(
             navController = navController,
@@ -467,12 +510,12 @@ private fun AppNavHost(startDestination: Destination) {
         )
         bundleDetailScreen(
             navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         storeScreen(
             navController = navController,
-            goToWeb = { url, _ -> uriHandler.openUri(url) },
+            goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         webViewScreen(

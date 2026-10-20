@@ -10,6 +10,13 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // The Free Games widget opens `pm.bam.gamedeals://giveaways`. The same scheme carries the ITAD
+                // OAuth redirect, but ASWebAuthenticationSession consumes that one itself, so it never lands here.
+                .onOpenURL { url in
+                    if url.host == "giveaways" {
+                        AppShortcutsKt.openGiveawaysShortcut()
+                    }
+                }
         }
     }
 }
@@ -18,7 +25,9 @@ struct iOSApp: App {
  * App-launch wiring for the shared (Compose/KMP) layer:
  *  - starts Koin early (so a background launch has a graph before the Compose UI exists),
  *  - registers the `BGTaskScheduler` poll handler — must happen before launch completes,
- *  - routes a tapped notification's `userInfo["route"]` into the shared `NotificationRouteBus` the nav host collects.
+ *  - registers the sale-alert action buttons,
+ *  - routes a tapped notification's `userInfo["route"]` into the shared `NotificationRouteBus` the nav host collects,
+ *    and runs the "Mark as read" action without opening the app.
  */
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
@@ -31,16 +40,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         MainViewControllerKt.startSentry()
         MainViewControllerKt.startKoinIfNeeded()
         NotificationBackgroundPollKt.registerNotificationBackgroundPoll()
+        IosNotificationPresenterKt.registerNotificationCategories()
         UNUserNotificationCenter.current().delegate = self
         return true
     }
 
-    // A tapped notification (foreground, background, or cold start) — hand its route to the shared bus.
+    // A tapped notification (foreground, background, or cold start) — hand its route to the shared bus. "Mark as
+    // read" runs in the background instead; iOS waits for completionHandler before suspending the app again.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        if response.actionIdentifier == IosNotificationPresenterKt.MARK_READ_ACTION_ID {
+            MainViewControllerKt.markAllNotificationsRead(onDone: { completionHandler() })
+            return
+        }
+        // The default tap, "View deals" and "View series" all open the summary's screen.
         let routeKey = response.notification.request.content.userInfo["route"] as? String
         MainViewControllerKt.deliverNotificationRoute(routeKey: routeKey)
         completionHandler()

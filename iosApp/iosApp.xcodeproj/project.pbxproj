@@ -11,6 +11,9 @@
 		B100000000000000000000B2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* ContentView.swift */; };
 		B100000000000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Assets.xcassets */; };
 		B100000000000000000000B4 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Preview Assets.xcassets */; };
+		B100000000000000000000B7 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* AppShortcuts.swift */; };
+		B100000000000000000000B8 /* GameDealsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A8 /* GameDealsWidget.swift */; };
+		B100000000000000000000B9 /* GameDealsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AA /* GameDealsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* PrivacyInfo.xcprivacy */; };
 		B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = S100000000000000000000P1 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
@@ -19,11 +22,39 @@
 		3159A1652FC4F49100C4EE0D /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		A100000000000000000000A1 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		A100000000000000000000A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A100000000000000000000A7 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 		A100000000000000000000A3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A100000000000000000000A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A100000000000000000000A6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A100000000000000000000A8 /* GameDealsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDealsWidget.swift; sourceTree = "<group>"; };
+		A100000000000000000000A9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A100000000000000000000AA /* GameDealsWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GameDealsWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A100000000000000000000A5 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXContainerItemProxy section */
+		D100000000000000000000D4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = R100000000000000000000A1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T100000000000000000000D2;
+			remoteInfo = GameDealsWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		P100000000000000000000E9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B100000000000000000000B9 /* GameDealsWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		P100000000000000000000E3 /* Frameworks */ = {
@@ -34,6 +65,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		P100000000000000000000E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -41,6 +79,7 @@
 			isa = PBXGroup;
 			children = (
 				G100000000000000000000C2 /* iosApp */,
+				G100000000000000000000C5 /* GameDealsWidget */,
 				G100000000000000000000C3 /* Products */,
 				3159A1652FC4F49100C4EE0D /* Secrets.xcconfig */,
 			);
@@ -51,6 +90,7 @@
 			children = (
 				A100000000000000000000A1 /* iOSApp.swift */,
 				A100000000000000000000A2 /* ContentView.swift */,
+				A100000000000000000000A7 /* AppShortcuts.swift */,
 				A100000000000000000000A3 /* Assets.xcassets */,
 				A100000000000000000000A6 /* PrivacyInfo.xcprivacy */,
 				G100000000000000000000C4 /* Preview Content */,
@@ -62,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				A100000000000000000000A5 /* iosApp.app */,
+				A100000000000000000000AA /* GameDealsWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,6 +113,15 @@
 				A100000000000000000000A4 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		G100000000000000000000C5 /* GameDealsWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000A8 /* GameDealsWidget.swift */,
+				A100000000000000000000A9 /* Info.plist */,
+			);
+			path = GameDealsWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -85,11 +135,13 @@
 				P100000000000000000000E2 /* Sources */,
 				P100000000000000000000E3 /* Frameworks */,
 				P100000000000000000000E4 /* Resources */,
+				P100000000000000000000E9 /* Embed Foundation Extensions */,
 				P100000000000000000000E5 /* Upload dSYMs to Sentry */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D100000000000000000000D3 /* PBXTargetDependency */,
 			);
 			name = iosApp;
 			packageProductDependencies = (
@@ -98,6 +150,23 @@
 			productName = iosApp;
 			productReference = A100000000000000000000A5 /* iosApp.app */;
 			productType = "com.apple.product-type.application";
+		};
+		T100000000000000000000D2 /* GameDealsWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L100000000000000000000A3 /* Build configuration list for PBXNativeTarget "GameDealsWidget" */;
+			buildPhases = (
+				P100000000000000000000E6 /* Sources */,
+				P100000000000000000000E7 /* Frameworks */,
+				P100000000000000000000E8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GameDealsWidget;
+			productName = GameDealsWidget;
+			productReference = A100000000000000000000AA /* GameDealsWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -110,6 +179,10 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					T100000000000000000000D1 = {
+						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = 36N7FDX928;
+					};
+					T100000000000000000000D2 = {
 						CreatedOnToolsVersion = 15.0;
 						DevelopmentTeam = 36N7FDX928;
 					};
@@ -132,6 +205,7 @@
 			projectRoot = "";
 			targets = (
 				T100000000000000000000D1 /* iosApp */,
+				T100000000000000000000D2 /* GameDealsWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -144,6 +218,13 @@
 				B100000000000000000000B4 /* Preview Assets.xcassets in Resources */,
 				B100000000000000000000B3 /* Assets.xcassets in Resources */,
 				B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		P100000000000000000000E8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -193,10 +274,27 @@
 			files = (
 				B100000000000000000000B2 /* ContentView.swift in Sources */,
 				B100000000000000000000B1 /* iOSApp.swift in Sources */,
+				B100000000000000000000B7 /* AppShortcuts.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		P100000000000000000000E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B100000000000000000000B8 /* GameDealsWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D100000000000000000000D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T100000000000000000000D2 /* GameDealsWidget */;
+			targetProxy = D100000000000000000000D4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		X100000000000000000000F1 /* Debug */ = {
@@ -394,6 +492,56 @@
 			};
 			name = Release;
 		};
+		X100000000000000000000F5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36N7FDX928;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GameDealsWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pm.bam.gamedeals.ios.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		X100000000000000000000F6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36N7FDX928;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GameDealsWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pm.bam.gamedeals.ios.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -411,6 +559,15 @@
 			buildConfigurations = (
 				X100000000000000000000F3 /* Debug */,
 				X100000000000000000000F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L100000000000000000000A3 /* Build configuration list for PBXNativeTarget "GameDealsWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X100000000000000000000F5 /* Debug */,
+				X100000000000000000000F6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
