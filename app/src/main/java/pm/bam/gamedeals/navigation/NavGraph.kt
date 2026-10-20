@@ -18,8 +18,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.common.navigation.SearchController
@@ -27,6 +29,8 @@ import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
 import pm.bam.gamedeals.feature.account.navigation.accountScreen
+import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.feature.account.ui.SignInPromptHost
 import pm.bam.gamedeals.feature.account.ui.rememberNotificationBellState
 import pm.bam.gamedeals.feature.bundles.navigation.bundleDetailScreen
@@ -43,6 +47,8 @@ import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
+import pm.bam.gamedeals.shortcuts.AppShortcut
+import pm.bam.gamedeals.shortcuts.AppShortcutBus
 
 @Composable
 internal fun NavGraph(
@@ -71,6 +77,22 @@ internal fun NavGraph(
                 NotificationRoute.FollowedSeries -> {
                     analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "followed_series"))
                     navActions.navigateToFollowedSeries()
+                }
+            }
+        }
+    }
+
+    // Launcher shortcuts and the Free Games widget (shortcuts/AppShortcut.kt). Consume-once, like the bus above.
+    val authTokenStore: AuthTokenStore = koinInject()
+    LaunchedEffect(Unit) {
+        AppShortcutBus.requests.collect { shortcut ->
+            when (shortcut) {
+                AppShortcut.GIVEAWAYS -> navActions.navigateToGiveaways()
+                AppShortcut.DEALS -> navActions.navigateTopLevel(Destination.Deals)
+                AppShortcut.WAITLIST -> {
+                    navActions.navigateToWaitlist()
+                    // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
+                    if (authTokenStore.observeAuthState().first() !is AuthState.LoggedIn) SignInPromptController.requestWhenReady()
                 }
             }
         }

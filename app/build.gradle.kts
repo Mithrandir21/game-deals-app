@@ -209,6 +209,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.compose.material3)
 
+    // Free Games home-screen widget (widget/FreeGamesWidget.kt).
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
     implementation(libs.coil3)
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.ktor)

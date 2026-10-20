@@ -21,6 +21,8 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.feature.appupdate.ui.AppUpdateHost
 import pm.bam.gamedeals.navigation.NavGraph
 import pm.bam.gamedeals.notifications.toNotificationRoute
+import pm.bam.gamedeals.shortcuts.AppShortcutBus
+import pm.bam.gamedeals.shortcuts.toAppShortcut
 
 class MainActivity : ComponentActivity() {
 
@@ -31,7 +33,7 @@ class MainActivity : ComponentActivity() {
         // targetSdk 35+ forces edge-to-edge; call this explicitly so the system-bar scrims/contrast are
         // applied on older API levels too. Per-surface insets are handled in the shell + screen scaffolds.
         enableEdgeToEdge()
-        handleNotificationIntent(intent) // cold-start tap
+        handleLaunchIntent(intent) // cold-start notification tap, launcher shortcut or widget tap
         setContent {
             // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the (fast)
             // Storage read lands. Recomposes live when the user changes it from the Account hub.
@@ -63,11 +65,15 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleNotificationIntent(intent)
+        handleLaunchIntent(intent)
     }
 
-    /** Routes a tapped background notification (Phase B) into the Compose nav via [NotificationRouteBus]. */
-    private fun handleNotificationIntent(intent: Intent?) {
+    /**
+     * Routes a tapped background notification (Phase B) into the Compose nav via [NotificationRouteBus], and a
+     * launcher shortcut or Free Games widget tap via [AppShortcutBus].
+     */
+    private fun handleLaunchIntent(intent: Intent?) {
         intent?.toNotificationRoute()?.let { NotificationRouteBus.deliver(it) }
+        intent?.toAppShortcut()?.let { AppShortcutBus.deliver(it) }
     }
 }

@@ -20,6 +20,10 @@ internal const val EXTRA_NOTIFICATION_ROUTE = "extra_notification_route"
 internal const val ROUTE_NOTIFICATIONS = "notifications"
 internal const val ROUTE_FOLLOWED_SERIES = "followed_series"
 
+/** Tray id of the bundled waitlist summary; [NotificationActionReceiver] dismisses it after "Mark as read". */
+internal const val WAITLIST_SUMMARY_ID = Int.MIN_VALUE
+private const val FRANCHISE_SUMMARY_ID = Int.MIN_VALUE + 1
+
 /** Cap the per-game lines listed in an expanded notification so the tray text stays readable. */
 private const val MAX_GAME_LINES = 6
 
@@ -30,6 +34,9 @@ private const val MAX_GAME_LINES = 6
  *  - a **followed-franchise** summary listing the newly-on-sale franchise games (tap → Followed-series).
  *
  * This is the de-spam fix: the franchise path used to fan out one tray notification per on-sale game.
+ * Each summary also carries action buttons: "View deals" + "Mark as read" on the waitlist summary (the latter
+ * handled in the background by [NotificationActionReceiver]), "View series" on the franchise summary. There is
+ * nothing to mark read for the franchise path: those alerts are worked out on the device, not stored by ITAD.
  * Lives in `:app` because the tap [PendingIntent] must target [MainActivity].
  */
 internal class AndroidNotificationPresenter(
@@ -62,6 +69,10 @@ internal class AndroidNotificationPresenter(
                     lines = games.map { it.toLine() },
                     fallbackText = context.getString(R.string.notification_summary_text, waitlistAlerts.size),
                     contentIntent = routeIntent(ROUTE_NOTIFICATIONS, WAITLIST_SUMMARY_ID),
+                    actions = listOf(
+                        context.getString(R.string.notification_action_view_deals) to routeIntent(ROUTE_NOTIFICATIONS, WAITLIST_SUMMARY_ID),
+                        context.getString(R.string.notification_action_mark_read) to markAllReadIntent(),
+                    ),
                 )
                 analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "waitlist", "count" to games.size))
             }
@@ -75,6 +86,9 @@ internal class AndroidNotificationPresenter(
                     lines = franchiseGames.map { it.title },
                     fallbackText = context.getString(R.string.notification_summary_text, franchiseAlerts.size),
                     contentIntent = routeIntent(ROUTE_FOLLOWED_SERIES, FRANCHISE_SUMMARY_ID),
+                    actions = listOf(
+                        context.getString(R.string.notification_action_view_series) to routeIntent(ROUTE_FOLLOWED_SERIES, FRANCHISE_SUMMARY_ID),
+                    ),
                 )
                 analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "franchise", "count" to franchiseGames.size))
             }
@@ -92,12 +106,14 @@ internal class AndroidNotificationPresenter(
         lines: List<String>,
         fallbackText: String,
         contentIntent: PendingIntent,
+        actions: List<Pair<String, PendingIntent>>,
     ) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
+        actions.forEach { (label, intent) -> builder.addAction(0, label, intent) }
         when {
             lines.isEmpty() -> builder.setContentText(fallbackText)
             lines.size == 1 -> builder.setContentText(lines.first())
@@ -131,10 +147,13 @@ internal class AndroidNotificationPresenter(
         return PendingIntent.getActivity(context, requestCode, intent, PENDING_FLAGS)
     }
 
+    private fun markAllReadIntent(): PendingIntent {
+        val intent = Intent(context, NotificationActionReceiver::class.java).setAction(ACTION_MARK_ALL_READ)
+        return PendingIntent.getBroadcast(context, WAITLIST_SUMMARY_ID, intent, PENDING_FLAGS)
+    }
+
     private companion object {
         const val CHANNEL_ID = "itad_waitlist"
-        const val WAITLIST_SUMMARY_ID = Int.MIN_VALUE
-        const val FRANCHISE_SUMMARY_ID = Int.MIN_VALUE + 1
         const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     }
 }
