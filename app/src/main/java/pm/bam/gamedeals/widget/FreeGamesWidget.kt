@@ -1,7 +1,6 @@
 package pm.bam.gamedeals.widget
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
@@ -50,7 +49,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import pm.bam.gamedeals.MainActivity
 import pm.bam.gamedeals.R
 import pm.bam.gamedeals.domain.models.Giveaway
 import pm.bam.gamedeals.domain.models.GiveawayPlatform
@@ -63,7 +61,6 @@ import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.shortcuts.AppShortcut
-import pm.bam.gamedeals.shortcuts.EXTRA_APP_SHORTCUT
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -106,7 +103,7 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
             error(logger, t) { "Free Games widget couldn't refresh giveaways." }
             true
         }
-        val giveaways = giveawaysRepository.observeGiveaways(PC_GAMES_BY_POPULARITY).first().take(MAX_ROWS)
+        val giveaways = giveawaysRepository.observeGiveaways(PC_GAMES_BY_POPULARITY).first().take(WIDGET_MAX_ROWS)
         // A failed refresh with a usable cache still shows the cache.
         if (giveaways.isEmpty() && refreshFailed) return FreeGamesState.Error
         return FreeGamesState.Loaded(giveaways.map { it.toWidgetGame(context) })
@@ -117,23 +114,10 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
         title = title.removeSuffix(" Giveaway"),
         worth = worthDenominated?.takeIf { it.isNotBlank() && it != "N/A" },
         endsLabel = endDate?.let(::relativeEnd)?.let { context.getString(R.string.widget_free_games_ends, it) },
-        thumbnail = thumbnail(context, thumbnail),
+        thumbnail = loadWidgetThumbnail(context, thumbnail),
     )
 
-    /** Downloads a small thumbnail. Widgets live in another process with a tight bitmap budget, so keep it small. */
-    private suspend fun thumbnail(context: Context, url: String): Bitmap? {
-        val request = ImageRequest.Builder(context)
-            .data(url)
-            .size(THUMBNAIL_WIDTH_PX, THUMBNAIL_HEIGHT_PX)
-            .allowHardware(false) // RemoteViews can't carry hardware bitmaps.
-            .build()
-        return (SingletonImageLoader.get(context).execute(request) as? SuccessResult)?.image?.toBitmap()
-    }
-
     private companion object {
-        const val THUMBNAIL_WIDTH_PX = 240
-        const val THUMBNAIL_HEIGHT_PX = 112
-
         val PC_GAMES_BY_POPULARITY = GiveawaySearchParameters(
             platforms = GiveawayPlatform.entries.map { GiveawayPlatformSelection(it, it == GiveawayPlatform.PC) }.toImmutableList(),
             types = GiveawayType.entries.map { GiveawayTypeSelection(it, it == GiveawayType.GAME) }.toImmutableList(),
@@ -176,20 +160,12 @@ internal fun relativeEnd(endDate: String, nowMillis: Long = System.currentTimeMi
 
 // region UI
 
-private const val MAX_ROWS = 7
-private val NARROW_WIDTH = 180.dp
-/** Padding plus the "Free to keep" header. */
-private val CHROME_HEIGHT = 48.dp
-/** One game row: a 32 dp thumbnail beside two lines of text, plus the gap below it. */
-private val ROW_HEIGHT = 40.dp
-
 @Composable
 private fun FreeGamesContent(state: FreeGamesState) {
     val context = LocalContext.current
     val size = LocalSize.current
-    val openGiveaways = Intent(context, MainActivity::class.java).putExtra(EXTRA_APP_SHORTCUT, AppShortcut.GIVEAWAYS.key)
-    // A narrow widget (about 2 cells wide) shows one game large; otherwise as many rows as the height fits.
-    val rows = if (size.width < NARROW_WIDTH) 1 else ((size.height - CHROME_HEIGHT) / ROW_HEIGHT).toInt().coerceIn(1, MAX_ROWS)
+    val openGiveaways = AppShortcut.Giveaways.intent(context)
+    val rows = widgetRows(size)
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -199,13 +175,13 @@ private fun FreeGamesContent(state: FreeGamesState) {
             .padding(12.dp)
             .clickable(actionStartActivity(openGiveaways)),
     ) {
-        Header()
+        WidgetHeader(R.string.widget_free_games_header, R.drawable.ic_widget_gift)
         Spacer(GlanceModifier.height(6.dp))
         when (state) {
-            FreeGamesState.Error -> Message(LocalContext.current.getString(R.string.widget_free_games_error))
+            FreeGamesState.Error -> WidgetMessage(R.string.widget_free_games_error)
             is FreeGamesState.Loaded -> when {
-                state.games.isEmpty() -> Message(LocalContext.current.getString(R.string.widget_free_games_empty))
-                rows == 1 && size.width < NARROW_WIDTH -> SmallGame(state.games.first())
+                state.games.isEmpty() -> WidgetMessage(R.string.widget_free_games_empty)
+                rows == 1 && size.width < WIDGET_NARROW_WIDTH -> SmallGame(state.games.first())
                 // Own Column, each row padded rather than followed by a Spacer: Glance renders at most 10 children
                 // per container, and header + spacer + seven rows with spacers would silently drop the last ones.
                 else -> Column {
@@ -217,31 +193,9 @@ private fun FreeGamesContent(state: FreeGamesState) {
 }
 
 @Composable
-private fun Header() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_gift),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.primary),
-            modifier = GlanceModifier.size(16.dp),
-        )
-        Spacer(GlanceModifier.width(6.dp))
-        Text(
-            text = LocalContext.current.getString(R.string.widget_free_games_header),
-            style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 13.sp, fontWeight = FontWeight.Bold),
-        )
-    }
-}
-
-@Composable
-private fun Message(text: String) {
-    Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp))
-}
-
-@Composable
 private fun SmallGame(game: WidgetGame) {
     Column {
-        Thumbnail(game.thumbnail, GlanceModifier.fillMaxWidth().height(56.dp))
+        WidgetThumbnail(game.thumbnail, GlanceModifier.fillMaxWidth().height(56.dp))
         Spacer(GlanceModifier.height(4.dp))
         Text(
             text = game.title,
@@ -255,7 +209,7 @@ private fun SmallGame(game: WidgetGame) {
 @Composable
 private fun GameRow(game: WidgetGame) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = GlanceModifier.fillMaxWidth().padding(bottom = 6.dp)) {
-        Thumbnail(game.thumbnail, GlanceModifier.size(width = 64.dp, height = 32.dp))
+        WidgetThumbnail(game.thumbnail, GlanceModifier.size(width = 64.dp, height = 32.dp))
         Spacer(GlanceModifier.width(8.dp))
         Column {
             Text(
@@ -275,20 +229,6 @@ private fun Details(game: WidgetGame) {
         game.worth?.let { Text(text = it, maxLines = 1, style = style.copy(textDecoration = TextDecoration.LineThrough)) }
         if (game.worth != null && game.endsLabel != null) Spacer(GlanceModifier.width(4.dp))
         game.endsLabel?.let { Text(text = it, maxLines = 1, style = style) }
-    }
-}
-
-@Composable
-private fun Thumbnail(bitmap: Bitmap?, modifier: GlanceModifier) {
-    if (bitmap != null) {
-        Image(
-            provider = ImageProvider(bitmap),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = modifier.cornerRadius(4.dp),
-        )
-    } else {
-        Box(modifier = modifier.cornerRadius(4.dp).background(GlanceTheme.colors.surfaceVariant)) {}
     }
 }
 

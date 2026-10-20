@@ -30,4 +30,16 @@
     <string name="widget_free_games_error">Couldn\'t load giveaways. Tap to open the app.</string>
     <string name="widget_free_games_empty">No free PC games right now. Check back soon.</string>
     <string name="widget_free_games_ends">ends %1$s</string>
+
+    <!-- Waitlist deals home-screen widget. -->
+    <string name="widget_waitlist_deals_name">Waitlist Deals</string>
+    <string name="widget_waitlist_deals_description">Games on your waitlist that are on sale right now.</string>
+    <string name="widget_waitlist_deals_header">On sale from your waitlist</string>
+    <string name="widget_waitlist_deals_signed_out">Sign in with IsThereAnyDeal to see your waitlist deals. Tap to sign in.</string>
+    <string name="widget_waitlist_deals_error">Couldn\'t load your waitlist. Tap to open the app.</string>
+    <string name="widget_waitlist_deals_empty_waitlist">Your waitlist is empty. Add games from their pages to see their deals here.</string>
+    <string name="widget_waitlist_deals_none_on_sale">Nothing on your waitlist is on sale right now.</string>
+    <!-- Discount badge in a waitlist deal row, e.g. "-75%". -->
+    <string name="widget_waitlist_deals_cut">-%1$d%%</string>
+    <string name="widget_waitlist_deals_lowest_ever">Lowest ever</string>
 </resources>
