@@ -2,6 +2,7 @@ package pm.bam.gamedeals.widget
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.dp
@@ -85,7 +86,8 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
         }
     }
 
-    private suspend fun load(context: Context): WaitlistDealsState {
+    @VisibleForTesting
+    internal suspend fun load(context: Context): WaitlistDealsState {
         if (authTokenStore.observeAuthState().first() !is AuthState.LoggedIn) return WaitlistDealsState.SignedOut
         val region = regionRepository.getSelectedCountryCode()
         var snapshot = waitlistRepository.observeWaitlistDisplay().first()
@@ -127,13 +129,14 @@ class WaitlistDealsWidget : GlanceAppWidget(), KoinComponent {
         thumbnail = loadWidgetThumbnail(context, artwork.thumbnail),
     )
 
-    private companion object {
+    internal companion object {
         /** Matches the widget's system refresh period (res/xml/waitlist_deals_widget_info.xml). */
-        const val STALE_AFTER_MILLIS = 3 * 60 * 60 * 1000L
+        internal const val STALE_AFTER_MILLIS = 3 * 60 * 60 * 1000L
 
         /** The waitlist ids the last "new games" refresh ran for; process-wide, like the widget instances. */
+        @VisibleForTesting
         @Volatile
-        var refreshedForIds: Set<String>? = null
+        internal var refreshedForIds: Set<String>? = null
     }
 }
 
