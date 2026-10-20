@@ -3,6 +3,7 @@ package pm.bam.gamedeals.widget
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -149,6 +150,8 @@ internal sealed interface WaitlistDealsState {
     data class Loaded(val deals: List<WidgetDeal>) : WaitlistDealsState
 }
 
+// Immutable: built once per widget update and never changed; the Bitmap is never mutated after decoding.
+@Immutable
 internal data class WidgetDeal(
     val gameId: String,
     val title: String,

@@ -2,7 +2,7 @@
 <!--
     Widget picker preview for the Waitlist deals widget (android:previewLayout in xml/waitlist_deals_widget_info.xml),
     Android 12+. A static look-alike of widget/WaitlistDealsWidget.kt with sample games, like widget_free_games_preview.
-    Only RemoteViews-safe views (no plain View). Sample titles, prices and shops are made up.
+    Only RemoteViews-safe views (no plain View), and android:tint rather than AppCompat's app:tint, which RemoteViews ignores. Sample titles, prices and shops are made up.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -24,7 +24,8 @@
             android:layout_height="16dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_widget_waitlist"
-            android:tint="@android:color/system_accent1_600" />
+            android:tint="@android:color/system_accent1_600"
+            tools:ignore="UseAppTint" />
 
         <TextView
             android:layout_width="wrap_content"
