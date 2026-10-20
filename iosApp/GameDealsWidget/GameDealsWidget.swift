@@ -249,14 +249,15 @@ private struct Thumbnail: View {
     let image: UIImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-            } else {
-                Rectangle().fill(.quaternary)
+        // The image fills an overlay so it is cropped to the caller's frame instead of overflowing it.
+        Rectangle()
+            .fill(.quaternary)
+            .overlay {
+                if let image {
+                    Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                }
             }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
 
