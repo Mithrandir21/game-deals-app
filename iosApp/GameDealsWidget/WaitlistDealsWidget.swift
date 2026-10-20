@@ -206,7 +206,7 @@ private struct SmallDeal: View {
             Text(deal.deal.title)
                 .font(.footnote.weight(.semibold))
                 .lineLimit(2)
-            PriceLine(deal: deal.deal)
+            PriceLine(deal: deal.deal, showsShop: false)
             if deal.deal.atHistoricalLow { LowestEver() }
         }
     }
@@ -225,8 +225,9 @@ private struct DealRow: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    PriceLine(deal: deal.deal)
-                    if deal.deal.atHistoricalLow { LowestEver() }
+                    // "Lowest ever" takes the shop's place so the row still fits on one line.
+                    PriceLine(deal: deal.deal, showsShop: !deal.deal.atHistoricalLow)
+                    if deal.deal.atHistoricalLow { LowestEver().fixedSize() }
                 }
             }
         }
@@ -236,19 +237,25 @@ private struct DealRow: View {
 /// "-75% $4.99 ~~$19.99~~ Steam"
 private struct PriceLine: View {
     let deal: WaitlistWidgetDeal
+    let showsShop: Bool
 
     var body: some View {
         HStack(spacing: 4) {
+            // Discount and price never truncate; the usual price and shop give way first.
             Text("-\(deal.discountPercent)%")
                 .fontWeight(.bold)
                 .foregroundStyle(.tint)
+                .fixedSize()
             Text(deal.price)
                 .foregroundStyle(.primary)
+                .fixedSize()
             if let regular = deal.regular {
                 Text(regular).strikethrough()
+                    .layoutPriority(-1)
             }
-            if let shop = deal.shop {
+            if showsShop, let shop = deal.shop {
                 Text(shop)
+                    .layoutPriority(-2)
             }
         }
         .font(.caption2)
