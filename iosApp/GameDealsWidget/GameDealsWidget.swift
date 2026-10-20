@@ -80,7 +80,7 @@ private extension WidgetFamily {
         switch self {
         case .systemSmall: return 1
         case .systemMedium: return 3
-        default: return 8
+        default: return 7
         }
     }
 }
