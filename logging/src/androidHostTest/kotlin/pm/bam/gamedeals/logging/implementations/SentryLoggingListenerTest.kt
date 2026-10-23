@@ -15,9 +15,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import pm.bam.gamedeals.logging.ExpectedFailure
 import pm.bam.gamedeals.logging.LogLevel
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * JVM-host coverage for how log levels map onto Sentry: low levels become breadcrumbs, ERROR/FATAL become
@@ -115,6 +117,25 @@ class SentryLoggingListenerTest {
             tag = null,
             throwable = IllegalStateException("load failed", SocketTimeoutException("read timed out")),
         )
+
+        verify(exactly = 1) { Sentry.addBreadcrumb(any()) }
+        verify(exactly = 0) { Sentry.captureException(any(), any()) }
+    }
+
+    @Test
+    fun error_from_a_coroutine_cancellation_becomes_a_breadcrumb_not_an_issue() {
+        // Routine teardown that slipped past runCatchingLogged (Sentry GAME-DEALS-X: "Job was cancelled").
+        listener.onLog(LogLevel.ERROR, "load failed", tag = null, throwable = CancellationException("Job was cancelled"))
+
+        verify(exactly = 1) { Sentry.addBreadcrumb(any()) }
+        verify(exactly = 0) { Sentry.captureException(any(), any()) }
+    }
+
+    @Test
+    fun error_from_a_wrapped_expected_failure_becomes_a_breadcrumb_not_an_issue() {
+        class SessionRejected : RuntimeException("signed out"), ExpectedFailure
+
+        listener.onLog(LogLevel.ERROR, "waitlist sync", tag = null, throwable = IllegalStateException("sync", SessionRejected()))
 
         verify(exactly = 1) { Sentry.addBreadcrumb(any()) }
         verify(exactly = 0) { Sentry.captureException(any(), any()) }

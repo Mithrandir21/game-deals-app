@@ -5,7 +5,7 @@ import io.sentry.kotlin.multiplatform.SentryLevel
 import io.sentry.kotlin.multiplatform.protocol.Breadcrumb
 import pm.bam.gamedeals.logging.LogLevel
 import pm.bam.gamedeals.logging.LoggingInterface
-import pm.bam.gamedeals.logging.isExpectedNetworkFailure
+import pm.bam.gamedeals.logging.isExpectedFailure
 
 internal class SentryLoggingListener : LoggingInterface {
 
@@ -20,10 +20,10 @@ internal class SentryLoggingListener : LoggingInterface {
             LogLevel.DEBUG -> Unit
             LogLevel.INFO,
             LogLevel.WARN -> Sentry.addBreadcrumb(breadcrumb(level.toSentryLevel(), message, tag, throwable))
-            // A connectivity failure isn't a defect — the app already degraded as designed and the user
-            // simply had no network. Record it as a breadcrumb so it still shows up in the trail of any
-            // real issue, but don't manufacture an issue of its own (see [isExpectedNetworkFailure]).
-            LogLevel.ERROR if isExpectedNetworkFailure(throwable) ->
+            // A connectivity failure, a cancellation or an [ExpectedFailure] isn't a defect — the app already
+            // handled it as designed. Record it as a breadcrumb so it still shows up in the trail of any
+            // real issue, but don't manufacture an issue of its own (see [isExpectedFailure]).
+            LogLevel.ERROR if isExpectedFailure(throwable) ->
                 Sentry.addBreadcrumb(breadcrumb(SentryLevel.WARNING, message, tag, throwable))
             LogLevel.ERROR,
             LogLevel.FATAL -> {

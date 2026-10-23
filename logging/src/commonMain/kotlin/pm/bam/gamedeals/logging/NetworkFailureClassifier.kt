@@ -18,11 +18,15 @@ package pm.bam.gamedeals.logging
  * graph) — but see [KTOR_NETWORK_FAILURE_NAMES] for why that arm carries less weight than it looks like
  * it does on Android.
  */
-fun isExpectedNetworkFailure(throwable: Throwable?): Boolean {
-    var cause = throwable
+fun isExpectedNetworkFailure(throwable: Throwable?): Boolean =
+    throwable.anyInCauseChain { it.isPlatformNetworkFailure() || it::class.simpleName in KTOR_NETWORK_FAILURE_NAMES }
+
+/** Whether [predicate] holds for this throwable or any of its causes, up to [MAX_CAUSE_DEPTH] deep. */
+internal inline fun Throwable?.anyInCauseChain(predicate: (Throwable) -> Boolean): Boolean {
+    var cause = this
     var depth = 0
     while (cause != null && depth < MAX_CAUSE_DEPTH) {
-        if (cause.isPlatformNetworkFailure() || cause::class.simpleName in KTOR_NETWORK_FAILURE_NAMES) return true
+        if (predicate(cause)) return true
         val next = cause.cause
         if (next === cause) return false // self-referential chain; bail rather than spin
         cause = next
@@ -59,4 +63,4 @@ private val KTOR_NETWORK_FAILURE_NAMES = setOf(
 )
 
 /** Guards against a pathologically long (or cyclic) cause chain. */
-private const val MAX_CAUSE_DEPTH = 10
+internal const val MAX_CAUSE_DEPTH = 10
