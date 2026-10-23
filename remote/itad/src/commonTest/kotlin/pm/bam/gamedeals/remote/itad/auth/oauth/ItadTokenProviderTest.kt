@@ -7,6 +7,9 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.logging.LogLevel
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.LoggingInterface
 import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
@@ -110,6 +113,56 @@ class ItadTokenProviderTest {
         assertTrue(store.cleared)
     }
 
-    private fun oauthAnswering(status: HttpStatusCode) =
-        ItadOAuthClient(mockHttpClient(json) { _ -> respond("nope", status) }, credentials)
+    @Test
+    fun a_revoked_grant_clears_the_session_and_logs_a_warning_not_an_error() = runTest {
+        // Sentry GAME-DEALS-H: a user revoking the app on ITAD is an ordinary sign-out.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+        val body = """{"error":"invalid_grant","error_description":"The refresh token is invalid.","hint":"Token has been revoked"}"""
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.BadRequest, body), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.WARN), recorder.levels)
+    }
+
+    @Test
+    fun a_rejected_client_clears_the_session_and_still_logs_an_error() = runTest {
+        // invalid_client means the app's own credentials were refused — every user would hit it.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.Unauthorized, """{"error":"invalid_client"}"""), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.ERROR), recorder.levels)
+    }
+
+    @Test
+    fun a_rejection_without_a_readable_reason_still_logs_an_error() = runTest {
+        // Without "invalid_grant" in the reply we can't tell a user's sign-out from an app-wide fault, so report it.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.BadRequest, body = ""), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.ERROR), recorder.levels)
+    }
+
+    private fun oauthAnswering(status: HttpStatusCode, body: String = "nope") =
+        ItadOAuthClient(mockHttpClient(json) { _ -> respond(body, status) }, credentials)
+
+    private class LevelRecordingLogger : Logger {
+        val levels = mutableListOf<LogLevel>()
+        override fun log(level: LogLevel, tag: String?, throwable: Throwable?, messageProvider: () -> String) {
+            levels += level
+        }
+        override fun fatalThrowable(throwable: Throwable, tag: String?) = Unit
+        override fun addLoggerListener(loggingInterface: LoggingInterface) = Unit
+        override fun removeLoggerListener(loggingInterface: LoggingInterface) = Unit
+    }
 }

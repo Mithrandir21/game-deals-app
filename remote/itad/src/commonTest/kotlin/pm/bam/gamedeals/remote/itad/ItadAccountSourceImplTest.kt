@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad
 
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -9,8 +10,10 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.logging.isExpectedFailure
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.exceptions.RemoteHttpException
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadIgnoredApi
 import pm.bam.gamedeals.remote.itad.api.ItadNotesApi
@@ -21,6 +24,7 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.mockHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -73,6 +77,76 @@ class ItadAccountSourceImplTest {
             notesApi = ItadNotesApi(client),
             remoteExceptionTransformer = RemoteExceptionTransformer { it },
         )
+    }
+
+    /** A source whose every call answers [status], mapped the way the real transformer does for these codes. */
+    private fun failingSource(status: HttpStatusCode): ItadAccountSourceImpl {
+        val client = mockHttpClient(json) { _ -> respond("", status) }
+        val transformer = RemoteExceptionTransformer { t ->
+            when {
+                t !is ResponseException -> t
+                t.response.status == HttpStatusCode.Unauthorized -> RemoteHttpException.Unauthorized(t)
+                else -> RemoteHttpException.HttpException(t.response.status.value, t)
+            }
+        }
+        return ItadAccountSourceImpl(
+            logger = logger,
+            userApi = ItadUserApi(client),
+            waitlistApi = ItadWaitlistApi(client),
+            collectionApi = ItadCollectionApi(client),
+            notificationsApi = ItadNotificationsApi(client),
+            ignoredApi = ItadIgnoredApi(client),
+            notesApi = ItadNotesApi(client),
+            remoteExceptionTransformer = transformer,
+        )
+    }
+
+    @Test
+    fun a_401_after_a_failed_refresh_surfaces_as_an_expected_session_rejection() = runTest {
+        // Sentry GAME-DEALS-G: the waitlist 401 that follows a revoked refresh token is the same sign-out
+        // GAME-DEALS-H already recorded, so it must not raise a second issue.
+        val failure = assertFailsWith<ItadSessionRejectedException> { failingSource(HttpStatusCode.Unauthorized).getWaitlist() }
+
+        assertTrue(isExpectedFailure(failure))
+        assertTrue(failure.cause is RemoteHttpException.Unauthorized)
+    }
+
+    @Test
+    fun every_account_call_surfaces_a_401_as_an_expected_session_rejection() = runTest {
+        val calls: List<Pair<String, suspend ItadAccountSourceImpl.() -> Unit>> = listOf(
+            "getUserInfo" to { getUserInfo() },
+            "getWaitlist" to { getWaitlist() },
+            "addToWaitlist" to { addToWaitlist("uuid-1") },
+            "removeFromWaitlist" to { removeFromWaitlist("uuid-1") },
+            "getCollection" to { getCollection() },
+            "addToCollection" to { addToCollection("uuid-2") },
+            "removeFromCollection" to { removeFromCollection("uuid-2") },
+            "getNotifications" to { getNotifications() },
+            "markNotificationRead" to { markNotificationRead("n1") },
+            "markAllNotificationsRead" to { markAllNotificationsRead() },
+            "getWaitlistNotificationGames" to { getWaitlistNotificationGames("n1") },
+            "getWaitlistNotificationDetail" to { getWaitlistNotificationDetail("n1") },
+            "getIgnored" to { getIgnored() },
+            "addToIgnored" to { addToIgnored("uuid-3") },
+            "removeFromIgnored" to { removeFromIgnored("uuid-3") },
+            "getNotes" to { getNotes() },
+            "setNote" to { setNote("uuid-4", "note") },
+            "removeNote" to { removeNote("uuid-4") },
+        )
+        val source = failingSource(HttpStatusCode.Unauthorized)
+
+        calls.forEach { (name, call) ->
+            val failure = assertFailsWith<ItadSessionRejectedException>(name) { source.call() }
+            assertTrue(isExpectedFailure(failure), name)
+        }
+    }
+
+    @Test
+    fun other_http_failures_pass_through_unchanged() = runTest {
+        val failure = assertFailsWith<RemoteHttpException.HttpException> { failingSource(HttpStatusCode.ServiceUnavailable).getWaitlist() }
+
+        assertEquals(503, failure.code)
+        assertFalse(isExpectedFailure(failure))
     }
 
     @Test

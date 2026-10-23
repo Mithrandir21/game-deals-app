@@ -12,6 +12,7 @@ import pm.bam.gamedeals.domain.models.WaitlistEntry
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.remote.exceptions.RemoteExceptionTransformer
+import pm.bam.gamedeals.remote.exceptions.RemoteHttpException
 import pm.bam.gamedeals.remote.itad.api.ItadCollectionApi
 import pm.bam.gamedeals.remote.itad.api.ItadIgnoredApi
 import pm.bam.gamedeals.remote.itad.api.ItadNotesApi
@@ -52,77 +53,77 @@ internal class ItadAccountSourceImpl(
     override suspend fun getUserInfo(): ItadUser =
         userApi.getInfo()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .toItadUser()
 
     override suspend fun getWaitlist(): List<WaitlistEntry> =
         waitlistApi.getWaitlist()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .map { it.toWaitlistEntry() }
 
     override suspend fun addToWaitlist(gameId: String) {
         waitlistApi.addGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun removeFromWaitlist(gameId: String) {
         waitlistApi.removeGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun getCollection(): List<CollectionEntry> =
         collectionApi.getCollection()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .map { it.toCollectionEntry() }
 
     override suspend fun addToCollection(gameId: String) {
         collectionApi.addGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun removeFromCollection(gameId: String) {
         collectionApi.removeGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun getNotifications(): List<ItadNotification> =
         notificationsApi.getNotifications()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .map { it.toItadNotification() }
 
     override suspend fun markNotificationRead(id: String) {
         notificationsApi.markRead(id)
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun markAllNotificationsRead() {
         notificationsApi.markAllRead()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun getWaitlistNotificationGames(id: String): List<NotificationGame> =
         notificationsApi.getWaitlistDetail(id)
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .games
             .map { it.toNotificationGame() }
@@ -130,51 +131,61 @@ internal class ItadAccountSourceImpl(
     override suspend fun getWaitlistNotificationDetail(id: String): NotificationDetail =
         notificationsApi.getWaitlistDetail(id)
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .toNotificationDetail(id)
 
     override suspend fun getIgnored(): List<IgnoredEntry> =
         ignoredApi.getIgnored()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .map { it.toIgnoredEntry() }
 
     override suspend fun addToIgnored(gameId: String) {
         ignoredApi.addGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun removeFromIgnored(gameId: String) {
         ignoredApi.removeGames(listOf(gameId))
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun getNotes(): List<ItadNote> =
         notesApi.getNotes()
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
             .map { it.toItadNote() }
 
     override suspend fun setNote(gameId: String, note: String) {
         notesApi.putNote(gameId, note)
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
 
     override suspend fun removeNote(gameId: String) {
         notesApi.deleteNote(gameId)
             .log(logger, tag = TAG)
-            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .mapAnyFailure { toAccountFailure() }
             .getOrThrow()
     }
+
+    /**
+     * The bearer client only lets a 401 through once refreshing the token has failed, and
+     * [pm.bam.gamedeals.remote.itad.auth.oauth.ItadTokenProvider] has already logged why — so here a 401 means "no usable session", not a new defect.
+     */
+    private fun Throwable.toAccountFailure(): Throwable =
+        when (val mapped = remoteExceptionTransformer.transformApiException(this)) {
+            is RemoteHttpException.Unauthorized -> ItadSessionRejectedException(mapped)
+            else -> mapped
+        }
 
     private companion object {
         private const val TAG = "ItadAccountSource"

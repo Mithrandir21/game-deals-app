@@ -2,12 +2,14 @@ package pm.bam.gamedeals.remote.itad.auth.oauth
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import kotlin.coroutines.cancellation.CancellationException
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.warn
 
 /**
  * Bridges the persisted [AuthTokenStore] and the [ItadOAuthClient] for Ktor's `Auth { bearer }` plugin
@@ -49,7 +51,12 @@ class ItadTokenProvider(
             throw ce
         } catch (e: ClientRequestException) {
             if (e.response.status in DEFINITIVE_REJECTIONS) {
-                error(logger, throwable = e) { "ITAD rejected the refresh token; clearing session" }
+                if (e.isRevokedGrant()) {
+                    // The user's own grant ended (revoked on ITAD, or expired): an ordinary sign-out, not a defect.
+                    warn(logger, throwable = e) { "ITAD refresh token revoked or expired; clearing session" }
+                } else {
+                    error(logger, throwable = e) { "ITAD rejected the refresh token; clearing session" }
+                }
                 clearAndNull()
             } else {
                 keepSession(e)
@@ -58,6 +65,19 @@ class ItadTokenProvider(
             keepSession(t)
         }
     }
+
+    /**
+     * OAuth's `invalid_grant` is specific to this user's refresh token. Other rejections (`invalid_client`,
+     * `invalid_request`) point at the app's own credentials or request and would hit every user, so they stay errors.
+     */
+    private suspend fun ClientRequestException.isRevokedGrant(): Boolean =
+        try {
+            "invalid_grant" in response.bodyAsText()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (_: Throwable) {
+            false
+        }
 
     private fun keepSession(t: Throwable): BearerTokens? {
         error(logger, throwable = t) { "ITAD token refresh failed; keeping the session for the next attempt" }
