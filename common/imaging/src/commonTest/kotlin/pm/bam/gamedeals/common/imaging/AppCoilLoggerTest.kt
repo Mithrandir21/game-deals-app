@@ -39,8 +39,8 @@ class AppCoilLoggerTest {
     }
 
     @Test
-    fun production_starts_at_info_min_level() =
-        assertEquals(CoilLogger.Level.Info, appCoilLogger(RecordingLogger(), debug = false).minLevel)
+    fun production_starts_at_warn_min_level() =
+        assertEquals(CoilLogger.Level.Warn, appCoilLogger(RecordingLogger(), debug = false).minLevel)
 
     @Test
     fun debug_starts_at_debug_min_level() =

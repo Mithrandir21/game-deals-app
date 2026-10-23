@@ -14,11 +14,12 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * @param logger the app logging seam to forward Coil events to.
  * @param debug when true (debug builds) Coil logs from [CoilLogger.Level.Debug] up — verbose console
- *   output for development; when false (production) it starts at [CoilLogger.Level.Info], keeping the
- *   per-successful-load debug breadcrumbs out of the Sentry trail.
+ *   output for development; when false (production) it starts at [CoilLogger.Level.Warn]. Coil reports every
+ *   successful or cancelled load at Info, and as Sentry breadcrumbs those filled the whole 100-slot trail,
+ *   pushing out the failure that led to the issue (GAME-DEALS-11 carried nothing but image loads).
  */
 fun appCoilLogger(logger: Logger, debug: Boolean): CoilLogger = object : CoilLogger {
-    override var minLevel: CoilLogger.Level = if (debug) CoilLogger.Level.Debug else CoilLogger.Level.Info
+    override var minLevel: CoilLogger.Level = if (debug) CoilLogger.Level.Debug else CoilLogger.Level.Warn
     override fun log(tag: String, level: CoilLogger.Level, message: String?, throwable: Throwable?) {
         logger.log(coilLogLevel(level, throwable), "CoilLogging", throwable = throwable) { message ?: "Coil Log Message" }
     }
