@@ -9,6 +9,7 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RemoteExceptionTransformerImplTest {
@@ -19,7 +20,8 @@ class RemoteExceptionTransformerImplTest {
 
         val result = RemoteExceptionTransformerImpl().transformApiException(responseException)
 
-        assertEquals(RemoteHttpException.BadRequest, result)
+        assertTrue(result is RemoteHttpException.BadRequest)
+        assertSame(responseException, result.cause)
     }
 
     @Test
@@ -28,7 +30,8 @@ class RemoteExceptionTransformerImplTest {
 
         val result = RemoteExceptionTransformerImpl().transformApiException(responseException)
 
-        assertEquals(RemoteHttpException.NotFound, result)
+        assertTrue(result is RemoteHttpException.NotFound)
+        assertEquals("HTTP 404", result.message)
     }
 
     @Test

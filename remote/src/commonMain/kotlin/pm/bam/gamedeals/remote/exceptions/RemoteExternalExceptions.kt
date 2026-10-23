@@ -15,15 +15,19 @@ import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_UNA
 
 /**
  * Sealed class that will represent specific HTTP exception that are results of API calls.
+ *
+ * The message carries the status ("HTTP 429") and [cause] the transport's own exception (URL and response
+ * text), so a Sentry issue says which failure it was. These are classes, not singletons: a shared exception
+ * instance would also share the stack trace of whichever call created it first.
  */
-sealed class RemoteHttpException(open val code: Int) : RuntimeException() {
+sealed class RemoteHttpException(val code: Int, cause: Throwable?) : RuntimeException("HTTP $code", cause) {
 
-    data object BadRequest : RemoteHttpException(400)
-    data object Unauthorized : RemoteHttpException(401)
-    data object Forbidden : RemoteHttpException(403)
-    data object NotFound : RemoteHttpException(404)
-    data object MethodNotAllowed : RemoteHttpException(405)
-    data class HttpException(override val code: Int) : RemoteHttpException(code)
+    class BadRequest(cause: Throwable? = null) : RemoteHttpException(CODE_BAD_REQUEST, cause)
+    class Unauthorized(cause: Throwable? = null) : RemoteHttpException(CODE_UNAUTHORIZED, cause)
+    class Forbidden(cause: Throwable? = null) : RemoteHttpException(CODE_FORBIDDEN, cause)
+    class NotFound(cause: Throwable? = null) : RemoteHttpException(CODE_NOT_FOUND, cause)
+    class MethodNotAllowed(cause: Throwable? = null) : RemoteHttpException(CODE_METHOD_NOT_ALLOWED, cause)
+    class HttpException(code: Int, cause: Throwable? = null) : RemoteHttpException(code, cause)
 
     companion object {
         internal const val CODE_BAD_REQUEST = 400
@@ -36,15 +40,15 @@ sealed class RemoteHttpException(open val code: Int) : RuntimeException() {
 
 
 internal fun ResponseException.toRemoteHttpException(): RemoteHttpException =
-    response.status.value.toRemoteHttpException()
+    response.status.value.toRemoteHttpException(cause = this)
 
 
-internal fun Int.toRemoteHttpException(): RemoteHttpException =
+internal fun Int.toRemoteHttpException(cause: Throwable? = null): RemoteHttpException =
     when (this) {
-        CODE_BAD_REQUEST -> BadRequest
-        CODE_UNAUTHORIZED -> Unauthorized
-        CODE_FORBIDDEN -> Forbidden
-        CODE_NOT_FOUND -> NotFound
-        CODE_METHOD_NOT_ALLOWED -> MethodNotAllowed
-        else -> HttpException(this)
+        CODE_BAD_REQUEST -> BadRequest(cause)
+        CODE_UNAUTHORIZED -> Unauthorized(cause)
+        CODE_FORBIDDEN -> Forbidden(cause)
+        CODE_NOT_FOUND -> NotFound(cause)
+        CODE_METHOD_NOT_ALLOWED -> MethodNotAllowed(cause)
+        else -> HttpException(this, cause)
     }
