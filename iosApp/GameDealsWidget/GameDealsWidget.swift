@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 import WidgetKit
 
-// Home Screen widget: PC games that are free to keep right now. It fetches GamerPower's public API itself rather
+// Home Screen widget: full PC games (no DLC or loot) that are free to keep right now, newest first like the Giveaways tab. It fetches GamerPower's public API itself rather
 // than reading the app's data, so it needs no App Group or shared storage and works before the app is ever opened.
 // Tapping it opens the app's Giveaways tab through the `pm.bam.gamedeals://giveaways` link (iOSApp.swift).
 
@@ -24,8 +24,8 @@ struct FreeGamesWidget: Widget {
                 .widgetURL(URL(string: "pm.bam.gamedeals://giveaways"))
                 .widgetBackground()
         }
-        .configurationDisplayName("Free Games")
-        .description("PC games that are free to keep right now.")
+        .configurationDisplayName("Free PC Games")
+        .description("Full PC games that are free to keep right now, newest first. No DLC or loot.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -95,9 +95,9 @@ enum GamerPower {
         let end_date: String?
     }
 
-    /// Active PC game giveaways, most popular first. Returns nil on any network or decoding failure.
+    /// Active PC game giveaways, newest first (the Giveaways tab's default order). Returns nil on any network or decoding failure.
     static func freeGames(limit: Int) async -> [FreeGame]? {
-        guard let url = URL(string: "https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=popularity") else { return nil }
+        guard let url = URL(string: "https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=date") else { return nil }
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             // GamerPower answers 201 with an empty body when nothing matches.
@@ -162,7 +162,7 @@ struct FreeGamesWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("Free to keep", systemImage: "gift.fill")
+            Label("Free PC games", systemImage: "gift.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tint)
             content

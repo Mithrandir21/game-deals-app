@@ -73,10 +73,11 @@ class FreeGamesWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 /**
- * Home-screen widget: PC games that are free to keep right now, most popular first — the Android twin of the iOS
- * Free Games widget (`iosApp/GameDealsWidget`). Unlike iOS it reads the app's own giveaways cache through
- * [GiveawaysRepository], refreshing it when stale, so it shows the same list as the Giveaways tab. Tapping it opens
- * that tab. The system refreshes it every 3 hours (`res/xml/free_games_widget_info.xml`).
+ * Home-screen widget: full PC games (no DLC or loot) that are free to keep right now, newest first — the Android twin of
+ * the iOS Free Games widget (`iosApp/GameDealsWidget`). Unlike iOS it reads the app's own giveaways cache through
+ * [GiveawaysRepository], refreshing it when stale, in the Giveaways tab's default order. Tapping it opens that tab, which
+ * also lists other platforms and DLC; the "Free PC games" header makes the widget's narrower filter clear. The system
+ * refreshes it every 3 hours (`res/xml/free_games_widget_info.xml`).
  */
 class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
 
@@ -106,7 +107,7 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
             error(logger, t) { "Free Games widget couldn't refresh giveaways." }
             true
         }
-        val giveaways = giveawaysRepository.observeGiveaways(PC_GAMES_BY_POPULARITY).first().take(WIDGET_MAX_ROWS)
+        val giveaways = giveawaysRepository.observeGiveaways(PC_GAMES_NEWEST_FIRST).first().take(WIDGET_MAX_ROWS)
         // A failed refresh with a usable cache still shows the cache.
         if (giveaways.isEmpty() && refreshFailed) return FreeGamesState.Error
         return FreeGamesState.Loaded(giveaways.map { it.toWidgetGame(context) })
@@ -121,10 +122,10 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
     )
 
     private companion object {
-        val PC_GAMES_BY_POPULARITY = GiveawaySearchParameters(
+        val PC_GAMES_NEWEST_FIRST = GiveawaySearchParameters(
             platforms = GiveawayPlatform.entries.map { GiveawayPlatformSelection(it, it == GiveawayPlatform.PC) }.toImmutableList(),
             types = GiveawayType.entries.map { GiveawayTypeSelection(it, it == GiveawayType.GAME) }.toImmutableList(),
-            sortBy = GiveawaySortBy.POPULARITY,
+            sortBy = GiveawaySortBy.DATE,
         )
     }
 }

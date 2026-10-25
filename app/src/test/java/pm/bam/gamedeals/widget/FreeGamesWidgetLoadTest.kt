@@ -59,14 +59,14 @@ class FreeGamesWidgetLoadTest {
     private fun FreeGamesState.games() = (this as FreeGamesState.Loaded).games
 
     @Test
-    fun it_asks_for_pc_games_most_popular_first() = runTest {
+    fun it_asks_for_pc_games_newest_first_like_the_giveaways_tab() = runTest {
         cached()
 
         load()
 
         verify {
             giveawaysRepository.observeGiveaways(match {
-                it.sortBy == GiveawaySortBy.POPULARITY &&
+                it.sortBy == GiveawaySortBy.DATE &&
                     it.platforms.filter { p -> p.selected }.map { p -> p.platform } == listOf(GiveawayPlatform.PC) &&
                     it.types.filter { t -> t.selected }.map { t -> t.type } == listOf(GiveawayType.GAME)
             })

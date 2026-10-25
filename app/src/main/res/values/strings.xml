@@ -24,9 +24,9 @@
     <string name="shortcut_waitlist_long">My waitlist</string>
 
     <!-- Free Games home-screen widget. -->
-    <string name="widget_free_games_name">Free Games</string>
-    <string name="widget_free_games_description">PC games that are free to keep right now.</string>
-    <string name="widget_free_games_header">Free to keep</string>
+    <string name="widget_free_games_name">Free PC Games</string>
+    <string name="widget_free_games_description">Full PC games that are free to keep right now, newest first. No DLC or loot.</string>
+    <string name="widget_free_games_header">Free PC games</string>
     <string name="widget_free_games_error">Couldn\'t load giveaways. Tap to open the app.</string>
     <string name="widget_free_games_empty">No free PC games right now. Check back soon.</string>
     <string name="widget_free_games_ends">ends %1$s</string>
