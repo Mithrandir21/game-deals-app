@@ -40,3 +40,10 @@
 # (constructed via Koin, not Room) and entity members Room's generated code maps by name.
 -keep @androidx.room.Entity class * { *; }
 -keep @androidx.room.ProvidedTypeConverter class * { *; }
+
+# ---- Error reporting ----------------------------------------------------------------------------
+# R8 merges exception classes of the same shape, so Sentry would name an HTTP 504 "BadRequest" and a
+# Ktor server error "RedirectResponseException". Pinning the names keeps each type separate and true.
+-keepnames class pm.bam.gamedeals.** extends java.lang.Throwable
+-keepnames class io.ktor.client.plugins.ResponseException
+-keepnames class * extends io.ktor.client.plugins.ResponseException
