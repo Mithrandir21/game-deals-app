@@ -87,7 +87,9 @@ internal fun NavGraph(
     LaunchedEffect(Unit) {
         AppShortcutBus.requests.collect { shortcut ->
             when (shortcut) {
-                AppShortcut.Giveaways -> navActions.navigateToGiveaways()
+                // Tabs must go through navigateTopLevel: a plain push leaves Home's saved-state slot unset, so the
+                // next Home tap saves Giveaways into it and restores Giveaways instead of Home.
+                AppShortcut.Giveaways -> navActions.navigateTopLevel(Destination.Giveaways)
                 AppShortcut.Deals -> navActions.navigateTopLevel(Destination.Deals)
                 is AppShortcut.Game -> navActions.navigateToGame(shortcut.gameId)
                 AppShortcut.Waitlist -> {

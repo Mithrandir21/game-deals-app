@@ -112,12 +112,6 @@ internal class NavigationActions(private val navController: NavHostController) {
     /** Clear the active search (the app-shell toolbar search field was closed). */
     fun clearSearch() = SearchController.clear()
 
-    fun navigateToGiveaways() {
-        navController.navigate(Destination.Giveaways) {
-            restoreState = true
-        }
-    }
-
     fun navigateToBundles() {
         navController.navigate(Destination.Bundles) {
             restoreState = true
