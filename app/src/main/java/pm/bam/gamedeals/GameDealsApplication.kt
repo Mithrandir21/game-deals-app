@@ -3,6 +3,7 @@ package pm.bam.gamedeals
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.updateAll
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -14,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -41,6 +43,8 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
+import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.widget.FreeGamesWidget
 import pm.bam.gamedeals.widget.WaitlistDealsWidget
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.appupdate.di.appUpdateModule
@@ -270,30 +274,43 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     }
 
     /**
-     * Redraws the Waitlist deals widget when sign-in, the waitlist, or its priced snapshot changes, so it doesn't wait
-     * for its 3-hour system refresh after the user signs out or waitlists a game. The first emission is dropped (it is
-     * the state the widget already shows) and bursts are debounced. A no-op when no widget is placed. The widget's own
-     * refresh updates the snapshot too, but its redraw then finds the snapshot fresh, so this can't loop.
+     * Redraws the widgets when their data changes, so they don't wait for their 3-hour system refresh: the Waitlist
+     * deals widget after the user signs in or out, waitlists a game, or its priced snapshot changes; the Free Games
+     * widget whenever giveaways are fetched (e.g. the Giveaways tab refreshed them). The first emission is dropped (it is
+     * the state the widget already shows) and bursts are debounced. A no-op when no widget is placed. A widget's own
+     * refresh updates its data too, but the redraw then finds that data fresh, so this can't loop.
      */
-    @OptIn(FlowPreview::class)
     private fun runWidgetUpdates() {
-        applicationScope.launch {
+        redrawOnChange(
             combine(
                 get<AuthTokenStore>().observeAuthState().map { it is AuthState.LoggedIn },
                 get<WaitlistRepository>().observeWaitlistIds(),
                 get<WaitlistRepository>().observeWaitlistDisplay(),
-            ) { loggedIn, ids, snapshot -> Triple(loggedIn, ids, snapshot) }
+            ) { loggedIn, ids, snapshot -> Triple(loggedIn, ids, snapshot) },
+            name = "Waitlist deals",
+        ) { WaitlistDealsWidget() }
+        // Every fetch restamps all rows' expiry, so the oldest stamp changes exactly when giveaways are fetched.
+        redrawOnChange(
+            get<GiveawaysRepository>().observeGiveaways().map { list -> list.minOfOrNull { it.expires } },
+            name = "Free Games",
+        ) { FreeGamesWidget() }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun redrawOnChange(changes: Flow<Any?>, name: String, widget: () -> GlanceAppWidget) {
+        applicationScope.launch {
+            changes
                 .distinctUntilChanged()
                 .drop(1)
                 .debounce(WIDGET_UPDATE_DEBOUNCE_MILLIS)
                 .collect {
                     try {
-                        WaitlistDealsWidget().updateAll(this@GameDealsApplication)
+                        widget().updateAll(this@GameDealsApplication)
                     } catch (ce: CancellationException) {
                         throw ce
                     } catch (t: Throwable) {
                         try {
-                            error(logger, throwable = t) { "Waitlist deals widget update failed" }
+                            error(logger, throwable = t) { "$name widget update failed" }
                         } catch (_: Throwable) {
                         }
                     }

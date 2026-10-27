@@ -75,9 +75,10 @@ class FreeGamesWidgetReceiver : GlanceAppWidgetReceiver() {
 /**
  * Home-screen widget: full PC games (no DLC or loot) that are free to keep right now, newest first — the Android twin of
  * the iOS Free Games widget (`iosApp/GameDealsWidget`). Unlike iOS it reads the app's own giveaways cache through
- * [GiveawaysRepository], refreshing it when stale, in the Giveaways tab's default order. Tapping it opens that tab, which
- * also lists other platforms and DLC; the "Free PC games" header makes the widget's narrower filter clear. The system
- * refreshes it every 3 hours (`res/xml/free_games_widget_info.xml`).
+ * [GiveawaysRepository], refetching it when it is older than [FRESH_FOR_MILLIS] (sooner than the app's own cache TTL), in
+ * the Giveaways tab's default order. Tapping it opens that tab, which also lists other platforms and DLC; the "Free PC
+ * games" header makes the widget's narrower filter clear. The system refreshes it every 3 hours
+ * (`res/xml/free_games_widget_info.xml`), and the app redraws it whenever it fetches new giveaways (GameDealsApplication).
  */
 class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
 
@@ -99,7 +100,7 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
     @VisibleForTesting
     internal suspend fun load(context: Context): FreeGamesState {
         val refreshFailed = try {
-            giveawaysRepository.refreshGiveaways()
+            giveawaysRepository.refreshGiveawaysIfOlderThan(FRESH_FOR_MILLIS)
             false
         } catch (ce: CancellationException) {
             throw ce
@@ -121,8 +122,11 @@ class FreeGamesWidget : GlanceAppWidget(), KoinComponent {
         thumbnail = loadWidgetThumbnail(context, thumbnail),
     )
 
-    private companion object {
-        val PC_GAMES_NEWEST_FIRST = GiveawaySearchParameters(
+    internal companion object {
+        /** Matches the widget's system refresh period, so each periodic redraw shows freshly fetched giveaways. */
+        internal const val FRESH_FOR_MILLIS = 3 * 60 * 60 * 1000L
+
+        private val PC_GAMES_NEWEST_FIRST = GiveawaySearchParameters(
             platforms = GiveawayPlatform.entries.map { GiveawayPlatformSelection(it, it == GiveawayPlatform.PC) }.toImmutableList(),
             types = GiveawayType.entries.map { GiveawayTypeSelection(it, it == GiveawayType.GAME) }.toImmutableList(),
             sortBy = GiveawaySortBy.DATE,

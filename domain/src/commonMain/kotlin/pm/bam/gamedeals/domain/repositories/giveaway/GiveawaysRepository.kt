@@ -23,6 +23,9 @@ interface GiveawaysRepository {
     fun observeGiveaways(giveawaySearchParameters: GiveawaySearchParameters): Flow<List<Giveaway>>
 
     suspend fun refreshGiveaways()
+
+    /** Like [refreshGiveaways], but also refetches when the cache was fetched more than [maxAgeMillis] ago. */
+    suspend fun refreshGiveawaysIfOlderThan(maxAgeMillis: Long)
 }
 
 internal class GiveawaysRepositoryImpl(
@@ -78,5 +81,13 @@ internal class GiveawaysRepositoryImpl(
     override suspend fun refreshGiveaways() {
         val refreshed = cache.refreshIfNeeded()
         debug(logger) { "Giveaways refresh needed: $refreshed" }
+    }
+
+    override suspend fun refreshGiveawaysIfOlderThan(maxAgeMillis: Long) {
+        // Every row is stamped with fetch time + TTL, so the oldest stamp gives the fetch time.
+        val fetchedAt = giveawaysDao.getAllGiveaways().minOfOrNull { it.expires }?.minus(GIVEAWAYS_TTL_MILLIS)
+        val tooOld = fetchedAt != null && clock.nowMillis() - fetchedAt > maxAgeMillis
+        val refreshed = cache.refreshIfNeeded(force = tooOld)
+        debug(logger) { "Giveaways refresh (max age $maxAgeMillis ms) needed: $refreshed" }
     }
 }

@@ -2,6 +2,7 @@ package pm.bam.gamedeals.widget
 
 import android.content.Context
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -53,7 +54,7 @@ class FreeGamesWidgetLoadTest {
     }
 
     private fun refreshFails() {
-        coEvery { giveawaysRepository.refreshGiveaways() } throws IOException("offline")
+        coEvery { giveawaysRepository.refreshGiveawaysIfOlderThan(any()) } throws IOException("offline")
     }
 
     private fun FreeGamesState.games() = (this as FreeGamesState.Loaded).games
@@ -71,6 +72,15 @@ class FreeGamesWidgetLoadTest {
                     it.types.filter { t -> t.selected }.map { t -> t.type } == listOf(GiveawayType.GAME)
             })
         }
+    }
+
+    @Test
+    fun it_refetches_giveaways_older_than_its_refresh_period() = runTest {
+        cached()
+
+        load()
+
+        coVerify { giveawaysRepository.refreshGiveawaysIfOlderThan(FreeGamesWidget.FRESH_FOR_MILLIS) }
     }
 
     @Test

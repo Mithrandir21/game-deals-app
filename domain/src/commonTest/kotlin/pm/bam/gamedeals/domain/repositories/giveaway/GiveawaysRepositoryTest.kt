@@ -21,6 +21,7 @@ import pm.bam.gamedeals.domain.models.GiveawaySortBy
 import pm.bam.gamedeals.domain.models.GiveawayType
 import pm.bam.gamedeals.domain.models.GiveawayTypeSelection
 import pm.bam.gamedeals.domain.source.GamerPowerSource
+import pm.bam.gamedeals.domain.utils.millisInHour
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.MAX_DATETIME
@@ -80,6 +81,38 @@ class GiveawaysRepositoryTest {
 
         verifySuspend(exactly(0)) { gamerPowerSource.fetchGiveaways() }
         verifySuspend(exactly(1)) { giveawaysDao.getAllGiveaways() }
+    }
+
+    @Test
+    fun refresh_if_older_than_refetches_an_unexpired_cache_fetched_too_long_ago() = runTest {
+        // Fetched 4 hours ago: still inside the TTL, but older than the 3 hours asked for.
+        val fetchedAt = now - millisInHour * 4
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(giveaway(expires = fetchedAt + GIVEAWAYS_TTL_MILLIS))
+        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(giveaway())
+
+        impl.refreshGiveawaysIfOlderThan(millisInHour * 3)
+
+        verifySuspend(exactly(1)) { gamerPowerSource.fetchGiveaways() }
+    }
+
+    @Test
+    fun refresh_if_older_than_skips_a_cache_fetched_recently_enough() = runTest {
+        val fetchedAt = now - millisInHour * 2
+        everySuspend { giveawaysDao.getAllGiveaways() } returns listOf(giveaway(expires = fetchedAt + GIVEAWAYS_TTL_MILLIS))
+
+        impl.refreshGiveawaysIfOlderThan(millisInHour * 3)
+
+        verifySuspend(exactly(0)) { gamerPowerSource.fetchGiveaways() }
+    }
+
+    @Test
+    fun refresh_if_older_than_fetches_into_an_empty_cache() = runTest {
+        everySuspend { giveawaysDao.getAllGiveaways() } returns emptyList()
+        everySuspend { gamerPowerSource.fetchGiveaways() } returns listOf(giveaway())
+
+        impl.refreshGiveawaysIfOlderThan(millisInHour * 3)
+
+        verifySuspend(exactly(1)) { gamerPowerSource.fetchGiveaways() }
     }
 
     @Test
