@@ -1,0 +1,107 @@
+package pm.bam.gamedeals.domain.repositories.wintersale
+
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.time.Clock
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
+
+class WinterSaleOffersRepositoryTest {
+    @Test
+    fun deduplicates_and_chunks_four_hundred_thirty_ids_without_exceeding_the_api_cap() = runTest {
+        val source = FakeOfferSource()
+        val ids = (1..430).map { "game-$it" }
+
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 123L }).load(ids + "game-1" + "", "GB")
+
+        assertEquals(listOf(200, 200, 30), source.calls.map { it.first.size })
+        assertTrue(source.calls.all { it.second == "GB" })
+        assertEquals(430, result.perGame.size)
+        assertEquals("GB", result.country)
+        assertEquals(123L, result.refreshedAtEpochMillis)
+    }
+
+    @Test
+    fun one_failed_chunk_does_not_hide_successful_chunks() = runTest {
+        val source = FakeOfferSource(failOnId = "game-201")
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load((1..430).map { "game-$it" }, "GB")
+
+        assertIs<WinterSalePriceStatus.Priced>(result.perGame["game-1"])
+        assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game-201"])
+        assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game-400"])
+        assertIs<WinterSalePriceStatus.Priced>(result.perGame["game-401"])
+    }
+
+    @Test
+    fun absent_row_and_explicitly_empty_price_have_different_states() = runTest {
+        val source = object : WinterSaleOfferSource {
+            override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> = mapOf("empty" to null)
+        }
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("empty", "missing"), "GB")
+
+        assertEquals(WinterSalePriceStatus.NoCurrentOffer, result.perGame["empty"])
+        assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["missing"])
+    }
+
+    @Test
+    fun mismatched_region_cannot_be_reused() = runTest {
+        val source = object : WinterSaleOfferSource {
+            override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> =
+                mapOf("game" to offer("game", country = "US"))
+        }
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("game"), "GB")
+
+        assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game"])
+    }
+
+    @Test
+    fun historical_low_comparison_requires_the_same_currency() {
+        assertTrue(offer("game", historicalLow = WinterSaleMoney(10.0, "GBP")).isAtHistoricalLow)
+        assertFalse(offer("game", historicalLow = WinterSaleMoney(10.0, "USD")).isAtHistoricalLow)
+        assertTrue(offer("game", cut = 1).isDiscounted)
+        assertFalse(offer("game", cut = 0).isDiscounted)
+    }
+
+    @Test
+    fun cancellation_stops_the_refresh() = runTest {
+        val source = object : WinterSaleOfferSource {
+            override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> = throw CancellationException("cancelled")
+        }
+        assertFailsWith<CancellationException> { WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("game"), "GB") }
+    }
+}
+
+private class FakeOfferSource(private val failOnId: String? = null) : WinterSaleOfferSource {
+    val calls = mutableListOf<Pair<List<String>, String>>()
+
+    override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> {
+        calls += gameIds to country
+        if (failOnId != null && failOnId in gameIds) error("chunk failed")
+        return gameIds.associateWith { offer(it, country) }
+    }
+}
+
+private fun offer(
+    id: String,
+    country: String = "GB",
+    cut: Int = 20,
+    historicalLow: WinterSaleMoney? = null,
+) = WinterSaleOffer(
+    gameId = id,
+    country = country,
+    shopId = 1,
+    shopName = "Example Shop",
+    price = WinterSaleMoney(10.0, "GBP"),
+    regular = WinterSaleMoney(12.5, "GBP"),
+    cutPercent = cut,
+    url = "https://example.com/game",
+    voucher = null,
+    activationLabels = listOf("Steam"),
+    checkedAtEpochMillis = null,
+    expiresAtEpochMillis = null,
+    historicalLow = historicalLow,
+)

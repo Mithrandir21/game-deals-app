@@ -15,6 +15,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadLookupResponse
+import pm.bam.gamedeals.remote.itad.models.RemoteItadOverviewResponse
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
 
 /**
@@ -90,6 +91,21 @@ class ItadGamesApi(private val httpClient: HttpClient) {
                 contentType(ContentType.Application.Json)
                 setBody(gameIds)
             }.body<List<RemoteItadGamePrices>>()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    suspend fun getOverview(gameIds: List<String>, country: String): ApiResponse<RemoteItadOverviewResponse> = try {
+        ApiResponse.Success(
+            httpClient.post("/games/overview/v2") {
+                parameter("country", country)
+                parameter("vouchers", true)
+                contentType(ContentType.Application.Json)
+                setBody(gameIds)
+            }.body<RemoteItadOverviewResponse>()
         )
     } catch (e: CancellationException) {
         throw e

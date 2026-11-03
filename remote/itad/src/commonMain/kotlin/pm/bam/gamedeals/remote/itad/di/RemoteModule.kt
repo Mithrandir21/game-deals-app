@@ -5,10 +5,12 @@ import pm.bam.gamedeals.domain.source.DealsSource
 import pm.bam.gamedeals.domain.source.ItadAccountSource
 import pm.bam.gamedeals.domain.source.ItadLoginSource
 import pm.bam.gamedeals.domain.source.StatsSource
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOfferSource
 import pm.bam.gamedeals.remote.itad.ItadAccountSourceImpl
 import pm.bam.gamedeals.remote.itad.ItadLoginSourceImpl
 import pm.bam.gamedeals.remote.itad.ItadSourceImpl
 import pm.bam.gamedeals.remote.itad.ItadStatsSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadWinterSaleOfferSource
 
 /**
  * Binds the ITAD implementations of the domain source ports (epic #205 / #219).
@@ -18,6 +20,7 @@ import pm.bam.gamedeals.remote.itad.ItadStatsSourceImpl
  * account port (epic #219, Phase 2.3) over the bearer (OAuth) client.
  */
 val itadRemoteModule = module {
+    single<WinterSaleOfferSource> { ItadWinterSaleOfferSource(get(), get(), get()) }
     single<DealsSource> {
         ItadSourceImpl(
             get(),

@@ -235,6 +235,38 @@ data class RemoteItadGamePrices(
     @SerialName("deals") val deals: List<RemoteItadDealEntry> = emptyList(),
 )
 
+// --- /games/overview/v2 ---
+@Serializable
+data class RemoteItadOverviewResponse(
+    @SerialName("prices") val prices: List<RemoteItadOverviewGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteItadOverviewGame(
+    @SerialName("id") val id: String,
+    @SerialName("current") val current: RemoteItadOverviewOffer? = null,
+    @SerialName("lowest") val lowest: RemoteItadOverviewLow? = null,
+)
+
+@Serializable
+data class RemoteItadOverviewOffer(
+    @SerialName("shop") val shop: RemoteItadShopRef,
+    @SerialName("price") val price: RemoteItadPrice,
+    @SerialName("regular") val regular: RemoteItadPrice? = null,
+    @SerialName("cut") val cut: Int = 0,
+    @SerialName("url") val url: String,
+    @SerialName("voucher") val voucher: String? = null,
+    @SerialName("drm") val drm: List<RemoteItadOverviewDrm> = emptyList(),
+    @SerialName("timestamp") val timestamp: String? = null,
+    @SerialName("expiry") val expiry: String? = null,
+)
+
+@Serializable
+data class RemoteItadOverviewDrm(@SerialName("id") val id: Int, @SerialName("name") val name: String? = null)
+
+@Serializable
+data class RemoteItadOverviewLow(@SerialName("price") val price: RemoteItadPrice? = null)
+
 // --- /games/history/v2 ---
 @Serializable
 data class RemoteItadHistoryDeal(
