@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
@@ -74,8 +76,14 @@ import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_voucher
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_was
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_waitlist
 
+private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+/** Event, offer and price-check times read in the phone's own time zone, with the date so a weekday is never ambiguous. */
 @OptIn(ExperimentalTime::class)
-internal fun winterSaleUtc(epochMillis: Long): String = Instant.fromEpochMilliseconds(epochMillis).toString().take(16).replace('T', ' ') + " UTC"
+internal fun winterSaleTime(epochMillis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val time = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone)
+    return "${time.day} ${MONTH_ABBREV[time.month.ordinal]} ${time.year}, ${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
+}
 
 @Composable
 internal fun WinterSaleHomeCard(event: WinterSaleEventState.Available, onOpen: () -> Unit) {
@@ -84,8 +92,8 @@ internal fun WinterSaleHomeCard(event: WinterSaleEventState.Available, onOpen: (
             Text(event.event.title, style = MaterialTheme.typography.titleLarge)
             Text(if (event.phase == WinterSalePhase.BeforeSale) event.event.beforeSaleCopy else event.event.duringSaleCopy)
             Text(
-                if (event.phase == WinterSalePhase.BeforeSale) stringResource(Res.string.winter_sale_starts, winterSaleUtc(event.event.saleStartEpochMillis))
-                else stringResource(Res.string.winter_sale_ends, winterSaleUtc(event.event.endEpochMillis)),
+                if (event.phase == WinterSalePhase.BeforeSale) stringResource(Res.string.winter_sale_starts, winterSaleTime(event.event.saleStartEpochMillis))
+                else stringResource(Res.string.winter_sale_ends, winterSaleTime(event.event.endEpochMillis)),
                 style = MaterialTheme.typography.labelMedium,
             )
         }
@@ -139,9 +147,9 @@ private fun WinterSaleGuideContent(
                             )
                             Text(
                                 if (event.phase == WinterSalePhase.BeforeSale) {
-                                    stringResource(Res.string.winter_sale_starts, winterSaleUtc(event.event.saleStartEpochMillis))
+                                    stringResource(Res.string.winter_sale_starts, winterSaleTime(event.event.saleStartEpochMillis))
                                 } else {
-                                    stringResource(Res.string.winter_sale_ends, winterSaleUtc(event.event.endEpochMillis))
+                                    stringResource(Res.string.winter_sale_ends, winterSaleTime(event.event.endEpochMillis))
                                 },
                             )
                             state.country?.let { Text(stringResource(Res.string.winter_sale_region, it.name, it.currency)) }
@@ -210,9 +218,9 @@ private fun WinterSaleDealCard(card: WinterSaleGuideCard, fallbackCheckedAt: Lon
                 Text(if (offer.activationLabels.isEmpty()) stringResource(Res.string.winter_sale_activation_unknown)
                     else stringResource(Res.string.winter_sale_activation, offer.activationLabels.joinToString(", ")))
                 offer.voucher?.let { Text(stringResource(Res.string.winter_sale_voucher, it)) }
-                offer.expiresAtEpochMillis?.let { Text(stringResource(Res.string.winter_sale_expires, winterSaleUtc(it))) }
+                offer.expiresAtEpochMillis?.let { Text(stringResource(Res.string.winter_sale_expires, winterSaleTime(it))) }
             }
-            Text(stringResource(Res.string.winter_sale_checked, winterSaleUtc(offer.checkedAtEpochMillis ?: fallbackCheckedAt)),
+            Text(stringResource(Res.string.winter_sale_checked, winterSaleTime(offer.checkedAtEpochMillis ?: fallbackCheckedAt)),
                 style = MaterialTheme.typography.labelSmall)
             if (offer.url.isNotBlank()) TextButton(onClick = { onOffer(offer.url) }) {
                 Text(stringResource(if (stale) Res.string.winter_sale_last_link else Res.string.winter_sale_offer_link))

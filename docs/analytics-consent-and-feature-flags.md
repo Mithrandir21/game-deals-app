@@ -1,5 +1,7 @@
 # Analytics consent ↔ Feature flags
 
+> **Historical.** PostHog was removed from Game Deals on 2026-09-19 and its analytics and feature-flag seams are now no-ops, so the app sends no product analytics. This record is kept for history only; do not use it as current privacy guidance.
+
 **Last reviewed:** 2026-08-30
 **Scope:** `logging/**` (analytics + featureflags seams), `app/**` (PostHog bootstrap), onboarding/account consent UI
 **Why this doc exists:** PostHog backs **both** product-analytics events and feature flags. Consent gates one but not the other, on purpose. This records how that decoupling works, what it does and doesn't protect, and the residual privacy gap to keep in mind when changing either path.

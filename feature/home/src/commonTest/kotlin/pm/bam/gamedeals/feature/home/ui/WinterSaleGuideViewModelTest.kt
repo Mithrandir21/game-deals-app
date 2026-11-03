@@ -116,6 +116,36 @@ class WinterSaleGuideViewModelTest {
         }
     }
 
+    @Test
+    fun the_open_guide_reloads_as_the_sale_starts_and_hides_at_the_end() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime })
+        val event = WinterSaleEvent("winter", 0L, 5 * 60 * 1000L, 10 * 60 * 1000L, "Winter", "Before", "During")
+        fixture.events.state = WinterSaleEventState.Available(event, WinterSalePhase.BeforeSale, 4 * 60 * 1000L, false)
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals(listOf(false), fixture.guide.saleActive)
+
+            fixture.events.state = WinterSaleEventState.Available(event, WinterSalePhase.OnSale, 5 * 60 * 1000L, false)
+            advanceTimeBy(60 * 1000L + 1)
+            runCurrent()
+            assertEquals(listOf(false, true), fixture.guide.saleActive)
+            assertEquals(WinterSalePhase.OnSale, (fixture.vm.state.value.event as WinterSaleEventState.Available).phase)
+
+            fixture.events.state = WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Ended)
+            advanceTimeBy(5 * 60 * 1000L + 1)
+            runCurrent()
+            assertNull(fixture.vm.state.value.content)
+            assertTrue(fixture.vm.state.value.event is WinterSaleEventState.Hidden)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun fixture(clock: Clock): Fixture {
         val country = MutableStateFlow(Country("GB", "United Kingdom", "GBP"))
         val adult = MutableStateFlow(false)
@@ -145,9 +175,11 @@ class WinterSaleGuideViewModelTest {
 
     private class FakeGuide : WinterSaleGuideRepository {
         val calls = mutableListOf<String>()
+        val saleActive = mutableListOf<Boolean>()
         var fail = false
         override suspend fun load(country: String, includeAdult: Boolean, saleStartEpochMs: Long, saleActive: Boolean): WinterSaleGuideContent {
             calls += country
+            this.saleActive += saleActive
             if (fail) error("offline")
             val safe = card("safe", country, true)
             val adult = card("adult", country, false)

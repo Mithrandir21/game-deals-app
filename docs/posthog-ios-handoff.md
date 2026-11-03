@@ -1,5 +1,7 @@
 # PostHog iOS — implementation handoff
 
+> **Historical.** PostHog was removed from Game Deals on 2026-09-19 and its analytics and feature-flag seams are now no-ops, so the app sends no product analytics. This record is kept for history only; do not use it as current privacy guidance.
+
 > **Status: done — build-verified on macOS (Xcode 26.5, iOS 26.5 arm64 sim, 2026-06-24).** The §3 iOS-native
 > work is complete: `posthog-ios` 3.38.0 linked via SPM (product `PostHog`), `Secrets`/`Info.plist` plumbing in,
 > `startPostHog()` called in the `AppDelegate`. `BUILD SUCCEEDED` with the SDK linked (no `-ObjC`/symbol issues)

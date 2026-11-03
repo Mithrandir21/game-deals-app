@@ -119,6 +119,7 @@ android {
         buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
         buildConfigField("String", "ITAD_OAUTH_CLIENT_ID", "\"$itadOauthClientId\"")
         buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
+        buildConfigField("String", "WINTER_SALE_EVENT_BASE_URL", "\"https://gamedeals.bam.pm\"")
     }
 
     buildFeatures.buildConfig = true
@@ -128,6 +129,11 @@ android {
             // Pair flag for the KMP-library `enableCoverage = true`; the root `jacocoAndroidTestReport` task folds the resulting `coverage.ec`
             // files into the parallel JaCoCo report alongside Kover's JVM coverage.
             enableAndroidTestCoverage = true
+            // Event rehearsals: read the event document from a local Worker, and install beside the store app so its data is untouched.
+            providers.gradleProperty("gamedeals.winterSaleEventBaseUrl").orNull?.let {
+                buildConfigField("String", "WINTER_SALE_EVENT_BASE_URL", "\"$it\"")
+            }
+            providers.gradleProperty("gamedeals.debugApplicationIdSuffix").orNull?.let { applicationIdSuffix = it }
         }
         release {
             isMinifyEnabled = true

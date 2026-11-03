@@ -80,6 +80,23 @@ class WinterSaleGuideRepositoryTest {
         assertEquals(listOf("popular"), result.popular.cards.map { it.candidate.gameId })
     }
 
+    @Test
+    fun historical_lows_lead_then_discount_and_equal_cards_keep_one_order_whatever_the_response_order() = runTest {
+        val ids = listOf("delta", "alpha", "low", "charlie", "big")
+        val offers = mapOf(
+            "delta" to offer("delta", 20), "alpha" to offer("alpha", 20), "charlie" to offer("charlie", 20),
+            "big" to offer("big", 80), "low" to offer("low", 5).copy(historicalLow = WinterSaleMoney(10.0, "GBP")),
+        )
+        val orders = listOf(ids, ids.reversed()).map { order ->
+            val candidates = FakeCandidates().apply { wait = WinterSaleRawSection(order.map { raw(it) }) }
+            val series = FakeSeries(WinterSaleSeriesRawSection(emptyList(), checking = false, unavailable = false, moreSeriesFollowed = false))
+            WinterSaleGuideRepositoryImpl(candidates, series, FakeOffers(offers)).load("GB", false, 1L, true).waitlist.cards.map { it.candidate.gameId }
+        }
+
+        assertEquals(listOf("low", "big", "alpha", "charlie", "delta"), orders.first())
+        assertEquals(orders.first(), orders.last())
+    }
+
     private class FakeCandidates : WinterSaleCandidatesRepository {
         var wait = WinterSaleRawSection(emptyList())
         var popular = WinterSaleRawSection(emptyList())

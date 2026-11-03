@@ -14,11 +14,13 @@ import pm.bam.gamedeals.remote.wintersale.WinterSaleEventHttpSource
 
 private val winterSaleEventClient = named("winter-sale-event")
 
-fun remoteModule(buildType: RemoteBuildType) = module {
+const val WINTER_SALE_EVENT_BASE_URL = "https://gamedeals.bam.pm"
+
+fun remoteModule(buildType: RemoteBuildType, winterSaleEventBaseUrl: String = WINTER_SALE_EVENT_BASE_URL) = module {
     single<RemoteBuildUtil> { RemoteBuildUtilImpl(buildType) }
     single<RemoteExceptionTransformer> { RemoteExceptionTransformerImpl() }
     single<HttpClient>(winterSaleEventClient) {
-        gameDealsHttpClient(json = get(), buildUtil = get(), baseUrl = "https://gamedeals.bam.pm")
+        gameDealsHttpClient(json = get(), buildUtil = get(), baseUrl = winterSaleEventBaseUrl)
     }
     single<WinterSaleEventSource> { WinterSaleEventHttpSource(get(winterSaleEventClient)) }
 }
