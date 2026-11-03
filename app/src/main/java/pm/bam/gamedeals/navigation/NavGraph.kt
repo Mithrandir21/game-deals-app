@@ -42,6 +42,7 @@ import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -158,6 +159,13 @@ internal fun NavGraph(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+                goToWinterSale = { navActions.navigateToWinterSaleGuide() },
+            )
+
+            winterSaleGuideScreen(
+                onBack = { navController.popBackStack() },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToOffer = { url -> platformActions.openInApp(url) },
             )
 
             dealsScreen(

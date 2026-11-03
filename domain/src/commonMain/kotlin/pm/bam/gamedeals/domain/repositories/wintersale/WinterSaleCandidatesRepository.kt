@@ -10,7 +10,17 @@ import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 
-data class WinterSaleCandidate(val gameId: String, val title: String, val artwork: GameArtwork, val offer: WinterSaleOffer)
+data class WinterSaleCandidate(val gameId: String, val title: String, val artwork: GameArtwork, val offer: WinterSaleOffer, val adult: Boolean? = null)
+
+data class WinterSaleRawCandidate(val gameId: String, val title: String, val artwork: GameArtwork, val adult: Boolean?)
+
+data class WinterSaleRawSection(
+    val games: List<WinterSaleRawCandidate>,
+    val incomplete: Boolean = false,
+    val unavailable: Boolean = false,
+    val signInRequired: Boolean = false,
+    val shortFeed: Boolean = false,
+)
 
 data class WinterSaleCandidateSection(
     val games: List<WinterSaleCandidate>,
@@ -27,6 +37,8 @@ interface WinterSalePopularSource {
 }
 
 interface WinterSaleCandidatesRepository {
+    suspend fun waitlistCandidates(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleRawSection
+    suspend fun popularCandidates(country: String, includeAdult: Boolean): WinterSaleRawSection
     suspend fun waitlist(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleCandidateSection
     suspend fun popular(country: String, includeAdult: Boolean): WinterSaleCandidateSection
 }
@@ -40,10 +52,10 @@ internal class WinterSaleCandidatesRepositoryImpl(
     private val offersRepository: WinterSaleOffersRepository,
     private val clock: Clock,
 ) : WinterSaleCandidatesRepository {
-    override suspend fun waitlist(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleCandidateSection {
-        if (authTokenStore.getAccessToken() == null) return WinterSaleCandidateSection(emptyList(), signInRequired = true)
+    override suspend fun waitlistCandidates(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleRawSection {
+        if (authTokenStore.getAccessToken() == null) return WinterSaleRawSection(emptyList(), signInRequired = true)
         val entries = try { waitlistRepository.getWaitlist() } catch (error: CancellationException) { throw error } catch (_: Throwable) {
-            return WinterSaleCandidateSection(emptyList(), unavailable = true)
+            return WinterSaleRawSection(emptyList(), unavailable = true)
         }
         var snapshot = waitlistRepository.observeWaitlistDisplay().first()
         val now = clock.nowMillis()
@@ -57,20 +69,19 @@ internal class WinterSaleCandidatesRepositoryImpl(
             snapshot = waitlistRepository.observeWaitlistDisplay().first()
         }
         if (snapshot == null || snapshot.regionCode != country || snapshot.items.map { it.gameId }.toSet() != entries.map { it.gameId }.toSet()) {
-            return WinterSaleCandidateSection(emptyList(), incomplete = refreshFailed, unavailable = true)
+            return WinterSaleRawSection(emptyList(), incomplete = refreshFailed, unavailable = true)
         }
         val ranked = snapshot.items.asSequence()
             .filter { it.type == "game" && (includeAdult || it.mature == false) && it.hasDeal && (it.discountPercent ?: 0) > 0 }
             .sortedWith(compareByDescending<WaitlistDisplayItem> { it.isAtHistoricalLow }.thenByDescending { it.discountPercent ?: 0 }.thenBy { it.gameId })
             .take(SECTION_CANDIDATE_LIMIT).toList()
-        val prices = offersRepository.load(ranked.map { it.gameId }, country)
-        val games = ranked.mapNotNull { item -> item.toCandidate(prices.perGame[item.gameId]) }
-        return WinterSaleCandidateSection(games, incomplete = snapshot.priceFetchIncomplete || refreshFailed || prices.hasUnavailable())
+        return WinterSaleRawSection(ranked.map { WinterSaleRawCandidate(it.gameId, it.title, it.artwork, it.mature) },
+            incomplete = snapshot.priceFetchIncomplete || refreshFailed)
     }
 
-    override suspend fun popular(country: String, includeAdult: Boolean): WinterSaleCandidateSection {
+    override suspend fun popularCandidates(country: String, includeAdult: Boolean): WinterSaleRawSection {
         val fetched = try { popularSource.fetch(country, includeAdult, POPULAR_CANDIDATE_LIMIT) }
-        catch (error: CancellationException) { throw error } catch (_: Throwable) { return WinterSaleCandidateSection(emptyList(), unavailable = true) }
+        catch (error: CancellationException) { throw error } catch (_: Throwable) { return WinterSaleRawSection(emptyList(), unavailable = true) }
         val signedIn = authTokenStore.getAccessToken() != null
         val excluded = if (signedIn) {
             collectionRepository.observeCollectionIds().first() + waitlistRepository.observeWaitlistIds().first() + ignoredRepository.observeIgnoredIds().first()
@@ -78,19 +89,28 @@ internal class WinterSaleCandidatesRepositoryImpl(
         val candidates = fetched.asSequence()
             .filter { it.type == "game" && (includeAdult || it.mature == false) && it.gameId !in excluded }
             .distinctBy { it.gameId }.toList()
-        val prices = offersRepository.load(candidates.map { it.gameId }, country)
-        val games = candidates.mapNotNull { item -> item.toCandidate(prices.perGame[item.gameId]) }
-            .sortedWith(compareByDescending<WinterSaleCandidate> { it.offer.isAtHistoricalLow }
-                .thenByDescending { it.offer.cutPercent }.thenBy { it.gameId })
-            .take(SECTION_CANDIDATE_LIMIT)
-        return WinterSaleCandidateSection(games, incomplete = prices.hasUnavailable(), shortFeed = games.size < SECTION_CANDIDATE_LIMIT)
+        return WinterSaleRawSection(candidates.map { WinterSaleRawCandidate(it.gameId, it.title, it.artwork, it.mature) },
+            shortFeed = candidates.size < SECTION_CANDIDATE_LIMIT)
     }
 
-    private fun WaitlistDisplayItem.toCandidate(status: WinterSalePriceStatus?): WinterSaleCandidate? =
-        (status as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted }?.let { WinterSaleCandidate(gameId, title, artwork, it) }
+    override suspend fun waitlist(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleCandidateSection {
+        val raw = waitlistCandidates(country, includeAdult, saleStartEpochMs, saleActive)
+        return price(raw, country)
+    }
 
-    private fun WinterSalePopularGame.toCandidate(status: WinterSalePriceStatus?): WinterSaleCandidate? =
-        (status as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted }?.let { WinterSaleCandidate(gameId, title, artwork, it) }
+    override suspend fun popular(country: String, includeAdult: Boolean): WinterSaleCandidateSection = price(popularCandidates(country, includeAdult), country)
+
+    private suspend fun price(raw: WinterSaleRawSection, country: String): WinterSaleCandidateSection {
+        val prices = offersRepository.load(raw.games.map { it.gameId }, country)
+        val games = raw.games.mapNotNull { it.toCandidate(prices.perGame[it.gameId]) }
+            .sortedWith(compareByDescending<WinterSaleCandidate> { it.offer.isAtHistoricalLow }
+                .thenByDescending { it.offer.cutPercent }.thenBy { it.gameId }).take(SECTION_CANDIDATE_LIMIT)
+        return WinterSaleCandidateSection(games, incomplete = raw.incomplete || prices.hasUnavailable(), unavailable = raw.unavailable,
+            signInRequired = raw.signInRequired, shortFeed = raw.shortFeed || games.size < SECTION_CANDIDATE_LIMIT)
+    }
+
+    private fun WinterSaleRawCandidate.toCandidate(status: WinterSalePriceStatus?): WinterSaleCandidate? =
+        (status as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted }?.let { WinterSaleCandidate(gameId, title, artwork, it, adult) }
 
     private fun WinterSaleOfferLoad.hasUnavailable(): Boolean = perGame.values.any { it == WinterSalePriceStatus.Unavailable }
 

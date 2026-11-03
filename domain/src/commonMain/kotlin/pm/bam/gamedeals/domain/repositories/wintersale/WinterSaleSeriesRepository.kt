@@ -55,6 +55,15 @@ internal class WinterSaleSeriesMapStoreImpl(private val storage: Storage) : Wint
 
 data class WinterSaleSeriesCandidate(val game: WinterSaleCandidate, val seriesNames: List<String>)
 
+data class WinterSaleSeriesRawCandidate(val game: WinterSaleRawCandidate, val seriesNames: List<String>)
+
+data class WinterSaleSeriesRawSection(
+    val games: List<WinterSaleSeriesRawCandidate>,
+    val checking: Boolean,
+    val unavailable: Boolean,
+    val moreSeriesFollowed: Boolean,
+)
+
 data class WinterSaleSeriesSection(
     val games: List<WinterSaleSeriesCandidate>,
     val checking: Boolean,
@@ -64,6 +73,7 @@ data class WinterSaleSeriesSection(
 )
 
 interface WinterSaleSeriesRepository {
+    suspend fun candidates(includeAdult: Boolean): WinterSaleSeriesRawSection
     suspend fun load(country: String, includeAdult: Boolean): WinterSaleSeriesSection
 }
 
@@ -76,7 +86,7 @@ internal class WinterSaleSeriesRepositoryImpl(
     private val offersRepository: WinterSaleOffersRepository,
     private val clock: Clock,
 ) : WinterSaleSeriesRepository {
-    override suspend fun load(country: String, includeAdult: Boolean): WinterSaleSeriesSection {
+    override suspend fun candidates(includeAdult: Boolean): WinterSaleSeriesRawSection {
         val allFollowed = followedRepository.getFollowed().sortedWith(compareByDescending<FollowedFranchise> { it.addedAtMs }.thenBy { it.franchiseId })
         val selected = allFollowed.take(MAX_SERIES)
         val now = clock.nowMillis()
@@ -127,7 +137,10 @@ internal class WinterSaleSeriesRepositoryImpl(
                 }
                 if (id != null) resolved += WinterSaleSeriesMappedGame(id, game.title, game.erotic, game.coverImageId)
             }
-            val entry = WinterSaleSeriesMapEntry(franchise.franchiseId, franchise.addedAtMs, now, complete, resolved.distinctBy { it.itadId })
+            val mapped = resolved.groupBy { it.itadId }.values.map { matches ->
+                matches.first().copy(erotic = matches.map { it.erotic }.combinedAdultState())
+            }
+            val entry = WinterSaleSeriesMapEntry(franchise.franchiseId, franchise.addedAtMs, now, complete, mapped)
             maps[franchise.franchiseId] = entry
             if (!complete) checking = true
         }
@@ -135,18 +148,33 @@ internal class WinterSaleSeriesRepositoryImpl(
         val byGameId = linkedMapOf<String, Pair<WinterSaleSeriesMappedGame, MutableList<String>>>()
         for (franchise in selected) {
             for (game in maps[franchise.franchiseId]?.games.orEmpty()) {
-                if (!includeAdult && game.erotic != false) continue
-                byGameId.getOrPut(game.itadId) { game to mutableListOf() }.second += franchise.name
+                val existing = byGameId[game.itadId]
+                if (existing == null) {
+                    byGameId[game.itadId] = game to mutableListOf(franchise.name)
+                } else {
+                    existing.second += franchise.name
+                    byGameId[game.itadId] = existing.first.copy(erotic = listOf(existing.first.erotic, game.erotic).combinedAdultState()) to existing.second
+                }
             }
         }
-        val prices = offersRepository.load(byGameId.keys.toList(), country)
-        val candidates = byGameId.mapNotNull { (id, pair) ->
-            val offer = (prices.perGame[id] as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted } ?: return@mapNotNull null
-            WinterSaleSeriesCandidate(WinterSaleCandidate(id, pair.first.title, GameArtwork(boxart = pair.first.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }), offer), pair.second)
+        val candidates = byGameId.filter { (_, pair) -> includeAdult || pair.first.erotic == false }.map { (id, pair) -> WinterSaleSeriesRawCandidate(
+            WinterSaleRawCandidate(id, pair.first.title, GameArtwork(boxart = pair.first.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }),
+                pair.first.erotic), pair.second,
+        ) }
+        return WinterSaleSeriesRawSection(candidates, checking, unavailable, allFollowed.size > MAX_SERIES)
+    }
+
+    override suspend fun load(country: String, includeAdult: Boolean): WinterSaleSeriesSection {
+        val raw = candidates(includeAdult)
+        val prices = offersRepository.load(raw.games.map { it.game.gameId }, country)
+        val games = raw.games.mapNotNull { item ->
+            val offer = (prices.perGame[item.game.gameId] as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted }
+                ?: return@mapNotNull null
+            WinterSaleSeriesCandidate(WinterSaleCandidate(item.game.gameId, item.game.title, item.game.artwork, offer, item.game.adult), item.seriesNames)
         }.sortedWith(compareByDescending<WinterSaleSeriesCandidate> { it.game.offer.isAtHistoricalLow }
             .thenByDescending { it.game.offer.cutPercent }.thenBy { it.game.gameId }).take(SECTION_LIMIT)
-        return WinterSaleSeriesSection(candidates, checking, unavailable,
-            prices.perGame.values.any { it == WinterSalePriceStatus.Unavailable }, allFollowed.size > MAX_SERIES)
+        return WinterSaleSeriesSection(games, raw.checking, raw.unavailable,
+            prices.perGame.values.any { it == WinterSalePriceStatus.Unavailable }, raw.moreSeriesFollowed)
     }
 
     private companion object {
@@ -157,4 +185,10 @@ internal class WinterSaleSeriesRepositoryImpl(
         const val SECTION_LIMIT = 30
         const val MAP_TTL_MS = 7 * 24 * 60 * 60 * 1000L
     }
+}
+
+private fun List<Boolean?>.combinedAdultState(): Boolean? = when {
+    any { it == true } -> true
+    any { it == null } -> null
+    else -> false
 }

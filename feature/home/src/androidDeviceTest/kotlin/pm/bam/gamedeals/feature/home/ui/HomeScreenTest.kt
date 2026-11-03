@@ -26,6 +26,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.ui.PreviewDeal
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.logging.analytics.Analytics
@@ -56,11 +57,13 @@ class HomeScreenTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val viewModel: HomeViewModel = mockk(relaxed = true)
+    private val winterSaleEntry: WinterSaleEntryViewModel = mockk(relaxed = true)
 
     private lateinit var labels: Labels
 
     @Before
     fun setup() {
+        every { winterSaleEntry.event } returns MutableStateFlow<WinterSaleEventState.Available?>(null)
         every { viewModel.gamePeek } returns MutableStateFlow(null)
         every { viewModel.accountStats } returns MutableStateFlow(null)
         every { viewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
@@ -91,6 +94,7 @@ class HomeScreenTest {
                 onViewBundle = onViewBundle,
                 goToWeb = goToWeb,
                 viewModel = viewModel,
+                winterSaleEntry = winterSaleEntry,
             )
         }
     }

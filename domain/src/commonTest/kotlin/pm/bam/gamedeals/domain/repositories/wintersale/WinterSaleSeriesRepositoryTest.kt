@@ -74,6 +74,20 @@ class WinterSaleSeriesRepositoryTest {
     }
 
     @Test
+    fun one_unknown_classification_in_overlapping_series_hides_the_game_when_adult_is_off() = runTest {
+        val fixture = fixture(listOf(followed(1), followed(2)))
+        fixture.store.entries = listOf(
+            WinterSaleSeriesMapEntry(1, 1, 9_000L, true, listOf(WinterSaleSeriesMappedGame("shared", "Shared", false))),
+            WinterSaleSeriesMapEntry(2, 2, 9_000L, true, listOf(WinterSaleSeriesMappedGame("shared", "Shared", null))),
+        )
+
+        assertTrue(fixture.repo.candidates(false).games.isEmpty())
+        val visible = fixture.repo.candidates(true).games.single()
+        assertEquals(null, visible.game.adult)
+        assertEquals(listOf("Series 2", "Series 1"), visible.seriesNames)
+    }
+
+    @Test
     fun failed_franchise_keeps_its_previous_map_and_other_series_continue() = runTest {
         val fixture = fixture(listOf(followed(3), followed(2), followed(1)))
         fixture.store.entries = listOf(WinterSaleSeriesMapEntry(2, 2L, -700_000_000L, true,

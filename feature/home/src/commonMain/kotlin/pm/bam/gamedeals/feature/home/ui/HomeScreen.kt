@@ -93,6 +93,7 @@ import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
@@ -149,9 +150,13 @@ internal fun HomeScreen(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: HomeViewModel = koinViewModel()
+    onViewWinterSale: () -> Unit = {},
+    viewModel: HomeViewModel = koinViewModel(),
+    winterSaleEntry: WinterSaleEntryViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
+    val winterSaleEvent by winterSaleEntry.event.collectAsStateWithLifecycle()
+    WinterSaleResumeEffect(winterSaleEntry::onResume, winterSaleEntry::onPause)
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
@@ -198,6 +203,8 @@ internal fun HomeScreen(
         },
         goToWeb = goToWeb,
         onRetry = { viewModel.retry() },
+        winterSaleEvent = winterSaleEvent,
+        onOpenWinterSale = onViewWinterSale,
     )
 
     // Collect one-shot UI events and dispatch them.
@@ -240,6 +247,8 @@ private fun HomeScreenContent(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    winterSaleEvent: WinterSaleEventState.Available? = null,
+    onOpenWinterSale: () -> Unit = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
@@ -279,6 +288,8 @@ private fun HomeScreenContent(
                         onViewCollection = onViewCollection,
                         onViewBundles = onViewBundles,
                         onViewBundle = onViewBundle,
+                        winterSaleEvent = winterSaleEvent,
+                        onOpenWinterSale = onOpenWinterSale,
                     )
                 }
 
@@ -329,6 +340,8 @@ private fun HomeFeed(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
+    winterSaleEvent: WinterSaleEventState.Available? = null,
+    onOpenWinterSale: () -> Unit = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
@@ -356,6 +369,11 @@ private fun HomeFeed(
         // Track whether we've already emitted a section so each subsequent section is preceded by a
         // separator + spacing, while the first one stays flush to the top (no stray divider).
         var renderedSection = false
+
+        winterSaleEvent?.let { event ->
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, onOpenWinterSale) }
+            renderedSection = true
+        }
 
         // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
         accountStats?.let { stats ->

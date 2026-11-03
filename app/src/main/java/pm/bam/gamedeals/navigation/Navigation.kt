@@ -16,6 +16,8 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     fun navigateHome() = navigateTopLevel(Destination.Home)
 
+    fun navigateToWinterSaleGuide() { navController.navigate(Destination.WinterSaleGuide) }
+
     /** Open the onboarding carousel as a pushed screen (the Account hub's "How it works" replay). */
     fun navigateToOnboarding() {
         navController.navigate(Destination.Onboarding)

@@ -85,6 +85,7 @@ import pm.bam.gamedeals.feature.giveaways.di.giveawaysModule
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
 import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
@@ -449,6 +450,12 @@ private fun AppNavHost(startDestination: Destination) {
             goToWeb = { url, _ -> platformActions.openInApp(url) },
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
+            goToWinterSale = { navController.navigate(Destination.WinterSaleGuide) },
+        )
+        winterSaleGuideScreen(
+            onBack = { navController.popBackStack() },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+            goToOffer = { url -> platformActions.openInApp(url) },
         )
         dealsScreen(
             goToWeb = { url, _ -> platformActions.openInApp(url) },

@@ -23,6 +23,9 @@ sealed interface Destination {
     @Serializable
     data object Home : Destination
 
+    @Serializable
+    data object WinterSaleGuide : Destination
+
     /** Top-level tab: the full, browsable all-stores deals list (epic #219, Phase 4). */
     @Serializable
     data object Deals : Destination

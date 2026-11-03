@@ -49,4 +49,34 @@
 
     <string name="home_screen_loading_indicator">Loading top deals</string>
 
+    <string name="winter_sale_title">Winter Sale guide</string>
+    <string name="winter_sale_starts">Sale starts %1$s</string>
+    <string name="winter_sale_ends">Sale ends %1$s</string>
+    <string name="winter_sale_region">Prices for %1$s · %2$s</string>
+    <string name="winter_sale_stale">Event information is from the last successful check.</string>
+    <string name="winter_sale_updating">ITAD prices may still be updating as the sale begins.</string>
+    <string name="winter_sale_waitlist">Your waitlist</string>
+    <string name="winter_sale_series">Your series</string>
+    <string name="winter_sale_popular">Popular on ITAD</string>
+    <string name="winter_sale_sign_in">Sign in to see your waitlist</string>
+    <string name="winter_sale_checking_series">Checking your series…</string>
+    <string name="winter_sale_more_series">Showing your ten newest followed series.</string>
+    <string name="winter_sale_fewer_popular">Fewer popular games have discounted lowest offers right now.</string>
+    <string name="winter_sale_unavailable">Couldn't check this part of the guide. Pull down to try again.</string>
+    <string name="winter_sale_hidden">Winter Sale guide isn't available right now.</string>
+    <string name="winter_sale_partial">Some prices couldn't load.</string>
+    <string name="winter_sale_no_sales">No current sales found. Pull down to check again.</string>
+    <string name="winter_sale_price_unavailable">Price unavailable right now. Check the store link for the latest offer.</string>
+    <string name="winter_sale_discount">%1$d%% off</string>
+    <string name="winter_sale_was">Was %1$s</string>
+    <string name="winter_sale_historical_low">At its historical low</string>
+    <string name="winter_sale_from_store">Lowest offer at %1$s</string>
+    <string name="winter_sale_activation">Activates on %1$s</string>
+    <string name="winter_sale_activation_unknown">Launcher not listed</string>
+    <string name="winter_sale_voucher">Use voucher %1$s</string>
+    <string name="winter_sale_expires">Offer ends %1$s</string>
+    <string name="winter_sale_checked">Price checked %1$s</string>
+    <string name="winter_sale_offer_link">Open ITAD store link</string>
+    <string name="winter_sale_last_link">Open last known ITAD link</string>
+    <string name="winter_sale_attribution">Prices, stores, and links supplied by IsThereAnyDeal.</string>
 </resources>
