@@ -31,6 +31,8 @@ internal data class WinterSaleGuideState(
     val loading: Boolean = false,
     val refreshing: Boolean = false,
     val stalePrices: Boolean = false,
+    /** False until the first event check returns, so the screen shows a spinner rather than "not available". */
+    val eventChecked: Boolean = false,
 )
 
 internal class WinterSaleGuideViewModel(
@@ -108,7 +110,8 @@ internal class WinterSaleGuideViewModel(
             if (event !is WinterSaleEventState.Available) {
                 loadedContext = null
                 lastSuccessfulAtEpochMs = 0L
-                mutableState.value = mutableState.value.copy(event = event, content = null, loading = false, refreshing = false, stalePrices = false)
+                mutableState.value = mutableState.value.copy(event = event, eventChecked = true, content = null, loading = false,
+                    refreshing = false, stalePrices = false)
                 return@launch
             }
             val phaseChanged = (old.event as? WinterSaleEventState.Available)?.phase != event.phase
@@ -116,11 +119,16 @@ internal class WinterSaleGuideViewModel(
             val stillFresh = lastSuccessfulAtEpochMs > 0L && clock.nowMillis() >= lastSuccessfulAtEpochMs &&
                 clock.nowMillis() - lastSuccessfulAtEpochMs < REFRESH_MS
             if (!force && sameContext && stillFresh && !phaseChanged && old.content != null) {
-                mutableState.value = mutableState.value.copy(event = event, loading = false, refreshing = false)
+                mutableState.value = mutableState.value.copy(event = event, eventChecked = true, loading = false, refreshing = false)
                 return@launch
             }
-            mutableState.value = mutableState.value.copy(event = event, loading = old.content == null,
-                refreshing = old.content != null, stalePrices = old.content != null && !stillFresh)
+            // While reloading, judge the shown prices by their own check time: a retry after a partial load must not
+            // hide prices fetched moments ago.
+            val shownPricesFresh = old.content?.checkedAtEpochMillis?.let { checkedAt ->
+                clock.nowMillis() >= checkedAt && clock.nowMillis() - checkedAt < REFRESH_MS
+            } == true
+            mutableState.value = mutableState.value.copy(event = event, eventChecked = true, loading = old.content == null,
+                refreshing = old.content != null, stalePrices = old.content != null && !shownPricesFresh)
             val result = try { guide.load(context.country.code, context.includeAdult, event.event.saleStartEpochMillis,
                 event.phase == WinterSalePhase.OnSale) }
             catch (error: CancellationException) { throw error } catch (_: Throwable) { null }

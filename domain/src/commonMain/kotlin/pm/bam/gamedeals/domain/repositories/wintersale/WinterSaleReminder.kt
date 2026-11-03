@@ -129,8 +129,11 @@ internal class WinterSaleReminderImpl(
         val serverNow = available.observedServerNowEpochMillis
         val fireAt = event.saleStartEpochMillis + current.offsetMillis
         val alreadyDue = current.status == Status.Scheduled && current.fireAtServerEpochMillis?.let { serverNow >= it } == true
-        if (fireAt >= event.endEpochMillis || serverNow >= fireAt || (alreadyDue && !firing)) {
-            // Too late to remind: it already fired, or the user is in the app during the sale anyway.
+        // A due reminder is left alone: on Android its job may not have run yet (Doze, no connection) and claims it
+        // when it does; on iOS it has already fired. Cancelling here would drop an Android reminder unseen.
+        if (alreadyDue && !firing) return
+        if (fireAt >= event.endEpochMillis || serverNow >= fireAt) {
+            // Too late to remind: the first check came after the fire time, and the user is in the app during the sale anyway.
             save(current.copy(status = Status.Done))
             if (current.status == Status.Scheduled) scheduler.cancel()
             return

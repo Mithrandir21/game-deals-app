@@ -132,7 +132,11 @@ private fun WinterSaleGuideContent(
             val event = state.event as? WinterSaleEventState.Available
             if (event == null) {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    Text(stringResource(Res.string.winter_sale_hidden), modifier = Modifier.padding(24.dp))
+                    if (state.eventChecked) {
+                        Text(stringResource(Res.string.winter_sale_hidden), modifier = Modifier.padding(24.dp))
+                    } else {
+                        CircularProgressIndicator()
+                    }
                 }
                 return@Scaffold
             }

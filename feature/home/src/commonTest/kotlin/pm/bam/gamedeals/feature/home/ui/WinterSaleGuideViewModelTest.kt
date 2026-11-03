@@ -6,6 +6,7 @@ import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,6 +147,39 @@ class WinterSaleGuideViewModelTest {
         }
     }
 
+    @Test
+    fun the_guide_checks_before_saying_unavailable_and_a_retry_keeps_just_fetched_prices() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime })
+        fixture.guide.partial = true
+        try {
+            runCurrent()
+            assertFalse(fixture.vm.state.value.eventChecked)
+            fixture.vm.onResume()
+            runCurrent()
+            assertTrue(fixture.vm.state.value.eventChecked)
+            assertEquals(1, fixture.guide.calls.size)
+            fixture.vm.onPause()
+
+            advanceTimeBy(60 * 1000L)
+            val gate = CompletableDeferred<Unit>()
+            fixture.guide.gate = gate
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals(2, fixture.guide.calls.size)
+            assertTrue(fixture.vm.state.value.refreshing)
+            assertFalse(fixture.vm.state.value.stalePrices)
+            gate.complete(Unit)
+            runCurrent()
+            assertFalse(fixture.vm.state.value.refreshing)
+            assertFalse(fixture.vm.state.value.stalePrices)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun fixture(clock: Clock): Fixture {
         val country = MutableStateFlow(Country("GB", "United Kingdom", "GBP"))
         val adult = MutableStateFlow(false)
@@ -177,14 +211,17 @@ class WinterSaleGuideViewModelTest {
         val calls = mutableListOf<String>()
         val saleActive = mutableListOf<Boolean>()
         var fail = false
+        var partial = false
+        var gate: CompletableDeferred<Unit>? = null
         override suspend fun load(country: String, includeAdult: Boolean, saleStartEpochMs: Long, saleActive: Boolean): WinterSaleGuideContent {
             calls += country
             this.saleActive += saleActive
+            gate?.await()
             if (fail) error("offline")
             val safe = card("safe", country, true)
             val adult = card("adult", country, false)
             return WinterSaleGuideContent(country, 1_000L,
-                WinterSaleGuideSection(WinterSaleGuideSectionKind.Waitlist, listOf(safe, adult)),
+                WinterSaleGuideSection(WinterSaleGuideSectionKind.Waitlist, listOf(safe, adult), incomplete = partial),
                 WinterSaleGuideSection(WinterSaleGuideSectionKind.Series, emptyList()),
                 WinterSaleGuideSection(WinterSaleGuideSectionKind.Popular, emptyList()))
         }

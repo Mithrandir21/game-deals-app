@@ -124,6 +124,19 @@ class WinterSaleReminderTest {
     }
 
     @Test
+    fun a_background_check_after_the_fire_time_leaves_a_late_android_job_to_show_it() = runTest {
+        val reminder = reminder()
+        reminder.reconcile(available(serverNow = SALE_START - HOUR))
+        events.state = available(serverNow = SALE_START + OFFSET + 10 * MINUTE)
+
+        reminder.sync()
+
+        assertEquals(0, scheduler.cancels)
+        assertEquals(WinterSaleReminderDecision.Show, reminder.claimDelivery())
+        assertEquals(1, scheduler.scheduled.size)
+    }
+
+    @Test
     fun a_first_open_after_the_fire_time_schedules_nothing() = runTest {
         val reminder = reminder()
         reminder.reconcile(available(serverNow = SALE_START + OFFSET))
