@@ -195,6 +195,8 @@ data class RemoteItadDealsGame(
     @SerialName("id") val id: String,
     @SerialName("slug") val slug: String? = null,
     @SerialName("title") val title: String,
+    @SerialName("type") val type: String? = null,
+    @SerialName("mature") val mature: Boolean? = null,
     @SerialName("assets") @Serializable(with = LenientGameAssetsSerializer::class) val assets: RemoteItadGameAssets? = null,
     @SerialName("deal") val deal: RemoteItadDealEntry,
 )

@@ -16,6 +16,7 @@ data class WaitlistDisplayItem(
     val title: String,
     val artwork: GameArtwork = GameArtwork(),
     val type: String? = null,
+    val mature: Boolean? = null,
     val addedEpochMs: Long? = null,
     val bestPriceDenominated: String? = null,
     val bestRegularDenominated: String? = null,
@@ -50,6 +51,7 @@ data class WaitlistDisplaySnapshot(
     val items: List<WaitlistDisplayItem> = emptyList(),
     val regionCode: String = "",
     val refreshedAtEpochMs: Long = 0L,
+    val priceFetchIncomplete: Boolean = false,
 )
 
 /**
