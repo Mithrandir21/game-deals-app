@@ -17,7 +17,7 @@ data class WinterSaleCandidateSection(
     val incomplete: Boolean = false,
     val unavailable: Boolean = false,
     val signInRequired: Boolean = false,
-    val moreCandidatesAvailable: Boolean = false,
+    val shortFeed: Boolean = false,
 )
 
 data class WinterSalePopularGame(val gameId: String, val title: String, val artwork: GameArtwork, val type: String?, val mature: Boolean?)
@@ -83,7 +83,7 @@ internal class WinterSaleCandidatesRepositoryImpl(
             .sortedWith(compareByDescending<WinterSaleCandidate> { it.offer.isAtHistoricalLow }
                 .thenByDescending { it.offer.cutPercent }.thenBy { it.gameId })
             .take(SECTION_CANDIDATE_LIMIT)
-        return WinterSaleCandidateSection(games, incomplete = prices.hasUnavailable(), moreCandidatesAvailable = games.size < SECTION_CANDIDATE_LIMIT)
+        return WinterSaleCandidateSection(games, incomplete = prices.hasUnavailable(), shortFeed = games.size < SECTION_CANDIDATE_LIMIT)
     }
 
     private fun WaitlistDisplayItem.toCandidate(status: WinterSalePriceStatus?): WinterSaleCandidate? =

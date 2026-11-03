@@ -35,7 +35,7 @@ class WinterSaleCandidatesRepositoryTest {
 
         assertEquals(listOf("sale"), section.games.map { it.gameId })
         assertEquals(listOf(100), fixture.popular.limits)
-        assertTrue(section.moreCandidatesAvailable)
+        assertTrue(section.shortFeed)
     }
 
     @Test
