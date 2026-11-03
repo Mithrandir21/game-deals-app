@@ -71,6 +71,8 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverride
 import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverrideImpl
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
@@ -126,6 +128,7 @@ val domainModule = module {
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
     // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }

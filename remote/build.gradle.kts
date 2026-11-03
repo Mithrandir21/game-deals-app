@@ -19,6 +19,7 @@ kotlin {
 
             implementation(project(":logging"))
             implementation(project(":common"))
+            implementation(project(":domain"))
         }
 
         androidMain.dependencies {
