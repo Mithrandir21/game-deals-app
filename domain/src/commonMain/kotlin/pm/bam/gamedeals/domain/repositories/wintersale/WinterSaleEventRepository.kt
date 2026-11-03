@@ -49,6 +49,15 @@ interface WinterSaleEventRepository {
     suspend fun refresh(): WinterSaleEventState
 }
 
+/** Fresh check for a deep link into the guide; any failure reads as unavailable. */
+suspend fun WinterSaleEventRepository.isAvailable(): Boolean = try {
+    refresh() is WinterSaleEventState.Available
+} catch (error: CancellationException) {
+    throw error
+} catch (_: Throwable) {
+    false
+}
+
 internal class WinterSaleEventRepositoryImpl(
     private val source: WinterSaleEventSource,
     private val storage: Storage,

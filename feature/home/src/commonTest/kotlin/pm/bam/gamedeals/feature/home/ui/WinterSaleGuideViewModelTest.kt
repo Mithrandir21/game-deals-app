@@ -35,6 +35,7 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideSectionKin
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleMoney
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffer
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -127,7 +128,7 @@ class WinterSaleGuideViewModelTest {
         every { authStore.observeAuthState() } returns auth
         val events = FakeEvents()
         val guide = FakeGuide()
-        val vm = WinterSaleGuideViewModel(events, guide, regionRepository, settingsRepository, authStore, clock)
+        val vm = WinterSaleGuideViewModel(events, guide, regionRepository, settingsRepository, authStore, clock, mock<WinterSaleReminder>(MockMode.autoUnit))
         return Fixture(vm, country, adult, auth, events, guide)
     }
 

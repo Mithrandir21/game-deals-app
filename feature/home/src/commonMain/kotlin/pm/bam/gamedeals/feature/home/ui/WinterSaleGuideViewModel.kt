@@ -21,6 +21,7 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideContent
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 
 internal data class WinterSaleGuideState(
     val event: WinterSaleEventState = WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable),
@@ -39,6 +40,7 @@ internal class WinterSaleGuideViewModel(
     settings: SettingsRepository,
     auth: AuthTokenStore,
     private val clock: Clock,
+    private val reminder: WinterSaleReminder,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(WinterSaleGuideState())
     val state: StateFlow<WinterSaleGuideState> = mutableState
@@ -101,6 +103,7 @@ internal class WinterSaleGuideViewModel(
             val event = try { events.refresh() } catch (error: CancellationException) { throw error } catch (_: Throwable) {
                 WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable)
             }
+            viewModelScope.launch { reminder.reconcile(event) }
             if (context != currentContext) return@launch
             if (event !is WinterSaleEventState.Available) {
                 loadedContext = null

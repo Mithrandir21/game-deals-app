@@ -24,6 +24,8 @@ import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
@@ -66,8 +68,9 @@ internal fun NavGraph(
     val analytics: Analytics = koinInject()
 
     // Route taps on background (OS-tray) notifications into the nav graph: the bundled waitlist summary opens
-    // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen. The bus
+    // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen, the sale reminder opens the guide. The bus
     // is consume-once, so this won't re-navigate.
+    val winterSaleEvents: WinterSaleEventRepository = koinInject()
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
             when (route) {
@@ -79,6 +82,8 @@ internal fun NavGraph(
                     analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "followed_series"))
                     navActions.navigateToFollowedSeries()
                 }
+                NotificationRoute.WinterSaleGuide ->
+                    if (winterSaleEvents.isAvailable()) navActions.navigateToWinterSaleGuide() else navActions.navigateTopLevel(Destination.Home)
             }
         }
     }

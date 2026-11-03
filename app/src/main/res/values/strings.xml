@@ -2,6 +2,9 @@
 <resources>
     <string name="app_name">Game Deals</string>
     <string name="notification_channel_waitlist">Waitlist alerts</string>
+    <string name="notification_channel_sale_reminder">Sale reminders</string>
+    <string name="notification_sale_reminder_title">The Winter Sale is on</string>
+    <string name="notification_sale_reminder_text">See discounted games from your waitlist, followed series and popular picks.</string>
     <string name="notification_summary_text">%1$d new deals</string>
     <!-- Bundled per-path tray summaries (#7 notification revamp): one each per poll. -->
     <string name="notification_waitlist_summary_title">Waitlist price drops</string>

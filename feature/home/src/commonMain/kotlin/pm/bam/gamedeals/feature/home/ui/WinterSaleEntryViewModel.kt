@@ -12,8 +12,12 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 
-internal class WinterSaleEntryViewModel(private val events: WinterSaleEventRepository) : ViewModel() {
+internal class WinterSaleEntryViewModel(
+    private val events: WinterSaleEventRepository,
+    private val reminder: WinterSaleReminder,
+) : ViewModel() {
     private val mutableEvent = MutableStateFlow<WinterSaleEventState.Available?>(null)
     val event: StateFlow<WinterSaleEventState.Available?> = mutableEvent
     private var poll: Job? = null
@@ -26,6 +30,7 @@ internal class WinterSaleEntryViewModel(private val events: WinterSaleEventRepos
                     WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable)
                 }
                 mutableEvent.value = state as? WinterSaleEventState.Available
+                launch { reminder.reconcile(state) }
                 val deadline = (state as? WinterSaleEventState.Available)?.let {
                     if (it.phase == WinterSalePhase.BeforeSale) it.event.saleStartEpochMillis else it.event.endEpochMillis
                 }

@@ -24,6 +24,6 @@ val accountModule = module {
     viewModel { NotificationBellViewModel(get(), get()) }
     viewModel { IgnoredViewModel(get(), get()) }
     viewModel { MyNotesViewModel(get(), get()) }
-    viewModel { NotificationSettingsViewModel(get(), get()) }
+    viewModel { NotificationSettingsViewModel(get(), get(), get()) }
     viewModel { SignInPromptViewModel(get(), get()) }
 }

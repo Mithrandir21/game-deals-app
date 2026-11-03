@@ -73,6 +73,8 @@ import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverrideImpl
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepositoryImpl
@@ -144,6 +146,7 @@ val domainModule = module {
     single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get()) }
+    single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
     // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }

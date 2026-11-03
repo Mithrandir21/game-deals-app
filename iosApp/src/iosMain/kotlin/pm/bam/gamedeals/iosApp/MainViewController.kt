@@ -45,6 +45,8 @@ import pm.bam.gamedeals.common.imaging.appCoilLogger
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.di.commonUiModule
@@ -368,11 +370,19 @@ private fun AppNavHost(startDestination: Destination) {
 
     // Route taps on background (OS-tray) notifications into the nav graph — mirrors the Android NavGraph.
     // The bus is consume-once, so this won't re-navigate.
+    val winterSaleEvents = remember { KoinPlatform.getKoin().get<WinterSaleEventRepository>() }
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
             when (route) {
                 NotificationRoute.Notifications -> navController.navigate(Destination.Notifications)
                 NotificationRoute.FollowedSeries -> navController.navigate(Destination.FollowedSeriesList)
+                // iOS can't re-check the event when the reminder fires, so a remote disable is honoured here instead.
+                NotificationRoute.WinterSaleGuide ->
+                    if (winterSaleEvents.isAvailable()) {
+                        navController.navigate(Destination.WinterSaleGuide)
+                    } else {
+                        navController.navigate(Destination.Home) { popUpTo(Destination.Home); launchSingleTop = true }
+                    }
             }
         }
     }
