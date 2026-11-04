@@ -32,6 +32,8 @@ class WinterSaleGuideRepositoryTest {
         assertEquals(listOf("popular"), result.popular.cards.map { it.candidate.gameId })
         assertEquals(listOf("On your waitlist", "From Series A"), result.waitlist.cards.last().reasons)
         assertEquals(listOf("From Series B", "Popular on ITAD"), result.series.cards.single().reasons)
+        assertEquals(listOf("Series B"), result.series.cards.single().seriesNames)
+        assertEquals(listOf("Series A"), result.waitlist.cards.last().seriesNames)
     }
 
     @Test

@@ -12,6 +12,8 @@ data class WinterSaleGuideCard(
     val candidate: WinterSaleCandidate,
     val reasons: List<String>,
     val adultAllowedOff: Boolean,
+    /** The followed series this game belongs to, in follow order; the guide groups the Series section by the first. */
+    val seriesNames: List<String> = emptyList(),
 )
 
 data class WinterSaleGuideSection(
@@ -93,19 +95,24 @@ internal class WinterSaleGuideRepositoryImpl(
     ): WinterSaleGuideContent {
         val reasons = linkedMapOf<String, MutableList<String>>()
         val adultAllowed = linkedMapOf<String, Boolean>()
+        val seriesNames = linkedMapOf<String, MutableList<String>>()
         fun add(game: WinterSaleRawCandidate, labels: List<String>) {
             reasons.getOrPut(game.gameId) { mutableListOf() }.addAll(labels)
             adultAllowed[game.gameId] = (adultAllowed[game.gameId] ?: true) && game.adult == false
         }
         wait.games.forEach { add(it, listOf("On your waitlist")) }
-        followed.games.forEach { add(it.game, it.seriesNames.map { name -> "From $name" }) }
+        followed.games.forEach {
+            add(it.game, it.seriesNames.map { name -> "From $name" })
+            seriesNames.getOrPut(it.game.gameId) { mutableListOf() }.addAll(it.seriesNames)
+        }
         ranked.games.forEach { add(it, listOf("Popular on ITAD")) }
         val seen = mutableSetOf<String>()
         fun cards(raw: List<WinterSaleRawCandidate>): List<WinterSaleGuideCard> = raw.mapNotNull { game ->
             val offer = (offers.perGame[game.gameId] as? WinterSalePriceStatus.Priced)?.offer?.takeIf { it.isDiscounted }
                 ?: return@mapNotNull null
             WinterSaleGuideCard(WinterSaleCandidate(game.gameId, game.title, game.artwork, offer, game.adult),
-                reasons[game.gameId].orEmpty().distinct(), adultAllowed[game.gameId] == true)
+                reasons[game.gameId].orEmpty().distinct(), adultAllowed[game.gameId] == true,
+                seriesNames[game.gameId].orEmpty().distinct())
         }.distinctBy { it.candidate.gameId }
             .sortedWith(compareByDescending<WinterSaleGuideCard> { it.candidate.offer.isAtHistoricalLow }
                 .thenByDescending { it.candidate.offer.cutPercent }.thenBy { it.candidate.gameId })

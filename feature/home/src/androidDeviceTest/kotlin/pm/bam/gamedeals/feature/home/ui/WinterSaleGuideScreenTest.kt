@@ -31,19 +31,19 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleMoney
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffer
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
+import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_activation
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_checking_series
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_discount
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_ends
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_from_store
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_back
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_hidden
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_try_again
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_last_link
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_no_sales
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_offer_link
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_partial
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_price_unavailable_short
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_show_less
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_view_all
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_price_unavailable
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_sign_in
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_starts
@@ -114,13 +114,16 @@ class WinterSaleGuideScreenTest {
     }
 
     @Test
-    fun stale_prices_are_hidden_but_the_last_link_stays() {
-        setGuide(guideState(content(waitlist = section(WinterSaleGuideSectionKind.Waitlist, listOf(card())))).copy(stalePrices = true))
+    fun stale_prices_are_replaced_by_a_notice_and_a_chip_but_the_row_still_opens() {
+        val peeked = mutableListOf<String>()
+        setGuide(guideState(content(waitlist = section(WinterSaleGuideSectionKind.Waitlist, listOf(card())))).copy(stalePrices = true),
+            onPeek = { peeked += it.candidate.gameId })
 
-        show(text.getValue("lastLink"))
-        // Once in the header and once on the card, in place of the price.
-        composeTestRule.onAllNodesWithText(text.getValue("priceUnavailable")).assertCountEquals(2)
-        composeTestRule.onNodeWithText(text.getValue("discount")).assertDoesNotExist()
+        show(text.getValue("priceUnavailable"))
+        show(text.getValue("priceUnavailableShort"))
+        composeTestRule.onNodeWithText(PRICE).assertDoesNotExist()
+        composeTestRule.onNodeWithText(GAME_TITLE).performClick()
+        assertEquals(listOf(GAME_ID), peeked)
     }
 
     @Test
@@ -131,22 +134,49 @@ class WinterSaleGuideScreenTest {
     }
 
     @Test
-    fun a_card_shows_the_offer_and_opens_the_game_or_the_supplied_link() {
-        val games = mutableListOf<String>()
-        val links = mutableListOf<String>()
+    fun a_row_shows_the_offer_like_other_deal_rows_and_opens_the_peek_sheet() {
+        val peeked = mutableListOf<String>()
         setGuide(guideState(content(waitlist = section(WinterSaleGuideSectionKind.Waitlist, listOf(card())))),
-            onGame = { games += it }, onOffer = { links += it })
+            onPeek = { peeked += it.candidate.gameId })
 
         show(text.getValue("updating"))
-        show(text.getValue("discount"))
-        show(text.getValue("store"))
+        show(GAME_TITLE)
+        show(PRICE)
+        show(SHOP)
+        // The section heading already says "Your waitlist", so the row only adds the launcher.
         show(text.getValue("activation"))
-        show(text.getValue("offerLink"))
+        composeTestRule.onNodeWithText("On your waitlist", substring = true).assertDoesNotExist()
 
-        composeTestRule.onNodeWithText(text.getValue("offerLink")).performClick()
         composeTestRule.onNodeWithText(GAME_TITLE).performClick()
-        assertEquals(listOf(OFFER_URL), links)
-        assertEquals(listOf(GAME_ID), games)
+        assertEquals(listOf(GAME_ID), peeked)
+    }
+
+    @Test
+    fun a_long_section_shows_its_best_five_until_view_all() {
+        val cards = (1..7).map { card(id = "game-$it", title = "Game $it") }
+        setGuide(guideState(content(popular = section(WinterSaleGuideSectionKind.Popular, cards))))
+
+        show("Game 5")
+        composeTestRule.onNodeWithText("Game 6").assertDoesNotExist()
+        composeTestRule.onNodeWithText(text.getValue("viewAll")).performClick()
+        show("Game 7")
+        show(text.getValue("showLess"))
+    }
+
+    @Test
+    fun followed_series_are_grouped_under_their_own_headings() {
+        val cards = listOf(
+            card(id = "a", title = "Fallout 4", series = listOf("Fallout")),
+            card(id = "b", title = "Mass Effect LE", series = listOf("Mass Effect")),
+            card(id = "c", title = "Fallout 76", series = listOf("Fallout")),
+        )
+        setGuide(guideState(content(series = section(WinterSaleGuideSectionKind.Series, cards))))
+
+        show("Fallout")
+        show("Mass Effect")
+        show("Fallout 76")
+        // One heading per series, even though two Fallout games are listed.
+        composeTestRule.onAllNodesWithText("Fallout").assertCountEquals(1)
     }
 
     @Test
@@ -178,13 +208,12 @@ class WinterSaleGuideScreenTest {
 
     private fun setGuide(
         state: WinterSaleGuideState,
-        onGame: (String) -> Unit = {},
-        onOffer: (String) -> Unit = {},
+        onPeek: (WinterSaleGuideCard) -> Unit = {},
         onRetry: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             loadText()
-            WinterSaleGuideContent(state, onBack = {}, onGame = onGame, onOffer = onOffer, onRefresh = {}, onRetry = onRetry)
+            WinterSaleGuideContent(state, onBack = {}, onPeek = onPeek, onRefresh = {}, onRetry = onRetry)
         }
     }
 
@@ -205,11 +234,10 @@ class WinterSaleGuideScreenTest {
         text["partial"] = stringResource(Res.string.winter_sale_partial)
         text["sectionUnavailable"] = stringResource(Res.string.winter_sale_unavailable)
         text["priceUnavailable"] = stringResource(Res.string.winter_sale_price_unavailable)
-        text["lastLink"] = stringResource(Res.string.winter_sale_last_link)
-        text["offerLink"] = stringResource(Res.string.winter_sale_offer_link)
+        text["priceUnavailableShort"] = stringResource(Res.string.winter_sale_price_unavailable_short)
+        text["viewAll"] = stringResource(Res.string.winter_sale_view_all, 7)
+        text["showLess"] = stringResource(Res.string.winter_sale_show_less)
         text["updating"] = stringResource(Res.string.winter_sale_updating)
-        text["discount"] = stringResource(Res.string.winter_sale_discount, CUT)
-        text["store"] = stringResource(Res.string.winter_sale_from_store, SHOP)
         text["activation"] = stringResource(Res.string.winter_sale_activation, LAUNCHER)
         text["starts"] = stringResource(Res.string.winter_sale_starts, winterSaleTime(SALE_START))
         text["ends"] = stringResource(Res.string.winter_sale_ends, winterSaleTime(SALE_END))
@@ -244,14 +272,15 @@ class WinterSaleGuideScreenTest {
         checking: Boolean = false,
     ) = WinterSaleGuideSection(kind, cards, incomplete = incomplete, unavailable = unavailable, signInRequired = signInRequired, checking = checking)
 
-    private fun card(): WinterSaleGuideCard {
+    private fun card(id: String = GAME_ID, title: String = GAME_TITLE, series: List<String> = emptyList()): WinterSaleGuideCard {
         val offer = WinterSaleOffer(
-            gameId = GAME_ID, country = "GB", shopId = 61, shopName = SHOP,
+            gameId = id, country = "GB", shopId = 61, shopName = SHOP,
             price = WinterSaleMoney(9.99, "GBP"), regular = WinterSaleMoney(19.99, "GBP"), cutPercent = CUT,
             url = OFFER_URL, voucher = null, activationLabels = listOf(LAUNCHER),
             checkedAtEpochMillis = SALE_START + HOUR, expiresAtEpochMillis = null, historicalLow = null,
         )
-        return WinterSaleGuideCard(WinterSaleCandidate(GAME_ID, GAME_TITLE, GameArtwork(), offer, adult = false), listOf("On your waitlist"), adultAllowedOff = true)
+        val reasons = listOf("On your waitlist") + series.map { "From $it" }
+        return WinterSaleGuideCard(WinterSaleCandidate(id, title, GameArtwork(), offer, adult = false), reasons, adultAllowedOff = true, seriesNames = series)
     }
 
     private companion object {
@@ -268,5 +297,6 @@ class WinterSaleGuideScreenTest {
         const val LAUNCHER = "Steam"
         const val CUT = 50
         const val OFFER_URL = "https://itad.link/offer"
+        val PRICE = formatMoney(9.99, "GBP")
     }
 }

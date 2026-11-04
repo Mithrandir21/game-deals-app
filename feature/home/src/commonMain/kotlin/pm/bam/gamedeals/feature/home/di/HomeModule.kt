@@ -5,9 +5,11 @@ import org.koin.dsl.module
 import pm.bam.gamedeals.feature.home.ui.HomeViewModel
 import pm.bam.gamedeals.feature.home.ui.WinterSaleEntryViewModel
 import pm.bam.gamedeals.feature.home.ui.WinterSaleGuideViewModel
+import pm.bam.gamedeals.feature.home.ui.WinterSalePeekViewModel
 
 val homeModule = module {
     viewModel { WinterSaleEntryViewModel(get(), get()) }
+    viewModel { WinterSalePeekViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WinterSaleGuideViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

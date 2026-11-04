@@ -49,6 +49,9 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
  * row shows small **passive** [GameStateBadges] over the thumbnail corner when the game is
  * [isWaitlisted] and/or [isCollected], so state is still visible at a glance.
  *
+ * An optional [supportingText] (e.g. the Winter Sale guide's "From Fallout · Activates on Steam") sits under the
+ * store line in a muted style; it is part of the row's visible text, so callers include it in [contentDescription].
+ *
  * When there is no [salePrice] but a [neutralChip] is given (e.g. an unreleased "New release" with no
  * deal yet), the chip stands in for the price column so every content row keeps the same anatomy.
  *
@@ -73,6 +76,7 @@ fun DealListRow(
     storeIconUrl: String? = null,
     isWaitlisted: Boolean = false,
     isCollected: Boolean = false,
+    supportingText: String? = null,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the row's content description, keeping each badge and its TalkBack
@@ -138,6 +142,15 @@ fun DealListRow(
                 )
                 if (storeName != null) {
                     StoreLabel(storeName = storeName, iconUrl = storeIconUrl)
+                }
+                if (supportingText != null) {
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
             Column(

@@ -80,5 +80,14 @@
     <string name="winter_sale_checked">Price checked %1$s</string>
     <string name="winter_sale_offer_link">Open ITAD store link</string>
     <string name="winter_sale_last_link">Open last known ITAD link</string>
+    <string name="winter_sale_prices_checked">Prices checked %1$s</string>
+    <string name="winter_sale_region_chip">%1$s · %2$s</string>
+    <string name="winter_sale_price_unavailable_short">Price unavailable</string>
+    <string name="winter_sale_view_all">View all (%1$d)</string>
+    <string name="winter_sale_show_less">Show less</string>
+    <string name="winter_sale_sign_in_action">Sign in</string>
+    <string name="winter_sale_other_series">Other series</string>
+    <string name="winter_sale_row_description">%1$s, %2$s, %3$d%% off at %4$s</string>
+    <string name="winter_sale_row_description_no_price">%1$s, price unavailable</string>
     <string name="winter_sale_attribution">Prices, stores, and links supplied by IsThereAnyDeal.</string>
 </resources>

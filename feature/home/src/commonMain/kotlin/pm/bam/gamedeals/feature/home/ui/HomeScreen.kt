@@ -689,7 +689,7 @@ private fun HomeFeed(
  * vertical breathing room so the distinct feed sections read as clearly separated blocks. Inset
  * horizontally to align with the section content rather than running fully edge-to-edge.
  */
-private fun LazyListScope.sectionDivider() {
+internal fun LazyListScope.sectionDivider() {
     item(contentType = CONTENT_TYPE_SECTION_DIVIDER) {
         HorizontalDivider(
             modifier = Modifier.padding(
@@ -888,7 +888,7 @@ private fun <T> LazyListScope.gridSection(
  * actionable node.
  */
 @Composable
-private fun SectionHeader(
+internal fun SectionHeader(
     text: String,
     modifier: Modifier = Modifier,
     actionText: String? = null,
