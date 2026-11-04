@@ -10,8 +10,8 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventPayload
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventSource
 
 internal class WinterSaleEventHttpSource(private val client: HttpClient) : WinterSaleEventSource {
-    override suspend fun fetch(): WinterSaleEventPayload {
-        val response = client.get("/events/winter-sale-2026.json") {
+    override suspend fun fetch(testDocument: Boolean): WinterSaleEventPayload {
+        val response = client.get(if (testDocument) TEST_PATH else PATH) {
             header(HttpHeaders.CacheControl, "no-cache, no-store")
             header("Pragma", "no-cache")
         }
@@ -23,5 +23,7 @@ internal class WinterSaleEventHttpSource(private val client: HttpClient) : Winte
 
     private companion object {
         const val MAX_DOCUMENT_CHARS = 16_384
+        const val PATH = "/events/winter-sale-2026.json"
+        const val TEST_PATH = "/events/winter-sale-2026-test.json"
     }
 }

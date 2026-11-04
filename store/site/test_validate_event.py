@@ -12,6 +12,16 @@ class EventDocumentValidationTest(unittest.TestCase):
     def test_checked_in_document_is_valid(self):
         self.assertEqual("steam-winter-2026", validate_document(json.dumps(VALID))["eventId"])
 
+    def test_checked_in_test_document_is_valid_and_off(self):
+        text = Path(__file__).with_name("winter-sale-2026-test.json").read_text()
+        document = validate_document(text, "steam-winter-2026-test")
+        self.assertFalse(document["enabled"])
+
+    def test_a_test_document_is_not_a_real_one(self):
+        text = Path(__file__).with_name("winter-sale-2026-test.json").read_text()
+        with self.assertRaisesRegex(ValueError, "Unexpected event ID"):
+            validate_document(text)
+
     def test_duplicate_keys_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "Duplicate key"):
             validate_document('{"enabled":true,"enabled":false}')

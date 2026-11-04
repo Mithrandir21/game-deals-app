@@ -22,7 +22,41 @@ class WinterSaleEventRepositoryTest {
     private val storage = MemoryStorage()
     private val source = FakeSource(WinterSaleEventPayload(ENABLED, deviceNow))
     private val logger = RecordingLogger()
-    private fun repository() = WinterSaleEventRepositoryImpl(source, storage, Clock { deviceNow }, Json { ignoreUnknownKeys = true }, logger)
+    private val testMode = FakeTestMode()
+    private fun repository() = WinterSaleEventRepositoryImpl(source, storage, Clock { deviceNow }, Json { ignoreUnknownKeys = true }, logger, testMode)
+
+    @Test
+    fun test_mode_reads_the_test_document_with_its_own_event_id() = runTest {
+        testMode.on = true
+        source.testResponse = WinterSaleEventPayload(ENABLED.replace("steam-winter-2026", "steam-winter-2026-test"), deviceNow)
+
+        val state = repository().refresh() as WinterSaleEventState.Available
+
+        assertEquals("steam-winter-2026-test", state.event.id)
+        assertEquals(listOf(true), source.requests)
+    }
+
+    @Test
+    fun test_mode_rejects_a_real_document_and_the_real_check_rejects_a_test_one() = runTest {
+        testMode.on = true
+        source.testResponse = WinterSaleEventPayload(ENABLED, deviceNow)
+        assertEquals(WinterSaleHiddenReason.Unavailable, (repository().refresh() as WinterSaleEventState.Hidden).reason)
+
+        testMode.on = false
+        source.response = WinterSaleEventPayload(ENABLED.replace("steam-winter-2026", "steam-winter-2026-test"), deviceNow)
+        assertEquals(WinterSaleHiddenReason.Unavailable, (repository().refresh() as WinterSaleEventState.Hidden).reason)
+    }
+
+    @Test
+    fun switching_documents_never_falls_back_to_the_other_documents_cache() = runTest {
+        repository().refresh()
+        testMode.on = true
+        source.fail = true
+
+        assertEquals(WinterSaleHiddenReason.Unavailable, (repository().refresh() as WinterSaleEventState.Hidden).reason)
+        testMode.on = false
+        assertEquals("steam-winter-2026", (repository().refresh() as WinterSaleEventState.Available).event.id)
+    }
 
     @Test
     fun server_date_controls_visibility_and_sale_phase() = runTest {
@@ -156,13 +190,23 @@ class WinterSaleEventRepositoryTest {
 }
 
 private class FakeSource(var response: WinterSaleEventPayload) : WinterSaleEventSource {
+    var testResponse: WinterSaleEventPayload? = null
     var fail = false
     var delayMillis = 0L
-    override suspend fun fetch(): WinterSaleEventPayload {
+    val requests = mutableListOf<Boolean>()
+    override suspend fun fetch(testDocument: Boolean): WinterSaleEventPayload {
+        requests += testDocument
         delay(delayMillis)
         if (fail) error("offline")
-        return response
+        return if (testDocument) testResponse ?: error("no test document") else response
     }
+}
+
+private class FakeTestMode : WinterSaleTestMode {
+    var on = false
+    override fun observe() = kotlinx.coroutines.flow.flowOf(on)
+    override suspend fun isOn() = on
+    override suspend fun set(on: Boolean) { this.on = on }
 }
 
 private class MemoryStorage : Storage {

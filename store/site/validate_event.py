@@ -4,6 +4,8 @@ from pathlib import Path
 
 
 EVENT_PATH = Path(__file__).with_name("winter-sale-2026.json")
+TEST_EVENT_PATH = Path(__file__).with_name("winter-sale-2026-test.json")
+EVENT_IDS = {EVENT_PATH.name: "steam-winter-2026", TEST_EVENT_PATH.name: "steam-winter-2026-test"}
 
 
 def unique_keys(pairs):
@@ -27,13 +29,13 @@ def utc_instant(value, name):
     return parsed
 
 
-def validate_document(text):
+def validate_document(text, event_id="steam-winter-2026"):
     document = json.loads(text, object_pairs_hook=unique_keys)
     if not isinstance(document, dict):
         raise ValueError("Event document must be an object")
     if type(document.get("schemaVersion")) is not int or document["schemaVersion"] != 1:
         raise ValueError("Unsupported schema version")
-    if document.get("eventId") != "steam-winter-2026":
+    if document.get("eventId") != event_id:
         raise ValueError("Unexpected event ID")
     if type(document.get("enabled")) is not bool:
         raise ValueError("enabled must be a boolean")
@@ -49,5 +51,9 @@ def validate_document(text):
 
 
 if __name__ == "__main__":
-    validated = validate_document(EVENT_PATH.read_text())
-    print(f"Valid event document: {validated['eventId']}, enabled={validated['enabled']}")
+    import sys
+
+    paths = [Path(arg) for arg in sys.argv[1:]] or [EVENT_PATH, TEST_EVENT_PATH]
+    for path in paths:
+        validated = validate_document(path.read_text(), EVENT_IDS.get(path.name, "steam-winter-2026"))
+        print(f"Valid event document: {validated['eventId']}, enabled={validated['enabled']}")

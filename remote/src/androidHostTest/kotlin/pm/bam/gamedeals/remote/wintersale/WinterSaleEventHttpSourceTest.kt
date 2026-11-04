@@ -32,6 +32,17 @@ class WinterSaleEventHttpSourceTest {
     }
 
     @Test
+    fun the_developer_test_switch_reads_the_test_document() = runTest {
+        val client = HttpClient(MockEngine { request ->
+            assertEquals("/events/winter-sale-2026-test.json", request.url.encodedPath)
+            respond("""{"enabled":false}""", headers = headersOf(HttpHeaders.Date, DATE))
+        })
+
+        WinterSaleEventHttpSource(client).fetch(testDocument = true)
+        client.close()
+    }
+
+    @Test
     fun an_error_status_fails_the_fetch() = runTest {
         // The production client sets expectSuccess, so the repository sees a failure and falls back to its cache.
         for ((status, type) in listOf(HttpStatusCode.NotFound to ClientRequestException::class.java,

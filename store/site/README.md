@@ -1,6 +1,6 @@
 # Game Deals support Worker and Winter Sale event document
 
-`worker.js` serves the support page and the Winter Sale control document at `/events/winter-sale-2026.json`. The event route returns `Cache-Control: no-store` and a server `Date` header. The checked-in document starts with `enabled: false`; change it only for the intended soft launch and deploy this Worker to make the change live.
+`worker.js` serves the support page and the Winter Sale control document at `/events/winter-sale-2026.json`. The event route returns `Cache-Control: no-store` and a server `Date` header. It also serves a developer test document at `/events/winter-sale-2026-test.json` (event ID `steam-winter-2026-test`), which only debug builds with the developer screen's test switch read. The checked-in documents start with `enabled: false`; change it only for the intended soft launch and deploy this Worker to make the change live.
 
 Before a deployment, run:
 

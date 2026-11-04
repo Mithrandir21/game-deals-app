@@ -45,6 +45,7 @@ This was the method used for the first deploy on 4 November 2026. Claude Code's 
 | `site-routes.mjs` | `application/javascript+module` | as in the repo |
 | `index.html` | `text/plain` | as in the repo |
 | `winter-sale-2026.json` | `application/javascript+module` | `export default { …the document… };` |
+| `winter-sale-2026-test.json` | `application/javascript+module` | `export default { …the test document… };` |
 
 Cloudflare refuses a raw JSON module (`unsupported Content-Type application/json`), so the document is wrapped as a script module under the same name. `worker.js` imports it unchanged. Wrangler instead bundles everything into one file. Either way the live route serves the same JSON.
 
@@ -87,6 +88,18 @@ The updated text is `docs/winter-sale/privacy_policy.txt` in this repository. It
 Store disclosures: the event request carries no user data and nothing new is collected, so the App Store privacy label, `PrivacyInfo.xcprivacy` and the Play Data safety form need no change.
 
 ## Rehearsal
+
+### Testing on a phone after the app is public (test event file)
+
+Once a release with the guide is public, switching the real document on shows the guide to everyone. To test without that:
+
+1. Install a **debug build** on the phone (store builds never read the test file; the switch is ignored in release builds).
+2. In the app: Account → Developer tools → Winter Sale guide → **Use the test event file**. Reopen the app.
+3. Ask Claude to switch the test file on with the Cloudflare connector, with test dates (for example `visibleFrom` now, `saleStart` a few minutes ahead, `end` a day later). Only `winter-sale-2026-test.json` changes; the real module is uploaded unchanged.
+4. Test the Home card, the guide, links, alerts on/off, the reminder and its tap. The test event has its own ID (`steam-winter-2026-test`) and its own cache, so it uses up nothing of the real event's one reminder.
+5. Switch the test file off again, and turn the developer switch off. Reading the real document again replaces the test reminder record and cancels any pending test reminder.
+
+Check: `curl -sSI https://gamedeals.bam.pm/events/winter-sale-2026-test.json` returns `200` and `no-store`.
 
 ### Android with a local event file
 

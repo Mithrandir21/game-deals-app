@@ -20,7 +20,8 @@ import pm.bam.gamedeals.logging.warn
 data class WinterSaleEventPayload(val body: String, val serverDateEpochMillis: Long?)
 
 interface WinterSaleEventSource {
-    suspend fun fetch(): WinterSaleEventPayload
+    /** [testDocument] reads the developer test document instead of the real one; see [WinterSaleTestMode]. */
+    suspend fun fetch(testDocument: Boolean = false): WinterSaleEventPayload
 }
 
 data class WinterSaleEvent(
@@ -67,14 +68,17 @@ internal class WinterSaleEventRepositoryImpl(
     private val clock: Clock,
     private val json: Json,
     private val logger: Logger,
+    private val testMode: WinterSaleTestMode,
 ) : WinterSaleEventRepository {
 
     // One report per process: every Home open checks the document, and a bad one is the same fault each time.
     private var reportedBadDocument = false
 
     override suspend fun refresh(): WinterSaleEventState {
+        // The real and test documents keep separate caches and event IDs, so switching never mixes them.
+        val document = if (testModeOn()) TEST_DOCUMENT else REAL_DOCUMENT
         val response = try {
-            withTimeoutOrNull(FETCH_TIMEOUT_MILLIS) { source.fetch() }
+            withTimeoutOrNull(FETCH_TIMEOUT_MILLIS) { source.fetch(testDocument = document == TEST_DOCUMENT) }
                 .also { if (it == null) warn(logger) { "Winter Sale event check timed out" } }
         } catch (error: CancellationException) {
             throw error
@@ -85,15 +89,15 @@ internal class WinterSaleEventRepositoryImpl(
         }
 
         if (response != null) {
-            when (val parsed = parse(response.body)) {
+            when (val parsed = parse(response.body, document)) {
                 ParsedDocument.Disabled -> {
-                    persist(CachedDocument(response.body, response.serverDateEpochMillis, clock.nowMillis()))
+                    persist(document, CachedDocument(response.body, response.serverDateEpochMillis, clock.nowMillis()))
                     return WinterSaleEventState.Hidden(WinterSaleHiddenReason.Disabled)
                 }
                 is ParsedDocument.Enabled -> {
                     val serverNow = response.serverDateEpochMillis
                     if (serverNow != null) {
-                        persist(CachedDocument(response.body, serverNow, clock.nowMillis()))
+                        persist(document, CachedDocument(response.body, serverNow, clock.nowMillis()))
                         return stateAt(parsed.event, serverNow, usingCache = false)
                     }
                     reportBadDocument("Winter Sale event response has no usable Date header")
@@ -102,12 +106,21 @@ internal class WinterSaleEventRepositoryImpl(
             }
         }
 
-        return cachedState()
+        return cachedState(document)
     }
 
-    private suspend fun cachedState(): WinterSaleEventState {
+    private suspend fun testModeOn(): Boolean = try {
+        testMode.isOn()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (t: Throwable) {
+        error(logger, t)
+        false
+    }
+
+    private suspend fun cachedState(document: Document): WinterSaleEventState {
         val cached = try {
-            storage.getNullable<CachedDocument>(CACHE_KEY)
+            storage.getNullable<CachedDocument>(document.cacheKey)
         } catch (error: CancellationException) {
             throw error
         } catch (t: Throwable) {
@@ -115,7 +128,7 @@ internal class WinterSaleEventRepositoryImpl(
             null
         } ?: return WinterSaleEventState.Hidden(WinterSaleHiddenReason.Unavailable)
 
-        val parsed = parse(cached.body)
+        val parsed = parse(cached.body, document)
         if (parsed == ParsedDocument.Disabled) return WinterSaleEventState.Hidden(WinterSaleHiddenReason.Disabled)
         if (parsed !is ParsedDocument.Enabled) return WinterSaleEventState.Hidden(WinterSaleHiddenReason.Unavailable)
 
@@ -129,18 +142,18 @@ internal class WinterSaleEventRepositoryImpl(
         return stateAt(parsed.event, serverDate + elapsed, usingCache = true)
     }
 
-    private suspend fun persist(cached: CachedDocument) {
+    private suspend fun persist(document: Document, cached: CachedDocument) {
         try {
-            if (storage.save(CACHE_KEY, cached)) return
+            if (storage.save(document.cacheKey, cached)) return
             warn(logger) { "Winter Sale event document could not be cached" }
         } catch (error: CancellationException) {
             throw error
         } catch (t: Throwable) {
             error(logger, t)
         }
-        if (parse(cached.body) == ParsedDocument.Disabled) {
+        if (parse(cached.body, document) == ParsedDocument.Disabled) {
             try {
-                storage.remove(CACHE_KEY)
+                storage.remove(document.cacheKey)
             } catch (error: CancellationException) {
                 throw error
             } catch (t: Throwable) {
@@ -167,11 +180,11 @@ internal class WinterSaleEventRepositoryImpl(
     }
 
     @OptIn(ExperimentalTime::class)
-    private fun parse(body: String): ParsedDocument {
+    private fun parse(body: String, document: Document): ParsedDocument {
         val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return ParsedDocument.Invalid
         if (runCatching { root["enabled"]?.jsonPrimitive?.booleanOrNull }.getOrNull() == false) return ParsedDocument.Disabled
         val wire = runCatching { json.decodeFromJsonElement(WinterSaleEventWire.serializer(), root) }.getOrNull() ?: return ParsedDocument.Invalid
-        if (!wire.enabled || wire.schemaVersion != SCHEMA_VERSION || wire.eventId != EVENT_ID) return ParsedDocument.Invalid
+        if (!wire.enabled || wire.schemaVersion != SCHEMA_VERSION || wire.eventId != document.eventId) return ParsedDocument.Invalid
         if (wire.copy.title.isBlank() || wire.copy.beforeSale.isBlank() || wire.copy.duringSale.isBlank()) return ParsedDocument.Invalid
         val visibleFrom = runCatching { Instant.parse(wire.visibleFrom).toEpochMilliseconds() }.getOrNull() ?: return ParsedDocument.Invalid
         val saleStart = runCatching { Instant.parse(wire.saleStart).toEpochMilliseconds() }.getOrNull() ?: return ParsedDocument.Invalid
@@ -188,9 +201,11 @@ internal class WinterSaleEventRepositoryImpl(
         data object Invalid : ParsedDocument
     }
 
+    private data class Document(val eventId: String, val cacheKey: String)
+
     private companion object {
-        const val CACHE_KEY = "winter_sale_event_document_v1"
-        const val EVENT_ID = "steam-winter-2026"
+        val REAL_DOCUMENT = Document("steam-winter-2026", "winter_sale_event_document_v1")
+        val TEST_DOCUMENT = Document("steam-winter-2026-test", "winter_sale_event_test_document_v1")
         const val SCHEMA_VERSION = 1
         const val FETCH_TIMEOUT_MILLIS = 2_000L
         const val CACHE_LIFETIME_MILLIS = 12L * 60 * 60 * 1_000

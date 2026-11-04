@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { handleSiteRequest } from "./site-routes.mjs";
 
 const eventJson = readFileSync(new URL("./winter-sale-2026.json", import.meta.url), "utf8");
+const testEventJson = readFileSync(new URL("./winter-sale-2026-test.json", import.meta.url), "utf8");
 const request = (path, method = "GET") => new Request(`https://gamedeals.bam.pm${path}`, { method });
 
 test("the event route serves JSON with a server date and no-store", async () => {
@@ -33,4 +34,17 @@ test("the support page and legacy redirect keep their behaviour", async () => {
 test("unsupported methods cannot change the document", () => {
   const response = handleSiteRequest(request("/events/winter-sale-2026.json", "POST"), "", eventJson);
   assert.equal(response.status, 405);
+});
+
+test("the test event route serves the test document with the same headers", async () => {
+  const response = handleSiteRequest(request("/events/winter-sale-2026-test.json"), "<html></html>", eventJson, testEventJson);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.ok(Number.isFinite(Date.parse(response.headers.get("date"))));
+  assert.equal(JSON.parse(await response.text()).eventId, "steam-winter-2026-test");
+});
+
+test("without a test document the test path redirects like any unknown path", () => {
+  const response = handleSiteRequest(request("/events/winter-sale-2026-test.json"), "<html></html>", eventJson);
+  assert.equal(response.status, 302);
 });

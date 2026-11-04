@@ -73,6 +73,8 @@ import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverrideImpl
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestMode
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestModeImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepository
@@ -140,7 +142,8 @@ val domainModule = module {
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
-    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get()) }
+    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get()) }
+    single<WinterSaleTestMode> { WinterSaleTestModeImpl(get(SETTINGS_QUALIFIER), get()) }
     single<WinterSaleOffersRepository> { WinterSaleOffersRepositoryImpl(get(), get(), get()) }
     single<WinterSaleCandidatesRepository> { WinterSaleCandidatesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER), get()) }
