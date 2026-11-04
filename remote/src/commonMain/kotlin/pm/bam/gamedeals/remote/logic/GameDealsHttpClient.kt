@@ -86,6 +86,7 @@ fun gameDealsHttpClient(
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
                 level = LogLevel.HEADERS
+                hideCredentials()
             }
             RemoteBuildType.RELEASE -> Unit
         }

@@ -8,10 +8,12 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.db.dao.GameIdMappingDao
 import pm.bam.gamedeals.domain.models.FollowedFranchise
+import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import kotlin.test.Test
@@ -29,6 +31,29 @@ class WinterSaleSeriesRepositoryTest {
         assertEquals(listOf(10L, 9L, 8L), fixture.source.calls)
         verifySuspend(exactly(60)) { fixture.games.findGameIdBySteamAppId(any(), any()) }
         assertTrue(fixture.store.entries.first { it.franchiseId == 8L }.complete.not())
+    }
+
+    @Test
+    fun series_maps_are_fetched_together_not_one_after_another() = runTest {
+        val fixture = fixture((1L..5L).map { followed(it) })
+        fixture.source.delayMillis = 1_000L
+
+        fixture.repo.candidates(false)
+
+        assertEquals(3, fixture.source.maxInFlight)
+        assertEquals(1_000L, testScheduler.currentTime)
+    }
+
+    @Test
+    fun series_games_use_the_itad_banner_with_the_igdb_cover_as_portrait() = runTest {
+        val fixture = fixture(listOf(followed(1)))
+        fixture.store.entries = listOf(WinterSaleSeriesMapEntry(1, 1L, 9_000L, true,
+            listOf(WinterSaleSeriesMappedGame("itad-1", "Game", false, coverImageId = "co1"))))
+
+        val art = fixture.repo.candidates(false).games.single().game.artwork
+
+        assertEquals("https://assets.isthereanydeal.com/itad-1/banner300.jpg", art.thumbnail)
+        assertTrue(art.boxart.orEmpty().contains("co1"))
     }
 
     @Test
@@ -124,11 +149,21 @@ class WinterSaleSeriesRepositoryTest {
     private class FakeSource : WinterSaleSeriesSource {
         var games = emptyMap<Long, List<WinterSaleSeriesGame>>()
         var failId: Long? = null
+        var delayMillis = 0L
         val calls = mutableListOf<Long>()
+        private var inFlight = 0
+        var maxInFlight = 0
         override suspend fun fetch(franchiseId: Long, limit: Int): List<WinterSaleSeriesGame> {
             calls += franchiseId
-            if (franchiseId == failId) error("IGDB unavailable")
-            return games[franchiseId].orEmpty()
+            inFlight++
+            maxInFlight = maxOf(maxInFlight, inFlight)
+            try {
+                delay(delayMillis)
+                if (franchiseId == failId) error("IGDB unavailable")
+                return games[franchiseId].orEmpty()
+            } finally {
+                inFlight--
+            }
         }
     }
 

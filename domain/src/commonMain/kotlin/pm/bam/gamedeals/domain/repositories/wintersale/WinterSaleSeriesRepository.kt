@@ -1,6 +1,9 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.storage.getNullable
@@ -96,10 +99,10 @@ internal class WinterSaleSeriesRepositoryImpl(
         val now = clock.nowMillis()
         val stored = mapStore.get().associateBy { it.franchiseId }
         val maps = linkedMapOf<Long, WinterSaleSeriesMapEntry>()
-        var franchiseCalls = 0
         var lookupCalls = 0
         var unavailable = false
         var checking = false
+        val toBuild = mutableListOf<FollowedFranchise>()
         for (franchise in selected) {
             val cached = stored[franchise.franchiseId]?.takeIf { it.followedAtEpochMs == franchise.addedAtMs }
             val fresh = cached?.takeIf { it.complete && it.builtAtEpochMs <= now && now - it.builtAtEpochMs < MAP_TTL_MS }
@@ -107,15 +110,29 @@ internal class WinterSaleSeriesRepositoryImpl(
                 maps[franchise.franchiseId] = fresh
                 continue
             }
-            if (franchiseCalls >= MAX_FRANCHISE_CALLS) {
+            if (toBuild.size >= MAX_FRANCHISE_CALLS) {
                 checking = true
                 if (cached != null) maps[franchise.franchiseId] = cached
                 continue
             }
-            franchiseCalls++
-            val games = try { seriesSource.fetch(franchise.franchiseId, MAX_GAMES_PER_SERIES) }
-            catch (error: CancellationException) { throw error } catch (t: Throwable) {
-                error(logger, t)
+            toBuild += franchise
+        }
+        // The franchise calls are independent, so they run together (IGDB allows 4 a second; at most 3 here).
+        // The Steam-id lookups below stay sequential so the lookup budget is spent in follow order.
+        val fetched = coroutineScope {
+            toBuild.map { franchise ->
+                async {
+                    try { seriesSource.fetch(franchise.franchiseId, MAX_GAMES_PER_SERIES) }
+                    catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                        error(logger, t)
+                        null
+                    }
+                }
+            }.awaitAll()
+        }
+        for ((franchise, games) in toBuild.zip(fetched)) {
+            val cached = stored[franchise.franchiseId]?.takeIf { it.followedAtEpochMs == franchise.addedAtMs }
+            if (games == null) {
                 unavailable = true
                 checking = true
                 if (cached != null) maps[franchise.franchiseId] = cached
@@ -171,7 +188,7 @@ internal class WinterSaleSeriesRepositoryImpl(
             }
         }
         val candidates = byGameId.filter { (_, pair) -> includeAdult || pair.first.erotic == false }.map { (id, pair) -> WinterSaleSeriesRawCandidate(
-            WinterSaleRawCandidate(id, pair.first.title, GameArtwork(boxart = pair.first.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }),
+            WinterSaleRawCandidate(id, pair.first.title, seriesArtwork(id, pair.first.coverImageId),
                 pair.first.erotic), pair.second,
         ) }
         return WinterSaleSeriesRawSection(candidates, checking, unavailable, allFollowed.size > MAX_SERIES)
@@ -191,6 +208,15 @@ internal class WinterSaleSeriesRepositoryImpl(
     }
 
     private companion object {
+        /**
+         * ITAD serves its wide banner at a path built from the game id, so series games get the same art as the
+         * waitlist and popular rows without another request; the IGDB cover stays as the portrait fallback.
+         */
+        fun seriesArtwork(itadId: String, igdbCoverId: String?) = GameArtwork(
+            banner300 = "https://assets.isthereanydeal.com/$itadId/banner300.jpg",
+            boxart = igdbCoverId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) },
+        )
+
         const val MAX_SERIES = 10
         const val MAX_GAMES_PER_SERIES = 30
         const val MAX_FRANCHISE_CALLS = 3

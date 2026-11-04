@@ -17,6 +17,7 @@ import pm.bam.gamedeals.remote.itad.auth.oauth.ItadTokenProvider
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
 import pm.bam.gamedeals.remote.logic.httpClient
+import pm.bam.gamedeals.remote.logic.hideCredentials
 import pm.bam.gamedeals.remote.logic.ktorPlatformLogger
 
 /**
@@ -41,6 +42,7 @@ internal fun itadOAuthHttpClient(
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
                 level = LogLevel.HEADERS
+                hideCredentials()
             }
             RemoteBuildType.RELEASE -> Unit
         }
@@ -70,6 +72,7 @@ internal fun itadAuthHttpClient(
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
                 level = LogLevel.HEADERS
+                hideCredentials()
             }
             RemoteBuildType.RELEASE -> Unit
         }
