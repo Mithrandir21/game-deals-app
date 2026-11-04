@@ -114,7 +114,7 @@ internal fun WinterSaleGuideScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WinterSaleGuideContent(
+internal fun WinterSaleGuideContent(
     state: WinterSaleGuideState,
     onBack: () -> Unit,
     onGame: (String) -> Unit,
