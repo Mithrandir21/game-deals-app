@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -21,7 +22,7 @@ class WinterSaleReminderTest {
     private val storage = ReminderMemoryStorage()
 
     private fun reminder(random: Random = FixedOffset(OFFSET)) =
-        WinterSaleReminderImpl(events, settings, scheduler, storage, Clock { deviceNow }, random)
+        WinterSaleReminderImpl(events, settings, scheduler, storage, Clock { deviceNow }, TestingLoggingListener(), random)
 
     @Test
     fun schedules_once_at_sale_start_plus_offset_measured_from_server_time() = runTest {
@@ -37,7 +38,7 @@ class WinterSaleReminderTest {
     fun offset_is_between_one_and_three_hours_and_kept_when_the_start_moves() = runTest {
         repeat(50) { seed ->
             val scheduler = RecordingScheduler()
-            val reminder = WinterSaleReminderImpl(events, settings, scheduler, ReminderMemoryStorage(), Clock { deviceNow }, Random(seed))
+            val reminder = WinterSaleReminderImpl(events, settings, scheduler, ReminderMemoryStorage(), Clock { deviceNow }, TestingLoggingListener(), Random(seed))
             reminder.reconcile(available(serverNow = SALE_START - HOUR))
             reminder.reconcile(available(serverNow = SALE_START - HOUR, saleStart = SALE_START + 2 * HOUR))
 

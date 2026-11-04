@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.GameArtwork
 import kotlin.test.Test
@@ -22,7 +23,7 @@ class WinterSaleGuideRepositoryTest {
             "popular" to offer("popular", 10), "ordinary" to offer("ordinary", 0),
         ))
 
-        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers).load("GB", false, 1L, true)
+        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers, TestingLoggingListener()).load("GB", false, 1L, true)
 
         assertEquals(1, offers.calls.size)
         assertEquals(setOf("wait", "shared", "series", "popular", "ordinary"), offers.calls.single().toSet())
@@ -41,7 +42,7 @@ class WinterSaleGuideRepositoryTest {
             checking = false, unavailable = false, moreSeriesFollowed = false))
         val offers = FakeOffers((1..31).associate { "game-$it" to offer("game-$it", 32 - it) })
 
-        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers).load("GB", true, 1L, true)
+        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers, TestingLoggingListener()).load("GB", true, 1L, true)
 
         assertEquals(30, result.waitlist.cards.size)
         assertEquals("game-1", result.waitlist.cards.first().candidate.gameId)
@@ -56,7 +57,7 @@ class WinterSaleGuideRepositoryTest {
             checking = false, unavailable = false, moreSeriesFollowed = false))
         val offers = FakeOffers(mapOf("shared" to offer("shared", 20)))
 
-        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers).load("GB", true, 1L, true)
+        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers, TestingLoggingListener()).load("GB", true, 1L, true)
 
         assertEquals(1, result.waitlist.cards.size)
         assertFalse(result.waitlist.cards.single().adultAllowedOff)
@@ -71,7 +72,7 @@ class WinterSaleGuideRepositoryTest {
         val series = FakeSeries(WinterSaleSeriesRawSection(emptyList(), checking = true, unavailable = true, moreSeriesFollowed = false))
         val offers = FakeOffers(mapOf("popular" to offer("popular", 20)))
 
-        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers).load("US", false, 1L, false)
+        val result = WinterSaleGuideRepositoryImpl(candidates, series, offers, TestingLoggingListener()).load("US", false, 1L, false)
 
         assertTrue(result.waitlist.signInRequired)
         assertTrue(result.series.checking)
@@ -90,7 +91,7 @@ class WinterSaleGuideRepositoryTest {
         val orders = listOf(ids, ids.reversed()).map { order ->
             val candidates = FakeCandidates().apply { wait = WinterSaleRawSection(order.map { raw(it) }) }
             val series = FakeSeries(WinterSaleSeriesRawSection(emptyList(), checking = false, unavailable = false, moreSeriesFollowed = false))
-            WinterSaleGuideRepositoryImpl(candidates, series, FakeOffers(offers)).load("GB", false, 1L, true).waitlist.cards.map { it.candidate.gameId }
+            WinterSaleGuideRepositoryImpl(candidates, series, FakeOffers(offers), TestingLoggingListener()).load("GB", false, 1L, true).waitlist.cards.map { it.candidate.gameId }
         }
 
         assertEquals(listOf("low", "big", "alpha", "charlie", "delta"), orders.first())

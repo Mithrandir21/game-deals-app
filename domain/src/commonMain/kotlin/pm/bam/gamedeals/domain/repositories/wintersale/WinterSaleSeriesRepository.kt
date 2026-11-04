@@ -13,6 +13,8 @@ import pm.bam.gamedeals.domain.models.IgdbImageSize
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 data class WinterSaleSeriesGame(val igdbId: Long, val title: String, val steamAppId: Int?, val erotic: Boolean?, val coverImageId: String? = null)
 
@@ -37,12 +39,13 @@ interface WinterSaleSeriesMapStore {
     suspend fun replace(entries: List<WinterSaleSeriesMapEntry>)
 }
 
-internal class WinterSaleSeriesMapStoreImpl(private val storage: Storage) : WinterSaleSeriesMapStore {
+internal class WinterSaleSeriesMapStoreImpl(private val storage: Storage, private val logger: Logger) : WinterSaleSeriesMapStore {
     override suspend fun get(): List<WinterSaleSeriesMapEntry> = try {
         storage.getNullable<List<WinterSaleSeriesMapEntry>>(KEY).orEmpty()
     } catch (error: CancellationException) {
         throw error
-    } catch (_: Throwable) {
+    } catch (t: Throwable) {
+        error(logger, t)
         emptyList()
     }
 
@@ -85,6 +88,7 @@ internal class WinterSaleSeriesRepositoryImpl(
     private val mapStore: WinterSaleSeriesMapStore,
     private val offersRepository: WinterSaleOffersRepository,
     private val clock: Clock,
+    private val logger: Logger,
 ) : WinterSaleSeriesRepository {
     override suspend fun candidates(includeAdult: Boolean): WinterSaleSeriesRawSection {
         val allFollowed = followedRepository.getFollowed().sortedWith(compareByDescending<FollowedFranchise> { it.addedAtMs }.thenBy { it.franchiseId })
@@ -110,7 +114,8 @@ internal class WinterSaleSeriesRepositoryImpl(
             }
             franchiseCalls++
             val games = try { seriesSource.fetch(franchise.franchiseId, MAX_GAMES_PER_SERIES) }
-            catch (error: CancellationException) { throw error } catch (_: Throwable) {
+            catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
                 unavailable = true
                 checking = true
                 if (cached != null) maps[franchise.franchiseId] = cached
@@ -121,7 +126,11 @@ internal class WinterSaleSeriesRepositoryImpl(
             for (game in games.take(MAX_GAMES_PER_SERIES)) {
                 val steamId = game.steamAppId ?: continue
                 val cachedId = try { mappingDao.get(steamId)?.takeIf { it.expires > now }?.gameId }
-                catch (error: CancellationException) { throw error } catch (_: Throwable) { unavailable = true; null }
+                catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                    error(logger, t)
+                    unavailable = true
+                    null
+                }
                 val id = if (cachedId != null) cachedId else {
                     if (lookupCalls >= MAX_UNCACHED_LOOKUPS) {
                         complete = false
@@ -129,7 +138,8 @@ internal class WinterSaleSeriesRepositoryImpl(
                     }
                     lookupCalls++
                     try { gamesRepository.findGameIdBySteamAppId(steamId, game.title) }
-                    catch (error: CancellationException) { throw error } catch (_: Throwable) {
+                    catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                        error(logger, t)
                         unavailable = true
                         complete = false
                         null
@@ -144,7 +154,10 @@ internal class WinterSaleSeriesRepositoryImpl(
             maps[franchise.franchiseId] = entry
             if (!complete) checking = true
         }
-        try { mapStore.replace(maps.values.toList()) } catch (error: CancellationException) { throw error } catch (_: Throwable) { unavailable = true }
+        try { mapStore.replace(maps.values.toList()) } catch (error: CancellationException) { throw error } catch (t: Throwable) {
+            error(logger, t)
+            unavailable = true
+        }
         val byGameId = linkedMapOf<String, Pair<WinterSaleSeriesMappedGame, MutableList<String>>>()
         for (franchise in selected) {
             for (game in maps[franchise.franchiseId]?.games.orEmpty()) {

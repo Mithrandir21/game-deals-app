@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.everySuspend
@@ -113,7 +114,7 @@ class WinterSaleSeriesRepositoryTest {
         everySuspend { followedRepo.getFollowed() } returns followed
         everySuspend { dao.get(any()) } returns null
         everySuspend { games.findGameIdBySteamAppId(any(), any()) } returns null
-        val repo = WinterSaleSeriesRepositoryImpl(followedRepo, source, games, dao, store, offers, Clock { 10_000L })
+        val repo = WinterSaleSeriesRepositoryImpl(followedRepo, source, games, dao, store, offers, Clock { 10_000L }, TestingLoggingListener())
         return Fixture(repo, source, store, offers, games)
     }
 

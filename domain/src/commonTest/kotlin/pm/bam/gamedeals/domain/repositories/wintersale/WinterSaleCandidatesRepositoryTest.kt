@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
@@ -74,7 +75,7 @@ class WinterSaleCandidatesRepositoryTest {
         everySuspend { auth.getAccessToken() } returns if (signedIn) "token" else null
         every { collection.observeCollectionIds() } returns flowOf(persistentSetOf("owned"))
         every { ignored.observeIgnoredIds() } returns flowOf(persistentSetOf("ignored"))
-        val repo = WinterSaleCandidatesRepositoryImpl(waitlist, collection, ignored, auth, popular, offers, Clock { 10_000L })
+        val repo = WinterSaleCandidatesRepositoryImpl(waitlist, collection, ignored, auth, popular, offers, Clock { 10_000L }, TestingLoggingListener())
         return Fixture(repo, waitlist, popular, offers)
     }
 

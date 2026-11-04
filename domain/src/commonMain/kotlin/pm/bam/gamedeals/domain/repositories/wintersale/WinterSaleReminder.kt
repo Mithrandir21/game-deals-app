@@ -11,6 +11,8 @@ import pm.bam.gamedeals.common.storage.getNullable
 import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 /**
  * Platform port for the single phone-local sale reminder: Android a one-time WorkManager job, iOS a pending
@@ -55,6 +57,7 @@ internal class WinterSaleReminderImpl(
     private val scheduler: WinterSaleReminderScheduler,
     private val storage: Storage,
     private val clock: Clock,
+    private val logger: Logger,
     private val random: Random = Random.Default,
 ) : WinterSaleReminder {
 
@@ -166,7 +169,8 @@ internal class WinterSaleReminderImpl(
         block()
     } catch (error: CancellationException) {
         throw error
-    } catch (_: Throwable) {
+    } catch (t: Throwable) {
+        error(logger, t)
         null
     }
 

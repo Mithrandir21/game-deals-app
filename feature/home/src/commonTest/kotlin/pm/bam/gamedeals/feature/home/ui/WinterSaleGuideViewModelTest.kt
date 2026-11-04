@@ -2,6 +2,10 @@
 
 package pm.bam.gamedeals.feature.home.ui
 
+import pm.bam.gamedeals.logging.LogLevel
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.testing.RecordingLogger
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
@@ -180,7 +184,98 @@ class WinterSaleGuideViewModelTest {
         }
     }
 
-    private fun fixture(clock: Clock): Fixture {
+    @Test
+    fun the_sale_copy_flips_at_once_but_the_price_reload_waits_for_its_spread() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime }, jitterMillis = 3 * 60 * 1000L)
+        val event = WinterSaleEvent("winter", 0L, 5 * 60 * 1000L, 60 * 60 * 1000L, "Winter", "Before", "During")
+        fixture.events.state = WinterSaleEventState.Available(event, WinterSalePhase.BeforeSale, 4 * 60 * 1000L, false)
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals(listOf(false), fixture.guide.saleActive)
+
+            fixture.events.state = WinterSaleEventState.Available(event, WinterSalePhase.OnSale, 5 * 60 * 1000L, false)
+            advanceTimeBy(60 * 1000L + 1)
+            runCurrent()
+            assertEquals(WinterSalePhase.OnSale, (fixture.vm.state.value.event as WinterSaleEventState.Available).phase)
+            assertEquals(listOf(false), fixture.guide.saleActive)
+
+            advanceTimeBy(3 * 60 * 1000L)
+            runCurrent()
+            assertEquals(listOf(false, true), fixture.guide.saleActive)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun a_first_open_during_the_sale_loads_at_once() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime }, jitterMillis = 3 * 60 * 1000L)
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals(listOf(true), fixture.guide.saleActive)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun a_pull_right_after_a_load_is_ignored() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime })
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals(1, fixture.guide.calls.size)
+
+            advanceTimeBy(29 * 1000L)
+            fixture.vm.onPullToRefresh()
+            runCurrent()
+            assertEquals(1, fixture.guide.calls.size)
+
+            advanceTimeBy(1_000L)
+            fixture.vm.onPullToRefresh()
+            runCurrent()
+            assertEquals(2, fixture.guide.calls.size)
+            fixture.vm.onPullToRefresh()
+            runCurrent()
+            assertEquals(2, fixture.guide.calls.size)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun a_failed_guide_load_is_logged() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val logger = RecordingLogger()
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime }, logger = logger)
+        fixture.guide.fail = true
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertEquals("offline", logger.at(LogLevel.ERROR).single().throwable?.message)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    private fun fixture(clock: Clock, jitterMillis: Long = 0L, logger: Logger = TestingLoggingListener()): Fixture {
         val country = MutableStateFlow(Country("GB", "United Kingdom", "GBP"))
         val adult = MutableStateFlow(false)
         val auth = MutableStateFlow<AuthState>(AuthState.LoggedOut)
@@ -192,7 +287,7 @@ class WinterSaleGuideViewModelTest {
         every { authStore.observeAuthState() } returns auth
         val events = FakeEvents()
         val guide = FakeGuide()
-        val vm = WinterSaleGuideViewModel(events, guide, regionRepository, settingsRepository, authStore, clock, mock<WinterSaleReminder>(MockMode.autoUnit))
+        val vm = WinterSaleGuideViewModel(events, guide, regionRepository, settingsRepository, authStore, clock, mock<WinterSaleReminder>(MockMode.autoUnit), logger) { jitterMillis }
         return Fixture(vm, country, adult, auth, events, guide)
     }
 

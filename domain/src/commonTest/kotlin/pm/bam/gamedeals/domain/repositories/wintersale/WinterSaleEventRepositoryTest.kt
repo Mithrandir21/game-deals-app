@@ -1,5 +1,7 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.logging.LogLevel
+import pm.bam.gamedeals.testing.RecordingLogger
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.delay
@@ -19,7 +21,8 @@ class WinterSaleEventRepositoryTest {
     private var deviceNow = millis("2026-12-10T12:00:00Z")
     private val storage = MemoryStorage()
     private val source = FakeSource(WinterSaleEventPayload(ENABLED, deviceNow))
-    private fun repository() = WinterSaleEventRepositoryImpl(source, storage, Clock { deviceNow }, Json { ignoreUnknownKeys = true })
+    private val logger = RecordingLogger()
+    private fun repository() = WinterSaleEventRepositoryImpl(source, storage, Clock { deviceNow }, Json { ignoreUnknownKeys = true }, logger)
 
     @Test
     fun server_date_controls_visibility_and_sale_phase() = runTest {
@@ -110,6 +113,34 @@ class WinterSaleEventRepositoryTest {
     fun old_extra_fields_are_tolerated() = runTest {
         source.response = WinterSaleEventPayload(ENABLED.replace("\"enabled\":true,", "\"enabled\":true,\"handPicks\":[\"unused\"],"), deviceNow)
         assertEquals(WinterSalePhase.BeforeSale, (repository().refresh() as WinterSaleEventState.Available).phase)
+    }
+
+    @Test
+    fun a_bad_document_is_reported_once_per_process_and_a_disabled_one_not_at_all() = runTest {
+        val repository = repository()
+        source.response = WinterSaleEventPayload("<html>redirect</html>", deviceNow)
+        repository.refresh()
+        repository.refresh()
+        source.response = WinterSaleEventPayload(ENABLED, null)
+        repository.refresh()
+        assertEquals(listOf("Winter Sale event document is invalid"), logger.at(LogLevel.ERROR).map { it.message })
+
+        logger.entries.clear()
+        source.response = WinterSaleEventPayload("""{"enabled":false}""", deviceNow)
+        repository().refresh()
+        assertTrue(logger.entries.isEmpty())
+    }
+
+    @Test
+    fun fetch_failures_and_timeouts_are_logged() = runTest {
+        source.fail = true
+        repository().refresh()
+        assertEquals("offline", logger.at(LogLevel.ERROR).single().throwable?.message)
+
+        source.fail = false
+        source.delayMillis = 3_000
+        repository().refresh()
+        assertEquals(listOf("Winter Sale event check timed out"), logger.at(LogLevel.WARN).map { it.message })
     }
 
     private fun millis(value: String) = Instant.parse(value).toEpochMilliseconds()

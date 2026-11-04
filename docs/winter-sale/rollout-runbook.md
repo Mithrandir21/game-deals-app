@@ -95,9 +95,9 @@ Release builds always read the production route. Before the store release goes l
 
 ## Monitoring through the sale
 
-- Sentry: new issues in the guide, the event check or the reminder job.
+- Sentry: new issues in the guide, the event check or the reminder job. A bad event document (invalid, or no `Date` header) raises one issue per app run with the message "Winter Sale event document is invalid" or "…has no usable Date header"; that means the Worker is serving the wrong thing. Offline and timeout failures only appear as breadcrumbs.
 - Cloudflare: the Worker's request graph for `gamedeals-site`. Expect a jump at release and at soft launch; errors should stay near zero.
-- ITAD: API usage around 17 December. Each guide refresh makes one batched price pass; series lookups are capped per opening.
+- ITAD: API usage around 17 December. Each guide refresh makes one batched price pass; series lookups are capped per opening. An open guide waits a random 0–10 minutes after 18:00 UTC before reloading prices, and a pull within 30 seconds of the last load is ignored.
 
 ## Accepted limitations
 

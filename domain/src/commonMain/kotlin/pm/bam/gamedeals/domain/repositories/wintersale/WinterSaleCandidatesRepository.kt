@@ -9,6 +9,8 @@ import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 data class WinterSaleCandidate(val gameId: String, val title: String, val artwork: GameArtwork, val offer: WinterSaleOffer, val adult: Boolean? = null)
 
@@ -51,10 +53,12 @@ internal class WinterSaleCandidatesRepositoryImpl(
     private val popularSource: WinterSalePopularSource,
     private val offersRepository: WinterSaleOffersRepository,
     private val clock: Clock,
+    private val logger: Logger,
 ) : WinterSaleCandidatesRepository {
     override suspend fun waitlistCandidates(country: String, includeAdult: Boolean, saleStartEpochMs: Long?, saleActive: Boolean): WinterSaleRawSection {
         if (authTokenStore.getAccessToken() == null) return WinterSaleRawSection(emptyList(), signInRequired = true)
-        val entries = try { waitlistRepository.getWaitlist() } catch (error: CancellationException) { throw error } catch (_: Throwable) {
+        val entries = try { waitlistRepository.getWaitlist() } catch (error: CancellationException) { throw error } catch (t: Throwable) {
+            error(logger, t)
             return WinterSaleRawSection(emptyList(), unavailable = true)
         }
         var snapshot = waitlistRepository.observeWaitlistDisplay().first()
@@ -65,7 +69,10 @@ internal class WinterSaleCandidatesRepositoryImpl(
             snapshot.items.map { it.gameId }.toSet() != entries.map { it.gameId }.toSet()
         var refreshFailed = false
         if (stale) {
-            try { waitlistRepository.refreshWaitlistDisplay() } catch (error: CancellationException) { throw error } catch (_: Throwable) { refreshFailed = true }
+            try { waitlistRepository.refreshWaitlistDisplay() } catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
+                refreshFailed = true
+            }
             snapshot = waitlistRepository.observeWaitlistDisplay().first()
         }
         if (snapshot == null || snapshot.regionCode != country || snapshot.items.map { it.gameId }.toSet() != entries.map { it.gameId }.toSet()) {
@@ -81,7 +88,10 @@ internal class WinterSaleCandidatesRepositoryImpl(
 
     override suspend fun popularCandidates(country: String, includeAdult: Boolean): WinterSaleRawSection {
         val fetched = try { popularSource.fetch(country, includeAdult, POPULAR_CANDIDATE_LIMIT) }
-        catch (error: CancellationException) { throw error } catch (_: Throwable) { return WinterSaleRawSection(emptyList(), unavailable = true) }
+        catch (error: CancellationException) { throw error } catch (t: Throwable) {
+            error(logger, t)
+            return WinterSaleRawSection(emptyList(), unavailable = true)
+        }
         val signedIn = authTokenStore.getAccessToken() != null
         val excluded = if (signedIn) {
             collectionRepository.observeCollectionIds().first() + waitlistRepository.observeWaitlistIds().first() + ignoredRepository.observeIgnoredIds().first()

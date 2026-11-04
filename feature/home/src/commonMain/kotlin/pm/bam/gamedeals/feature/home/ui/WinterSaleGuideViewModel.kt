@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.home.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +23,8 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideContent
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 internal data class WinterSaleGuideState(
     val event: WinterSaleEventState = WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable),
@@ -43,6 +46,9 @@ internal class WinterSaleGuideViewModel(
     auth: AuthTokenStore,
     private val clock: Clock,
     private val reminder: WinterSaleReminder,
+    private val logger: Logger,
+    /** Spreads the sale-start price reload of every open guide, so they don't all call ITAD at 18:00:00 UTC. */
+    private val saleStartJitterMillis: () -> Long = { Random.nextLong(0, MAX_SALE_START_JITTER_MS + 1) },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(WinterSaleGuideState())
     val state: StateFlow<WinterSaleGuideState> = mutableState
@@ -53,7 +59,10 @@ internal class WinterSaleGuideViewModel(
 
     private var currentContext: Context? = null
     private var loadedContext: Context? = null
+    /** The sale phase the shown prices were loaded in; a change means they must be reloaded. */
+    private var loadedPhase: WinterSalePhase? = null
     private var lastSuccessfulAtEpochMs = 0L
+    private var lastLoadStartedAtEpochMs: Long? = null
     private var poll: Job? = null
     private var load: Job? = null
 
@@ -67,6 +76,7 @@ internal class WinterSaleGuideViewModel(
                 if (previous == null || !previous.samePrices(next)) {
                     load?.cancel()
                     loadedContext = null
+                    loadedPhase = null
                     lastSuccessfulAtEpochMs = 0L
                     mutableState.value = mutableState.value.copy(content = null, country = next.country, includeAdult = next.includeAdult,
                         stalePrices = false, loading = false, refreshing = false)
@@ -97,30 +107,46 @@ internal class WinterSaleGuideViewModel(
 
     fun onPause() { poll?.cancel(); poll = null }
 
+    /** A pull straight after a load is ignored: repeated pulls would each cost about five ITAD calls on the app's one key. */
+    fun onPullToRefresh() {
+        val now = clock.nowMillis()
+        val last = lastLoadStartedAtEpochMs
+        if (last != null && now >= last && now - last < PULL_GAP_MS) return
+        refresh(force = true)
+    }
+
     fun refresh(force: Boolean = true) {
         load?.cancel()
         load = viewModelScope.launch {
             val context = currentContext ?: return@launch
             val old = mutableState.value
-            val event = try { events.refresh() } catch (error: CancellationException) { throw error } catch (_: Throwable) {
+            val event = try { events.refresh() } catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
                 WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable)
             }
             viewModelScope.launch { reminder.reconcile(event) }
             if (context != currentContext) return@launch
             if (event !is WinterSaleEventState.Available) {
                 loadedContext = null
+                loadedPhase = null
                 lastSuccessfulAtEpochMs = 0L
                 mutableState.value = mutableState.value.copy(event = event, eventChecked = true, content = null, loading = false,
                     refreshing = false, stalePrices = false)
                 return@launch
             }
-            val phaseChanged = (old.event as? WinterSaleEventState.Available)?.phase != event.phase
+            val phaseChanged = loadedPhase != event.phase
             val sameContext = loadedContext?.samePrices(context) == true
             val stillFresh = lastSuccessfulAtEpochMs > 0L && clock.nowMillis() >= lastSuccessfulAtEpochMs &&
                 clock.nowMillis() - lastSuccessfulAtEpochMs < REFRESH_MS
             if (!force && sameContext && stillFresh && !phaseChanged && old.content != null) {
                 mutableState.value = mutableState.value.copy(event = event, eventChecked = true, loading = false, refreshing = false)
                 return@launch
+            }
+            if (!force && loadedPhase == WinterSalePhase.BeforeSale && event.phase == WinterSalePhase.OnSale && old.content != null) {
+                // The sale copy and its "prices may still be updating" note show at once; the price reload waits a moment.
+                mutableState.value = mutableState.value.copy(event = event, eventChecked = true)
+                delay(saleStartJitterMillis())
+                if (context != currentContext) return@launch
             }
             // While reloading, judge the shown prices by their own check time: a retry after a partial load must not
             // hide prices fetched moments ago.
@@ -129,9 +155,13 @@ internal class WinterSaleGuideViewModel(
             } == true
             mutableState.value = mutableState.value.copy(event = event, eventChecked = true, loading = old.content == null,
                 refreshing = old.content != null, stalePrices = old.content != null && !shownPricesFresh)
+            lastLoadStartedAtEpochMs = clock.nowMillis()
             val result = try { guide.load(context.country.code, context.includeAdult, event.event.saleStartEpochMillis,
                 event.phase == WinterSalePhase.OnSale) }
-            catch (error: CancellationException) { throw error } catch (_: Throwable) { null }
+            catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
+                null
+            }
             if (context != currentContext) return@launch
             if (result == null || (!result.hasCards && result.hasFailure && old.content != null && sameContext)) {
                 mutableState.value = mutableState.value.copy(content = if (sameContext) old.content else null,
@@ -140,6 +170,7 @@ internal class WinterSaleGuideViewModel(
             }
             if (result != null) {
                 loadedContext = context
+                loadedPhase = event.phase
                 if (!result.hasFailure) lastSuccessfulAtEpochMs = clock.nowMillis()
                 mutableState.value = mutableState.value.copy(content = result, loading = false, refreshing = false, stalePrices = false)
             } else {
@@ -148,5 +179,9 @@ internal class WinterSaleGuideViewModel(
         }
     }
 
-    private companion object { const val REFRESH_MS = 15 * 60 * 1000L }
+    private companion object {
+        const val REFRESH_MS = 15 * 60 * 1000L
+        const val MAX_SALE_START_JITTER_MS = 10 * 60 * 1000L
+        const val PULL_GAP_MS = 30 * 1000L
+    }
 }

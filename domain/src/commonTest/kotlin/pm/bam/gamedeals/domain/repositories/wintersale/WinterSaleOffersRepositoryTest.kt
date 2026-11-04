@@ -1,5 +1,8 @@
 package pm.bam.gamedeals.domain.repositories.wintersale
 
+import pm.bam.gamedeals.logging.LogLevel
+import pm.bam.gamedeals.testing.RecordingLogger
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
@@ -16,7 +19,7 @@ class WinterSaleOffersRepositoryTest {
         val source = FakeOfferSource()
         val ids = (1..430).map { "game-$it" }
 
-        val result = WinterSaleOffersRepositoryImpl(source, Clock { 123L }).load(ids + "game-1" + "", "GB")
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 123L }, TestingLoggingListener()).load(ids + "game-1" + "", "GB")
 
         assertEquals(listOf(200, 200, 30), source.calls.map { it.first.size })
         assertTrue(source.calls.all { it.second == "GB" })
@@ -28,8 +31,10 @@ class WinterSaleOffersRepositoryTest {
     @Test
     fun one_failed_chunk_does_not_hide_successful_chunks() = runTest {
         val source = FakeOfferSource(failOnId = "game-201")
-        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load((1..430).map { "game-$it" }, "GB")
+        val logger = RecordingLogger()
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }, logger).load((1..430).map { "game-$it" }, "GB")
 
+        assertEquals(1, logger.at(LogLevel.ERROR).size)
         assertIs<WinterSalePriceStatus.Priced>(result.perGame["game-1"])
         assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game-201"])
         assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game-400"])
@@ -41,7 +46,7 @@ class WinterSaleOffersRepositoryTest {
         val source = object : WinterSaleOfferSource {
             override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> = mapOf("empty" to null)
         }
-        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("empty", "missing"), "GB")
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }, TestingLoggingListener()).load(listOf("empty", "missing"), "GB")
 
         assertEquals(WinterSalePriceStatus.NoCurrentOffer, result.perGame["empty"])
         assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["missing"])
@@ -53,7 +58,7 @@ class WinterSaleOffersRepositoryTest {
             override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> =
                 mapOf("game" to offer("game", country = "US"))
         }
-        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("game"), "GB")
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }, TestingLoggingListener()).load(listOf("game"), "GB")
 
         assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["game"])
     }
@@ -71,7 +76,7 @@ class WinterSaleOffersRepositoryTest {
         val source = object : WinterSaleOfferSource {
             override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> = throw CancellationException("cancelled")
         }
-        assertFailsWith<CancellationException> { WinterSaleOffersRepositoryImpl(source, Clock { 0L }).load(listOf("game"), "GB") }
+        assertFailsWith<CancellationException> { WinterSaleOffersRepositoryImpl(source, Clock { 0L }, TestingLoggingListener()).load(listOf("game"), "GB") }
     }
 }
 

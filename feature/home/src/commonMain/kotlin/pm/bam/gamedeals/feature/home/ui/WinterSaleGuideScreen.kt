@@ -109,7 +109,7 @@ internal fun WinterSaleGuideScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     WinterSaleResumeEffect(viewModel::onResume, viewModel::onPause)
-    WinterSaleGuideContent(state, onBack, onGame, onOffer, viewModel::refresh)
+    WinterSaleGuideContent(state, onBack, onGame, onOffer, viewModel::onPullToRefresh)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -13,6 +13,9 @@ import pm.bam.gamedeals.common.storage.Storage
 import pm.bam.gamedeals.common.storage.getNullable
 import pm.bam.gamedeals.common.storage.save
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.warn
 
 data class WinterSaleEventPayload(val body: String, val serverDateEpochMillis: Long?)
 
@@ -63,14 +66,21 @@ internal class WinterSaleEventRepositoryImpl(
     private val storage: Storage,
     private val clock: Clock,
     private val json: Json,
+    private val logger: Logger,
 ) : WinterSaleEventRepository {
+
+    // One report per process: every Home open checks the document, and a bad one is the same fault each time.
+    private var reportedBadDocument = false
 
     override suspend fun refresh(): WinterSaleEventState {
         val response = try {
             withTimeoutOrNull(FETCH_TIMEOUT_MILLIS) { source.fetch() }
+                .also { if (it == null) warn(logger) { "Winter Sale event check timed out" } }
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            // Offline and timeouts are downgraded to breadcrumbs by the Sentry listener; anything else is an issue.
+            error(logger, t)
             null
         }
 
@@ -86,8 +96,9 @@ internal class WinterSaleEventRepositoryImpl(
                         persist(CachedDocument(response.body, serverNow, clock.nowMillis()))
                         return stateAt(parsed.event, serverNow, usingCache = false)
                     }
+                    reportBadDocument("Winter Sale event response has no usable Date header")
                 }
-                ParsedDocument.Invalid -> Unit
+                ParsedDocument.Invalid -> reportBadDocument("Winter Sale event document is invalid")
             }
         }
 
@@ -99,7 +110,8 @@ internal class WinterSaleEventRepositoryImpl(
             storage.getNullable<CachedDocument>(CACHE_KEY)
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            error(logger, t)
             null
         } ?: return WinterSaleEventState.Hidden(WinterSaleHiddenReason.Unavailable)
 
@@ -120,20 +132,27 @@ internal class WinterSaleEventRepositoryImpl(
     private suspend fun persist(cached: CachedDocument) {
         try {
             if (storage.save(CACHE_KEY, cached)) return
+            warn(logger) { "Winter Sale event document could not be cached" }
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Throwable) {
-            Unit
+        } catch (t: Throwable) {
+            error(logger, t)
         }
         if (parse(cached.body) == ParsedDocument.Disabled) {
             try {
                 storage.remove(CACHE_KEY)
             } catch (error: CancellationException) {
                 throw error
-            } catch (_: Throwable) {
-                Unit
+            } catch (t: Throwable) {
+                error(logger, t)
             }
         }
+    }
+
+    private fun reportBadDocument(message: String) {
+        if (reportedBadDocument) return
+        reportedBadDocument = true
+        error(logger) { message }
     }
 
     private fun stateAt(event: WinterSaleEvent, serverNow: Long, usingCache: Boolean): WinterSaleEventState = when {

@@ -2,6 +2,8 @@ package pm.bam.gamedeals.domain.repositories.wintersale
 
 import kotlin.coroutines.cancellation.CancellationException
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 data class WinterSaleMoney(val amount: Double, val currency: String)
 
@@ -48,6 +50,7 @@ interface WinterSaleOffersRepository {
 internal class WinterSaleOffersRepositoryImpl(
     private val source: WinterSaleOfferSource,
     private val clock: Clock,
+    private val logger: Logger,
 ) : WinterSaleOffersRepository {
     override suspend fun load(gameIds: List<String>, country: String): WinterSaleOfferLoad {
         require(country.isNotBlank())
@@ -58,7 +61,8 @@ internal class WinterSaleOffersRepositoryImpl(
                 source.fetch(chunk, country)
             } catch (error: CancellationException) {
                 throw error
-            } catch (_: Throwable) {
+            } catch (t: Throwable) {
+                error(logger, t)
                 emptyMap()
             }
             for (id in chunk) {

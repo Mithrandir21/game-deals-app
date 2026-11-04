@@ -140,13 +140,13 @@ val domainModule = module {
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
-    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
-    single<WinterSaleOffersRepository> { WinterSaleOffersRepositoryImpl(get(), get()) }
-    single<WinterSaleCandidatesRepository> { WinterSaleCandidatesRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
-    single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER)) }
-    single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
-    single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get()) }
-    single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get()) }
+    single<WinterSaleOffersRepository> { WinterSaleOffersRepositoryImpl(get(), get(), get()) }
+    single<WinterSaleCandidatesRepository> { WinterSaleCandidatesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get(), get()) }
+    single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
     // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }

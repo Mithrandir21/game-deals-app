@@ -3,6 +3,8 @@ package pm.bam.gamedeals.domain.repositories.wintersale
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
 
 enum class WinterSaleGuideSectionKind { Waitlist, Series, Popular }
 
@@ -50,21 +52,29 @@ internal class WinterSaleGuideRepositoryImpl(
     private val candidatesRepository: WinterSaleCandidatesRepository,
     private val seriesRepository: WinterSaleSeriesRepository,
     private val offersRepository: WinterSaleOffersRepository,
+    private val logger: Logger,
 ) : WinterSaleGuideRepository {
     override suspend fun load(country: String, includeAdult: Boolean, saleStartEpochMs: Long, saleActive: Boolean): WinterSaleGuideContent = coroutineScope {
         val waitlist = async {
             try { candidatesRepository.waitlistCandidates(country, includeAdult, saleStartEpochMs, saleActive) }
-            catch (error: CancellationException) { throw error } catch (_: Throwable) { WinterSaleRawSection(emptyList(), unavailable = true) }
+            catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
+                WinterSaleRawSection(emptyList(), unavailable = true)
+            }
         }
         val series = async {
             try { seriesRepository.candidates(includeAdult) }
-            catch (error: CancellationException) { throw error } catch (_: Throwable) {
+            catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
                 WinterSaleSeriesRawSection(emptyList(), checking = false, unavailable = true, moreSeriesFollowed = false)
             }
         }
         val popular = async {
             try { candidatesRepository.popularCandidates(country, includeAdult) }
-            catch (error: CancellationException) { throw error } catch (_: Throwable) { WinterSaleRawSection(emptyList(), unavailable = true) }
+            catch (error: CancellationException) { throw error } catch (t: Throwable) {
+                error(logger, t)
+                WinterSaleRawSection(emptyList(), unavailable = true)
+            }
         }
         val wait = waitlist.await()
         val followed = series.await()
