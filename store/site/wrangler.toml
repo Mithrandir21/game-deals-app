@@ -7,3 +7,6 @@ preview_urls = false
 routes = [{ pattern = "gamedeals.bam.pm", custom_domain = true }]
 # index.html is imported as a string, so the page stays plain HTML.
 rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = true }]
+# Keep request logs off: the privacy policy says we do not keep a log of event-file requests.
+[observability]
+enabled = false

@@ -33,16 +33,44 @@ Then confirm the live route:
 curl -sSi https://gamedeals.bam.pm/events/winter-sale-2026.json | grep -iE '^(HTTP|cache-control|date)|"enabled"'
 ```
 
-Expect `200`, `cache-control: no-store`, a `date` header, and the intended `enabled` value. Wrangler needs a login on this machine (`npx wrangler@4 login`), or deploy from the Cloudflare dashboard.
+Expect `200`, `cache-control: no-store`, a `date` header, and the intended `enabled` value. Wrangler needs a login on this machine (`npx wrangler@4 login`). The owner prefers not to log in with Wrangler; use the Cloudflare connector instead (below).
+
+### Deploying with the Cloudflare connector (no Wrangler login)
+
+This was the method used for the first deploy on 4 November 2026. Claude Code's Cloudflare connector (`mcp__cloudflare-api__execute`) uploads the Worker with a multipart `PUT /accounts/{account}/workers/scripts/gamedeals-site`. The metadata is `main_module: "worker.js"`, `compatibility_date: "2025-09-01"`, no bindings and `observability: { enabled: false }`. It uploads four modules:
+
+| Module | Content type | Content |
+|---|---|---|
+| `worker.js` | `application/javascript+module` | as in the repo |
+| `site-routes.mjs` | `application/javascript+module` | as in the repo |
+| `index.html` | `text/plain` | as in the repo |
+| `winter-sale-2026.json` | `application/javascript+module` | `export default { …the document… };` |
+
+Cloudflare refuses a raw JSON module (`unsupported Content-Type application/json`), so the document is wrapped as a script module under the same name. `worker.js` imports it unchanged. Wrangler instead bundles everything into one file. Either way the live route serves the same JSON.
+
+**Toggle only the switch.** Read the live modules (`GET …/workers/scripts/gamedeals-site/content/v2`, which returns multipart). Replace the single `"enabled": true|false` in `winter-sale-2026.json`. Upload every module again with the same metadata. Abort if the module is missing or has more than one `enabled`; that happens after a Wrangler deploy, because the bundle has no separate module. In that case do a full upload as in the table. Ask Claude to "switch the Winter Sale guide off with the Cloudflare connector"; this file has the steps.
+
+After any change, run the `curl` check above and update `store/site/winter-sale-2026.json` in the repo to match.
+
+### Turning it off from a phone (Cloudflare dashboard)
+
+Not yet tried from a phone. In the Cloudflare dashboard:
+1. Open Workers & Pages, then `gamedeals-site`, then Edit code.
+2. Open `winter-sale-2026.json`, change `"enabled": true` to `"enabled": false`, then Deploy.
+3. Check `https://gamedeals.bam.pm/events/winter-sale-2026.json` in the phone's browser: it should show `"enabled":false`.
+
+Try this once before 10 December, so the phone route is known to work.
 
 ### Turning the guide off
 
-1. Set `"enabled": false` in `store/site/winter-sale-2026.json`.
-2. Run the validation and deploy commands above, then the `curl` check.
+1. Set `"enabled": false`: in `store/site/winter-sale-2026.json` with Wrangler, with the connector toggle, or in the dashboard editor.
+2. Deploy (Wrangler: run the validation and deploy commands above), then run the `curl` check.
 3. Effect: any phone that fetches the document hides the Home entry and the guide at once, and Android cancels its pending reminder. A phone that is offline keeps a cached enabled document for at most 12 hours.
 4. Known limit: an iOS reminder that is already scheduled can still fire after a disable until the app is opened or the background check runs. Tapping it then opens Home, not the guide.
 
 No app release is needed to turn the guide off.
+
+**Practised 4 November 2026** with the connector. The route was deployed switched off (production had redirected it to the home page until then), then switched on, then off. Each change was live within about 5 seconds of the upload: the upload took about 2–5 seconds, and the next `curl` showed the new value. The support page was unchanged (same SHA-256), as were the redirect for other paths and the 405 for other methods. Worker logs stay off (`[observability] enabled = false`), as the privacy policy promises. Released apps don't fetch the route yet, so no user saw any of this.
 
 ## Privacy policy
 
