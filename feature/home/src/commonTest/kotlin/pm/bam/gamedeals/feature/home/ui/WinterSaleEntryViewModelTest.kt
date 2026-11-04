@@ -45,6 +45,62 @@ class WinterSaleEntryViewModelTest {
         }
     }
 
+    @Test
+    fun the_home_card_switches_at_sale_start_then_rechecks_every_fifteen_minutes() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val event = WinterSaleEvent("winter", 0L, 5 * MINUTE, 60 * MINUTE, "Winter", "Before", "During")
+        val source = FakeEvents()
+        source.state = WinterSaleEventState.Available(event, WinterSalePhase.BeforeSale, 0L, false)
+        val vm = WinterSaleEntryViewModel(source, RecordingReminder())
+        try {
+            vm.onResume()
+            runCurrent()
+            assertEquals(WinterSalePhase.BeforeSale, vm.event.value?.phase)
+            assertEquals(1, source.refreshes)
+
+            source.state = WinterSaleEventState.Available(event, WinterSalePhase.OnSale, 5 * MINUTE, false)
+            advanceTimeBy(5 * MINUTE - 1)
+            runCurrent()
+            assertEquals(1, source.refreshes)
+            advanceTimeBy(1)
+            runCurrent()
+            assertEquals(WinterSalePhase.OnSale, vm.event.value?.phase)
+            assertEquals(2, source.refreshes)
+
+            // During the sale the next check is the 15-minute one, not the end of the sale.
+            advanceTimeBy(15 * MINUTE)
+            runCurrent()
+            assertEquals(3, source.refreshes)
+        } finally {
+            vm.onPause()
+            vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun leaving_home_stops_the_checks_and_returning_checks_at_once() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val source = FakeEvents()
+        val vm = WinterSaleEntryViewModel(source, RecordingReminder())
+        try {
+            vm.onResume()
+            runCurrent()
+            vm.onPause()
+            advanceTimeBy(60 * MINUTE)
+            runCurrent()
+            assertEquals(1, source.refreshes)
+
+            vm.onResume()
+            runCurrent()
+            assertEquals(2, source.refreshes)
+        } finally {
+            vm.onPause()
+            vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
     private val available = WinterSaleEventState.Available(
         WinterSaleEvent("winter", 0L, 0L, 10_000_000_000L, "Winter", "Before", "During"),
         WinterSalePhase.OnSale, 1_000L, false,
@@ -52,8 +108,11 @@ class WinterSaleEntryViewModelTest {
 
     private inner class FakeEvents : WinterSaleEventRepository {
         var state: WinterSaleEventState = available
-        override suspend fun refresh() = state
+        var refreshes = 0
+        override suspend fun refresh(): WinterSaleEventState { refreshes++; return state }
     }
+
+    private companion object { const val MINUTE = 60 * 1000L }
 
     private class RecordingReminder : WinterSaleReminder {
         val reconciled = mutableListOf<WinterSaleEventState>()
