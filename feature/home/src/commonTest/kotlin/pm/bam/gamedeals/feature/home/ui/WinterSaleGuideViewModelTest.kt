@@ -229,6 +229,32 @@ class WinterSaleGuideViewModelTest {
     }
 
     @Test
+    fun try_again_after_a_failed_check_shows_the_spinner_and_loads_the_guide() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val fixture = fixture(Clock { 1_000 + testScheduler.currentTime })
+        val available = fixture.events.state
+        fixture.events.state = WinterSaleEventState.Hidden(pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason.Unavailable)
+        try {
+            runCurrent()
+            fixture.vm.onResume()
+            runCurrent()
+            assertTrue(fixture.vm.state.value.eventChecked)
+            assertEquals(0, fixture.guide.calls.size)
+
+            fixture.events.state = available
+            fixture.vm.onRetry()
+            assertFalse(fixture.vm.state.value.eventChecked)
+            runCurrent()
+            assertTrue(fixture.vm.state.value.eventChecked)
+            assertEquals(1, fixture.guide.calls.size)
+        } finally {
+            fixture.vm.onPause()
+            fixture.vm.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun a_pull_right_after_a_load_is_ignored() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val fixture = fixture(Clock { 1_000 + testScheduler.currentTime })

@@ -81,7 +81,7 @@ internal class WinterSaleCandidatesRepositoryImpl(
         val ranked = snapshot.items.asSequence()
             .filter { it.type == "game" && (includeAdult || it.mature == false) && it.hasDeal && (it.discountPercent ?: 0) > 0 }
             .sortedWith(compareByDescending<WaitlistDisplayItem> { it.isAtHistoricalLow }.thenByDescending { it.discountPercent ?: 0 }.thenBy { it.gameId })
-            .take(SECTION_CANDIDATE_LIMIT).toList()
+            .take(WAITLIST_CANDIDATE_LIMIT).toList()
         return WinterSaleRawSection(ranked.map { WinterSaleRawCandidate(it.gameId, it.title, it.artwork, it.mature) },
             incomplete = snapshot.priceFetchIncomplete || refreshFailed)
     }
@@ -128,5 +128,10 @@ internal class WinterSaleCandidatesRepositoryImpl(
         const val WAITLIST_MAX_AGE_MS = 3 * 60 * 60 * 1000L
         const val POPULAR_CANDIDATE_LIMIT = 100
         const val SECTION_CANDIDATE_LIMIT = 30
+        /**
+         * Twice the section size: the snapshot's prices are older than the fresh price pass, so some top candidates may
+         * no longer be discounted. The extra IDs ride in the same price batch (waitlist 60 + series 30 + popular 100 < 200).
+         */
+        const val WAITLIST_CANDIDATE_LIMIT = 60
     }
 }

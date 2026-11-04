@@ -49,11 +49,11 @@ class WinterSaleReminderWorkerTest {
     }
 
     @Test
-    fun retry_asks_again_up_to_three_times_then_gives_up_quietly() = runTest {
+    fun retry_asks_again_up_to_six_times_then_gives_up_quietly() = runTest {
         coEvery { reminder.claimDelivery() } returns WinterSaleReminderDecision.Retry
 
-        for (attempt in 0..2) assertEquals(ListenableWorker.Result.retry(), worker(attempt).doWork())
-        assertEquals(ListenableWorker.Result.success(), worker(attempt = 3).doWork())
+        for (attempt in 0..5) assertEquals(ListenableWorker.Result.retry(), worker(attempt).doWork())
+        assertEquals(ListenableWorker.Result.success(), worker(attempt = 6).doWork())
         coVerify(exactly = 0) { presenter.present() }
     }
 

@@ -35,6 +35,26 @@ class WinterSaleReminderTest {
     }
 
     @Test
+    fun a_record_restored_onto_a_new_phone_without_its_job_is_re_armed() = runTest {
+        val reminder = reminder()
+        reminder.reconcile(available(serverNow = SALE_START - HOUR))
+        scheduler.pending = false
+        reminder.reconcile(available(serverNow = SALE_START - HOUR))
+
+        assertEquals(listOf(HOUR + OFFSET, HOUR + OFFSET), scheduler.scheduled)
+    }
+
+    @Test
+    fun a_failed_pending_check_leaves_the_reminder_alone() = runTest {
+        val reminder = reminder()
+        reminder.reconcile(available(serverNow = SALE_START - HOUR))
+        scheduler.pending = null
+        reminder.reconcile(available(serverNow = SALE_START - HOUR))
+
+        assertEquals(listOf(HOUR + OFFSET), scheduler.scheduled)
+    }
+
+    @Test
     fun offset_is_between_one_and_three_hours_and_kept_when_the_start_moves() = runTest {
         repeat(50) { seed ->
             val scheduler = RecordingScheduler()
@@ -263,8 +283,10 @@ class WinterSaleReminderTest {
     private class RecordingScheduler : WinterSaleReminderScheduler {
         val scheduled = mutableListOf<Long>()
         var cancels = 0
+        var pending: Boolean? = true
         override fun schedule(delayMillis: Long) { scheduled += delayMillis }
         override fun cancel() { cancels++ }
+        override suspend fun isPending(): Boolean = pending ?: error("WorkManager unavailable")
     }
 
     private companion object {

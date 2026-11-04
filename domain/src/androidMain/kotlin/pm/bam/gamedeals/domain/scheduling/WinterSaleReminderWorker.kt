@@ -25,6 +25,7 @@ internal class WinterSaleReminderWorker(
     }
 
     private companion object {
-        const val MAX_RETRIES = 3
+        /** With the scheduler's growing wait this covers about two hours of document-host outage. */
+        const val MAX_RETRIES = 6
     }
 }

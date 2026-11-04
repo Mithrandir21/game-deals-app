@@ -39,6 +39,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideCard
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideSection
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideSectionKind
@@ -48,6 +49,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_activation
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_activation_unknown
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_attribution
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_back
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_checked
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_checking_series
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_discount
@@ -55,8 +57,8 @@ import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_ends
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_expires
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_fewer_popular
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_from_store
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_historical_low
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_hidden
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_historical_low
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_last_link
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_more_series
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_no_sales
@@ -70,11 +72,12 @@ import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_sign_in
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_stale
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_starts
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_title
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_try_again
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_unavailable
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_updating
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_voucher
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_was
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_waitlist
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_was
 
 private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -109,7 +112,7 @@ internal fun WinterSaleGuideScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     WinterSaleResumeEffect(viewModel::onResume, viewModel::onPause)
-    WinterSaleGuideContent(state, onBack, onGame, onOffer, viewModel::onPullToRefresh)
+    WinterSaleGuideContent(state, onBack, onGame, onOffer, viewModel::onPullToRefresh, viewModel::onRetry)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,12 +123,13 @@ internal fun WinterSaleGuideContent(
     onGame: (String) -> Unit,
     onOffer: (String) -> Unit,
     onRefresh: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(topBar = {
             TopAppBar(title = { Text(stringResource(Res.string.winter_sale_title)) }, navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.winter_sale_title))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.winter_sale_back))
                 }
             })
         }) { padding ->
@@ -133,7 +137,13 @@ internal fun WinterSaleGuideContent(
             if (event == null) {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     if (state.eventChecked) {
-                        Text(stringResource(Res.string.winter_sale_hidden), modifier = Modifier.padding(24.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                            Text(stringResource(Res.string.winter_sale_hidden))
+                            // Only a failed check is worth retrying; a switched-off or ended guide stays hidden.
+                            if ((state.event as? WinterSaleEventState.Hidden)?.reason == WinterSaleHiddenReason.Unavailable) {
+                                TextButton(onClick = onRetry) { Text(stringResource(Res.string.winter_sale_try_again)) }
+                            }
+                        }
                     } else {
                         CircularProgressIndicator()
                     }

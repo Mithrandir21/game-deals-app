@@ -64,6 +64,8 @@
     <string name="winter_sale_fewer_popular">Fewer popular games have discounted lowest offers right now.</string>
     <string name="winter_sale_unavailable">Couldn't check this part of the guide. Pull down to try again.</string>
     <string name="winter_sale_hidden">Winter Sale guide isn't available right now.</string>
+    <string name="winter_sale_try_again">Try again</string>
+    <string name="winter_sale_back">Back</string>
     <string name="winter_sale_partial">Some prices couldn't load.</string>
     <string name="winter_sale_no_sales">No current sales found. Pull down to check again.</string>
     <string name="winter_sale_price_unavailable">Price unavailable right now. Check the store link for the latest offer.</string>

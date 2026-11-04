@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.runtime.Composable
@@ -36,7 +37,9 @@ import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_checking_se
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_discount
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_ends
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_from_store
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_back
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_hidden
+import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_try_again
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_last_link
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_no_sales
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_offer_link
@@ -71,6 +74,19 @@ class WinterSaleGuideScreenTest {
         setGuide(WinterSaleGuideState(event = WinterSaleEventState.Hidden(WinterSaleHiddenReason.Disabled), eventChecked = true))
 
         composeTestRule.onNodeWithText(text.getValue("hidden")).assertIsDisplayed()
+        composeTestRule.onNodeWithText(text.getValue("tryAgain")).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(text.getValue("back")).assertIsDisplayed()
+    }
+
+    @Test
+    fun a_failed_check_offers_try_again() {
+        var retries = 0
+        setGuide(WinterSaleGuideState(event = WinterSaleEventState.Hidden(WinterSaleHiddenReason.Unavailable), eventChecked = true),
+            onRetry = { retries++ })
+
+        composeTestRule.onNodeWithText(text.getValue("hidden")).assertIsDisplayed()
+        composeTestRule.onNodeWithText(text.getValue("tryAgain")).performClick()
+        assertEquals(1, retries)
     }
 
     @Test
@@ -160,10 +176,15 @@ class WinterSaleGuideScreenTest {
         composeTestRule.onNodeWithText(BEFORE_COPY).assertDoesNotExist()
     }
 
-    private fun setGuide(state: WinterSaleGuideState, onGame: (String) -> Unit = {}, onOffer: (String) -> Unit = {}) {
+    private fun setGuide(
+        state: WinterSaleGuideState,
+        onGame: (String) -> Unit = {},
+        onOffer: (String) -> Unit = {},
+        onRetry: () -> Unit = {},
+    ) {
         composeTestRule.setContent {
             loadText()
-            WinterSaleGuideContent(state, onBack = {}, onGame = onGame, onOffer = onOffer, onRefresh = {})
+            WinterSaleGuideContent(state, onBack = {}, onGame = onGame, onOffer = onOffer, onRefresh = {}, onRetry = onRetry)
         }
     }
 
@@ -176,6 +197,8 @@ class WinterSaleGuideScreenTest {
     @Composable
     private fun loadText() {
         text["hidden"] = stringResource(Res.string.winter_sale_hidden)
+        text["tryAgain"] = stringResource(Res.string.winter_sale_try_again)
+        text["back"] = stringResource(Res.string.winter_sale_back)
         text["signIn"] = stringResource(Res.string.winter_sale_sign_in)
         text["checkingSeries"] = stringResource(Res.string.winter_sale_checking_series)
         text["noSales"] = stringResource(Res.string.winter_sale_no_sales)

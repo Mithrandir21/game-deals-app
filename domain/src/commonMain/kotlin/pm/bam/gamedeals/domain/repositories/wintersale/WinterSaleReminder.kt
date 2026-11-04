@@ -21,6 +21,12 @@ import pm.bam.gamedeals.logging.error
 interface WinterSaleReminderScheduler {
     fun schedule(delayMillis: Long)
     fun cancel()
+
+    /**
+     * Whether the platform still holds the pending reminder. Android answers from WorkManager, so a record restored from
+     * a backup onto a new phone, where no job exists, is re-armed. iOS keeps the default.
+     */
+    suspend fun isPending(): Boolean = true
 }
 
 /** Posts the reminder when the Android job fires; iOS posts it from the pending request without running app code. */
@@ -145,7 +151,7 @@ internal class WinterSaleReminderImpl(
         val fireAtDevice = clock.nowMillis() + delay
         val unchanged = current.status == Status.Scheduled && current.fireAtServerEpochMillis == fireAt &&
             current.fireAtDeviceEpochMillis?.let { abs(it - fireAtDevice) < RESCHEDULE_TOLERANCE_MILLIS } == true
-        if (unchanged && !firing) return
+        if (unchanged && !firing && pendingOrUnknown()) return
         // Save first: on Android re-arming replaces, and so cancels, a firing job that is calling this.
         save(current.copy(status = Status.Scheduled, fireAtServerEpochMillis = fireAt, fireAtDeviceEpochMillis = fireAtDevice))
         scheduler.schedule(delay)
@@ -155,6 +161,15 @@ internal class WinterSaleReminderImpl(
         if (record.status != Status.Scheduled) return
         save(record.copy(status = Status.Idle, fireAtServerEpochMillis = null, fireAtDeviceEpochMillis = null))
         scheduler.cancel()
+    }
+
+    private suspend fun pendingOrUnknown(): Boolean = try {
+        scheduler.isPending()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (t: Throwable) {
+        error(logger, t)
+        true
     }
 
     private fun randomOffset(): Long = random.nextLong(MIN_OFFSET_MILLIS, MAX_OFFSET_MILLIS + 1)

@@ -57,6 +57,24 @@ class WinterSaleCandidatesRepositoryTest {
     }
 
     @Test
+    fun waitlist_still_fills_thirty_when_top_snapshot_deals_have_ended() = runTest {
+        val fixture = fixture()
+        // The 10 best snapshot discounts are no longer on sale at the fresh price pass; 30 others still are.
+        val ended = (0 until 10).map { "ended$it" }
+        val live = (0 until 30).map { "live$it" }
+        fixture.waitlist.snapshot = WaitlistDisplaySnapshot(
+            items = ended.map { waitlist(it, discount = 90) } + live.map { waitlist(it, discount = 20) },
+            regionCode = "GB", refreshedAtEpochMs = 10_000L,
+        )
+        fixture.waitlist.entries = (ended + live).map { WaitlistEntry(it, it) }
+        fixture.offers.values = ended.associateWith { offer(it, cut = 0) } + live.associateWith { offer(it) }
+
+        val section = fixture.repo.waitlist("GB", false, null, false)
+
+        assertEquals(live.toSet(), section.games.map { it.gameId }.toSet())
+    }
+
+    @Test
     fun signed_out_waitlist_requires_sign_in_but_popular_still_loads() = runTest {
         val fixture = fixture(signedIn = false)
         fixture.popular.games = listOf(popular("sale"))
@@ -111,8 +129,8 @@ class WinterSaleCandidatesRepositoryTest {
     }
 
     private fun popular(id: String, type: String = "game", mature: Boolean? = false) = WinterSalePopularGame(id, id, GameArtwork(), type, mature)
-    private fun waitlist(id: String, mature: Boolean? = false) = WaitlistDisplayItem(
-        id, id, type = "game", mature = mature, bestPriceDenominated = "£10", discountPercent = 20,
+    private fun waitlist(id: String, mature: Boolean? = false, discount: Int = 20) = WaitlistDisplayItem(
+        id, id, type = "game", mature = mature, bestPriceDenominated = "£10", discountPercent = discount,
     )
     private fun offer(id: String, cut: Int = 20) = WinterSaleOffer(
         id, "GB", 1, "Shop", WinterSaleMoney(10.0, "GBP"), null, cut, "https://example.com/$id", null, emptyList(), null, null, null,

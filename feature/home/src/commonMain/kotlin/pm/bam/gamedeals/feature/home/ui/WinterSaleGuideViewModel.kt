@@ -115,6 +115,12 @@ internal class WinterSaleGuideViewModel(
         refresh(force = true)
     }
 
+    /** "Try again" on the unavailable screen: show the spinner while the event is checked again. */
+    fun onRetry() {
+        mutableState.value = mutableState.value.copy(eventChecked = false)
+        refresh(force = true)
+    }
+
     fun refresh(force: Boolean = true) {
         load?.cancel()
         load = viewModelScope.launch {
