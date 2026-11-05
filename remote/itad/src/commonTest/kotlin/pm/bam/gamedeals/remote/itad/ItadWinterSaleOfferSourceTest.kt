@@ -75,7 +75,41 @@ class ItadWinterSaleOfferSourceTest {
         client.close()
     }
 
+    @Test
+    fun a_real_reply_leaves_out_games_with_no_price_data() = runTest {
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = MockEngine { respond(RECORDED_OVERVIEW_GB, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json")) },
+        )
+        val requested = listOf(GTA_V, GTA_SAN_ANDREAS, ELDEN_RING, EYE_OF_THE_BEHOLDER)
+
+        val result = ItadWinterSaleOfferSource(ItadGamesApi(client), TestingLoggingListener(), RemoteExceptionTransformer { it })
+            .fetch(requested, "GB")
+
+        // The offers repository counts a game missing from a successful reply as "no current offer", not a failure.
+        assertEquals(setOf(ELDEN_RING), result.keys)
+        val offer = assertNotNull(result[ELDEN_RING])
+        assertEquals("PlanetPlay", offer.shopName)
+        assertEquals(42.21, offer.price.amount)
+        assertEquals("GBP", offer.price.currency)
+        assertEquals(51.48, offer.regular?.amount)
+        assertEquals(18, offer.cutPercent)
+        assertEquals("AUTUMN", offer.voucher)
+        assertEquals(listOf("Steam"), offer.activationLabels)
+        assertEquals(24.75, offer.historicalLow?.amount)
+        assertFalse(offer.isAtHistoricalLow)
+        assertNotNull(offer.checkedAtEpochMillis)
+        assertNull(offer.expiresAtEpochMillis)
+        client.close()
+    }
+
     private companion object {
+        const val GTA_V = "018d937f-03e2-7281-a961-037a2d279a92"
+        const val GTA_SAN_ANDREAS = "018d937e-f829-73ff-aa7f-95421948da6b"
+        const val ELDEN_RING = "018d937f-590c-728b-ac35-38bcff85f086"
+        const val EYE_OF_THE_BEHOLDER = "018d97d1-6352-73db-9f18-51d12c520f46"
         val FIXTURE = """
             {
               "prices": [

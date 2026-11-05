@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.SignInPromptController
-import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
@@ -73,18 +72,7 @@ internal fun NavGraph(
     val winterSaleEvents: WinterSaleEventRepository = koinInject()
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
-            when (route) {
-                NotificationRoute.Notifications -> {
-                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "notifications"))
-                    navActions.navigateToNotifications()
-                }
-                NotificationRoute.FollowedSeries -> {
-                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "followed_series"))
-                    navActions.navigateToFollowedSeries()
-                }
-                NotificationRoute.WinterSaleGuide ->
-                    if (winterSaleEvents.isAvailable()) navActions.navigateToWinterSaleGuide() else navActions.navigateTopLevel(Destination.Home)
-            }
+            openNotificationRoute(route, analytics, navActions, winterSaleAvailable = { winterSaleEvents.isAvailable() })
         }
     }
 

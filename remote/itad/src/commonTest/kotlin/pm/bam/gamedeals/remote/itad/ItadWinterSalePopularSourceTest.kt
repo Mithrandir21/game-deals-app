@@ -43,4 +43,24 @@ class ItadWinterSalePopularSourceTest {
         assertEquals(listOf(false, null), games.map { it.mature })
         client.close()
     }
+
+    @Test
+    fun a_real_ranked_reply_maps_titles_artwork_and_maturity() = runTest {
+        val client = itadHttpClient(
+            json = Json { ignoreUnknownKeys = true },
+            buildUtil = RemoteBuildUtil { RemoteBuildType.RELEASE },
+            apiKey = "test-key",
+            engine = MockEngine { respond(RECORDED_POPULAR_GB, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json")) },
+        )
+
+        val games = ItadWinterSalePopularSource(ItadDealsApi(client)).fetch("GB", false, 100)
+
+        assertEquals(listOf("Cyberpunk 2077", "Elden Ring", "Red Dead Redemption 2"), games.map { it.title })
+        assertTrue(games.all { it.type == "game" && it.mature == false })
+        assertEquals(
+            "https://assets.isthereanydeal.com/018d937f-2997-7131-b8b9-7c8af4825fa8/banner300.jpg?t=1792687867",
+            games.first().artwork.banner300,
+        )
+        client.close()
+    }
 }

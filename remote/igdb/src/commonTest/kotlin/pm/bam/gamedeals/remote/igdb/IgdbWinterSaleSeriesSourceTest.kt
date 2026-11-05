@@ -35,4 +35,20 @@ class IgdbWinterSaleSeriesSourceTest {
         assertEquals(listOf(123, 456, 777), games.map { it.steamAppId })
         client.close()
     }
+
+    @Test
+    fun a_real_franchise_reply_keeps_games_and_drops_bundles_and_dlc() = runTest {
+        val client = mockHttpClient(Json { ignoreUnknownKeys = true }) {
+            respond(RECORDED_ELDEN_RING_FRANCHISE, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+
+        val games = IgdbWinterSaleSeriesSource(IgdbGamesApi(client)).fetch(8190, 30)
+
+        // Real replies carry no `category`, so `game_type` alone decides: the bundle and the DLC are dropped.
+        assertEquals(listOf("Elden Ring", "Elden Ring Nightreign", "Elden Ring: Collector's Edition"), games.map { it.title })
+        assertEquals(listOf(1245620, 2622380, null), games.map { it.steamAppId })
+        assertEquals(listOf(false, false, false), games.map { it.erotic })
+        assertEquals("co4jni", games.first().coverImageId)
+        client.close()
+    }
 }

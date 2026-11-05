@@ -43,6 +43,13 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # The support site / Winter Sale control worker (store/site) is uploaded by hand through the Cloudflare
+    # dashboard, so CI is the only automatic check of its routes (real + test event file) and the event validator.
+    - name: Site worker tests
+      run: |
+        node --test store/site/test_site_routes.mjs
+        python3 -m unittest discover -s store/site -p 'test_*.py'
+
     - name: Build with Gradle
       run: ./gradlew --no-daemon build test
 

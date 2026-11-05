@@ -20,8 +20,8 @@ internal fun WinterSaleResumeEffect(onResume: () -> Unit, onPause: () -> Unit) {
                 else -> Unit
             }
         }
+        // addObserver replays the events up to the current state, so an already-resumed screen gets ON_RESUME here.
         owner.lifecycle.addObserver(observer)
-        if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) currentResume.value()
         onDispose { owner.lifecycle.removeObserver(observer); currentPause.value() }
     }
 }

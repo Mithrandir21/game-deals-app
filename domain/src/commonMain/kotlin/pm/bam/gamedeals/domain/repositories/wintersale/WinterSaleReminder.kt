@@ -23,8 +23,9 @@ interface WinterSaleReminderScheduler {
     fun cancel()
 
     /**
-     * Whether the platform still holds the pending reminder. Android answers from WorkManager, so a record restored from
-     * a backup onto a new phone, where no job exists, is re-armed. iOS keeps the default.
+     * Whether the platform still holds the pending reminder (Android: the WorkManager job; iOS: the pending notification
+     * request), so a record restored from a backup onto a new phone, where neither exists, is re-armed. The default
+     * "assume pending" is for test doubles and platforms that cannot tell.
      */
     suspend fun isPending(): Boolean = true
 }

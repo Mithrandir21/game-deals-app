@@ -1,5 +1,7 @@
 package pm.bam.gamedeals.domain.scheduling
 
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
@@ -34,6 +36,18 @@ internal class IosWinterSaleReminderScheduler(private val logger: Logger) : Wint
 
     override fun cancel() {
         UNUserNotificationCenter.currentNotificationCenter().removePendingNotificationRequestsWithIdentifiers(listOf(REMINDER_ID))
+    }
+
+    /**
+     * Whether iOS still holds the request. A restore onto a new phone brings the saved "scheduled" record back but
+     * not the pending request, so without this the reminder would never be re-added there. Only asked before the
+     * fire time, so a reminder that has already fired is not added again.
+     */
+    override suspend fun isPending(): Boolean = suspendCancellableCoroutine { continuation ->
+        UNUserNotificationCenter.currentNotificationCenter().getPendingNotificationRequestsWithCompletionHandler { requests ->
+            val pending = requests.orEmpty().any { (it as? UNNotificationRequest)?.identifier == REMINDER_ID }
+            if (continuation.isActive) continuation.resume(pending)
+        }
     }
 
     private companion object {

@@ -28,11 +28,7 @@ internal class AndroidWinterSaleReminderPresenter(private val context: Context) 
                 .setName(context.getString(R.string.notification_channel_sale_reminder))
                 .build()
         )
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(EXTRA_NOTIFICATION_ROUTE, ROUTE_WINTER_SALE_GUIDE)
-        }
-        val contentIntent = PendingIntent.getActivity(context, WINTER_SALE_REMINDER_ID, intent,
+        val contentIntent = PendingIntent.getActivity(context, WINTER_SALE_REMINDER_ID, winterSaleGuideIntent(context),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -49,7 +45,14 @@ internal class AndroidWinterSaleReminderPresenter(private val context: Context) 
         }
     }
 
-    private companion object {
+    internal companion object {
         const val CHANNEL_ID = "sale_reminders"
+        const val NOTIFICATION_ID = WINTER_SALE_REMINDER_ID
     }
+}
+
+/** The tap intent: opens the app on the guide route (read back by [toNotificationRoute]). */
+internal fun winterSaleGuideIntent(context: Context): Intent = Intent(context, MainActivity::class.java).apply {
+    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+    putExtra(EXTRA_NOTIFICATION_ROUTE, ROUTE_WINTER_SALE_GUIDE)
 }
