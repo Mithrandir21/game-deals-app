@@ -57,18 +57,20 @@ internal class WinterSaleOffersRepositoryImpl(
         val ids = gameIds.filter { it.isNotBlank() }.distinct()
         val statuses = linkedMapOf<String, WinterSalePriceStatus>()
         for (chunk in ids.chunked(MAX_IDS_PER_REQUEST)) {
-            val fetched = try {
+            // null means the request failed. A successful reply leaves out games that no store sells any more
+            // (delisted classics), so a missing game is "no current offer", not a failed price.
+            val fetched: Map<String, WinterSaleOffer?>? = try {
                 source.fetch(chunk, country)
             } catch (error: CancellationException) {
                 throw error
             } catch (t: Throwable) {
                 error(logger, t)
-                emptyMap()
+                null
             }
             for (id in chunk) {
-                val offer = fetched[id]
+                val offer = fetched?.get(id)
                 statuses[id] = when {
-                    id !in fetched -> WinterSalePriceStatus.Unavailable
+                    fetched == null -> WinterSalePriceStatus.Unavailable
                     offer == null -> WinterSalePriceStatus.NoCurrentOffer
                     offer.country != country || offer.gameId != id -> WinterSalePriceStatus.Unavailable
                     else -> WinterSalePriceStatus.Priced(offer)

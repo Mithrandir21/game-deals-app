@@ -42,14 +42,18 @@ class WinterSaleOffersRepositoryTest {
     }
 
     @Test
-    fun absent_row_and_explicitly_empty_price_have_different_states() = runTest {
+    fun a_game_left_out_of_a_successful_reply_has_no_current_offer() = runTest {
+        // ITAD's overview omits games no store sells any more (e.g. delisted GTA classics); that is not a failure.
         val source = object : WinterSaleOfferSource {
-            override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> = mapOf("empty" to null)
+            override suspend fun fetch(gameIds: List<String>, country: String): Map<String, WinterSaleOffer?> =
+                mapOf("empty" to null, "priced" to offer("priced"))
         }
-        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }, TestingLoggingListener()).load(listOf("empty", "missing"), "GB")
+        val result = WinterSaleOffersRepositoryImpl(source, Clock { 0L }, TestingLoggingListener()).load(listOf("empty", "missing", "priced"), "GB")
 
         assertEquals(WinterSalePriceStatus.NoCurrentOffer, result.perGame["empty"])
-        assertEquals(WinterSalePriceStatus.Unavailable, result.perGame["missing"])
+        assertEquals(WinterSalePriceStatus.NoCurrentOffer, result.perGame["missing"])
+        assertIs<WinterSalePriceStatus.Priced>(result.perGame["priced"])
+        assertFalse(result.perGame.values.any { it == WinterSalePriceStatus.Unavailable })
     }
 
     @Test
