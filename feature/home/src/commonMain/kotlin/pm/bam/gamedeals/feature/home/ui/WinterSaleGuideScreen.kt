@@ -1,11 +1,8 @@
 package pm.bam.gamedeals.feature.home.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -18,18 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,13 +54,11 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
-import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
-import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDealTotals
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideCard
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideSection
@@ -77,14 +66,11 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideSectionKin
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHiddenReason
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePhase
 import pm.bam.gamedeals.domain.utils.formatMoney
-import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
-import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_activation
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_attribution
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_back
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_checking_series
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_ends
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_expires
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_fewer_popular
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_hidden
@@ -104,7 +90,6 @@ import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_show_less
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_sign_in
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_sign_in_action
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_stale
-import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_starts
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_title
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_try_again
 import pm.bam.gamedeals.feature.home.generated.resources.winter_sale_unavailable
@@ -123,53 +108,29 @@ internal fun winterSaleTime(epochMillis: Long, zone: TimeZone = TimeZone.current
     return "${time.day} ${MONTH_ABBREV[time.month.ordinal]} ${time.year}, ${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
 }
 
+/** The day alone ("14 Dec"), in the phone's time zone: the countdown pill's date, where the full time would make it too long. */
+@OptIn(ExperimentalTime::class)
+internal fun winterSaleDay(epochMillis: Long, zone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val time = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone)
+    return "${time.day} ${MONTH_ABBREV[time.month.ordinal]}"
+}
 
-/** The guide's entry on Home: a tinted card in the feed with the sale's status, opening the guide. */
+
+/**
+ * The guide's entry on Home: the sale's blue card in its compact form. During the sale it leads with the deal total
+ * ([totals], from the day-long store counts); before the sale, and when the counts haven't loaded, with the countdown.
+ */
 @Composable
-internal fun WinterSaleHomeCard(event: WinterSaleEventState.Available, onOpen: () -> Unit) {
-    Card(
+internal fun WinterSaleHomeCard(event: WinterSaleEventState.Available, totals: WinterSaleDealTotals? = null, onOpen: () -> Unit) {
+    WinterSaleCard(
+        event = event,
+        totalDeals = totals?.totalDeals,
+        storeCount = totals?.storeCount ?: 0,
+        compact = true,
         onClick = onOpen,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.medium),
-    ) {
-        Row(
-            modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-        ) {
-            WinterSaleMark()
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
-                Text(event.event.title, style = MaterialTheme.typography.titleMedium)
-                Text(saleCopy(event), style = MaterialTheme.typography.bodyMedium)
-                Text(saleStatus(event), style = MaterialTheme.typography.labelMedium)
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-        }
-    }
+        modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.medium),
+    )
 }
-
-@Composable
-private fun WinterSaleMark() {
-    Box(
-        modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(Icons.Filled.AcUnit, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
-    }
-}
-
-private fun saleCopy(event: WinterSaleEventState.Available): String =
-    if (event.phase == WinterSalePhase.BeforeSale) event.event.beforeSaleCopy else event.event.duringSaleCopy
-
-@Composable
-private fun saleStatus(event: WinterSaleEventState.Available): String =
-    if (event.phase == WinterSalePhase.BeforeSale) stringResource(Res.string.winter_sale_starts, winterSaleTime(event.event.saleStartEpochMillis))
-    else stringResource(Res.string.winter_sale_ends, winterSaleTime(event.event.endEpochMillis))
 
 @Composable
 internal fun WinterSaleGuideScreen(
@@ -180,14 +141,10 @@ internal fun WinterSaleGuideScreen(
     peek: WinterSalePeekViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val gamePeek by peek.gamePeek.collectAsStateWithLifecycle()
     val waitlistIds by peek.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by peek.collectionIds.collectAsStateWithLifecycle()
-    val ignoredIds by peek.ignoredIds.collectAsStateWithLifecycle()
     val stores by peek.stores.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val platformActions = LocalPlatformActions.current
-    val actionFailed = stringResource(CommonRes.string.library_action_failed)
     WinterSaleResumeEffect(viewModel::onResume, viewModel::onPause)
 
     WinterSaleGuideContent(
@@ -201,31 +158,7 @@ internal fun WinterSaleGuideScreen(
         stores = stores,
         snackbarHostState = snackbarHostState,
     )
-
-    val peekGameId = gamePeek?.gameId
-    GamePeekSheet(
-        snackbarHostState = snackbarHostState,
-        data = gamePeek,
-        isWaitlisted = peekGameId != null && peekGameId in waitlistIds,
-        isCollected = peekGameId != null && peekGameId in collectionIds,
-        isIgnored = peekGameId != null && peekGameId in ignoredIds,
-        onDismiss = peek::dismiss,
-        onShare = peek::share,
-        onToggleWaitlist = peek::toggleWaitlist,
-        onToggleCollection = peek::toggleCollection,
-        onToggleIgnore = peek::toggleIgnore,
-        goToWeb = { url, _ -> onOffer(url) },
-        onViewGamePage = { data -> if (data.gameId.isNotEmpty()) onGame(data.gameId) },
-        onRetry = peek::retry,
-    )
-
-    SingleEventEffect(peek.events) { event ->
-        when (event) {
-            is WinterSalePeekViewModel.Event.Share -> platformActions.share(event.text)
-            WinterSalePeekViewModel.Event.SignInRequired -> SignInPromptController.request()
-            WinterSalePeekViewModel.Event.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
-        }
-    }
+    WinterSalePeekHost(peek = peek, snackbarHostState = snackbarHostState, onGame = onGame, onOffer = onOffer)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -326,39 +259,23 @@ internal fun WinterSaleGuideContent(
     }
 }
 
-/** Sale copy, its status and region as chips, and any notices about stale or still-updating prices, in one card. */
-@OptIn(ExperimentalLayoutApi::class)
+/** The sale's blue card (countdown, date and region), then any notices about stale or still-updating prices. */
 @Composable
 private fun WinterSaleBanner(state: WinterSaleGuideState, event: WinterSaleEventState.Available, checkedAt: Long?) {
     Column(
         modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ),
-            modifier = Modifier.fillMaxWidth(),
+        WinterSaleCard(
+            event = event,
+            totalDeals = null,
+            storeCount = 0,
+            extraChips = {
+                state.country?.let { SaleChip(stringResource(Res.string.winter_sale_region_chip, it.name, it.currency), Icons.Filled.Public) }
+            },
         ) {
-            Column(
-                modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
-                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
-                    WinterSaleMark()
-                    Text(saleCopy(event), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-                ) {
-                    InfoChip(Icons.Filled.Schedule, saleStatus(event))
-                    state.country?.let { InfoChip(Icons.Filled.Public, stringResource(Res.string.winter_sale_region_chip, it.name, it.currency)) }
-                }
-                if (checkedAt != null && !state.stalePrices) {
-                    Text(stringResource(Res.string.winter_sale_prices_checked, winterSaleTime(checkedAt)), style = MaterialTheme.typography.labelSmall)
-                }
+            if (checkedAt != null && !state.stalePrices) {
+                Text(stringResource(Res.string.winter_sale_prices_checked, winterSaleTime(checkedAt)), style = MaterialTheme.typography.labelSmall)
             }
         }
         val notices = buildList {
@@ -386,20 +303,6 @@ private fun WinterSaleBanner(state: WinterSaleGuideState, event: WinterSaleEvent
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun InfoChip(icon: ImageVector, text: String) {
-    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)) {
-        Row(
-            modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small, vertical = GameDealsCustomTheme.spacing.extraSmall),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-            Text(text, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

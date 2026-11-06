@@ -93,6 +93,7 @@ import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDealTotals
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -156,6 +157,7 @@ internal fun HomeScreen(
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val winterSaleEvent by winterSaleEntry.event.collectAsStateWithLifecycle()
+    val winterSaleTotals by winterSaleEntry.totals.collectAsStateWithLifecycle()
     WinterSaleResumeEffect(winterSaleEntry::onResume, winterSaleEntry::onPause)
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
@@ -204,6 +206,7 @@ internal fun HomeScreen(
         goToWeb = goToWeb,
         onRetry = { viewModel.retry() },
         winterSaleEvent = winterSaleEvent,
+        winterSaleTotals = winterSaleTotals,
         onOpenWinterSale = onViewWinterSale,
     )
 
@@ -248,6 +251,7 @@ private fun HomeScreenContent(
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     winterSaleEvent: WinterSaleEventState.Available? = null,
+    winterSaleTotals: WinterSaleDealTotals? = null,
     onOpenWinterSale: () -> Unit = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
@@ -289,6 +293,7 @@ private fun HomeScreenContent(
                         onViewBundles = onViewBundles,
                         onViewBundle = onViewBundle,
                         winterSaleEvent = winterSaleEvent,
+                        winterSaleTotals = winterSaleTotals,
                         onOpenWinterSale = onOpenWinterSale,
                     )
                 }
@@ -341,6 +346,7 @@ private fun HomeFeed(
     onViewBundle: (bundleId: Int) -> Unit,
     widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
     winterSaleEvent: WinterSaleEventState.Available? = null,
+    winterSaleTotals: WinterSaleDealTotals? = null,
     onOpenWinterSale: () -> Unit = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
@@ -371,7 +377,7 @@ private fun HomeFeed(
         var renderedSection = false
 
         winterSaleEvent?.let { event ->
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, onOpenWinterSale) }
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
             renderedSection = true
         }
 

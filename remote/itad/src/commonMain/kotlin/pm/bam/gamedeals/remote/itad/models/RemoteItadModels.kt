@@ -36,6 +36,8 @@ data class RemoteItadShopRef(
 data class RemoteItadShop(
     @SerialName("id") val id: Int,
     @SerialName("title") val title: String,
+    /** How many deals ITAD lists for the shop right now (all product types). */
+    @SerialName("deals") val deals: Int? = null,
 )
 
 // --- /games/search/v1 and /games/lookup/v1 ---

@@ -85,6 +85,8 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesMapStoreI
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
@@ -149,6 +151,7 @@ val domainModule = module {
     single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER), get()) }
     single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get(), get()) }
+    single<WinterSaleHubRepository> { WinterSaleHubRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
     single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
     // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.

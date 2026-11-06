@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -16,11 +17,13 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.stringResource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidate
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDealTotals
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEvent
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideCard
@@ -180,30 +183,64 @@ class WinterSaleGuideScreenTest {
     }
 
     @Test
-    fun the_home_card_shows_pre_sale_copy_and_opens_the_guide() {
+    fun before_the_sale_the_home_card_counts_down_to_the_start_and_opens_the_guide() {
         var opened = 0
         composeTestRule.setContent {
             loadText()
             WinterSaleHomeCard(available(WinterSalePhase.BeforeSale)) { opened++ }
         }
 
-        composeTestRule.onNodeWithText(BEFORE_COPY).assertIsDisplayed()
-        composeTestRule.onNodeWithText(text.getValue("starts")).assertIsDisplayed()
-        composeTestRule.onNodeWithText(DURING_COPY).assertDoesNotExist()
-        composeTestRule.onNodeWithText(EVENT_TITLE).performClick()
+        composeTestRule.onNodeWithText("The Winter Sale starts soon").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Starts in 1 hour").assertIsDisplayed()
+        composeTestRule.onNodeWithText(winterSaleTime(SALE_START)).assertIsDisplayed()
+        // The event file's own words no longer show on the card.
+        composeTestRule.onNodeWithText(EVENT_TITLE).assertDoesNotExist()
+        composeTestRule.onNodeWithText(BEFORE_COPY).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Starts in 1 hour").performClick()
         assertEquals(1, opened)
     }
 
     @Test
-    fun the_home_card_shows_sale_copy_and_the_end_time_during_the_sale() {
+    fun during_the_sale_the_home_card_leads_with_the_deal_total() {
         composeTestRule.setContent {
             loadText()
-            WinterSaleHomeCard(available(WinterSalePhase.OnSale)) {}
+            WinterSaleHomeCard(available(WinterSalePhase.OnSale), WinterSaleDealTotals(64_127, 8)) {}
         }
 
-        composeTestRule.onNodeWithText(DURING_COPY).assertIsDisplayed()
-        composeTestRule.onNodeWithText(text.getValue("ends")).assertIsDisplayed()
-        composeTestRule.onNodeWithText(BEFORE_COPY).assertDoesNotExist()
+        composeTestRule.onNodeWithText("The Winter Sale is on").assertIsDisplayed()
+        composeTestRule.onNodeWithText("64,000+ deals across 8 stores").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ends in 17 days").assertIsDisplayed()
+        composeTestRule.onNodeWithText(DURING_COPY).assertDoesNotExist()
+    }
+
+    @Test
+    fun without_a_total_the_home_card_leads_with_the_countdown() {
+        composeTestRule.setContent {
+            loadText()
+            WinterSaleHomeCard(available(WinterSalePhase.OnSale), totals = null) {}
+        }
+
+        composeTestRule.onNodeWithText("Ends in 17 days").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Until ${winterSaleTime(SALE_END)}").assertIsDisplayed()
+    }
+
+    @Test
+    fun the_guide_page_uses_the_same_card_with_the_region() {
+        setGuide(guideState(content()))
+
+        composeTestRule.onNodeWithText("The Winter Sale is on").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ends in 17 days").assertIsDisplayed()
+        composeTestRule.onNodeWithText("United Kingdom · GBP").assertIsDisplayed()
+        composeTestRule.onNodeWithText(DURING_COPY).assertDoesNotExist()
+    }
+
+    @Test
+    fun the_region_pill_always_sits_on_its_own_row_under_the_date() {
+        setGuide(guideState(content()))
+
+        val date = composeTestRule.onNodeWithText("Until ${winterSaleTime(SALE_END)}").getUnclippedBoundsInRoot()
+        val region = composeTestRule.onNodeWithText("United Kingdom · GBP").getUnclippedBoundsInRoot()
+        assertTrue("the region pill starts below the date pill", region.top >= date.bottom)
     }
 
     private fun setGuide(

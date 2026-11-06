@@ -64,6 +64,7 @@ class HomeScreenTest {
     @Before
     fun setup() {
         every { winterSaleEntry.event } returns MutableStateFlow<WinterSaleEventState.Available?>(null)
+        every { winterSaleEntry.totals } returns MutableStateFlow(null)
         every { viewModel.gamePeek } returns MutableStateFlow(null)
         every { viewModel.accountStats } returns MutableStateFlow(null)
         every { viewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())

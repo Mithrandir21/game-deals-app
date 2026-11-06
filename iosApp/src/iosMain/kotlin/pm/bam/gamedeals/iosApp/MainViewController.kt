@@ -466,6 +466,8 @@ private fun AppNavHost(startDestination: Destination) {
             onBack = { navController.popBackStack() },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
             goToOffer = { url -> platformActions.openInApp(url) },
+            goToForYou = { navController.navigate(Destination.WinterSaleForYou) },
+            goToSaleList = { shelf, saleEnd -> navController.navigate(Destination.WinterSaleList(shelf, saleEnd)) },
         )
         dealsScreen(
             goToWeb = { url, _ -> platformActions.openInApp(url) },

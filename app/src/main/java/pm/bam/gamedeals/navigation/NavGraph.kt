@@ -159,6 +159,8 @@ internal fun NavGraph(
                 onBack = { navController.popBackStack() },
                 goToGame = { gameId -> navActions.navigateToGame(gameId) },
                 goToOffer = { url -> platformActions.openInApp(url) },
+                goToForYou = { navActions.navigateToWinterSaleForYou() },
+                goToSaleList = { shelf, saleEnd -> navActions.navigateToWinterSaleList(shelf, saleEnd) },
             )
 
             dealsScreen(

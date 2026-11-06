@@ -274,3 +274,146 @@ internal const val RECORDED_POPULAR_GB = """
  ]
 }
 """
+
+/** `POST /deals/v2` with `{"country":"GB","sort":"rank","filter":{"type":[1],"flag":"H"}}`, recorded 6 Nov 2026 (first 3, deal fields trimmed). */
+internal const val RECORDED_ALL_TIME_LOWS_GB = """
+{
+ "nextOffset": 3,
+ "hasMore": true,
+ "list": [
+  {
+   "id": "018d937f-1e66-7184-b1d7-1634c8fc9df4",
+   "slug": "metro-exodus",
+   "title": "Metro Exodus",
+   "type": "game",
+   "mature": false,
+   "assets": {
+    "boxart": "https://assets.isthereanydeal.com/018d937f-1e66-7184-b1d7-1634c8fc9df4/boxart.jpg?t=1786477819",
+    "banner300": "https://assets.isthereanydeal.com/018d937f-1e66-7184-b1d7-1634c8fc9df4/banner300.jpg?t=1786477819"
+   },
+   "deal": {
+    "shop": {
+     "id": 16,
+     "name": "Epic Game Store"
+    },
+    "price": {
+     "amount": 2.49,
+     "amountInt": 249,
+     "currency": "GBP"
+    },
+    "regular": {
+     "amount": 24.99,
+     "amountInt": 2499,
+     "currency": "GBP"
+    },
+    "cut": 90,
+    "voucher": null,
+    "flag": "H",
+    "timestamp": "2026-10-26T18:02:02+01:00",
+    "expiry": "2026-11-09T18:00:00+01:00",
+    "url": "https://itad.link/018d959f-7379-7319-b044-b53bf5b98354/?app=jvku76"
+   }
+  },
+  {
+   "id": "018d937f-0de8-7372-aa7a-fc902b95be0c",
+   "slug": "outlast",
+   "title": "Outlast",
+   "type": "game",
+   "mature": false,
+   "assets": {
+    "boxart": "https://assets.isthereanydeal.com/018d937f-0de8-7372-aa7a-fc902b95be0c/boxart.jpg?t=1788208531",
+    "banner300": "https://assets.isthereanydeal.com/018d937f-0de8-7372-aa7a-fc902b95be0c/banner300.jpg?t=1788208532"
+   },
+   "deal": {
+    "shop": {
+     "id": 36,
+     "name": "GreenManGaming"
+    },
+    "price": {
+     "amount": 1.28,
+     "amountInt": 128,
+     "currency": "GBP"
+    },
+    "regular": {
+     "amount": 12.79,
+     "amountInt": 1279,
+     "currency": "GBP"
+    },
+    "cut": 90,
+    "voucher": null,
+    "flag": "H",
+    "timestamp": "2026-10-23T11:56:28+02:00",
+    "expiry": null,
+    "url": "https://itad.link/018d9386-a7e2-72a8-8939-b09f72292d2c/?app=jvku76"
+   }
+  },
+  {
+   "id": "018d937f-2d61-7357-8998-c5fabda75487",
+   "slug": "noita",
+   "title": "Noita",
+   "type": "game",
+   "mature": false,
+   "assets": {
+    "boxart": "https://assets.isthereanydeal.com/018d937f-2d61-7357-8998-c5fabda75487/boxart.jpg?t=1790938605",
+    "banner300": "https://assets.isthereanydeal.com/018d937f-2d61-7357-8998-c5fabda75487/banner300.jpg?t=1790938605"
+   },
+   "deal": {
+    "shop": {
+     "id": 35,
+     "name": "GOG"
+    },
+    "price": {
+     "amount": 6.19,
+     "amountInt": 619,
+     "currency": "GBP"
+    },
+    "regular": {
+     "amount": 15.49,
+     "amountInt": 1549,
+     "currency": "GBP"
+    },
+    "cut": 60,
+    "voucher": null,
+    "flag": "H",
+    "timestamp": "2026-10-28T15:07:11+01:00",
+    "expiry": null,
+    "url": "https://itad.link/018d9386-a363-704f-8ede-cf2d5e1bf8ed/?app=jvku76"
+   }
+  }
+ ]
+}
+"""
+
+/** `GET /service/shops/v1?country=GB`, recorded 6 Nov 2026 (4 of 35 shops). `deals` counts every product type. */
+internal const val RECORDED_SHOPS_GB = """
+[
+ {
+  "id": 16,
+  "title": "Epic Game Store",
+  "deals": 538,
+  "games": 15495,
+  "update": "2026-11-06T10:39:48+01:00"
+ },
+ {
+  "id": 26,
+  "title": "GamesPlanet UK",
+  "deals": 7843,
+  "games": 8751,
+  "update": "2026-11-06T01:40:57+01:00"
+ },
+ {
+  "id": 35,
+  "title": "GOG",
+  "deals": 6127,
+  "games": 12857,
+  "update": "2026-11-06T11:01:34+01:00"
+ },
+ {
+  "id": 61,
+  "title": "Steam",
+  "deals": 33646,
+  "games": 328927,
+  "update": "2026-11-06T11:27:10+01:00"
+ }
+]
+"""

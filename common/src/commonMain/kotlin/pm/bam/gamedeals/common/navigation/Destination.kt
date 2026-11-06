@@ -23,8 +23,20 @@ sealed interface Destination {
     @Serializable
     data object Home : Destination
 
+    /** The Winter Sale entry: the sale hub while the sale is on, the guide's own pages before and after. */
     @Serializable
     data object WinterSaleGuide : Destination
+
+    /** The guide's personal list (waitlist, followed series, popular), opened from the hub's "For you" tile. */
+    @Serializable
+    data object WinterSaleForYou : Destination
+
+    /**
+     * One hub shelf in full. [shelf] is a `WinterSaleShelf` key; [saleEndEpochMillis] drives its countdown strip and is the sale's
+     * end on this phone's clock (already corrected by the server time), so a phone with a wrong clock still counts down right.
+     */
+    @Serializable
+    data class WinterSaleList(val shelf: String, val saleEndEpochMillis: Long) : Destination
 
     /** Top-level tab: the full, browsable all-stores deals list (epic #219, Phase 4). */
     @Serializable
