@@ -71,6 +71,10 @@ class WinterSaleOffersRepositoryTest {
     fun historical_low_comparison_requires_the_same_currency() {
         assertTrue(offer("game", historicalLow = WinterSaleMoney(10.0, "GBP")).isAtHistoricalLow)
         assertFalse(offer("game", historicalLow = WinterSaleMoney(10.0, "USD")).isAtHistoricalLow)
+        // A game that is simply free (no price, no discount) is never "at its lowest price"; a 100% cut still is.
+        val free = offer("game", cut = 0, historicalLow = WinterSaleMoney(0.0, "GBP")).copy(price = WinterSaleMoney(0.0, "GBP"))
+        assertFalse(free.isAtHistoricalLow)
+        assertTrue(free.copy(cutPercent = 100).isAtHistoricalLow)
         assertTrue(offer("game", cut = 1).isDiscounted)
         assertFalse(offer("game", cut = 0).isDiscounted)
     }

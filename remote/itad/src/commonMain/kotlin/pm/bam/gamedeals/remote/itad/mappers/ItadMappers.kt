@@ -2,6 +2,7 @@ package pm.bam.gamedeals.remote.itad.mappers
 
 import kotlinx.collections.immutable.toImmutableList
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.isFreeWithoutDiscount
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
 import pm.bam.gamedeals.remote.itad.models.ItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.ItadGameSearchResult
@@ -54,7 +55,8 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, a
         url = url,
         storeLow = storeLow?.toItadMoney(),
         artwork = artwork,
-        isLowestEver = flag.isHistoryLowFlag(),
+        // A game that is simply free keeps ITAD's "H" off: there is no deal to mark (a new low "N" still counts).
+        isLowestEver = flag.isNewHistoryLowFlag() || (flag.isHistoryLowFlag() && !isFreeWithoutDiscount(price.amount, cut)),
         isNewHistoricalLow = flag.isNewHistoryLowFlag(),
         isStoreLow = flag.isStoreLowFlag(),
         hasVoucher = voucher.isVoucherPresent(),

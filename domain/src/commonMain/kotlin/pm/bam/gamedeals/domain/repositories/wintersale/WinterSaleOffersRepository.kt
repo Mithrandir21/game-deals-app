@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.wintersale
 
 import kotlin.coroutines.cancellation.CancellationException
 import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.domain.models.isFreeWithoutDiscount
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.error
 
@@ -24,7 +25,8 @@ data class WinterSaleOffer(
 ) {
     val isDiscounted: Boolean get() = cutPercent > 0
     val isAtHistoricalLow: Boolean get() =
-        historicalLow?.takeIf { it.currency == price.currency }?.let { price.amount <= it.amount } ?: false
+        !isFreeWithoutDiscount(price.amount, cutPercent) &&
+            (historicalLow?.takeIf { it.currency == price.currency }?.let { price.amount <= it.amount } ?: false)
 }
 
 interface WinterSaleOfferSource {

@@ -39,7 +39,8 @@ data class WaitlistDisplayItem(
      * the instant a new low is reached — too narrow for "now at lowest").
      */
     val isAtHistoricalLow: Boolean
-        get() = bestPriceValue != null && historicalLowValue != null && bestPriceValue <= historicalLowValue
+        get() = bestPriceValue != null && historicalLowValue != null && bestPriceValue <= historicalLowValue &&
+            !isFreeWithoutDiscount(bestPriceValue, discountPercent)
 }
 
 /**
