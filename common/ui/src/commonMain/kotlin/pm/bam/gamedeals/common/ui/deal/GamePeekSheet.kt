@@ -66,6 +66,7 @@ import pm.bam.gamedeals.common.ui.components.AllTimeLowBadge
 import pm.bam.gamedeals.common.ui.components.DealLowFlag
 import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
 import pm.bam.gamedeals.common.ui.components.StoreLowBadge
+import pm.bam.gamedeals.common.ui.components.dealBadgeContentSuffix
 import pm.bam.gamedeals.common.ui.components.dealLowFlag
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_all_time_body
 import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_all_time_title
@@ -363,7 +364,14 @@ private fun PeekBody(
         if (data.otherStores.isNotEmpty()) {
             Text(text = stringResource(Res.string.game_peek_other_stores_label), style = MaterialTheme.typography.titleSmall)
             data.otherStores.forEach { pair ->
-                val rowCd = stringResource(Res.string.game_peek_store_row_description, pair.deal.priceDenominated, pair.store.storeName)
+                // The row's own description replaces its text for TalkBack, so it also says the letter shown before the price.
+                val rowCd = stringResource(Res.string.game_peek_store_row_description, pair.deal.priceDenominated, pair.store.storeName) +
+                    dealBadgeContentSuffix(
+                        isNewHistoricalLow = pair.deal.isNewHistoricalLow,
+                        isLowestEver = pair.deal.isLowestEver,
+                        isStoreLow = pair.deal.isStoreLow,
+                        hasVoucher = false,
+                    )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
