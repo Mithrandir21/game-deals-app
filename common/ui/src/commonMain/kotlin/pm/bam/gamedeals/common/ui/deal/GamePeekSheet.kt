@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.common.ui.deal
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -345,7 +346,19 @@ private fun PeekBody(
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
-        peekLowFlags(data.bestDeal?.deal, data.otherStores.map { it.deal }).forEach { flag -> LowPriceLine(flag) }
+        val lowFlags = peekLowFlags(data.bestDeal?.deal, data.otherStores.map { it.deal })
+        if (lowFlags.isNotEmpty()) {
+            // One soft grey box holds the letters' explanations, so they read as a note about the prices below.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.medium)
+                    .padding(horizontal = GameDealsCustomTheme.spacing.large - GameDealsCustomTheme.spacing.small, vertical = GameDealsCustomTheme.spacing.medium + GameDealsCustomTheme.spacing.extraSmall),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+            ) {
+                lowFlags.forEach { flag -> LowPriceLine(flag) }
+            }
+        }
 
         if (data.otherStores.isNotEmpty()) {
             Text(text = stringResource(Res.string.game_peek_other_stores_label), style = MaterialTheme.typography.titleSmall)
