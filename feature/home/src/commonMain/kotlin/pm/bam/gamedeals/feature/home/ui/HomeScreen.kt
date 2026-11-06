@@ -807,6 +807,7 @@ private fun TrendingDealRow(
         hasVoucher = deal.hasVoucher,
         isNewHistoricalLow = deal.isNewHistoricalLow,
         isStoreLow = deal.isStoreLow,
+        isLowestEver = deal.isLowestEver,
         storeName = store?.storeName,
         storeIconUrl = store?.iconUrl,
         isWaitlisted = isWaitlisted,

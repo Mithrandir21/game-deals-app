@@ -235,6 +235,9 @@ private fun ItadDeal.toGameDeal(): GameDetails.GameDeal {
         retailPriceDenominated = retail.denominated(),
         savings = cutPercent,
         url = url,
+        isLowestEver = isLowestEver,
+        isNewHistoricalLow = isNewHistoricalLow,
+        isStoreLow = isStoreLow,
     )
 }
 

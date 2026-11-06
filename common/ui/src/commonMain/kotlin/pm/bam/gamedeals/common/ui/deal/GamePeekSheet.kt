@@ -50,12 +50,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.components.AllTimeLowBadge
+import pm.bam.gamedeals.common.ui.components.DealLowFlag
+import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
+import pm.bam.gamedeals.common.ui.components.StoreLowBadge
+import pm.bam.gamedeals.common.ui.components.dealLowFlag
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_all_time_body
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_all_time_title
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_new_body
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_new_title
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_store_body
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_low_store_title
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import org.jetbrains.compose.resources.painterResource
@@ -258,6 +274,53 @@ fun GamePeekContent(
     }
 }
 
+/**
+ * The low-price letters the sheet explains: the best deal's first, then any other store's, each once — so a
+ * letter seen on a row or tile is spelled out here even when that store isn't the cheapest.
+ */
+internal fun peekLowFlags(best: GameDetails.GameDeal?, others: List<GameDetails.GameDeal>): List<DealLowFlag> =
+    (listOfNotNull(best) + others)
+        .mapNotNull { dealLowFlag(isNewHistoricalLow = it.isNewHistoricalLow, isLowestEver = it.isLowestEver, isStoreLow = it.isStoreLow) }
+        .distinct()
+
+@Composable
+private fun LowPriceLetter(flag: DealLowFlag?) {
+    when (flag) {
+        DealLowFlag.NEW_LOW -> NewHistoricalLowBadge()
+        DealLowFlag.ALL_TIME_LOW -> AllTimeLowBadge()
+        DealLowFlag.STORE_LOW -> StoreLowBadge()
+        null -> Unit
+    }
+}
+
+/** "[N] New low: just hit its lowest price ever" — one line on a phone; wraps rather than cuts at large text sizes. */
+@Composable
+private fun LowPriceLine(flag: DealLowFlag) {
+    val (title, body) = when (flag) {
+        DealLowFlag.NEW_LOW -> Res.string.game_peek_low_new_title to Res.string.game_peek_low_new_body
+        DealLowFlag.ALL_TIME_LOW -> Res.string.game_peek_low_all_time_title to Res.string.game_peek_low_all_time_body
+        DealLowFlag.STORE_LOW -> Res.string.game_peek_low_store_title to Res.string.game_peek_low_store_body
+    }
+    val titleText = stringResource(title)
+    val bodyText = stringResource(body)
+    val spoken = "$titleText: $bodyText"
+    Row(
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = spoken },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+    ) {
+        LowPriceLetter(flag)
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(titleText) }
+                append(": ")
+                append(bodyText)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
 @Composable
 private fun PeekBody(
     data: GamePeekSheetData.Data,
@@ -282,6 +345,8 @@ private fun PeekBody(
             .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = GameDealsCustomTheme.spacing.medium),
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
+        peekLowFlags(data.bestDeal?.deal, data.otherStores.map { it.deal }).forEach { flag -> LowPriceLine(flag) }
+
         if (data.otherStores.isNotEmpty()) {
             Text(text = stringResource(Res.string.game_peek_other_stores_label), style = MaterialTheme.typography.titleSmall)
             data.otherStores.forEach { pair ->
@@ -303,6 +368,7 @@ private fun PeekBody(
                         contentDescription = null,
                     )
                     Text(modifier = Modifier.weight(1f), text = pair.store.storeName)
+                    LowPriceLetter(dealLowFlag(pair.deal.isNewHistoricalLow, pair.deal.isLowestEver, pair.deal.isStoreLow))
                     Text(text = pair.deal.priceDenominated)
                 }
             }

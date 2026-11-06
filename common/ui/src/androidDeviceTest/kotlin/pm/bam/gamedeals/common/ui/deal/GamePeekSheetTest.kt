@@ -7,6 +7,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performClick
 import io.mockk.mockk
 import io.mockk.verify
@@ -107,6 +109,34 @@ class GamePeekSheetTest {
         composeTestRule.onNodeWithText(labels.bestPriceSubtitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(labels.otherStoresHeader).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun eachLowPriceLetterIsSpelledOutOnOneLine() {
+        setContent(
+            dataState.copy(
+                bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal().copy(isNewHistoricalLow = true, isLowestEver = true)),
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isStoreLow = true)),
+                ),
+            ),
+        )
+
+        val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
+        newLow.assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertIsDisplayed()
+        // One line at the default text size: no taller than the letter chip's line plus a little.
+        val height = newLow.fetchSemanticsNode().boundsInRoot.height
+        val oneLine = with(composeTestRule.density) { 24.dp.toPx() }
+        assertTrue("the explanation wraps: ${height}px", height <= oneLine)
+    }
+
+    @Test
+    fun noLettersMeansNoExplanation() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertDoesNotExist()
     }
 
     @Test

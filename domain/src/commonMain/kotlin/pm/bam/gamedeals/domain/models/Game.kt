@@ -100,6 +100,15 @@ data class GameDetails(
         @SerialName("savings")
         val savings: Int,
         @SerialName("url")
-        val url: String = ""
+        val url: String = "",
+        /** ITAD's deal flag: the price is at the game's all-time low (`"N"` or `"H"`). False in caches from before it was kept. */
+        @SerialName("isLowestEver")
+        val isLowestEver: Boolean = false,
+        /** ITAD's deal flag `"N"`: the price just hit a new all-time low. */
+        @SerialName("isNewHistoricalLow")
+        val isNewHistoricalLow: Boolean = false,
+        /** ITAD's deal flag `"S"`: the lowest price this store has offered. */
+        @SerialName("isStoreLow")
+        val isStoreLow: Boolean = false,
     )
 }

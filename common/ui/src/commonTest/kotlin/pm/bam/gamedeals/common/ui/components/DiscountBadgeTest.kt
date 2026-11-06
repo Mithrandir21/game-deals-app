@@ -6,10 +6,16 @@ import kotlin.test.assertEquals
 class DiscountBadgeTest {
 
     @Test
-    fun large_cuts_map_to_HIGH_tier() {
+    fun cuts_of_75_percent_or_more_map_to_the_TOP_tier() {
+        assertEquals(DiscountTier.TOP, discountTier(75))
+        assertEquals(DiscountTier.TOP, discountTier(90))
+        assertEquals(DiscountTier.TOP, discountTier(100))
+    }
+
+    @Test
+    fun large_cuts_below_75_map_to_HIGH_tier() {
         assertEquals(DiscountTier.HIGH, discountTier(50))
-        assertEquals(DiscountTier.HIGH, discountTier(78))
-        assertEquals(DiscountTier.HIGH, discountTier(100))
+        assertEquals(DiscountTier.HIGH, discountTier(74))
     }
 
     @Test

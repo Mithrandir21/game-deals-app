@@ -406,7 +406,7 @@ private fun LazyListScope.guideRow(
             neutralChip = if (stalePrices) stringResource(Res.string.winter_sale_price_unavailable_short) else null,
             discountPercent = if (stalePrices) 0 else offer.cutPercent,
             hasVoucher = !stalePrices && offer.voucher != null,
-            isNewHistoricalLow = !stalePrices && offer.isAtHistoricalLow,
+            isLowestEver = !stalePrices && offer.isAtHistoricalLow,
             storeName = offer.shopName,
             storeIconUrl = stores[offer.shopId]?.iconUrl?.takeIf { it.isNotBlank() },
             isWaitlisted = game.gameId in waitlistIds,

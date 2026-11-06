@@ -79,7 +79,6 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_type_dlc
 import pm.bam.gamedeals.feature.account.generated.resources.account_type_game
 import pm.bam.gamedeals.feature.account.generated.resources.account_type_package
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_empty
-import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_lowest_ever
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_no_deal
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_biggest_discount
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_now_lowest
@@ -326,12 +325,11 @@ private fun <T> SortMenu(
 @Composable
 private fun WaitlistRow(row: WaitlistRowUi, onClick: () -> Unit) {
     val ago = addedAgoLabel(row.addedEpochMs, AgoPrefix.WAITLISTED)
-    val lowestEver = stringResource(Res.string.account_waitlist_lowest_ever)
     val noDeal = stringResource(Res.string.account_waitlist_no_deal)
     Column(Modifier.fillMaxWidth()) {
         DealListRow(
             title = row.title,
-            contentDescription = waitlistContentDescription(row, ago, lowestEver, noDeal),
+            contentDescription = waitlistContentDescription(row, ago, noDeal),
             onClick = onClick,
             imageUrl = row.imageUrl,
             salePrice = row.salePrice,
@@ -341,11 +339,12 @@ private fun WaitlistRow(row: WaitlistRowUi, onClick: () -> Unit) {
             hasVoucher = row.hasVoucher,
             isNewHistoricalLow = row.isNewHistoricalLow,
             isStoreLow = row.isStoreLow,
+            isLowestEver = row.isAtHistoricalLow,
             storeName = row.storeName,
             storeIconUrl = row.storeIconUrl,
             isWaitlisted = true,
         )
-        if (row.isAtHistoricalLow || ago != null) {
+        if (ago != null) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -353,39 +352,18 @@ private fun WaitlistRow(row: WaitlistRowUi, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
             ) {
-                if (row.isAtHistoricalLow) LowestEverChip(lowestEver)
-                ago?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = ago,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
 }
 
-@Composable
-private fun LowestEverChip(label: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        shape = RoundedCornerShape(GameDealsCustomTheme.spacing.extraSmall),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(
-                horizontal = GameDealsCustomTheme.spacing.small,
-                vertical = GameDealsCustomTheme.spacing.extraSmall,
-            ),
-        )
-    }
-}
-
 /** Flat, non-composable TalkBack string from already-resolved pieces. */
-private fun waitlistContentDescription(row: WaitlistRowUi, ago: String?, lowestEver: String, noDeal: String): String {
+private fun waitlistContentDescription(row: WaitlistRowUi, ago: String?, noDeal: String): String {
     val parts = mutableListOf(row.title)
     if (row.salePrice != null) {
         parts += row.salePrice
@@ -393,7 +371,6 @@ private fun waitlistContentDescription(row: WaitlistRowUi, ago: String?, lowestE
     } else {
         parts += noDeal
     }
-    if (row.isAtHistoricalLow) parts += lowestEver
     ago?.let { parts += it }
     return parts.joinToString(", ")
 }
