@@ -1,6 +1,11 @@
 package pm.bam.gamedeals.feature.home.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -141,6 +146,32 @@ class WinterSaleHubScreenTest {
     }
 
     @Test
+    fun a_store_shelf_leaves_the_store_off_its_cards_while_other_shelves_name_it() {
+        setHub(hubState())
+
+        // Steam's own shelf: the store is the shelf's heading, so its cards skip it.
+        composeTestRule.onAllNodes(hasAnyAncestor(hasContentDescription("Borderlands 2", substring = true)) and hasText("Steam"), useUnmergedTree = true)
+            .assertCountEquals(0)
+        scrollTo(hasContentDescription("Metro Exodus", substring = true))
+        composeTestRule.onAllNodes(hasAnyAncestor(hasContentDescription("Metro Exodus", substring = true)) and hasText("Shop 16"), useUnmergedTree = true)
+            .assertCountEquals(1)
+    }
+
+    @Test
+    fun a_card_strikes_through_the_old_price_only_when_it_is_higher() {
+        val state = hubState()
+        val hub = state.hub!!
+        setHub(state.copy(hub = hub.copy(bigCuts = listOf(
+            deal("rdr2", "Red Dead Redemption 2", cut = 77, shopId = 36).copy(price = WinterSaleMoney(13.79, "GBP"), regular = WinterSaleMoney(59.99, "GBP")),
+            deal("same", "Same Price", cut = 80, shopId = 37).copy(price = WinterSaleMoney(4.44, "GBP"), regular = WinterSaleMoney(4.44, "GBP")),
+        ))))
+
+        scrollTo(hasContentDescription("Same Price", substring = true))
+        composeTestRule.onAllNodes(hasText("59.99", substring = true), useUnmergedTree = true).assertCountEquals(1)
+        composeTestRule.onAllNodes(hasText("4.44", substring = true), useUnmergedTree = true).assertCountEquals(1)
+    }
+
+    @Test
     fun a_hub_that_failed_offers_a_retry() {
         setHub(hubState().copy(hub = null, failed = true))
         composeTestRule.onNodeWithText("Couldn't load the sale right now.").assertExists()
@@ -228,6 +259,53 @@ class WinterSaleHubScreenTest {
         assertEquals(1, retried)
         assertEquals("metro", peeked)
     }
+
+    @Test
+    fun each_list_has_its_own_title_and_line_and_states() {
+        var state by mutableStateOf(listState(WinterSaleShelf.BigCuts))
+        var retried = 0
+        composeTestRule.setContent {
+            WinterSaleListContent(state = state, onBack = {}, onRetry = { retried++ }, nowEpochMillis = { NOW })
+        }
+
+        composeTestRule.onNodeWithText("75% off or more").assertExists()
+        composeTestRule.onNodeWithText("Most popular first").assertExists()
+
+        state = listState(WinterSaleShelf.AllTimeLows)
+        composeTestRule.onNodeWithText("All-time lows").assertExists()
+        composeTestRule.onNodeWithText("Lowest price ever · most popular first").assertExists()
+        composeTestRule.onAllNodesWithText("H").onFirst().assertExists()
+
+        state = listState(WinterSaleShelf.Store(61)).copy(storeName = null, storeDeals = null)
+        composeTestRule.onNodeWithText("Store deals").assertExists()
+        composeTestRule.onNodeWithText("Top games, most popular first").assertExists()
+
+        state = listState(null)
+        composeTestRule.onAllNodesWithText("Winter Sale").onFirst().assertExists()
+        composeTestRule.onNodeWithText("Most popular first").assertDoesNotExist()
+
+        state = listState(WinterSaleShelf.BigCuts).copy(deals = emptyList<WinterSaleDeal>().toImmutableList())
+        composeTestRule.onNodeWithText("Nothing here right now.").assertExists()
+
+        state = listState(WinterSaleShelf.BigCuts).copy(deals = emptyList<WinterSaleDeal>().toImmutableList(), failed = true)
+        composeTestRule.onNodeWithText("Couldn't load this list right now.").assertExists()
+        composeTestRule.onNodeWithText("Try again").performClick()
+        assertEquals(1, retried)
+
+        state = listState(WinterSaleShelf.BigCuts).copy(deals = emptyList<WinterSaleDeal>().toImmutableList(), loading = true)
+        composeTestRule.onNodeWithText("Nothing here right now.").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Couldn't load this list right now.").assertDoesNotExist()
+    }
+
+    private fun listState(shelf: WinterSaleShelf?) = WinterSaleListState(
+        shelf = shelf,
+        saleEndEpochMillis = NOW + 3 * DAY,
+        storeName = "Steam",
+        storeDeals = 33_646,
+        deals = listOf(deal("metro", "Metro Exodus", cut = 90, flag = WinterSaleDealFlag.AllTimeLow, shopId = 16)).toImmutableList(),
+        loading = false,
+        endReached = true,
+    )
 
     private fun hubState(): WinterSaleHubState {
         val event = WinterSaleEvent("steam-winter-2026", NOW - 2 * DAY, NOW - DAY, NOW + 9 * DAY + HOUR, "Winter Sale guide", "Soon.", "On.")
