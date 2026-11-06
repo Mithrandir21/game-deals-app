@@ -242,30 +242,25 @@ internal fun WinterSaleHubContent(
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
             val event = state.event as? WinterSaleEventState.Available
-            if (!state.eventChecked || event == null) {
+            val hub = state.hub
+            // One spinner until the shelves are in, like the app's other pages: shown earlier, the blue card would open on
+            // the countdown and switch to the deal total a moment later.
+            if (!state.eventChecked || event == null || (hub == null && state.loading)) {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 return@Scaffold
             }
-            val hub = state.hub
             val bottomInset = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues()
             PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().padding(padding)) {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomInset) {
                     item(key = "header") { HubHeader(event, hub) }
                     item(key = "for-you") { ForYouTile(onForYou) }
-                    when {
-                        hub == null && state.loading -> item(key = "loading") {
-                            Box(Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.extraLarge), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                        hub == null && state.failed -> item(key = "failed") {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(stringResource(Res.string.winter_sale_hub_failed), style = MaterialTheme.typography.bodyMedium)
-                                TextButton(onClick = onRetry) { Text(stringResource(Res.string.winter_sale_try_again)) }
-                            }
+                    if (hub == null && state.failed) item(key = "failed") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(stringResource(Res.string.winter_sale_hub_failed), style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = onRetry) { Text(stringResource(Res.string.winter_sale_try_again)) }
                         }
                     }
                     if (hub != null) hubShelves(hub, onShelf, onPeek, stores, waitlistIds, collectionIds)

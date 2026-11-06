@@ -5,7 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -70,6 +72,17 @@ class WinterSaleHubScreenTest {
         // One pill: the countdown with the day, never a second pill that could wrap.
         composeTestRule.onNodeWithText("Ends in 9 days · ${winterSaleDay(NOW + 9 * DAY + HOUR)}").assertExists()
         composeTestRule.onNodeWithText("Until", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun while_the_shelves_load_the_page_shows_only_a_spinner() {
+        // The blue card would open on the countdown and switch to the deal total a moment later, so it waits too.
+        setHub(hubState().copy(hub = null, loading = true))
+
+        composeTestRule.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertExists()
+        composeTestRule.onNodeWithText("The Winter Sale is on").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Ends in 9 days", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("For you").assertDoesNotExist()
     }
 
     @Test
