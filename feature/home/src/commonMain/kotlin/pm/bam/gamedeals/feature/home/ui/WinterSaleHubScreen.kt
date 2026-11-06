@@ -5,11 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -33,6 +30,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +56,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,17 +66,24 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.components.DealBadgeCluster
 import pm.bam.gamedeals.common.ui.components.GameStateBadges
+import pm.bam.gamedeals.common.ui.components.PriceBlock
+import pm.bam.gamedeals.common.ui.components.StoreLabel
+import pm.bam.gamedeals.common.ui.components.dealBadgeContentSuffix
+import pm.bam.gamedeals.common.ui.components.discountColors
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.components.gameStateContentSuffix
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.common.ui.theme.GameDealsElevation
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.portrait
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.wintersale.WINTER_SALE_BIG_CUT_PERCENT
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDeal
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDealFlag
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHub
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubStore
@@ -301,6 +306,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hubShelves(
             subtitle = stringResource(Res.string.winter_sale_hub_lows_body),
             shelf = WinterSaleShelf.AllTimeLows,
             deals = hub.allTimeLows,
+            stores = stores,
             onShelf = onShelf,
             onPeek = onPeek,
             waitlistIds = waitlistIds,
@@ -313,6 +319,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hubShelves(
             subtitle = stringResource(Res.string.winter_sale_hub_cuts_body),
             shelf = WinterSaleShelf.BigCuts,
             deals = hub.bigCuts,
+            stores = stores,
             onShelf = onShelf,
             onPeek = onPeek,
             waitlistIds = waitlistIds,
@@ -470,7 +477,13 @@ private fun LeadStoreCard(
             }
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(store.deals, key = { it.gameId }) { deal ->
-                    SaleGameCard(deal, showStore = false, waitlisted = deal.gameId in waitlistIds, collected = deal.gameId in collectionIds) {
+                    SaleGameCard(
+                        deal,
+                        storeIconUrl = null,
+                        showStore = false,
+                        waitlisted = deal.gameId in waitlistIds,
+                        collected = deal.gameId in collectionIds,
+                    ) {
                         onPeek(deal, shelf)
                     }
                 }
@@ -502,18 +515,18 @@ private fun StoreTile(store: WinterSaleHubStore, iconUrl: String?, onShelf: (Win
                     Box(Modifier.width(40.dp).height(60.dp).clip(RoundedCornerShape(5.dp))) {
                         Cover(deal, Modifier.fillMaxSize())
                         if (deal.isBigCut) {
-                            val palette = winterSalePalette()
+                            val colors = discountColors(deal.cutPercent)
                             Text(
                                 "-${deal.cutPercent}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = palette.onRibbon,
+                                color = colors.content,
                                 maxLines = 1,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
-                                    .background(palette.ribbon)
+                                    .background(colors.container)
                                     .padding(vertical = 2.dp),
                             )
                         }
@@ -530,6 +543,7 @@ private fun DealShelf(
     subtitle: String,
     shelf: WinterSaleShelf,
     deals: List<WinterSaleDeal>,
+    stores: Map<Int, Store>,
     onShelf: (WinterSaleShelf) -> Unit,
     onPeek: (WinterSaleDeal, WinterSaleShelf) -> Unit,
     waitlistIds: Set<String>,
@@ -549,7 +563,13 @@ private fun DealShelf(
         }
         LazyRow(contentPadding = PaddingValues(horizontal = GameDealsCustomTheme.spacing.large), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(deals, key = { it.gameId }) { deal ->
-                SaleGameCard(deal, showStore = true, waitlisted = deal.gameId in waitlistIds, collected = deal.gameId in collectionIds) {
+                SaleGameCard(
+                    deal,
+                    storeIconUrl = stores[deal.shopId]?.iconUrl?.takeIf { it.isNotBlank() },
+                    showStore = true,
+                    waitlisted = deal.gameId in waitlistIds,
+                    collected = deal.gameId in collectionIds,
+                ) {
                     onPeek(deal, shelf)
                 }
             }
@@ -568,53 +588,95 @@ internal fun Cover(deal: WinterSaleDeal, modifier: Modifier = Modifier) {
     )
 }
 
-/** The spoken summary of a sale deal: title, price, cut and store, then its price badge and library state. */
+/** The spoken summary of a sale deal: title, price, cut and store. Cards and rows add the badges and library state. */
 @Composable
-internal fun saleDealDescription(deal: WinterSaleDeal, waitlisted: Boolean, collected: Boolean): String {
-    val base = stringResource(Res.string.winter_sale_row_description, deal.title, formatMoney(deal.price.amount, deal.price.currency),
-        deal.cutPercent, deal.shopName)
-    return listOfNotNull(base, spokenFlag(deal.flag)).joinToString(", ") + gameStateContentSuffix(isWaitlisted = waitlisted, isCollected = collected)
-}
+internal fun saleDealBaseDescription(deal: WinterSaleDeal): String =
+    stringResource(Res.string.winter_sale_row_description, deal.title, formatMoney(deal.price.amount, deal.price.currency), deal.cutPercent, deal.shopName)
 
-@OptIn(ExperimentalLayoutApi::class)
+/** The spoken summary of a sale card: [saleDealBaseDescription], then its badges as Home's tiles say them, then library state. */
 @Composable
-private fun SaleGameCard(deal: WinterSaleDeal, showStore: Boolean, waitlisted: Boolean, collected: Boolean, onClick: () -> Unit) {
+internal fun saleDealDescription(deal: WinterSaleDeal, waitlisted: Boolean, collected: Boolean): String =
+    saleDealBaseDescription(deal) +
+        dealBadgeContentSuffix(
+            isNewHistoricalLow = deal.isNewLow,
+            isLowestEver = deal.isLowestEver,
+            isStoreLow = deal.isStoreLow,
+            hasVoucher = deal.voucher != null,
+        ) +
+        gameStateContentSuffix(isWaitlisted = waitlisted, isCollected = collected)
+
+/** ITAD's one flag as the shared badges read it ("N" is also a lowest-ever price). */
+internal val WinterSaleDeal.isNewLow: Boolean get() = flag == WinterSaleDealFlag.NewLow
+internal val WinterSaleDeal.isLowestEver: Boolean get() = flag == WinterSaleDealFlag.NewLow || flag == WinterSaleDealFlag.AllTimeLow
+internal val WinterSaleDeal.isStoreLow: Boolean get() = flag == WinterSaleDealFlag.StoreLow
+
+/** The regular price, only when it is above the sale price. */
+internal fun WinterSaleDeal.regularPriceText(): String? =
+    regular?.takeIf { it.amount > price.amount }?.let { formatMoney(it.amount, it.currency) }
+
+/**
+ * A sale shelf card in Home's look: a raised card like Home's Featured tiles, the cover with the discount and
+ * low-price letter on its corner, two lines kept for the title so prices line up along the shelf, the store
+ * with its icon (left out on a store's own shelf), and the green price.
+ */
+@Composable
+private fun SaleGameCard(
+    deal: WinterSaleDeal,
+    storeIconUrl: String?,
+    showStore: Boolean,
+    waitlisted: Boolean,
+    collected: Boolean,
+    onClick: () -> Unit,
+) {
     val description = saleDealDescription(deal, waitlisted, collected)
-    Column(
-        modifier = Modifier
-            .width(CARD_WIDTH)
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = description },
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Card(
+        modifier = Modifier.width(CARD_WIDTH),
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(defaultElevation = GameDealsElevation.card),
     ) {
-        Box(Modifier.width(CARD_WIDTH).height(CARD_HEIGHT).clip(RoundedCornerShape(10.dp))) {
-            Cover(deal, Modifier.fillMaxSize())
-            WinterSaleCutBadge(deal.cutPercent, large = true, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
-            GameStateBadges(isWaitlisted = waitlisted, isCollected = collected, modifier = Modifier.align(Alignment.BottomStart).padding(4.dp))
+        Column(
+            modifier = Modifier
+                .clickable(role = Role.Button, onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = description },
+        ) {
+            Box(Modifier.width(CARD_WIDTH).height(CARD_COVER_HEIGHT)) {
+                Cover(deal, Modifier.fillMaxSize())
+                DealBadgeCluster(
+                    discountPercent = deal.cutPercent,
+                    hasVoucher = deal.voucher != null,
+                    isNewHistoricalLow = deal.isNewLow,
+                    isLowestEver = deal.isLowestEver,
+                    isStoreLow = deal.isStoreLow,
+                    onArt = true,
+                    modifier = Modifier.align(Alignment.TopStart).padding(GameDealsCustomTheme.spacing.small),
+                )
+                GameStateBadges(
+                    isWaitlisted = waitlisted,
+                    isCollected = collected,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(GameDealsCustomTheme.spacing.small),
+                )
+            }
+            Column(
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+            ) {
+                Text(
+                    deal.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (showStore) StoreLabel(storeName = deal.shopName, iconUrl = storeIconUrl)
+                PriceBlock(
+                    salePrice = formatMoney(deal.price.amount, deal.price.currency),
+                    regularPrice = deal.regularPriceText(),
+                    horizontalAlignment = Alignment.Start,
+                )
+            }
         }
-        deal.flag?.let { flag -> FlowRow { WinterSaleFlagBadge(flag) } }
-        Text(deal.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2,
-            overflow = TextOverflow.Ellipsis)
-        if (showStore) {
-            Text(deal.shopName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        SalePrice(deal)
-        Spacer(Modifier.height(2.dp))
     }
 }
 
-@Composable
-internal fun SalePrice(deal: WinterSaleDeal, horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(6.dp)) {
-    Row(horizontalArrangement = horizontalArrangement, verticalAlignment = Alignment.Bottom) {
-        Text(formatMoney(deal.price.amount, deal.price.currency), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        deal.regular?.takeIf { it.amount > deal.price.amount }?.let {
-            Text(formatMoney(it.amount, it.currency), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, textDecoration = TextDecoration.LineThrough)
-        }
-    }
-}
-
-private val CARD_WIDTH = 112.dp
-private val CARD_HEIGHT = 168.dp
+private val CARD_WIDTH = 120.dp
+private val CARD_COVER_HEIGHT = 180.dp

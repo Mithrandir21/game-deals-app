@@ -207,7 +207,7 @@ class WinterSaleEntryScreenTest {
 
         assertEquals(Color(0xFF16365A), palette?.hero)
         composeTestRule.onNodeWithText("64,000+ deals across 8 stores").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("New low").onFirst().assertExists()
+        composeTestRule.onAllNodesWithText("N").onFirst().assertExists()
         composeTestRule.onAllNodesWithText("-90%").onFirst().assertExists()
     }
 

@@ -1,23 +1,17 @@
 package pm.bam.gamedeals.feature.home.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,10 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,11 +47,11 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import pm.bam.gamedeals.common.ui.components.GameStateBadges
-import pm.bam.gamedeals.common.ui.components.StoreLabel
+import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.domain.utils.formatMoney
 import pm.bam.gamedeals.domain.repositories.wintersale.WINTER_SALE_BIG_CUT_PERCENT
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDeal
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleShelf
@@ -187,14 +177,24 @@ internal fun WinterSaleListContent(
                     state.deals.isEmpty() -> item(key = "empty") { FooterText(stringResource(Res.string.winter_sale_list_empty)) }
                 }
                 items(state.deals, key = { it.gameId }, contentType = { "sale-row" }) { deal ->
-                    SaleDealRow(
-                        deal = deal,
-                        storeIconUrl = stores[deal.shopId]?.iconUrl?.takeIf { it.isNotBlank() },
-                        waitlisted = deal.gameId in waitlistIds,
-                        collected = deal.gameId in collectionIds,
+                    // Home's deal row, so the sale's lists look like every other list in the app.
+                    DealListRow(
+                        title = deal.title,
+                        contentDescription = saleDealBaseDescription(deal),
                         onClick = { onPeek(deal) },
+                        imageUrl = deal.artwork.thumbnail,
+                        salePrice = formatMoney(deal.price.amount, deal.price.currency),
+                        regularPrice = deal.regularPriceText(),
+                        discountPercent = deal.cutPercent,
+                        hasVoucher = deal.voucher != null,
+                        isNewHistoricalLow = deal.isNewLow,
+                        isStoreLow = deal.isStoreLow,
+                        isLowestEver = deal.isLowestEver,
+                        storeName = deal.shopName,
+                        storeIconUrl = stores[deal.shopId]?.iconUrl?.takeIf { it.isNotBlank() },
+                        isWaitlisted = deal.gameId in waitlistIds,
+                        isCollected = deal.gameId in collectionIds,
                     )
-                    HorizontalDivider(Modifier.padding(horizontal = GameDealsCustomTheme.spacing.large))
                 }
                 if (state.deals.isNotEmpty()) item(key = "footer") {
                     when {
@@ -258,34 +258,4 @@ private fun FooterText(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
     )
-}
-
-/** A sale list row: cover, title, store, price badge on the left; the cut and price on the right. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun SaleDealRow(deal: WinterSaleDeal, storeIconUrl: String?, waitlisted: Boolean, collected: Boolean, onClick: () -> Unit) {
-    val description = saleDealDescription(deal, waitlisted, collected)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = description }
-            .padding(horizontal = GameDealsCustomTheme.spacing.large, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.width(60.dp).height(90.dp).clip(RoundedCornerShape(8.dp))) {
-            Cover(deal, Modifier.fillMaxSize())
-            GameStateBadges(isWaitlisted = waitlisted, isCollected = collected, modifier = Modifier.align(Alignment.BottomStart).padding(2.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(deal.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2,
-                overflow = TextOverflow.Ellipsis)
-            StoreLabel(storeName = deal.shopName, iconUrl = storeIconUrl)
-            deal.flag?.let { flag -> FlowRow { WinterSaleFlagBadge(flag, storeName = deal.shopName) } }
-        }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            WinterSaleCutBadge(deal.cutPercent)
-            SalePrice(deal, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End))
-        }
-    }
 }

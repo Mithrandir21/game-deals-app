@@ -103,15 +103,41 @@ class WinterSaleHubScreenTest {
     }
 
     @Test
-    fun cards_carry_the_sale_badges() {
+    fun cards_carry_home_s_letters_and_say_them() {
         setHub(hubState())
 
-        composeTestRule.onAllNodesWithText("New low").onFirst().assertExists()
+        composeTestRule.onAllNodesWithText("N").onFirst().assertExists()
         composeTestRule.onAllNodesWithText("-90%").onFirst().assertExists()
-        scrollTo(hasText("Store low"))
-        composeTestRule.onAllNodesWithText("Store low").onFirst().assertExists()
-        scrollTo(hasText("All-time low"))
-        composeTestRule.onAllNodesWithText("All-time low").onFirst().assertExists()
+        composeTestRule.onAllNodes(hasContentDescription("new lowest price ever", substring = true)).onFirst().assertExists()
+        scrollTo(hasText("S"))
+        composeTestRule.onAllNodesWithText("S").onFirst().assertExists()
+        scrollTo(hasText("H"))
+        composeTestRule.onAllNodes(hasContentDescription("at its lowest price ever", substring = true)).onFirst().assertExists()
+    }
+
+    @Test
+    fun a_voucher_deal_says_so() {
+        val state = hubState()
+        val hub = state.hub!!
+        setHub(state.copy(hub = hub.copy(bigCuts = listOf(deal("rdr2", "Red Dead Redemption 2", cut = 77, shopId = 36).copy(voucher = "SALE10")))))
+
+        scrollTo(hasContentDescription("voucher available", substring = true))
+        composeTestRule.onAllNodes(hasContentDescription("voucher available", substring = true)).onFirst().assertExists()
+    }
+
+    @Test
+    fun prices_line_up_along_a_shelf_whatever_the_title_length() {
+        val state = hubState()
+        val hub = state.hub!!
+        setHub(state.copy(hub = hub.copy(bigCuts = listOf(
+            deal("doom", "DOOM", cut = 83, shopId = 36).copy(price = WinterSaleMoney(3.44, "GBP")),
+            deal("tomb", "Tomb Raider Game of the Year Edition", cut = 90, shopId = 37).copy(price = WinterSaleMoney(1.98, "GBP")),
+        ))))
+
+        scrollTo(hasContentDescription("Tomb Raider", substring = true))
+        val short = composeTestRule.onNode(hasText("3.44", substring = true), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val long = composeTestRule.onNode(hasText("1.98", substring = true), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertEquals(short.top, long.top, 0.5f)
     }
 
     @Test
@@ -169,7 +195,8 @@ class WinterSaleHubScreenTest {
 
         composeTestRule.onNodeWithText("33,646 deals · top games, most popular first").assertExists()
         composeTestRule.onNodeWithText("Ends in 2 hours").assertExists()
-        composeTestRule.onNodeWithText("Lowest at Steam").assertExists()
+        composeTestRule.onNodeWithText("S").assertExists()
+        composeTestRule.onAllNodes(hasContentDescription("lowest price at this store", substring = true)).onFirst().assertExists()
         composeTestRule.onNodeWithText("-60%").assertExists()
         composeTestRule.onNodeWithText("That's everything for now.").assertExists()
         assertTrue("a short list asks for more straight away", loadMore.isNotEmpty())

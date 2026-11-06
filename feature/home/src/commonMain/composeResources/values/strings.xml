@@ -138,14 +138,6 @@
     <string name="winter_sale_list_failed">Couldn't load this list right now.</string>
     <string name="winter_sale_list_empty">Nothing here right now.</string>
     <string name="winter_sale_list_store_fallback">Store deals</string>
-    <!-- Sale badges on hub cards and list rows. ITAD gives each deal at most one of the three flags. -->
-    <string name="winter_sale_badge_new_low">New low</string>
-    <string name="winter_sale_badge_all_time_low">All-time low</string>
-    <string name="winter_sale_badge_store_low">Store low</string>
-    <string name="winter_sale_badge_store_low_at">Lowest at %1$s</string>
-    <string name="winter_sale_spoken_new_low">new lowest price ever</string>
-    <string name="winter_sale_spoken_all_time_low">lowest price ever</string>
-    <string name="winter_sale_spoken_store_low">lowest price at this store</string>
     <!-- The sale's blue card before the sale starts (Home and the guide's "starts soon" page). -->
     <string name="winter_sale_card_coming">The Winter Sale starts soon</string>
     <plurals name="winter_sale_card_starts_days">
