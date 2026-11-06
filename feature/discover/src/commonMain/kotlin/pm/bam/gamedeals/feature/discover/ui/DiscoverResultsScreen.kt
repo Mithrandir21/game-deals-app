@@ -216,6 +216,7 @@ private fun DiscoverResultsContent(
                                 hasVoucher = price?.bestHasVoucher ?: false,
                                 isNewHistoricalLow = price?.bestIsNewHistoricalLow ?: false,
                                 isStoreLow = price?.bestIsStoreLow ?: false,
+                                isLowestEver = price?.bestIsLowestEver ?: false,
                                 storeName = price?.bestShopName,
                                 storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
                                 isWaitlisted = result.gameId in waitlistIds,

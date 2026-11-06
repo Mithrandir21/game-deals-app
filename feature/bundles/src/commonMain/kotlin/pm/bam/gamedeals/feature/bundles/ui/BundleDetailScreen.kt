@@ -63,10 +63,7 @@ import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
-import pm.bam.gamedeals.common.ui.components.DiscountBadge
-import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
-import pm.bam.gamedeals.common.ui.components.StoreLowBadge
-import pm.bam.gamedeals.common.ui.components.VoucherBadge
+import pm.bam.gamedeals.common.ui.components.DealBadgeCluster
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
@@ -441,19 +438,14 @@ private fun BundleGamePriceLines(price: BundleGamePrice?) {
             )
         }
     }
-    // ITAD flag cluster, same anatomy as the deal rows: [voucher] [-XX%] [N] [S]. Hidden when none apply.
-    val cut = price.bestCutPercent ?: 0
-    if (price.bestHasVoucher || cut > 0 || price.bestIsNewHistoricalLow || price.bestIsStoreLow) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
-        ) {
-            if (price.bestHasVoucher) VoucherBadge()
-            DiscountBadge(discountPercent = cut)
-            if (price.bestIsNewHistoricalLow) NewHistoricalLowBadge()
-            if (price.bestIsStoreLow) StoreLowBadge()
-        }
-    }
+    // The deal rows' badge group: [voucher] [-XX%] [N|H|S], one letter at most. Draws nothing when none apply.
+    DealBadgeCluster(
+        discountPercent = price.bestCutPercent ?: 0,
+        hasVoucher = price.bestHasVoucher,
+        isNewHistoricalLow = price.bestIsNewHistoricalLow,
+        isLowestEver = price.bestIsLowestEver,
+        isStoreLow = price.bestIsStoreLow,
+    )
     price.historicalLowDenominated?.let { low ->
         Text(
             text = stringResource(Res.string.bundle_detail_historical_low, low),

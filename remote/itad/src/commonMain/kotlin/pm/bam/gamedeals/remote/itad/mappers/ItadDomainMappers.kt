@@ -151,6 +151,7 @@ internal fun ItadGamePrices.toBundleGamePrice(): BundleGamePrice {
         bestHasVoucher = best?.hasVoucher ?: false,
         bestIsNewHistoricalLow = best?.isNewHistoricalLow ?: false,
         bestIsStoreLow = best?.isStoreLow ?: false,
+        bestIsLowestEver = best?.isLowestEver ?: false,
         historicalLowValue = historyLowAll?.amount,
         historicalLowDenominated = historyLowAll?.denominated(),
         currency = best?.price?.currency ?: historyLowAll?.currency,

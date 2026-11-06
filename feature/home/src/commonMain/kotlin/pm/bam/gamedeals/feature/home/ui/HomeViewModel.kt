@@ -303,6 +303,7 @@ internal class HomeViewModel(
                 hasVoucher = price.bestHasVoucher,
                 isNewHistoricalLow = price.bestIsNewHistoricalLow,
                 isStoreLow = price.bestIsStoreLow,
+                isLowestEver = price.bestIsLowestEver,
             )
         }.toImmutableList()
 

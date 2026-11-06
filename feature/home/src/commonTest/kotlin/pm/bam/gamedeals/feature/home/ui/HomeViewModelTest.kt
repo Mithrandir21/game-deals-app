@@ -53,6 +53,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -171,6 +172,34 @@ class HomeViewModelTest : MainDispatcherTest() {
         val ranked = vm.uiState.value.mostWaitlisted.first()
         assertEquals("$9.99", ranked.priceDenominated)
         assertEquals(50, ranked.cutPercent)
+    }
+
+    @Test
+    fun ranked_rows_carry_the_best_deal_low_price_flags() = runTest {
+        // A ranked row at its all-time low shows the same H as Home's Featured and Trending rows.
+        everySuspend { statsRepository.getMostWaitlisted(any()) } returns listOf(RankedGame("w1", "Waited"))
+        everySuspend { gamesRepository.getGamePrices(any()) } returns listOf(
+            BundleGamePrice(
+                gameId = "w1",
+                bestShopName = "Steam",
+                bestPriceValue = 9.99,
+                bestPriceDenominated = "$9.99",
+                bestCutPercent = 50,
+                bestHasVoucher = true,
+                bestIsLowestEver = true,
+                historicalLowValue = 9.99,
+                historicalLowDenominated = "$9.99",
+            )
+        )
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val ranked = vm.uiState.value.mostWaitlisted.first()
+        assertTrue(ranked.isLowestEver)
+        assertFalse(ranked.isNewHistoricalLow)
+        assertFalse(ranked.isStoreLow)
+        assertTrue(ranked.hasVoucher)
     }
 
     @Test

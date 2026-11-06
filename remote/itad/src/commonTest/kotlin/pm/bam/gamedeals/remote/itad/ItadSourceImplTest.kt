@@ -432,6 +432,10 @@ class ItadSourceImplTest {
         assertEquals(4.99, price.historicalLowValue)
         assertEquals("$4.99", price.historicalLowDenominated)
         assertEquals("USD", price.currency)
+        // The best deal's flag "H" (at its all-time low, not new) reaches Discover, ranked Home rows and bundles as an H.
+        assertTrue(price.bestIsLowestEver)
+        assertFalse(price.bestIsNewHistoricalLow)
+        assertFalse(price.bestIsStoreLow)
         assertEquals("/games/prices/v3", recordedRequests.single().url.encodedPath)
     }
 
@@ -574,6 +578,10 @@ class ItadSourceImplTest {
         assertEquals(1, details.deals.size)
         assertEquals(35, details.deals.first().storeID)
         assertEquals("uuid-1:35", details.deals.first().dealID)
+        // The game sheet's letters come from these flags: shop 35's deal is flagged "H".
+        assertTrue(details.deals.first().isLowestEver)
+        assertFalse(details.deals.first().isNewHistoricalLow)
+        assertFalse(details.deals.first().isStoreLow)
 
         val paths = recordedRequests.map { it.url.encodedPath }
         assertTrue("/games/info/v2" in paths)

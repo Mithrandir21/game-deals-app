@@ -840,6 +840,7 @@ private fun RankedGameRow(
         hasVoucher = game.hasVoucher,
         isNewHistoricalLow = game.isNewHistoricalLow,
         isStoreLow = game.isStoreLow,
+        isLowestEver = game.isLowestEver,
         storeName = game.storeName,
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
