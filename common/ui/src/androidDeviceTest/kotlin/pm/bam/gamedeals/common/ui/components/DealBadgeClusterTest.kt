@@ -248,10 +248,10 @@ class DealBadgeClusterTest {
         Box(Modifier.semantics { contentDescription = name }) { content() }
     }
 
-    /** The colour along the middle of a chip's top edge: its fill, or its outline for H. */
+    /** The colour along the middle of a chip's top edge: its fill, or its outline for H (one pixel thick on low-density screens). */
     private fun assertTopEdge(name: String, expected: Color) {
         val image = composeTestRule.onNodeWithContentDescription(name).captureToImage().toPixelMap()
-        val actual = image[image.width / 2, 1]
+        val actual = image[image.width / 2, 0]
         val close = abs(actual.red - expected.red) < TOLERANCE &&
             abs(actual.green - expected.green) < TOLERANCE &&
             abs(actual.blue - expected.blue) < TOLERANCE

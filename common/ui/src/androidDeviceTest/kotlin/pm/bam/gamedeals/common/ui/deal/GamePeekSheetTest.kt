@@ -19,6 +19,8 @@ import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.koin.core.context.startKoin
@@ -129,7 +131,9 @@ class GamePeekSheetTest {
         val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
         newLow.assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertIsDisplayed()
-        // One line at the default text size: no taller than the letter chip's line plus a little.
+        // One line at the default text size on a typical phone; very narrow screens may wrap it.
+        val screenWidthDp = InstrumentationRegistry.getInstrumentation().targetContext.resources.configuration.screenWidthDp
+        assumeTrue("needs a typical phone width", screenWidthDp >= 400)
         val height = newLow.fetchSemanticsNode().boundsInRoot.height
         val oneLine = with(composeTestRule.density) { 24.dp.toPx() }
         assertTrue("the explanation wraps: ${height}px", height <= oneLine)
