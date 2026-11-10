@@ -1,0 +1,12 @@
+# https://gamedeals.bam.pm/, the App Store support URL. See store/README.md.
+name = "gamedeals-site"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "gamedeals.bam.pm", custom_domain = true }]
+# index.html is imported as a string, so the page stays plain HTML.
+rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = true }]
+# Keep request logs off: the privacy policy says we do not keep a log of event-file requests.
+[observability]
+enabled = false

@@ -11,13 +11,16 @@ import platform.Foundation.NSUserDomainMask
 import pm.bam.gamedeals.domain.db.DomainDatabase
 import pm.bam.gamedeals.domain.repositories.notifications.IosNotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderScheduler
 import pm.bam.gamedeals.domain.scheduling.IosNotificationScheduler
+import pm.bam.gamedeals.domain.scheduling.IosWinterSaleReminderScheduler
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 
 val domainIosModule = module {
 
     single<NotificationScheduler> { IosNotificationScheduler(get()) }
     single<NotificationPresenter> { IosNotificationPresenter(get(), get()) }
+    single<WinterSaleReminderScheduler> { IosWinterSaleReminderScheduler(get()) }
 
     single<RoomDatabase.Builder<DomainDatabase>> {
         val documents = NSSearchPathForDirectoriesInDomains(

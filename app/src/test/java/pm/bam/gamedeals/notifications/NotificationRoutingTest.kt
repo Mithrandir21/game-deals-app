@@ -30,6 +30,12 @@ class NotificationRoutingTest {
     }
 
     @Test
+    fun winter_sale_route_parses_to_the_guide_and_matches_the_shared_key() {
+        assertEquals(NotificationRoute.WinterSaleGuide, intent(ROUTE_WINTER_SALE_GUIDE).toNotificationRoute())
+        assertEquals(NotificationRoute.WinterSaleGuide, NotificationRoute.fromKey(ROUTE_WINTER_SALE_GUIDE))
+    }
+
+    @Test
     fun an_absent_or_unrecognised_route_is_null() {
         assertNull(intent(route = null).toNotificationRoute())
         assertNull(intent(route = "something-else").toNotificationRoute())

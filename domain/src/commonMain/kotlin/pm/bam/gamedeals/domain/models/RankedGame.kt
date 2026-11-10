@@ -31,4 +31,5 @@ data class RankedGame(
     val hasVoucher: Boolean = false,
     val isNewHistoricalLow: Boolean = false,
     val isStoreLow: Boolean = false,
+    val isLowestEver: Boolean = false,
 )

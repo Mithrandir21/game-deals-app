@@ -154,6 +154,23 @@ class ItadMappersTest {
         assertEquals("USD", bundle.currency)
     }
 
+    @Test
+    fun a_game_that_is_always_free_is_not_marked_at_its_all_time_low() {
+        // ITAD flags a permanently free game "H"; with no price and no discount there is no deal to mark.
+        freeEntry(flag = "H", cut = 0).toItadDeal(gameId = "uuid", gameTitle = "Game").let { assertFalse(it.isLowestEver) }
+        // A game that has just gone free for good (a new low) or is free for a while (a 100% cut) keeps its letter.
+        freeEntry(flag = "N", cut = 0).toItadDeal(gameId = "uuid", gameTitle = "Game").let {
+            assertTrue(it.isLowestEver)
+            assertTrue(it.isNewHistoricalLow)
+        }
+        freeEntry(flag = "H", cut = 100).toItadDeal(gameId = "uuid", gameTitle = "Game").let { assertTrue(it.isLowestEver) }
+        // A full-price game that has never been cheaper keeps its H.
+        dealEntry(flag = "H", voucher = null).copy(cut = 0).toItadDeal(gameId = "uuid", gameTitle = "Game").let { assertTrue(it.isLowestEver) }
+    }
+
+    private fun freeEntry(flag: String?, cut: Int): RemoteItadDealEntry =
+        dealEntry(flag = flag, voucher = null).copy(price = RemoteItadPrice(amount = 0.0, currency = "USD"), cut = cut)
+
     private fun dealEntry(flag: String?, voucher: String?): RemoteItadDealEntry =
         RemoteItadDealEntry(
             shop = RemoteItadShopRef(id = 61, name = "Steam"),

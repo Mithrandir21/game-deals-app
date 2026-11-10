@@ -93,6 +93,8 @@ import pm.bam.gamedeals.domain.models.RecentlyViewedGame
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.igdbImageUrl
 import pm.bam.gamedeals.domain.models.thumbnail
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleDealTotals
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventState
 import pm.bam.gamedeals.feature.home.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
@@ -149,9 +151,14 @@ internal fun HomeScreen(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
-    viewModel: HomeViewModel = koinViewModel()
+    onViewWinterSale: () -> Unit = {},
+    viewModel: HomeViewModel = koinViewModel(),
+    winterSaleEntry: WinterSaleEntryViewModel = koinViewModel()
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
+    val winterSaleEvent by winterSaleEntry.event.collectAsStateWithLifecycle()
+    val winterSaleTotals by winterSaleEntry.totals.collectAsStateWithLifecycle()
+    WinterSaleResumeEffect(winterSaleEntry::onResume, winterSaleEntry::onPause)
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
@@ -198,6 +205,9 @@ internal fun HomeScreen(
         },
         goToWeb = goToWeb,
         onRetry = { viewModel.retry() },
+        winterSaleEvent = winterSaleEvent,
+        winterSaleTotals = winterSaleTotals,
+        onOpenWinterSale = onViewWinterSale,
     )
 
     // Collect one-shot UI events and dispatch them.
@@ -240,6 +250,9 @@ private fun HomeScreenContent(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    winterSaleEvent: WinterSaleEventState.Available? = null,
+    winterSaleTotals: WinterSaleDealTotals? = null,
+    onOpenWinterSale: () -> Unit = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
@@ -279,6 +292,9 @@ private fun HomeScreenContent(
                         onViewCollection = onViewCollection,
                         onViewBundles = onViewBundles,
                         onViewBundle = onViewBundle,
+                        winterSaleEvent = winterSaleEvent,
+                        winterSaleTotals = winterSaleTotals,
+                        onOpenWinterSale = onOpenWinterSale,
                     )
                 }
 
@@ -329,6 +345,9 @@ private fun HomeFeed(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     widthClass: WidthSizeClass = WidthSizeClass.COMPACT,
+    winterSaleEvent: WinterSaleEventState.Available? = null,
+    winterSaleTotals: WinterSaleDealTotals? = null,
+    onOpenWinterSale: () -> Unit = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
@@ -356,6 +375,11 @@ private fun HomeFeed(
         // Track whether we've already emitted a section so each subsequent section is preceded by a
         // separator + spacing, while the first one stays flush to the top (no stray divider).
         var renderedSection = false
+
+        winterSaleEvent?.let { event ->
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
+            renderedSection = true
+        }
 
         // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
         accountStats?.let { stats ->
@@ -671,7 +695,7 @@ private fun HomeFeed(
  * vertical breathing room so the distinct feed sections read as clearly separated blocks. Inset
  * horizontally to align with the section content rather than running fully edge-to-edge.
  */
-private fun LazyListScope.sectionDivider() {
+internal fun LazyListScope.sectionDivider() {
     item(contentType = CONTENT_TYPE_SECTION_DIVIDER) {
         HorizontalDivider(
             modifier = Modifier.padding(
@@ -783,6 +807,7 @@ private fun TrendingDealRow(
         hasVoucher = deal.hasVoucher,
         isNewHistoricalLow = deal.isNewHistoricalLow,
         isStoreLow = deal.isStoreLow,
+        isLowestEver = deal.isLowestEver,
         storeName = store?.storeName,
         storeIconUrl = store?.iconUrl,
         isWaitlisted = isWaitlisted,
@@ -815,6 +840,7 @@ private fun RankedGameRow(
         hasVoucher = game.hasVoucher,
         isNewHistoricalLow = game.isNewHistoricalLow,
         isStoreLow = game.isStoreLow,
+        isLowestEver = game.isLowestEver,
         storeName = game.storeName,
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
@@ -870,7 +896,7 @@ private fun <T> LazyListScope.gridSection(
  * actionable node.
  */
 @Composable
-private fun SectionHeader(
+internal fun SectionHeader(
     text: String,
     modifier: Modifier = Modifier,
     actionText: String? = null,

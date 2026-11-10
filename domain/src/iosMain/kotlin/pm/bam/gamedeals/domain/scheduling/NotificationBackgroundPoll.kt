@@ -11,6 +11,7 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.debug
 import pm.bam.gamedeals.logging.error
@@ -45,7 +46,7 @@ private object NotificationBackgroundPoll {
             // Re-arm only while still opted in — cancel() already cleared the request on opt-out/logout.
             if (koin.get<NotificationSettings>().isEnabled()) koin.get<NotificationScheduler>().schedule()
             runCatching {
-                runNotificationPoll(koin.get<NotificationSync>(), koin.get<FollowedFranchiseChecker>(), koin.get<NotificationPresenter>())
+                runNotificationPoll(koin.get<NotificationSync>(), koin.get<FollowedFranchiseChecker>(), koin.get<NotificationPresenter>(), koin.get<WinterSaleReminder>())
             }.onFailure { error(logger, it) { "Background notification poll failed." } }
         }
         task.expirationHandler = { job.cancel() }

@@ -8,6 +8,14 @@
          opened from every game/deal row across Home and Deals. -->
     <string name="game_peek_best_price_at_store">%1$s at %2$s</string>
     <string name="game_peek_other_stores_label">Other stores</string>
+    <!-- One line per low-price letter shown in the peek sheet, so the letters on rows and tiles are explained
+         where people tap. Kept short so each fits one line on a phone at normal and larger text sizes. -->
+    <string name="game_peek_low_new_title">New low</string>
+    <string name="game_peek_low_new_body">just hit its lowest price ever</string>
+    <string name="game_peek_low_all_time_title">Historic low</string>
+    <string name="game_peek_low_all_time_body">back at its lowest price</string>
+    <string name="game_peek_low_store_title">Store low</string>
+    <string name="game_peek_low_store_body">cheapest ever at this store</string>
     <string name="game_peek_no_deals_label">No deals yet</string>
     <string name="game_peek_store_row_description">%1$s at %2$s</string>
     <string name="deal_share_label">Share</string>
@@ -28,11 +36,13 @@
          single-letter labels mirror the ITAD website ("N" = new historical low, "S" = store low). -->
     <string name="deal_new_low_badge_label">N</string>
     <string name="deal_store_low_badge_label">S</string>
+    <string name="deal_all_time_low_badge_label">H</string>
 
     <!-- Spoken-only suffixes appended to a deal's merged content description for each badge shown, so
          TalkBack announces what the visual badges convey. -->
     <string name="deal_new_low_content_suffix">, new lowest price ever</string>
     <string name="deal_store_low_content_suffix">, lowest price at this store</string>
+    <string name="deal_all_time_low_content_suffix">, at its lowest price ever</string>
     <string name="deal_voucher_content_suffix">, voucher available</string>
 
     <!-- Spoken-only suffixes for the passive waitlist/collection status badges (GameStateBadges) shown

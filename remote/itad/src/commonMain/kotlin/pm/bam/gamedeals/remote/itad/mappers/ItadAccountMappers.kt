@@ -70,7 +70,7 @@ internal fun RemoteItadSearchGame.toWaitlistEntry(): WaitlistEntry =
         title = title,
         artwork = assets.toGameArtwork(),
         type = type,
-        mature = mature ?: false,
+        mature = mature,
         addedEpochMs = added.toEpochMsOrNull(),
     )
 

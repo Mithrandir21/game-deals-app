@@ -36,6 +36,8 @@ data class RemoteItadShopRef(
 data class RemoteItadShop(
     @SerialName("id") val id: Int,
     @SerialName("title") val title: String,
+    /** How many deals ITAD lists for the shop right now (all product types). */
+    @SerialName("deals") val deals: Int? = null,
 )
 
 // --- /games/search/v1 and /games/lookup/v1 ---
@@ -195,6 +197,8 @@ data class RemoteItadDealsGame(
     @SerialName("id") val id: String,
     @SerialName("slug") val slug: String? = null,
     @SerialName("title") val title: String,
+    @SerialName("type") val type: String? = null,
+    @SerialName("mature") val mature: Boolean? = null,
     @SerialName("assets") @Serializable(with = LenientGameAssetsSerializer::class) val assets: RemoteItadGameAssets? = null,
     @SerialName("deal") val deal: RemoteItadDealEntry,
 )
@@ -234,6 +238,38 @@ data class RemoteItadGamePrices(
     @SerialName("historyLow") val historyLow: RemoteItadHistoryLow? = null,
     @SerialName("deals") val deals: List<RemoteItadDealEntry> = emptyList(),
 )
+
+// --- /games/overview/v2 ---
+@Serializable
+data class RemoteItadOverviewResponse(
+    @SerialName("prices") val prices: List<RemoteItadOverviewGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteItadOverviewGame(
+    @SerialName("id") val id: String,
+    @SerialName("current") val current: RemoteItadOverviewOffer? = null,
+    @SerialName("lowest") val lowest: RemoteItadOverviewLow? = null,
+)
+
+@Serializable
+data class RemoteItadOverviewOffer(
+    @SerialName("shop") val shop: RemoteItadShopRef,
+    @SerialName("price") val price: RemoteItadPrice,
+    @SerialName("regular") val regular: RemoteItadPrice? = null,
+    @SerialName("cut") val cut: Int = 0,
+    @SerialName("url") val url: String,
+    @SerialName("voucher") val voucher: String? = null,
+    @SerialName("drm") val drm: List<RemoteItadOverviewDrm> = emptyList(),
+    @SerialName("timestamp") val timestamp: String? = null,
+    @SerialName("expiry") val expiry: String? = null,
+)
+
+@Serializable
+data class RemoteItadOverviewDrm(@SerialName("id") val id: Int, @SerialName("name") val name: String? = null)
+
+@Serializable
+data class RemoteItadOverviewLow(@SerialName("price") val price: RemoteItadPrice? = null)
 
 // --- /games/history/v2 ---
 @Serializable

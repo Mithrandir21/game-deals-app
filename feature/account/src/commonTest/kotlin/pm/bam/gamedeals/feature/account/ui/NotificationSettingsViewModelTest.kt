@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.utils.observeEmissions
@@ -28,11 +29,12 @@ class NotificationSettingsViewModelTest : MainDispatcherTest() {
         every { observeEnabled() } returns flowOf(false)
     }
     private val scheduler: NotificationScheduler = mock(MockMode.autoUnit)
+    private val reminder: WinterSaleReminder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun viewModel() = NotificationSettingsViewModel(settings, scheduler)
+    private fun viewModel() = NotificationSettingsViewModel(settings, scheduler, reminder)
 
     @Test
     fun enabled_reflects_the_settings_flag() = runTest {
@@ -51,6 +53,7 @@ class NotificationSettingsViewModelTest : MainDispatcherTest() {
 
         verifySuspend(exactly(1)) { settings.setEnabled(true) }
         verify(exactly(1)) { scheduler.schedule() }
+        verifySuspend(exactly(1)) { reminder.sync() }
     }
 
     @Test
@@ -61,5 +64,6 @@ class NotificationSettingsViewModelTest : MainDispatcherTest() {
 
         verifySuspend(exactly(1)) { settings.setEnabled(false) }
         verify(exactly(1)) { scheduler.cancel() }
+        verifySuspend(exactly(1)) { reminder.cancel() }
     }
 }

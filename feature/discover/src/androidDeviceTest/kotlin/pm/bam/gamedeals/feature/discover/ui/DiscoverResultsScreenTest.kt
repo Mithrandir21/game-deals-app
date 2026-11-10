@@ -19,6 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
 import pm.bam.gamedeals.feature.discover.generated.resources.Res
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_empty
@@ -26,6 +27,8 @@ import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_er
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_retry
 import pm.bam.gamedeals.feature.discover.generated.resources.discover_results_row_description
 import pm.bam.gamedeals.feature.discover.ui.DiscoverResultsViewModel.ResultsScreenData
+import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
+import pm.bam.gamedeals.common.ui.generated.resources.deal_all_time_low_content_suffix
 
 /**
  * Device UI test for [DiscoverResultsScreen] via a mocked [DiscoverResultsViewModel]. Uses an
@@ -76,6 +79,28 @@ class DiscoverResultsScreenTest {
     }
 
     @Test
+    fun aResultAtItsAllTimeLowShowsAndSaysTheH() {
+        // Same letter as Home's rows: the best deal sits at the game's all-time low (ITAD flag "H").
+        val atLow = result.copy(
+            price = BundleGamePrice(
+                gameId = GAME_ID,
+                bestShopName = "Steam",
+                bestPriceValue = 4.99,
+                bestPriceDenominated = "$4.99",
+                bestCutPercent = 80,
+                bestRegularDenominated = "$24.99",
+                bestIsLowestEver = true,
+                historicalLowValue = 4.99,
+                historicalLowDenominated = "$4.99",
+            ),
+        )
+        setContent(ResultsScreenData(status = ResultsScreenData.Status.DATA, results = persistentListOf(atLow)))
+
+        composeTestRule.onNodeWithText("H", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(labels.rowDescription + labels.allTimeLowSuffix).assertIsDisplayed()
+    }
+
+    @Test
     fun emptyStateShowsEmptyMessage() {
         setContent(ResultsScreenData(status = ResultsScreenData.Status.EMPTY))
 
@@ -97,6 +122,7 @@ class DiscoverResultsScreenTest {
         val empty: String,
         val error: String,
         val retry: String,
+        val allTimeLowSuffix: String,
     ) {
         companion object {
             @Composable
@@ -105,6 +131,7 @@ class DiscoverResultsScreenTest {
                 empty = stringResource(Res.string.discover_results_empty),
                 error = stringResource(Res.string.discover_results_error),
                 retry = stringResource(Res.string.discover_results_retry),
+                allTimeLowSuffix = stringResource(CommonRes.string.deal_all_time_low_content_suffix),
             )
         }
     }

@@ -1,5 +1,6 @@
 package pm.bam.gamedeals.domain.repositories.waitlist
 
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -128,8 +129,8 @@ internal class WaitlistRepositoryImpl(
         }
         val region = currentRegion()
         val prices = fetchPrices(entries.map { it.gameId })
-        val items = entries.map { it.toDisplayItem(prices[it.gameId]) }
-        val snapshot = WaitlistDisplaySnapshot(items = items, regionCode = region, refreshedAtEpochMs = clock.nowMillis())
+        val items = entries.map { it.toDisplayItem(prices.byGameId[it.gameId]) }
+        val snapshot = WaitlistDisplaySnapshot(items = items, regionCode = region, refreshedAtEpochMs = clock.nowMillis(), priceFetchIncomplete = prices.incomplete)
         displayStore.replace(snapshot)
         displayFlow.value = snapshot
     }
@@ -145,10 +146,24 @@ internal class WaitlistRepositoryImpl(
 
     // Best-effort + chunked: ITAD's /games/prices/v3 takes an array of ids; chunk to stay under any cap and
     // tolerate a failed chunk (those games simply render price-less) rather than blanking the whole list.
-    private suspend fun fetchPrices(gameIds: List<String>): Map<String, BundleGamePrice> =
-        gameIds.chunked(PRICE_BATCH_SIZE)
-            .flatMap { chunk -> runCatching { dealsSource.fetchBundleGamePrices(chunk) }.getOrDefault(emptyList()) }
-            .associateBy { it.gameId }
+    private suspend fun fetchPrices(gameIds: List<String>): PriceFetch {
+        val prices = mutableMapOf<String, BundleGamePrice>()
+        var incomplete = false
+        for (chunk in gameIds.chunked(PRICE_BATCH_SIZE)) {
+            val fetched = try {
+                dealsSource.fetchBundleGamePrices(chunk)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                incomplete = true
+                emptyList()
+            }
+            fetched.forEach { prices[it.gameId] = it }
+        }
+        return PriceFetch(prices, incomplete)
+    }
+
+    private data class PriceFetch(val byGameId: Map<String, BundleGamePrice>, val incomplete: Boolean)
 
     private fun WaitlistEntry.toDisplayItem(price: BundleGamePrice?): WaitlistDisplayItem =
         WaitlistDisplayItem(
@@ -156,6 +171,7 @@ internal class WaitlistRepositoryImpl(
             title = title,
             artwork = artwork,
             type = type,
+            mature = mature,
             addedEpochMs = addedEpochMs,
             bestPriceDenominated = price?.bestPriceDenominated,
             bestRegularDenominated = price?.bestRegularDenominated,

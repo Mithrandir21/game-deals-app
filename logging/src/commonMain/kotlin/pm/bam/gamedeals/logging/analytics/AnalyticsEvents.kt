@@ -51,6 +51,14 @@ object AnalyticsEvents {
     const val RECENTLY_VIEWED_CLEARED = "recently_viewed_cleared"
 
     // --- Click-throughs to external stores / claims. ---
+    // --- Winter Sale hub: how far people explore during the sale. ---
+    /** The sale hub was shown (once per visit). */
+    const val WINTER_SALE_HUB_OPENED = "winter_sale_hub_opened"
+    /** A hub tile or "See all" opened a list. Carries `shelf` (`store:<id>`, `lows`, `cuts`, `for_you`). */
+    const val WINTER_SALE_SHELF_OPENED = "winter_sale_shelf_opened"
+    /** A game on the hub or a sale list was tapped. Carries `shelf` and `from` (`hub` or `list`). */
+    const val WINTER_SALE_GAME_PEEKED = "winter_sale_game_peeked"
+
     /** User opened a deal's store link. Carries `game_id`, `store_id`, `store_name`, `discount_pct`. */
     const val DEAL_STORE_OPENED = "deal_store_opened"
     /** User opened a giveaway's claim link. Carries `giveaway_id`, `platform`, `type`. */

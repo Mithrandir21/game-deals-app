@@ -71,6 +71,24 @@ import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
 import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverride
 import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverrideImpl
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestMode
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestModeImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesMapStore
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesMapStoreImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
@@ -126,6 +144,15 @@ val domainModule = module {
     single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
     single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get()) }
+    single<WinterSaleTestMode> { WinterSaleTestModeImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleOffersRepository> { WinterSaleOffersRepositoryImpl(get(), get(), get()) }
+    single<WinterSaleCandidatesRepository> { WinterSaleCandidatesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get(), get()) }
+    single<WinterSaleHubRepository> { WinterSaleHubRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
+    single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
     // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }

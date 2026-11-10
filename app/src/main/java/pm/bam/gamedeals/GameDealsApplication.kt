@@ -101,7 +101,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
                 commonUiModule,
                 domainModule,
                 domainAndroidModule,
-                remoteModule(currentRemoteBuildType()),
+                remoteModule(currentRemoteBuildType(), BuildConfig.WINTER_SALE_EVENT_BASE_URL),
                 gamerpowerNetworkModule,
                 gamerpowerRemoteModule,
                 igdbNetworkModule,

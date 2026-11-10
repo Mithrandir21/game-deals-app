@@ -19,11 +19,17 @@ sealed interface NotificationRoute {
         override val key = "followed_series"
     }
 
+    /** The one Winter Sale reminder opens the guide; the host falls back to Home when the event is off. */
+    data object WinterSaleGuide : NotificationRoute {
+        override val key = "winter_sale_guide"
+    }
+
     companion object {
         /** Inverse of [key] — maps a payload string back to a route, or null when absent/unrecognised. */
         fun fromKey(key: String?): NotificationRoute? = when (key) {
             Notifications.key -> Notifications
             FollowedSeries.key -> FollowedSeries
+            WinterSaleGuide.key -> WinterSaleGuide
             else -> null
         }
     }

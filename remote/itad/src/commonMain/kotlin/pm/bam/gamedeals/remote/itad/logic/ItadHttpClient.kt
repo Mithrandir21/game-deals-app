@@ -22,6 +22,7 @@ import kotlinx.serialization.json.Json
 import pm.bam.gamedeals.remote.logic.RemoteBuildType
 import pm.bam.gamedeals.remote.logic.RemoteBuildUtil
 import pm.bam.gamedeals.remote.logic.httpClient
+import pm.bam.gamedeals.remote.logic.hideCredentials
 import pm.bam.gamedeals.remote.logic.ktorPlatformLogger
 
 /**
@@ -73,6 +74,7 @@ internal fun itadHttpClient(
             RemoteBuildType.DEBUG -> install(Logging) {
                 logger = ktorPlatformLogger
                 level = LogLevel.HEADERS
+                hideCredentials()
             }
             RemoteBuildType.RELEASE -> Unit
         }

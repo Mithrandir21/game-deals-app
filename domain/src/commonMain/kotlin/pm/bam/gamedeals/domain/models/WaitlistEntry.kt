@@ -15,6 +15,6 @@ data class WaitlistEntry(
     val title: String,
     val artwork: GameArtwork = GameArtwork(),
     val type: String? = null,
-    val mature: Boolean = false,
+    val mature: Boolean? = null,
     val addedEpochMs: Long? = null,
 )

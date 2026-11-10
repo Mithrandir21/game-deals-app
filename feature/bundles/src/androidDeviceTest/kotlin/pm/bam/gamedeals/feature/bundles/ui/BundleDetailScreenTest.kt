@@ -1,7 +1,9 @@
 package pm.bam.gamedeals.feature.bundles.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -24,7 +26,9 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import kotlinx.collections.immutable.persistentMapOf
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.feature.bundles.generated.resources.Res
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundle_detail_get_bundle
 import pm.bam.gamedeals.feature.bundles.generated.resources.bundles_screen_data_loading_error_retry
@@ -90,6 +94,28 @@ class BundleDetailScreenTest {
         composeTestRule.onNodeWithText(GAME_TITLE).performClick()
 
         verify(exactly = 1) { viewModel.peekGame(GAME_ID, GAME_TITLE, any()) }
+    }
+
+    @Test
+    fun aGameAtItsAllTimeLowShowsOneLetterNextToItsDiscount() {
+        // Home's rule: one letter per deal, H for a price at its all-time low, beside the discount.
+        val price = BundleGamePrice(
+            gameId = GAME_ID,
+            bestShopName = "Steam",
+            bestPriceValue = 3.74,
+            bestPriceDenominated = "$3.74",
+            bestCutPercent = 75,
+            bestRegularDenominated = "$14.99",
+            bestIsLowestEver = true,
+            historicalLowValue = 3.74,
+            historicalLowDenominated = "$3.74",
+        )
+        setContent(BundleDetailScreenData.Data(bundle = bundle, prices = persistentMapOf(GAME_ID to price)))
+
+        composeTestRule.onNodeWithText("-75%", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("H", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("N", useUnmergedTree = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("S", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

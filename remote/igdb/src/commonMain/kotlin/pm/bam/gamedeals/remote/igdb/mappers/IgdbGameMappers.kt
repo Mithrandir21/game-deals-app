@@ -28,7 +28,7 @@ internal fun RemoteIgdbGame.toIgdbGame(): IgdbGame = IgdbGame(
     aggregatedRating = aggregatedRating,
     aggregatedRatingCount = aggregatedRatingCount,
     genres = genres.mapNotNull { it.name }.toImmutableList(),
-    themes = themes.mapNotNull { it.name }.toImmutableList(),
+    themes = themes.orEmpty().mapNotNull { it.name }.toImmutableList(),
     involvedCompanies = involvedCompanies.flatMap { it.toRoles() }.toImmutableList(),
     websites = websites.mapNotNull { it.toIgdbWebsiteOrNull() }.toImmutableList(),
     similarGames = similarGames.mapNotNull { it.toIgdbSimilarGameOrNull() }.toImmutableList(),
@@ -75,7 +75,7 @@ internal fun RemoteIgdbGame.toReleaseOrNull(): Release? {
         title = name,
         date = firstReleaseDate?.toInt() ?: 0,
         image = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
-        isMature = themes.any { it.id == IGDB_EROTIC_THEME_ID },
+        isMature = themes.orEmpty().any { it.id == IGDB_EROTIC_THEME_ID },
     )
 }
 

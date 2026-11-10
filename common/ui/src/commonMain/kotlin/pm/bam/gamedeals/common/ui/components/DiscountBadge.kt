@@ -12,11 +12,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.common.ui.theme.onTopDiscountContainerDark
+import pm.bam.gamedeals.common.ui.theme.onTopDiscountContainerLight
+import pm.bam.gamedeals.common.ui.theme.topDiscountContainerDark
+import pm.bam.gamedeals.common.ui.theme.topDiscountContainerLight
 
 /**
  * A compact discount pill (e.g. `-78%`) for the ITAD-style deal surfaces (UI Improvements
@@ -24,8 +29,9 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
  * rendered it; this is the reusable badge that finally surfaces it on tiles and rows.
  *
  * The pill colour is graded by magnitude (see [discountTier]) so deeper cuts read as more
- * prominent, and it adapts to light/dark automatically by mapping each tier onto Material3
- * container roles. It renders **nothing** when [discountPercent] is non-positive.
+ * prominent: grey, green and blue map onto Material3 container roles, and 75% or more gets its own
+ * red (no Material role), picked by the surface's lightness. It renders **nothing** when
+ * [discountPercent] is non-positive.
  *
  * It is string-agnostic: callers pass a localized [contentDescription] (e.g. "78% off"); when
  * omitted the visible `-78%` text carries the semantics. (The scissors icon now belongs to the
@@ -62,10 +68,11 @@ fun DiscountBadge(
 }
 
 /** Discount magnitude buckets that drive the badge's colour emphasis. */
-internal enum class DiscountTier { LOW, MEDIUM, HIGH }
+internal enum class DiscountTier { LOW, MEDIUM, HIGH, TOP }
 
 /** Pure, JVM-testable mapping from a discount percentage to its emphasis [DiscountTier]. */
 internal fun discountTier(discountPercent: Int): DiscountTier = when {
+    discountPercent >= 75 -> DiscountTier.TOP
     discountPercent >= 50 -> DiscountTier.HIGH
     discountPercent >= 25 -> DiscountTier.MEDIUM
     else -> DiscountTier.LOW
@@ -73,10 +80,23 @@ internal fun discountTier(discountPercent: Int): DiscountTier = when {
 
 private data class BadgeColors(val container: Color, val onContainer: Color)
 
+/** A discount's tier colours, for places that draw a cut without the pill itself (e.g. a strip under a small cover). */
+data class DiscountColors(val container: Color, val content: Color)
+
+/** The colours [DiscountBadge] uses for [discountPercent], so other discount marks match it exactly. */
+@Composable
+fun discountColors(discountPercent: Int): DiscountColors =
+    badgeColors(discountTier(discountPercent)).let { DiscountColors(it.container, it.onContainer) }
+
 @Composable
 private fun badgeColors(tier: DiscountTier): BadgeColors {
     val scheme = MaterialTheme.colorScheme
     return when (tier) {
+        DiscountTier.TOP -> if (scheme.surface.luminance() < 0.5f) {
+            BadgeColors(topDiscountContainerDark, onTopDiscountContainerDark)
+        } else {
+            BadgeColors(topDiscountContainerLight, onTopDiscountContainerLight)
+        }
         DiscountTier.HIGH -> BadgeColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)
         DiscountTier.MEDIUM -> BadgeColors(scheme.secondaryContainer, scheme.onSecondaryContainer)
         DiscountTier.LOW -> BadgeColors(scheme.surfaceVariant, scheme.onSurfaceVariant)
@@ -94,7 +114,8 @@ private fun DiscountBadge_Preview() {
             ) {
                 DiscountBadge(discountPercent = 12, contentDescription = "12% off")
                 DiscountBadge(discountPercent = 37, contentDescription = "37% off")
-                DiscountBadge(discountPercent = 78, contentDescription = "78% off")
+                DiscountBadge(discountPercent = 62, contentDescription = "62% off")
+                DiscountBadge(discountPercent = 90, contentDescription = "90% off")
             }
         }
     }
@@ -111,7 +132,8 @@ private fun DiscountBadge_Dark_Preview() {
             ) {
                 DiscountBadge(discountPercent = 12, contentDescription = "12% off")
                 DiscountBadge(discountPercent = 37, contentDescription = "37% off")
-                DiscountBadge(discountPercent = 78, contentDescription = "78% off")
+                DiscountBadge(discountPercent = 62, contentDescription = "62% off")
+                DiscountBadge(discountPercent = 90, contentDescription = "90% off")
             }
         }
     }

@@ -3,6 +3,7 @@ package pm.bam.gamedeals.domain.scheduling
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 
 /**
  * The shared body of one background notification poll: drive the ITAD [NotificationSync] **and** the
@@ -12,15 +13,21 @@ import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
  *
  * An ITAD-sync failure propagates so the caller (the worker) can map it to a WorkManager retry; the
  * franchise check is best-effort and never fails the poll (a still-delivered ITAD sync shouldn't be lost
- * because IGDB/ITAD pricing hiccuped).
+ * because IGDB/ITAD pricing hiccuped). The Winter Sale reminder is aligned first and told about a posted summary;
+ * it never throws, so it can't fail the poll either.
  */
 internal suspend fun runNotificationPoll(
     sync: NotificationSync,
     checker: FollowedFranchiseChecker,
     presenter: NotificationPresenter,
+    reminder: WinterSaleReminder,
 ) {
+    reminder.sync()
     val syncAlerts = sync.syncAndCollectNew()
     val franchiseAlerts = runCatching { checker.collectCrossedAlerts() }.getOrDefault(emptyList())
     val alerts = syncAlerts + franchiseAlerts
-    if (alerts.isNotEmpty()) presenter.present(alerts)
+    if (alerts.isNotEmpty()) {
+        presenter.present(alerts)
+        reminder.onSummaryPosted()
+    }
 }

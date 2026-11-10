@@ -28,6 +28,7 @@ import pm.bam.gamedeals.feature.debug.generated.resources.Res
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_navigation_back
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_intro
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_app_update
+import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_winter_sale
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_title
 
 /**
@@ -83,6 +84,11 @@ internal fun DebugScreen(onBack: () -> Unit) {
                 // --- Tools. Add new ones here; each owns its own state and dependencies. ---
                 DebugSectionHeader(stringResource(Res.string.debug_section_app_update))
                 ForceUpdateOverrideSection()
+
+                HorizontalDivider()
+
+                DebugSectionHeader(stringResource(Res.string.debug_section_winter_sale))
+                WinterSaleTestSection()
 
                 HorizontalDivider()
             }

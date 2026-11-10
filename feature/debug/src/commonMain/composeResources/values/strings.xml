@@ -14,4 +14,8 @@
     <string name="debug_update_clear">Clear</string>
     <string name="debug_update_reset_dismissal">Reset "seen today" — show the nudge again</string>
     <string name="debug_update_reset_dismissal_done">Dismissal cleared ✓</string>
+
+    <string name="debug_section_winter_sale">Winter Sale guide</string>
+    <string name="debug_winter_sale_test_row">Use the test event file</string>
+    <string name="debug_winter_sale_test_row_desc">Reads winter-sale-2026-test.json instead of the real file. Applies at the next event check, e.g. after reopening the app.</string>
 </resources>

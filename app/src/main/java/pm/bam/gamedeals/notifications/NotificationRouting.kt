@@ -13,5 +13,6 @@ internal fun Intent.toNotificationRoute(): NotificationRoute? =
     when (getStringExtra(EXTRA_NOTIFICATION_ROUTE)) {
         ROUTE_NOTIFICATIONS -> NotificationRoute.Notifications
         ROUTE_FOLLOWED_SERIES -> NotificationRoute.FollowedSeries
+        ROUTE_WINTER_SALE_GUIDE -> NotificationRoute.WinterSaleGuide
         else -> null
     }

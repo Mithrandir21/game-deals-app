@@ -16,6 +16,7 @@ data class WaitlistDisplayItem(
     val title: String,
     val artwork: GameArtwork = GameArtwork(),
     val type: String? = null,
+    val mature: Boolean? = null,
     val addedEpochMs: Long? = null,
     val bestPriceDenominated: String? = null,
     val bestRegularDenominated: String? = null,
@@ -38,7 +39,8 @@ data class WaitlistDisplayItem(
      * the instant a new low is reached — too narrow for "now at lowest").
      */
     val isAtHistoricalLow: Boolean
-        get() = bestPriceValue != null && historicalLowValue != null && bestPriceValue <= historicalLowValue
+        get() = bestPriceValue != null && historicalLowValue != null && bestPriceValue <= historicalLowValue &&
+            !isFreeWithoutDiscount(bestPriceValue, discountPercent)
 }
 
 /**
@@ -50,6 +52,7 @@ data class WaitlistDisplaySnapshot(
     val items: List<WaitlistDisplayItem> = emptyList(),
     val regionCode: String = "",
     val refreshedAtEpochMs: Long = 0L,
+    val priceFetchIncomplete: Boolean = false,
 )
 
 /**
