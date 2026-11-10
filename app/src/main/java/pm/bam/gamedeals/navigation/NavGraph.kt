@@ -22,8 +22,9 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.SignInPromptController
-import pm.bam.gamedeals.common.navigation.NotificationRoute
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
@@ -42,6 +43,7 @@ import pm.bam.gamedeals.feature.discover.navigation.discoverScreen
 import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
+import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -65,20 +67,12 @@ internal fun NavGraph(
     val analytics: Analytics = koinInject()
 
     // Route taps on background (OS-tray) notifications into the nav graph: the bundled waitlist summary opens
-    // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen. The bus
+    // the Notifications list, the bundled followed-franchise summary opens the Followed-series screen, the sale reminder opens the guide. The bus
     // is consume-once, so this won't re-navigate.
+    val winterSaleEvents: WinterSaleEventRepository = koinInject()
     LaunchedEffect(Unit) {
         NotificationRouteBus.routes.collect { route ->
-            when (route) {
-                NotificationRoute.Notifications -> {
-                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "notifications"))
-                    navActions.navigateToNotifications()
-                }
-                NotificationRoute.FollowedSeries -> {
-                    analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "followed_series"))
-                    navActions.navigateToFollowedSeries()
-                }
-            }
+            openNotificationRoute(route, analytics, navActions, winterSaleAvailable = { winterSaleEvents.isAvailable() })
         }
     }
 
@@ -158,6 +152,15 @@ internal fun NavGraph(
                 goToWeb = { url, _ -> platformActions.openInApp(url) },
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
+                goToWinterSale = { navActions.navigateToWinterSaleGuide() },
+            )
+
+            winterSaleGuideScreen(
+                onBack = { navController.popBackStack() },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
+                goToOffer = { url -> platformActions.openInApp(url) },
+                goToForYou = { navActions.navigateToWinterSaleForYou() },
+                goToSaleList = { shelf, saleEnd -> navActions.navigateToWinterSaleList(shelf, saleEnd) },
             )
 
             dealsScreen(

@@ -49,4 +49,104 @@
 
     <string name="home_screen_loading_indicator">Loading top deals</string>
 
+    <string name="winter_sale_title">Winter Sale guide</string>
+    <string name="winter_sale_starts">Sale starts %1$s</string>
+    <string name="winter_sale_ends">Sale ends %1$s</string>
+    <string name="winter_sale_region">Prices for %1$s · %2$s</string>
+    <string name="winter_sale_stale">Event information is from the last successful check.</string>
+    <string name="winter_sale_updating">ITAD prices may still be updating as the sale begins.</string>
+    <string name="winter_sale_waitlist">Your waitlist</string>
+    <string name="winter_sale_series">Your series</string>
+    <string name="winter_sale_popular">Popular on ITAD</string>
+    <string name="winter_sale_sign_in">Sign in to see your waitlist</string>
+    <string name="winter_sale_checking_series">Checking your series…</string>
+    <string name="winter_sale_more_series">Showing your ten newest followed series.</string>
+    <string name="winter_sale_fewer_popular">Fewer popular games have discounted lowest offers right now.</string>
+    <string name="winter_sale_unavailable">Couldn't check this part of the guide. Pull down to try again.</string>
+    <string name="winter_sale_hidden">Winter Sale guide isn't available right now.</string>
+    <string name="winter_sale_try_again">Try again</string>
+    <string name="winter_sale_back">Back</string>
+    <string name="winter_sale_partial">Some prices couldn't load.</string>
+    <string name="winter_sale_no_sales">No current sales found. Pull down to check again.</string>
+    <string name="winter_sale_price_unavailable">Price unavailable right now. Check the store link for the latest offer.</string>
+    <string name="winter_sale_discount">%1$d% off</string>
+    <string name="winter_sale_was">Was %1$s</string>
+    <string name="winter_sale_historical_low">At its historical low</string>
+    <string name="winter_sale_from_store">Lowest offer at %1$s</string>
+    <string name="winter_sale_activation">Activates on %1$s</string>
+    <string name="winter_sale_activation_unknown">Launcher not listed</string>
+    <string name="winter_sale_voucher">Use voucher %1$s</string>
+    <string name="winter_sale_expires">Offer ends %1$s</string>
+    <string name="winter_sale_checked">Price checked %1$s</string>
+    <string name="winter_sale_offer_link">Open ITAD store link</string>
+    <string name="winter_sale_last_link">Open last known ITAD link</string>
+    <string name="winter_sale_prices_checked">Prices checked %1$s</string>
+    <string name="winter_sale_region_chip">%1$s · %2$s</string>
+    <string name="winter_sale_price_unavailable_short">Price unavailable</string>
+    <string name="winter_sale_view_all">View all (%1$d)</string>
+    <string name="winter_sale_show_less">Show less</string>
+    <string name="winter_sale_sign_in_action">Sign in</string>
+    <string name="winter_sale_other_series">Other series</string>
+    <string name="winter_sale_row_description">%1$s, %2$s, %3$d% off at %4$s</string>
+    <string name="winter_sale_row_description_no_price">%1$s, price unavailable</string>
+    <string name="winter_sale_attribution">Prices, stores, and links supplied by IsThereAnyDeal.</string>
+    <!-- Winter Sale hub: the guide's landing page while the sale is on. -->
+    <string name="winter_sale_hub_on">The Winter Sale is on</string>
+    <plurals name="winter_sale_hub_total">
+        <item quantity="one">%1$s deals at %2$d store</item>
+        <item quantity="other">%1$s deals across %2$d stores</item>
+    </plurals>
+    <plurals name="winter_sale_hub_total_unknown">
+        <item quantity="one">Deals at %1$d store</item>
+        <item quantity="other">Deals across %1$d stores</item>
+    </plurals>
+    <plurals name="winter_sale_hub_ends_days">
+        <item quantity="one">Ends in %1$d day</item>
+        <item quantity="other">Ends in %1$d days</item>
+    </plurals>
+    <plurals name="winter_sale_hub_ends_hours">
+        <item quantity="one">Ends in %1$d hour</item>
+        <item quantity="other">Ends in %1$d hours</item>
+    </plurals>
+    <string name="winter_sale_hub_ends_soon">Ends within the hour</string>
+    <string name="winter_sale_hub_until">Until %1$s</string>
+    <!-- The full card's one pill during the sale: "Ends in 9 days · 14 Dec". -->
+    <string name="winter_sale_card_countdown_day">%1$s · %2$s</string>
+    <string name="winter_sale_hub_for_you">For you</string>
+    <string name="winter_sale_hub_for_you_body">Your waitlist, series you follow and popular picks</string>
+    <string name="winter_sale_hub_by_store">Shop the sale by store</string>
+    <string name="winter_sale_hub_store_deals">%1$s deals</string>
+    <string name="winter_sale_hub_store_description">%1$s, %2$s deals. See all</string>
+    <string name="winter_sale_hub_store_description_no_count">%1$s. See all</string>
+    <string name="winter_sale_hub_see_all">See all</string>
+    <string name="winter_sale_hub_see_all_description">See all: %1$s</string>
+    <string name="winter_sale_hub_lows">All-time lows</string>
+    <string name="winter_sale_hub_lows_body">Lowest price ever, right now</string>
+    <string name="winter_sale_hub_cuts">%1$d% off or more</string>
+    <string name="winter_sale_hub_cuts_body">Big cuts on popular games</string>
+    <string name="winter_sale_hub_partial">Some shelves couldn't load. Pull down to try again.</string>
+    <string name="winter_sale_hub_failed">Couldn't load the sale right now.</string>
+    <string name="winter_sale_hub_empty">No sale deals found right now. Pull down to check again.</string>
+    <!-- Winter Sale list: every shelf's "See all". -->
+    <string name="winter_sale_list_banner">Winter Sale</string>
+    <string name="winter_sale_list_store_sub">%1$s deals · top games, most popular first</string>
+    <string name="winter_sale_list_store_sub_no_count">Top games, most popular first</string>
+    <string name="winter_sale_list_lows_sub">Lowest price ever · most popular first</string>
+    <string name="winter_sale_list_cuts_sub">Most popular first</string>
+    <string name="winter_sale_list_more_failed">Couldn't load more games.</string>
+    <string name="winter_sale_list_end">That's everything for now.</string>
+    <string name="winter_sale_list_failed">Couldn't load this list right now.</string>
+    <string name="winter_sale_list_empty">Nothing here right now.</string>
+    <string name="winter_sale_list_store_fallback">Store deals</string>
+    <!-- The sale's blue card before the sale starts (Home and the guide's "starts soon" page). -->
+    <string name="winter_sale_card_coming">The Winter Sale starts soon</string>
+    <plurals name="winter_sale_card_starts_days">
+        <item quantity="one">Starts in %1$d day</item>
+        <item quantity="other">Starts in %1$d days</item>
+    </plurals>
+    <plurals name="winter_sale_card_starts_hours">
+        <item quantity="one">Starts in %1$d hour</item>
+        <item quantity="other">Starts in %1$d hours</item>
+    </plurals>
+    <string name="winter_sale_card_starts_soon">Starts within the hour</string>
 </resources>

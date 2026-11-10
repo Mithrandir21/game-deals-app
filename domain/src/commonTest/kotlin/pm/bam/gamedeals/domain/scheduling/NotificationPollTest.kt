@@ -13,6 +13,7 @@ import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
@@ -22,6 +23,7 @@ class NotificationPollTest {
     private val sync: NotificationSync = mock(MockMode.autoUnit)
     private val checker: FollowedFranchiseChecker = mock(MockMode.autoUnit)
     private val presenter: NotificationPresenter = mock(MockMode.autoUnit)
+    private val reminder: WinterSaleReminder = mock(MockMode.autoUnit)
 
     private fun alert(id: String) = PendingNotificationAlert(id, "title-$id", emptyList())
 
@@ -32,9 +34,10 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } returns franchise
 
-        runNotificationPoll(sync, checker, presenter)
+        runNotificationPoll(sync, checker, presenter, reminder)
 
         verifySuspend(exactly(1)) { presenter.present(itad + franchise) }
+        verifySuspend(exactly(1)) { reminder.onSummaryPosted() }
     }
 
     @Test
@@ -42,18 +45,21 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns emptyList()
         everySuspend { checker.collectCrossedAlerts() } returns emptyList()
 
-        runNotificationPoll(sync, checker, presenter)
+        runNotificationPoll(sync, checker, presenter, reminder)
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
+        verifySuspend(exactly(1)) { reminder.sync() }
+        verifySuspend(exactly(0)) { reminder.onSummaryPosted() }
     }
 
     @Test
     fun a_sync_failure_propagates_so_the_worker_can_retry() = runTest {
         everySuspend { sync.syncAndCollectNew() } throws RuntimeException("boom")
 
-        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter) }
+        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter, reminder) }
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
+        verifySuspend(exactly(1)) { reminder.sync() }
     }
 
     @Test
@@ -62,7 +68,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } throws RuntimeException("igdb down")
 
-        runNotificationPoll(sync, checker, presenter)
+        runNotificationPoll(sync, checker, presenter, reminder)
 
         verifySuspend(exactly(1)) { presenter.present(itad) }
     }

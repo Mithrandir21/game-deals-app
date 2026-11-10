@@ -492,7 +492,7 @@ class IgdbGamesApi(
         // so the most relevant entries lead the followed-series list and the deal check's per-franchise cap.
         internal fun buildFranchiseGamesQuery(franchiseId: Long, limit: Int): String =
             """
-            fields id,name,cover.image_id,external_games.uid,external_games.name,external_games.external_game_source;
+            fields id,name,category,game_type.type,parent_game,cover.image_id,themes.id,external_games.uid,external_games.name,external_games.external_game_source;
             where franchises = ($franchiseId);
             sort total_rating_count desc;
             limit $limit;

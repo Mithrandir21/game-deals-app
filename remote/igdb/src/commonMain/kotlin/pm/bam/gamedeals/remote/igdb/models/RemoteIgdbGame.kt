@@ -9,6 +9,9 @@ data class RemoteIgdbGame(
     val name: String,
     val summary: String? = null,
     val storyline: String? = null,
+    val category: Int? = null,
+    @SerialName("game_type") val gameType: RemoteIgdbGameType? = null,
+    @SerialName("parent_game") val parentGame: Long? = null,
     val cover: RemoteIgdbCover? = null,
     val screenshots: List<RemoteIgdbScreenshot> = emptyList(),
     @SerialName("first_release_date") val firstReleaseDate: Long? = null,
@@ -18,7 +21,7 @@ data class RemoteIgdbGame(
     @SerialName("aggregated_rating_count") val aggregatedRatingCount: Long? = null,
     @SerialName("total_rating_count") val totalRatingCount: Long? = null,
     val genres: List<RemoteIgdbGenre> = emptyList(),
-    val themes: List<RemoteIgdbTheme> = emptyList(),
+    val themes: List<RemoteIgdbTheme>? = null,
     @SerialName("involved_companies") val involvedCompanies: List<RemoteIgdbInvolvedCompany> = emptyList(),
     val websites: List<RemoteIgdbWebsite> = emptyList(),
     @SerialName("similar_games") val similarGames: List<RemoteIgdbSimilarGame> = emptyList(),
@@ -46,6 +49,9 @@ data class RemoteIgdbGame(
  * nullable so unknown/absent rows map to nothing rather than failing. (The pre-2024 `category`/`rating`
  * integer fields were removed by IGDB — verified live 2026-06-26.)
  */
+@Serializable
+data class RemoteIgdbGameType(val type: String? = null)
+
 @Serializable
 data class RemoteIgdbAgeRating(
     val id: Long,

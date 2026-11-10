@@ -1,7 +1,9 @@
 package pm.bam.gamedeals.feature.account.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -113,6 +115,27 @@ class LibraryListScreenTest {
         composeTestRule.onNodeWithText(GAME_TITLE).performClick()
 
         verify(exactly = 1) { peek.peek(GAME_ID, GAME_TITLE, null) }
+    }
+
+    @Test
+    fun aWaitlistedGameAtItsAllTimeLowShowsH() {
+        val atLow = waitlistRow().copy(salePrice = "$4.99", regularPrice = "$19.99", discountPercent = 75, storeName = "Steam", isAtHistoricalLow = true, bestPriceValue = 4.99)
+        setWaitlist(WaitlistUiState(loading = false, rows = persistentListOf(atLow)))
+
+        composeTestRule.onNodeWithText("H", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("N", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun aWaitlistedGameAtANewLowShowsOnlyN() {
+        val newLow = waitlistRow().copy(
+            salePrice = "$3.99", regularPrice = "$19.99", discountPercent = 80, storeName = "Steam",
+            isNewHistoricalLow = true, isAtHistoricalLow = true, bestPriceValue = 3.99,
+        )
+        setWaitlist(WaitlistUiState(loading = false, rows = persistentListOf(newLow)))
+
+        composeTestRule.onNodeWithText("N", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("H", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

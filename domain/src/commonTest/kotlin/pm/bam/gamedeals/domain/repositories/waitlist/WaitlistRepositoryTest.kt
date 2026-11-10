@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.repositories.waitlist
 
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
@@ -177,6 +178,34 @@ class WaitlistRepositoryTest {
         val b = snapshot.items.first { it.gameId == "b" }
         assertNull(b.bestPriceDenominated)
         assertFalse(b.hasDeal)
+        // Every price request worked, so the Winter Sale guide must not warn about missing prices.
+        assertFalse(snapshot.priceFetchIncomplete)
+    }
+
+    @Test
+    fun a_failed_price_batch_keeps_the_other_batches_and_marks_the_snapshot_incomplete() = runTest {
+        val entries = (1..150).map { WaitlistEntry("g$it", "Game $it") }
+        val source = FakeAccountSource(waitlist = entries)
+        val deals = mock<DealsSource>(MockMode.autoUnit)
+        everySuspend { deals.fetchBundleGamePrices(any()) } calls { (ids: List<String>) ->
+            if ("g150" in ids) error("second batch failed")
+            ids.map {
+                BundleGamePrice(
+                    gameId = it, bestShopName = "Steam", bestPriceValue = 5.0, bestPriceDenominated = "$5.00",
+                    bestCutPercent = 50, bestRegularDenominated = "$10.00", historicalLowValue = 4.0,
+                    historicalLowDenominated = "$4.00", currency = "USD",
+                )
+            }
+        }
+        val repo = repo(source, FakeAuthTokenStore("token"), FakeWaitlistDao(), dealsSource = deals)
+
+        repo.refreshWaitlistDisplay()
+
+        val snapshot = repo.observeWaitlistDisplay().first()!!
+        assertTrue(snapshot.priceFetchIncomplete)
+        assertEquals(150, snapshot.items.size)
+        assertEquals(100, snapshot.items.count { it.hasDeal })
+        assertFalse(snapshot.items.first { it.gameId == "g150" }.hasDeal)
     }
 
     @Test

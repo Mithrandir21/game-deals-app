@@ -201,6 +201,7 @@ private fun StoreDeals(
                     hasVoucher = deal.hasVoucher,
                     isNewHistoricalLow = deal.isNewHistoricalLow,
                     isStoreLow = deal.isStoreLow,
+                    isLowestEver = deal.isLowestEver,
                     // store label omitted: this screen is already scoped to a single store
                     isWaitlisted = isFavourite,
                     isCollected = isCollected,

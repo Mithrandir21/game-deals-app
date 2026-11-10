@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "eventId": "steam-winter-2026",
+  "enabled": false,
+  "visibleFrom": "2026-12-10T00:00:00Z",
+  "saleStart": "2026-12-17T18:00:00Z",
+  "end": "2027-01-04T18:00:00Z",
+  "copy": {
+    "title": "Winter Sale guide",
+    "beforeSale": "The Winter Sale starts soon. Explore games already discounted across stores.",
+    "duringSale": "Find discounted games from your waitlist, followed series, and popular picks."
+  }
+}

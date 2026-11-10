@@ -1,0 +1,83 @@
+PRIVACY POLICY FOR GAME DEALS
+Last updated: December 1, 2026
+
+This Privacy Policy explains what information the Game Deals mobile application (published on the Apple App Store as "Game Deals and Giveaways" and on Google Play as "Game Deals"; the "App") handles, why, and what choices you have. "We", "us" and "our" refer to the developer of the App.
+
+In short: the App does not ask for your name, email address, phone number, location or contacts. We do not show ads, do not sell data, and do not track you across other companies' apps or websites. The only data we receive is technical crash and performance diagnostics.
+
+1. DEFINITIONS
+- App: the Game Deals mobile application for iOS and Android.
+- Device: the phone or tablet on which you use the App.
+- Install ID: a random identifier the App generates the first time it runs. It is not derived from your device's hardware, advertising identifier or any account, and it is reset if you delete and reinstall the App.
+- Third-Party Service: an external service the App connects to, as listed in section 4.
+
+2. INFORMATION WE COLLECT
+We collect only crash and performance diagnostics, through Sentry (see section 4). These are sent only by published release builds of the App:
+- Crash reports: the error, a stack trace, and the screen or action that led to the crash.
+- Performance data: timings for app start-up, screen loads and network requests. Query strings, which can contain API keys or sign-in tokens, are removed from recorded web addresses before anything is sent.
+- Technical context: the App version, operating system and version, device model, language and region settings, and the Install ID. The Install ID lets us count how many installations a problem affects without knowing who you are.
+
+We configure Sentry not to collect personal information, such as your name, email address or the contents of network requests. We have also told Sentry not to store IP addresses.
+
+We do not collect:
+- your name, email address, phone number or other contact details
+- precise or approximate location (the App's region setting comes from your device's language and region settings and stays on your Device)
+- your contacts, photos or files
+- browsing history, search history or in-app usage analytics
+- advertising identifiers. The App contains no advertising and no tracking.
+
+3. INFORMATION STORED ONLY ON YOUR DEVICE
+The App keeps the following on your Device so it can work offline and remember your preferences. None of it is sent to us:
+- cached deals, prices, game details and images
+- your settings: theme, region, the "Show adult titles" choice, and notification preferences
+- if you sign in to IsThereAnyDeal, your sign-in token. It is stored encrypted in the iOS Keychain or protected by the Android Keystore.
+- for seasonal events such as the Winter Sale: the latest event information, whether the sale reminder (section 6) is scheduled or has been shown, and a list of games in the game series you follow, so the event guide can find them again quickly.
+Deleting the App removes all of this from your Device.
+
+4. THIRD-PARTY SERVICES
+To show deals and game information, the App sends standard requests directly from your Device to the services below. Like any internet request, these reveal your IP address and basic request details to the service. The App does not send them any personal information about you. Each service handles that data under its own privacy policy.
+
+- IsThereAnyDeal (isthereanydeal.com): game prices, deals, price history and bundles.
+- IGDB by Twitch (igdb.com, twitch.tv): game details and cover art.
+- GamerPower (gamerpower.com): free-game giveaways.
+- Sentry (sentry.io): crash and performance diagnostics, as described in section 2. Sentry processes this data on our behalf.
+- Game Deals website (gamedeals.bam.pm), hosted by Cloudflare: the App downloads a small event file from our website to decide whether to show a seasonal event guide, such as the Winter Sale guide. It does this when you open the App or the guide and, if price-drop alerts are on, during the background check described in section 6. The file is the same for everyone and the request carries nothing about you. Cloudflare processes the request on our behalf, and we do not keep a log of these requests.
+- Game stores: when you open a deal, the store's web page opens in your Device's web browser (for example Safari or Chrome). From then on, that store's own privacy policy applies.
+
+5. OPTIONAL ISTHEREANYDEAL ACCOUNT
+You can use every core feature of the App without an account. If you choose to connect an IsThereAnyDeal (ITAD) account:
+- You sign in on IsThereAnyDeal's own secure sign-in page. The App never sees your ITAD password.
+- The App receives a sign-in token, stored only on your Device (see section 3).
+- Your waitlist, collection and related data are read from and saved to your own ITAD account. That data stays with IsThereAnyDeal; we do not receive or store it.
+- You can sign out at any time in the App's Account screen. You can manage or delete your ITAD account through IsThereAnyDeal.
+
+6. NOTIFICATIONS
+Price-drop alerts are optional and are only switched on with your permission. The App checks for price drops on your Device in the background (iOS Background App Refresh, or Android's background work scheduler) and shows notifications locally. We do not run a push-notification server, and no notification token is sent to us.
+While alerts are on, the App may also schedule one reminder on your Device when a seasonal sale starts. It is scheduled and shown by your Device, and turning alerts off cancels it.
+
+7. HOW WE USE INFORMATION
+We use crash and performance diagnostics only to find and fix bugs, improve stability and performance, and understand which App versions are affected by a problem. We do not use them for advertising or profiling, and we do not sell, rent or share them with anyone other than Sentry, which processes them on our behalf.
+
+8. DATA RETENTION
+Crash and performance data is kept by Sentry for a limited period (generally no more than 90 days) and then deleted automatically. Data stored on your Device stays until you clear it or delete the App.
+
+9. CHILDREN'S PRIVACY
+The App is not directed to children under 13 (or the minimum age in your country), and we do not knowingly collect personal information from them. Titles tagged as adult content are hidden by default.
+
+10. GDPR (EEA AND UK USERS)
+- Legal basis: we process crash and performance diagnostics on the basis of our legitimate interest in providing a stable, secure and working App.
+- Your rights: you can ask for access to, correction of, or deletion of diagnostic data, or object to its processing. Because we do not know who you are, please include your App version, device model and the approximate time of the problem so we can find the data. You can also stop any further collection by deleting the App.
+- International transfers: Sentry may process diagnostic data outside the EEA/UK, under appropriate safeguards such as Standard Contractual Clauses.
+- You also have the right to complain to your local data protection authority.
+
+11. CCPA (CALIFORNIA RESIDENTS)
+- Categories collected: device and diagnostic information (crash and performance data, and the Install ID) as described in section 2.
+- We do not sell or share personal information for cross-context behavioral advertising.
+- You can ask to know about or delete this information by contacting us (section 13).
+
+12. CHANGES TO THIS POLICY
+We may update this Privacy Policy, for example when the App's features change. We will post the updated version at this address and change the "Last updated" date above.
+
+13. CONTACT US
+Questions, requests or concerns about this Privacy Policy:
+Email: privacy@bam.pm

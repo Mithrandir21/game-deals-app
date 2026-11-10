@@ -3,10 +3,15 @@ package pm.bam.gamedeals.common.ui.deal
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performClick
 import io.mockk.mockk
 import io.mockk.verify
@@ -14,6 +19,8 @@ import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.koin.core.context.startKoin
@@ -24,6 +31,7 @@ import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_all_time_low_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_collection_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
 import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
@@ -107,6 +115,86 @@ class GamePeekSheetTest {
         composeTestRule.onNodeWithText(labels.bestPriceSubtitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(labels.otherStoresHeader).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun eachLowPriceLetterIsSpelledOutOnOneLine() {
+        setContent(
+            dataState.copy(
+                bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal().copy(isNewHistoricalLow = true, isLowestEver = true)),
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isStoreLow = true)),
+                ),
+            ),
+        )
+
+        val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
+        newLow.assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertIsDisplayed()
+        // One line at the default text size on a typical phone; very narrow screens may wrap it.
+        val screenWidthDp = InstrumentationRegistry.getInstrumentation().targetContext.resources.configuration.screenWidthDp
+        assumeTrue("needs a typical phone width", screenWidthDp >= 400)
+        val height = newLow.fetchSemanticsNode().boundsInRoot.height
+        val oneLine = with(composeTestRule.density) { 24.dp.toPx() }
+        assertTrue("the explanation wraps: ${height}px", height <= oneLine)
+    }
+
+    @Test
+    fun noLettersMeansNoExplanation() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertDoesNotExist()
+    }
+
+    @Test
+    fun anotherStoreAtItsAllTimeLowShowsHOnItsRowSaysItAndExplainsIt() {
+        setContent(
+            dataState.copy(
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isLowestEver = true)),
+                ),
+            ),
+        )
+
+        composeTestRule.onNodeWithContentDescription("Historic low: back at its lowest price").assertIsDisplayed()
+        // The row shows the letter before its price, and TalkBack hears what the letter means.
+        composeTestRule.onAllNodesWithText("H", useUnmergedTree = true).assertCountEquals(2) // the line's chip + the row's
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow + labels.allTimeLowSuffix).assertIsDisplayed()
+    }
+
+    @Test
+    fun aStoreRowWithoutALetterShowsNone() {
+        setContent(dataState)
+
+        listOf("N", "H", "S").forEach { letter ->
+            composeTestRule.onAllNodesWithText(letter, useUnmergedTree = true).assertCountEquals(0)
+        }
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun theBestDealsLetterIsExplainedFirstAndEachLetterOnlyOnce() {
+        setContent(
+            dataState.copy(
+                bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal().copy(isStoreLow = true)),
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isNewHistoricalLow = true, isLowestEver = true)),
+                    StoreDealPair(
+                        store = PreviewStore.copy(storeID = 8, storeName = "Fanatical"),
+                        deal = otherDeal().copy(storeID = 8, dealID = "deal-3", priceDenominated = "$22.49", isStoreLow = true),
+                    ),
+                ),
+            ),
+        )
+
+        val storeLow = composeTestRule.onAllNodesWithContentDescription("Store low: cheapest ever at this store")
+        storeLow.assertCountEquals(1)
+        val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
+        assertTrue(
+            "the best deal's letter should come first",
+            storeLow[0].fetchSemanticsNode().boundsInRoot.top < newLow.fetchSemanticsNode().boundsInRoot.top,
+        )
     }
 
     @Test
@@ -232,6 +320,7 @@ class GamePeekSheetTest {
         val errorMessage: String,
         val retry: String,
         val actionFailed: String,
+        val allTimeLowSuffix: String,
     ) {
         companion object {
             @Composable
@@ -251,6 +340,7 @@ class GamePeekSheetTest {
                 errorMessage = stringResource(Res.string.deal_details_data_loading_error_msg),
                 retry = stringResource(Res.string.deal_details_data_loading_error_retry),
                 actionFailed = stringResource(Res.string.library_action_failed),
+                allTimeLowSuffix = stringResource(Res.string.deal_all_time_low_content_suffix),
             )
         }
     }

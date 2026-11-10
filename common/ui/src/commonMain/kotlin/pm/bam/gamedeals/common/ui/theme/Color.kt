@@ -234,3 +234,16 @@ val newLowBadgeContainerDark = Color(0xFFFFB95C)
 val onNewLowBadgeContainerDark = Color(0xFF3A2400)
 
 
+
+// Top discount tier (75% off or more): a red that sits apart from the orange "N" and the blue 50%+ tier
+// in both themes, so the biggest cuts stand out everywhere a discount is shown (one look for game items).
+// Both pairs keep at least 6:1 contrast for the label.
+val topDiscountContainerLight = Color(0xFFC62828)
+val onTopDiscountContainerLight = Color(0xFFFFFFFF)
+val topDiscountContainerDark = Color(0xFFFF8A80)
+val onTopDiscountContainerDark = Color(0xFF3D0A05)
+
+// All-time-low ("H") badge: the new-low orange as an outline and label on a neutral chip, so it reads as
+// a quieter relative of "N". The light label is a darker orange to keep 4.5:1 on the light chip.
+val allTimeLowBadgeContentLight = Color(0xFF8A4B00)
+val allTimeLowBadgeContentDark = Color(0xFFFFB95C)

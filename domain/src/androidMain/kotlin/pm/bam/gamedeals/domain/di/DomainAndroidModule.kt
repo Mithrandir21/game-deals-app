@@ -7,7 +7,9 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.version.AppInfo
 import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderScheduler
 import pm.bam.gamedeals.domain.scheduling.AndroidNotificationScheduler
+import pm.bam.gamedeals.domain.scheduling.AndroidWinterSaleReminderScheduler
 import pm.bam.gamedeals.domain.scheduling.NotificationScheduler
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.verbose
@@ -16,6 +18,7 @@ import java.util.concurrent.Executors
 val domainAndroidModule = module {
 
     single<NotificationScheduler> { AndroidNotificationScheduler(androidContext()) }
+    single<WinterSaleReminderScheduler> { AndroidWinterSaleReminderScheduler(androidContext()) }
 
     single<RoomDatabase.Builder<DomainDatabase>> {
         val builder = Room.databaseBuilder<DomainDatabase>(

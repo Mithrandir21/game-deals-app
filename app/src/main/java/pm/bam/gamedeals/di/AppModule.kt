@@ -12,13 +12,16 @@ import pm.bam.gamedeals.BuildConfig
 import pm.bam.gamedeals.common.imaging.appCoilLogger
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderPresenter
 import pm.bam.gamedeals.notifications.AndroidNotificationPresenter
+import pm.bam.gamedeals.notifications.AndroidWinterSaleReminderPresenter
 
 val appModule = module {
     single<Clock> { Clock { System.currentTimeMillis() } }
 
     // Background notification presentation — bound here because the tap PendingIntent targets MainActivity.
     single<NotificationPresenter> { AndroidNotificationPresenter(androidContext(), get()) }
+    single<WinterSaleReminderPresenter> { AndroidWinterSaleReminderPresenter(androidContext()) }
 
     single<ImageLoader> {
         val context = androidContext()

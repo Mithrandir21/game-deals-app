@@ -16,6 +16,7 @@ fun HomeRoute(
     onViewBundles: () -> Unit,
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onViewWinterSale: () -> Unit = {},
 ) {
     HomeScreen(
         goToGame = goToGame,
@@ -25,5 +26,6 @@ fun HomeRoute(
         onViewBundles = onViewBundles,
         onViewBundle = onViewBundle,
         goToWeb = goToWeb,
+        onViewWinterSale = onViewWinterSale,
     )
 }
