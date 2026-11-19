@@ -6,21 +6,19 @@ This branch holds store-listing assets only. It is an orphan branch and is never
 
 - Device: iPhone 17 Pro Max simulator, iOS 26.5
 - Size: 1320×2868 portrait PNG, no alpha
-- Captured: 2 October 2026
+- Captured: 19 November 2026
 - Status bar: 9:41, Wi-Fi, full signal, battery charged at 100%
 - In-app region: United States (USD); "Show adult titles" off; signed out
-- Source: Release simulator builds of
-  - `f4e6153b` (PR #326 head at capture time) for 01, 02, 04, 05 and 07
-  - a local merge of `88dc44c6` (PR #326) and `20942562` (PR #330, fix for #321) for 03 and 06
+- Source: Release simulator build of `2713e577` (dev head, the code going out as 1.6.0; local builds carry the placeholder version 1.0)
+
+No screen in this set shows a price, a discount, a struck-through price or the word "free", and no headline mentions one. App Review rejected 1.5.6 on 19 November 2026 under guideline 2.3.7, which counts references to free or discounted services as price references. The game pages are for Shadow of Mordor because it had no current deal, so the page shows no price card. The October set with prices is in this branch's history.
 
 `raw/` holds the plain screenshots. `captioned/` holds each one scaled to 80% on the #FF6A19→#FF5A00 gradient, with a bold white headline.
 
 | File | Screen | Headline |
 | --- | --- | --- |
-| 01-home.png | Home, featured grid | Every PC game deal in one place |
-| 02-deals.png | Deals list | Sort by discount, price and store |
-| 03-game-detail.png | Clair Obscur: Expedition 33 game page | Compare prices across stores |
-| 04-giveaways.png | Giveaways | Grab free games before they're gone |
-| 05-bundle-detail.png | Humble "Fall into Fall Fun-dle" bundle | Never miss a bundle |
-| 06-discover.png | Discover tag picker (RPG + Fantasy selected) | Discover games by theme |
-| 07-home-dark.png | Home in dark mode | Easy on the eyes in dark mode |
+| 01-discover-tags.png | Discover tag picker (RPG, Fantasy and Open world selected) | Discover games by theme |
+| 02-game-about.png | Middle-earth: Shadow of Mordor game page, About tab, top | Every game at a glance |
+| 03-game-details.png | Middle-earth: Shadow of Mordor game page, About tab, scrolled to Details and DLC | Dig into details, DLC and media |
+| 04-account.png | Account, signed out | Make it yours: region and theme |
+| 05-discover-dark.png | Discover tag picker in dark mode (Adventure, Science fiction and Survival selected) | Easy on the eyes in dark mode |
