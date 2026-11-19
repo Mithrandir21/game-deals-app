@@ -42,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -118,6 +119,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_li
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_platforms_overflow
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_rules_button
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -188,6 +190,7 @@ private fun GiveawaysScreenContent(
     // Tapping a card opens a peek sheet for that giveaway (no navigation). We keep the id (Saveable)
     // and resolve the full object from the live list; if it expired out of the list the sheet closes.
     var selectedGiveawayId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var showRules by rememberSaveable { mutableStateOf(false) }
     val selectedGiveaway = selectedGiveawayId?.let { id -> data.giveaways.firstOrNull { it.id == id } }
 
     // Column count widens with the available space (Home hero-tile gradation): 2-up on phones,
@@ -217,6 +220,7 @@ private fun GiveawaysScreenContent(
                 FilterBar(
                     activeCount = existingParameters.activeCount,
                     onClick = { onShowFiltersChanged(true) },
+                    onRulesClick = { showRules = true },
                 )
 
                 when (data.status) {
@@ -282,16 +286,28 @@ private fun GiveawaysScreenContent(
                 endDateMillis = selectedGiveaway?.let { data.endDateMillis[it.id] },
                 onDismiss = { selectedGiveawayId = null },
                 goToWeb = goToWeb,
+                onShowRules = { showRules = true },
+            )
+
+            // After the peek sheet, so opening the rules from a peek stacks them on top of it.
+            GiveawayRulesSheet(
+                show = showRules,
+                onDismiss = { showRules = false },
             )
         }
     }
 }
 
-/** Filter affordance mirroring the Deals tab: an outlined "Filter" button with an active-count badge. */
+/**
+ * Filter affordance mirroring the Deals tab: an outlined "Filter" button with an active-count badge.
+ * The trailing "Giveaway rules" link keeps the official rules one tap away whatever the list is doing
+ * (loading, empty or failed), as App Store guideline 5.3.2 asks.
+ */
 @Composable
 private fun FilterBar(
     activeCount: Int,
     onClick: () -> Unit,
+    onRulesClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -307,6 +323,10 @@ private fun FilterBar(
                 text = if (activeCount > 0) stringResource(Res.string.giveaway_screen_filter_button_count, activeCount)
                 else stringResource(Res.string.giveaway_screen_filter_button),
             )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        TextButton(onClick = onRulesClick) {
+            Text(stringResource(Res.string.giveaway_rules_button))
         }
     }
 }

@@ -38,6 +38,9 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_fi
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_filters_platform_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_opens_detail
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_loading_indicator
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_rules_button
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_rules_sponsor_body
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_rules_title
 import pm.bam.gamedeals.testing.fixtures.giveaway
 
 class GiveawaysScreenTest {
@@ -193,6 +196,41 @@ class GiveawaysScreenTest {
     }
 
     @Test
+    fun rulesLink_showsWhileLoading_andOpensRulesWithSponsorStatement() {
+        every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(screenSemantics.rulesTitle).assertDoesNotExist()
+
+        // The rules are reachable before (and whether or not) any giveaway loads.
+        composeTestRule.onNodeWithText(screenSemantics.rulesButton).performClick()
+
+        composeTestRule.onNodeWithText(screenSemantics.rulesTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(screenSemantics.rulesSponsor).assertIsDisplayed()
+    }
+
+    @Test
+    fun peekSheet_rulesLink_opensRules() {
+        val item = giveaway(id = 5, title = "Tell Me Why", endDate = null, description = "", instructions = "")
+        every { viewModel.uiState } returns MutableStateFlow(
+            GiveawaysViewModel.GiveawaysScreenData(
+                status = GiveawaysViewModel.GiveawaysScreenStatus.SUCCESS,
+                giveaways = persistentListOf(item),
+            )
+        )
+
+        setupCompose()
+
+        composeTestRule.onNodeWithContentDescription(screenSemantics.opensDetail, substring = true).performClick()
+
+        // The peek's link is the last of the two "Giveaway rules" links (the tab's top row has the other).
+        composeTestRule.onAllNodesWithText(screenSemantics.rulesButton).onLast().performClick()
+
+        composeTestRule.onNodeWithText(screenSemantics.rulesTitle).assertIsDisplayed()
+    }
+
+    @Test
     fun onShowFilters() {
         every { viewModel.uiState } returns MutableStateFlow(GiveawaysViewModel.GiveawaysScreenData(status = GiveawaysViewModel.GiveawaysScreenStatus.LOADING))
 
@@ -218,6 +256,9 @@ class GiveawaysScreenTest {
         val emptyLive: String,
         val howToClaim: String,
         val goToGiveaway: String,
+        val rulesButton: String,
+        val rulesTitle: String,
+        val rulesSponsor: String,
     ) {
         companion object {
             @Composable
@@ -231,6 +272,9 @@ class GiveawaysScreenTest {
                 emptyLive = stringResource(Res.string.giveaway_screen_empty_live),
                 howToClaim = stringResource(Res.string.giveaway_detail_instructions_heading),
                 goToGiveaway = stringResource(Res.string.giveaway_detail_go_to_giveaway),
+                rulesButton = stringResource(Res.string.giveaway_rules_button),
+                rulesTitle = stringResource(Res.string.giveaway_rules_title),
+                rulesSponsor = stringResource(Res.string.giveaway_rules_sponsor_body),
             )
         }
     }
