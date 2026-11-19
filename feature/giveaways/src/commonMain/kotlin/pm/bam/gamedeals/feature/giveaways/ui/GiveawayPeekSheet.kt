@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_detail_in
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_free_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_list_item_worth_label
 import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_screen_no_expiry
+import pm.bam.gamedeals.feature.giveaways.generated.resources.giveaway_rules_button
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
@@ -65,6 +67,7 @@ internal fun GiveawayPeekSheet(
     endDateMillis: Long?,
     onDismiss: () -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShowRules: () -> Unit,
 ) {
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     if (giveaway != null) {
@@ -77,6 +80,7 @@ internal fun GiveawayPeekSheet(
                 giveaway = giveaway,
                 endDateMillis = endDateMillis,
                 goToWeb = goToWeb,
+                onShowRules = onShowRules,
             )
         }
     }
@@ -93,6 +97,7 @@ internal fun GiveawayPeekContent(
     giveaway: Giveaway,
     endDateMillis: Long?,
     goToWeb: (url: String, gameTitle: String) -> Unit,
+    onShowRules: () -> Unit,
 ) {
     val analytics: Analytics = koinInject()
     LazyColumn(
@@ -215,6 +220,13 @@ internal fun GiveawayPeekContent(
                 )
             }
         }
+
+        // The official rules stay one tap away from every giveaway (App Store guideline 5.3.2).
+        item {
+            TextButton(onClick = onShowRules) {
+                Text(stringResource(Res.string.giveaway_rules_button))
+            }
+        }
     }
 }
 
@@ -232,6 +244,7 @@ private fun GiveawayPeekContentPreview() {
             ),
             endDateMillis = 4_102_444_800_000L,
             goToWeb = { _, _ -> },
+            onShowRules = {},
         )
     }
 }
