@@ -69,4 +69,19 @@
     <string name="giveaway_detail_description_heading">Description</string>
     <string name="giveaway_detail_instructions_heading">How to claim</string>
 
+    <!-- Giveaway rules: the app's official rules for the giveaways it lists (App Store guideline 5.3.2) -->
+    <string name="giveaway_rules_button">Giveaway rules</string>
+    <string name="giveaway_rules_title">Official giveaway rules</string>
+    <string name="giveaway_rules_intro">Game Deals and Giveaways only lists giveaways. It does not run, sponsor or manage any of them.</string>
+    <string name="giveaway_rules_provider_heading">Who runs each giveaway</string>
+    <string name="giveaway_rules_provider_body">Each giveaway is run by its provider, such as a game store or publisher, and the list comes from GamerPower. The provider decides who can take part, how to claim, when the giveaway ends and any limits. Read the provider's terms on the giveaway page before you claim.</string>
+    <string name="giveaway_rules_entry_heading">Taking part</string>
+    <string name="giveaway_rules_entry_body">No purchase is needed to see the giveaways in this app. The app does not collect entries, pick winners or hand out prizes. You claim each giveaway directly from its provider.</string>
+    <string name="giveaway_rules_accuracy_heading">Dates and values</string>
+    <string name="giveaway_rules_accuracy_body">End dates and original values come from the provider and can change. A giveaway can end early or run out without notice.</string>
+    <string name="giveaway_rules_sponsor_heading">Apple and Google</string>
+    <string name="giveaway_rules_sponsor_body">Apple is not a sponsor of any giveaway or contest in this app and is not involved with them in any way. The same applies to Google.</string>
+    <string name="giveaway_rules_contact_heading">Questions</string>
+    <string name="giveaway_rules_contact_body">Questions about a giveaway go to its provider. Questions about this app go to support@bam.pm.</string>
+
 </resources>
