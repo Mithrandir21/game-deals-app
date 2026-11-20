@@ -54,12 +54,20 @@ internal expect fun Throwable.isPlatformNetworkFailure(): Boolean
  *
  * The trap: adding a Ktor type that is *not* an `IOException` would silently do nothing in an Android
  * release build while appearing to work in debug and in unit tests. Anything added here must either
- * extend `IOException` or be handled explicitly in the platform actuals.
+ * extend `IOException`, be handled explicitly in the platform actuals, or never exist on Android at all.
+ *
+ * `DarwinHttpRequestException` is that last case: it lives only in `ktor-client-darwin`, so R8 never
+ * sees it. It is how the Darwin engine reports every URLSession transport failure — offline (-1009),
+ * DNS (-1003), dropped connection (-1005), timeout (-1001), TLS handshake (-1200, typical of captive
+ * portals). HTTP status failures never take this path (they surface as `ResponseException`s after a
+ * response arrives), so matching it can't hide a server error. Before it was listed, every iOS user who
+ * opened the app without signal produced a Sentry issue (GAME-DEALS-1G, -1F).
  */
 private val KTOR_NETWORK_FAILURE_NAMES = setOf(
     "HttpRequestTimeoutException",
     "ConnectTimeoutException",
     "SocketTimeoutException",
+    "DarwinHttpRequestException",
 )
 
 /** Guards against a pathologically long (or cyclic) cause chain. */

@@ -19,6 +19,8 @@ class NetworkFailureClassifierTest {
     private class HttpRequestTimeoutException : Throwable("Request timeout")
     private class ConnectTimeoutException : Throwable("Connect timeout")
     private class SocketTimeoutException : Throwable("Socket timeout")
+    private class DarwinHttpRequestException(code: Int) :
+        Throwable("Exception in http request: Error Domain=NSURLErrorDomain Code=$code")
 
     @Test
     fun a_null_throwable_is_not_a_network_failure() {
@@ -30,6 +32,19 @@ class NetworkFailureClassifierTest {
         assertTrue(isExpectedNetworkFailure(HttpRequestTimeoutException()))
         assertTrue(isExpectedNetworkFailure(ConnectTimeoutException()))
         assertTrue(isExpectedNetworkFailure(SocketTimeoutException()))
+    }
+
+    @Test
+    fun a_darwin_transport_failure_is_recognised() {
+        // iOS offline (GAME-DEALS-1G) and TLS handshake failure (GAME-DEALS-1F): the Darwin engine wraps
+        // every URLSession transport error in this one type, and nothing else classifies it on iOS.
+        assertTrue(isExpectedNetworkFailure(DarwinHttpRequestException(code = -1009)))
+        assertTrue(isExpectedNetworkFailure(DarwinHttpRequestException(code = -1200)))
+    }
+
+    @Test
+    fun a_darwin_transport_failure_wrapped_by_a_repository_is_recognised() {
+        assertTrue(isExpectedNetworkFailure(IllegalStateException("load failed", DarwinHttpRequestException(code = -1009))))
     }
 
     @Test
