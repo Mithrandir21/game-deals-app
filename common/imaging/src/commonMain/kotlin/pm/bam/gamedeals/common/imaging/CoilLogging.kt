@@ -27,10 +27,11 @@ fun appCoilLogger(logger: Logger, debug: Boolean): CoilLogger = object : CoilLog
 
 /**
  * Maps a Coil log event to an app [LogLevel], downgrading transient image-load failures so they
- * don't reach Sentry as issues. Only genuine decode/bitmap bugs stay at [LogLevel.ERROR]:
+ * don't reach Sentry as issues. Only failures that could point at a bug in the app stay at [LogLevel.ERROR]:
  * - cancellations (request abandoned, e.g. navigated away) -> DEBUG (breadcrumb only)
  * - null request data (the item simply has no artwork URL) -> DEBUG (breadcrumb only)
  * - HTTP (404 etc.) and IO/connectivity failures -> WARN (breadcrumb only)
+ * - the platform decoder rejecting the bytes it was served -> WARN (breadcrumb only), see [isUndecodableImage]
  * - non-error levels pass through unchanged.
  *
  * [NullRequestDataException] is Coil's signal that `AsyncImage(model = null)` was composed — a routine
@@ -49,8 +50,32 @@ internal fun coilLogLevel(level: CoilLogger.Level, throwable: Throwable?): LogLe
         is NullRequestDataException -> LogLevel.DEBUG
         is HttpException, is IOException -> LogLevel.WARN
         null -> LogLevel.WARN
-        else -> LogLevel.ERROR
+        else -> if (isUndecodableImage(throwable)) LogLevel.WARN else LogLevel.ERROR
     }
+
+/**
+ * Whether [throwable] is a platform decoder saying "these bytes aren't an image I can read": a corrupt
+ * file, an HTML error page served with a 200, or a format the decoder lacks. The URLs are third-party
+ * (store artwork, site favicons on the game page's links), so this is bad data, not an app defect, and the
+ * user just sees the placeholder. Android's `ImageDecoder` path already reports it as an `IOException`
+ * (WARN above); this aligns the two decoders that don't:
+ * - `BitmapFactoryDecoder` (Android fallback): `IllegalStateException("BitmapFactory returned a null bitmap…")`
+ *   — GAME-DEALS-W.
+ * - `SkiaImageDecoder` (iOS): `IllegalArgumentException("Failed to Image::makeFromEncoded")` from Skiko —
+ *   GAME-DEALS-1H, which re-fired on every visit to the same game page.
+ *
+ * Matched on the message as well as the type, so any other `IllegalStateException`/`IllegalArgumentException`
+ * in the pipeline still reaches Sentry. If a Coil or Skiko upgrade rewords these, they fall back to ERROR
+ * (noisy, never silent).
+ */
+private fun isUndecodableImage(throwable: Throwable): Boolean {
+    val message = throwable.message ?: return false
+    return when (throwable) {
+        is IllegalStateException -> message.startsWith("BitmapFactory returned a null bitmap")
+        is IllegalArgumentException -> message.startsWith("Failed to Image::makeFromEncoded")
+        else -> false
+    }
+}
 
 private fun CoilLogger.Level.toAppLogLevel(): LogLevel = when (this) {
     CoilLogger.Level.Verbose -> LogLevel.VERBOSE

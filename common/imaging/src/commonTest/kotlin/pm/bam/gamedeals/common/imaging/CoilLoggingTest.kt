@@ -42,6 +42,35 @@ class CoilLoggingTest {
         assertEquals(LogLevel.ERROR, coilLogLevel(CoilLogger.Level.Error, IllegalStateException("decode failed")))
 
     @Test
+    fun error_with_generic_illegal_argument_stays_error() =
+        assertEquals(LogLevel.ERROR, coilLogLevel(CoilLogger.Level.Error, IllegalArgumentException("bad size")))
+
+    @Test
+    fun android_bitmap_factory_rejecting_the_bytes_is_downgraded_to_warn() {
+        // GAME-DEALS-W: the exact message BitmapFactoryDecoder throws.
+        val undecodable = IllegalStateException(
+            "BitmapFactory returned a null bitmap. Often this means BitmapFactory could not decode the image data " +
+                "read from the image source (e.g. network, disk, or memory) as it's not encoded as a valid image format.",
+        )
+        assertEquals(LogLevel.WARN, coilLogLevel(CoilLogger.Level.Error, undecodable))
+    }
+
+    @Test
+    fun ios_skia_rejecting_the_bytes_is_downgraded_to_warn() =
+        // GAME-DEALS-1H: what Skiko's Image.makeFromEncoded throws under SkiaImageDecoder.
+        assertEquals(
+            LogLevel.WARN,
+            coilLogLevel(CoilLogger.Level.Error, IllegalArgumentException("Failed to Image::makeFromEncoded")),
+        )
+
+    @Test
+    fun a_decoder_message_on_the_wrong_exception_type_stays_error() =
+        assertEquals(
+            LogLevel.ERROR,
+            coilLogLevel(CoilLogger.Level.Error, RuntimeException("Failed to Image::makeFromEncoded")),
+        )
+
+    @Test
     fun non_error_levels_pass_through_unchanged() {
         assertEquals(LogLevel.WARN, coilLogLevel(CoilLogger.Level.Warn, IllegalStateException("ignored")))
         assertEquals(LogLevel.INFO, coilLogLevel(CoilLogger.Level.Info, null))
