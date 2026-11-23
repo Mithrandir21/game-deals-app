@@ -81,18 +81,25 @@ class AppShortcutTest {
     }
 
     @Test
+    fun a_shared_wishlist_link_opens_that_list() {
+        val ids = listOf("018d937f-07c2-7155-b6e2-f5f9b3c5b7a5", "018d937f-1ae9-734c-ba47-bd357cf07edd")
+        assertEquals(AppShortcut.SharedWishlist(ids), viewIntent(ShareLinks.wishlist(ids)).toSharedLinkShortcut())
+    }
+
+    @Test
     fun other_links_and_non_view_intents_are_not_shared_links() {
         val id = "018d937f-07c2-7155-b6e2-f5f9b3c5b7a5"
         assertNull(viewIntent("https://gamedeals.bam.pm/").toSharedLinkShortcut())
         assertNull(viewIntent("https://gamedeals.bam.pm/g/not-a-game").toSharedLinkShortcut())
+        assertNull(viewIntent("https://gamedeals.bam.pm/w/not-a-list").toSharedLinkShortcut())
         assertNull(viewIntent("pm.bam.gamedeals://shortcut/game/$id").toSharedLinkShortcut())
         assertNull(viewIntent(null).toSharedLinkShortcut())
         assertNull(viewIntent("https://gamedeals.bam.pm/g/$id", action = Intent.ACTION_MAIN).toSharedLinkShortcut())
     }
 
     @Test
-    fun the_manifest_claims_exactly_the_game_link_path_and_asks_android_to_verify_it() {
-        // The path must match ShareLinks.GAME_PATH and the Worker's app-links.mjs, or links fall back to the browser.
+    fun the_manifest_claims_exactly_the_shared_link_paths_and_asks_android_to_verify_them() {
+        // The paths must match ShareLinks and the Worker's app-links.mjs, or links fall back to the browser.
         val document = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
             .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml"))
         val filters = document.getElementsByTagName("intent-filter").elements()
@@ -103,7 +110,7 @@ class AppShortcutTest {
         assertEquals(MainActivity::class.java.simpleName, (filter.parentNode as Element).androidAttribute("name").substringAfterLast('.'))
         val data = filter.getElementsByTagName("data").elements()
         assertEquals(listOf("https"), data.mapNotNull { it.androidAttribute("scheme").ifEmpty { null } })
-        assertEquals(listOf(ShareLinks.GAME_PATH), data.mapNotNull { it.androidAttribute("pathPrefix").ifEmpty { null } })
+        assertEquals(listOf(ShareLinks.GAME_PATH, ShareLinks.WISHLIST_PATH), data.mapNotNull { it.androidAttribute("pathPrefix").ifEmpty { null } })
     }
 
     private fun org.w3c.dom.NodeList.elements(): List<Element> = (0 until length).map { item(it) as Element }

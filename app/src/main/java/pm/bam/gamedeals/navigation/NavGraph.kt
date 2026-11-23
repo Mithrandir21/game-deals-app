@@ -87,6 +87,7 @@ internal fun NavGraph(
                 AppShortcut.Giveaways -> navActions.navigateTopLevel(Destination.Giveaways)
                 AppShortcut.Deals -> navActions.navigateTopLevel(Destination.Deals)
                 is AppShortcut.Game -> navActions.navigateToGame(shortcut.gameId)
+                is AppShortcut.SharedWishlist -> navActions.navigateToSharedWishlist(shortcut.gameIds)
                 AppShortcut.Waitlist -> {
                     navActions.navigateToWaitlist()
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.

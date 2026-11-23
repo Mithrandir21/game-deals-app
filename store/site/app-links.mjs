@@ -11,7 +11,7 @@ export const ANDROID_CERT_SHA256 = [];
 export const IOS_APP_ID = "36N7FDX928.pm.bam.gamedeals.ios";
 
 // Paths the apps claim. Keep in step with ShareLinks.kt (common/links) and the Android intent filter.
-export const APP_LINK_PATHS = ["/g/*"];
+export const APP_LINK_PATHS = ["/g/*", "/w/*"];
 
 const FINGERPRINT = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;
 

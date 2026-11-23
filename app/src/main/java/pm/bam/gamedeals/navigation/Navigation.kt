@@ -70,6 +70,11 @@ internal class NavigationActions(private val navController: NavHostController) {
         }
     }
 
+    /** A friend's shared wishlist link. */
+    fun navigateToSharedWishlist(gameIds: List<String>) {
+        navController.navigate(Destination.SharedWishlist(gameIds.joinToString(",")))
+    }
+
     fun navigateToGame(gameId: String) {
         navController.navigate(Destination.Game(gameId)) {
             restoreState = gameId.isEmpty()

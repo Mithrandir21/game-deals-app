@@ -41,8 +41,9 @@ enum class FeatureFlag(val key: String, val default: Boolean) {
 
     /**
      * Gates shared deal links: with it on, sharing a deal shows an image card first and the share text carries the
-     * game's gamedeals.bam.pm link (which opens the app, or a preview page) instead of the store link. Defaults to
-     * on, as no remote flag provider is integrated. A release carrying it must not go out before the Worker serving
+     * game's gamedeals.bam.pm link (which opens the app, or a preview page) instead of the store link. It also gates
+     * the Waitlist's "share your wishlist" link, which needs the same Worker. Opening links others shared always
+     * works. Defaults to on, as no remote flag provider is integrated. A release carrying it must not go out before the Worker serving
      * those links is live with its ITAD key, or shared links show a "prices aren't loading" page.
      */
     DealLinks(key = "deal_links", default = true),

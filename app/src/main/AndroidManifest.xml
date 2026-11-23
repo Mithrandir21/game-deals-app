@@ -29,7 +29,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Shared game links, https://gamedeals.bam.pm/g/<id> (common/links/ShareLinks.kt). Verified against the
+            <!-- Shared game links, https://gamedeals.bam.pm/g/<id>, and wishlist links, /w/<ids>
+                 (common/links/ShareLinks.kt). Verified against the
                  Worker's /.well-known/assetlinks.json, so they open here instead of the browser. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -40,6 +41,7 @@
                 <data android:scheme="https" />
                 <data android:host="gamedeals.bam.pm" />
                 <data android:pathPrefix="/g/" />
+                <data android:pathPrefix="/w/" />
             </intent-filter>
 
             <!-- Launcher shortcuts: Free games, Deals, Waitlist (shortcuts/AppShortcut.kt). -->

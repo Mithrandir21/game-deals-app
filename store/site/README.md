@@ -7,7 +7,7 @@ Before a deployment, run:
 ```bash
 python3 store/site/validate_event.py
 python3 -m unittest discover -s store/site -p 'test_*.py'
-node --test store/site/test_site_routes.mjs store/site/test_share_routes.mjs
+node --test store/site/test_site_routes.mjs store/site/test_share_routes.mjs store/site/test_wishlist_routes.mjs
 cd store/site && npx wrangler@4 deploy --dry-run
 ```
 
@@ -19,6 +19,7 @@ cd store/site && npx wrangler@4 deploy --dry-run
 - **Shared allowance:** ITAD's call limit is shared with every app user. Each rendered page is kept in the edge cache for an hour per game and country, so a link shared widely costs two ITAD calls per hour per country, not two per visit.
 - **Privacy:** the visitor's country picks the price region for that response only. The cache key holds the game id and country, nothing else, and request logs stay off.
 - **App-link files:** `app-links.mjs` holds the Android package and signing fingerprints for `/.well-known/assetlinks.json` and the iOS app id for `/.well-known/apple-app-site-association`. Android needs **Play App Signing's** SHA-256 fingerprint (Play Console → App integrity), not the upload key's. Until one is added, `assetlinks.json` returns 404 and Android shows links in the browser.
+- **Wishlist links:** `wishlist-routes.mjs` serves `https://gamedeals.bam.pm/w/<ids>`, the link a signed-in user shares for up to ten games from their waitlist. The link is the list: each ITAD game id is written as 22 URL-safe base64 characters, in the order picked, and nothing is stored. The preview page shows each game's best price with a buy button. The page itself is never cached (`private, no-store`), because the set of games is the sharer's choice. Only public per-game data is cached, each game on its own key: title and art for a day, prices per country for an hour. The encoding matches `ShareLinks.wishlist` in the app, and both test files use the same sample links.
 - **Testing on a debug build:** a debug build isn't signed with the Play key, so verification fails. Approve the domain by hand instead: `adb shell pm set-app-links-user-selection --user cur --package pm.bam.gamedeals true gamedeals.bam.pm`.
 
 The `gamedeals-site` Worker serves `gamedeals.bam.pm`. The separate `bam.pm` Pages site belongs to DuoPoint; deploying this Worker does not update the privacy policy there. To turn the guide off, set `enabled` to `false`, validate, and deploy this Worker. The app treats a freshly fetched disabled document as authoritative and limits use of a cached enabled document to 12 hours when offline.

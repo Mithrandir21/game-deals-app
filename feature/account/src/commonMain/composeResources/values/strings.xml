@@ -153,4 +153,27 @@
     <!-- Debug-only entry point to the developer-tools screen. Never shown in a release build. -->
     <string name="account_row_debug">Developer tools</string>
     <string name="account_row_debug_desc">Debug builds only</string>
+
+    <!-- A friend's shared wishlist link (gamedeals.bam.pm/w/…). -->
+    <string name="shared_wishlist_title">A friend's wishlist</string>
+    <string name="shared_wishlist_intro">Their picks, cheapest first.</string>
+    <string name="shared_wishlist_both_want">You both want</string>
+    <string name="shared_wishlist_both_want_none">None of these are on your waitlist yet.</string>
+    <string name="shared_wishlist_also_on_list">Also on their list</string>
+    <string name="shared_wishlist_on_list">On their list</string>
+    <string name="shared_wishlist_sign_in_title">See which games you both want</string>
+    <string name="shared_wishlist_sign_in_body">Sign in with IsThereAnyDeal and the games on both lists show first.</string>
+    <string name="shared_wishlist_sign_in">Sign in</string>
+    <string name="shared_wishlist_failed">This wishlist couldn't be loaded. Check your connection and try again.</string>
+    <string name="shared_wishlist_retry">Try again</string>
+    <string name="shared_wishlist_empty">This link doesn't hold any games we can show.</string>
+    <string name="shared_wishlist_unavailable">Some games on this list couldn't be loaded right now.</string>
+
+    <!-- Sharing your own wishlist from the Waitlist screen. -->
+    <string name="waitlist_share">Share your wishlist</string>
+    <string name="waitlist_share_title">Share your wishlist</string>
+    <string name="waitlist_share_body">Pick up to %1$d games. Friends see live prices, and with the app they see the games you both want.</string>
+    <string name="waitlist_share_count">%1$d of %2$d picked</string>
+    <string name="waitlist_share_button">Share link</string>
+    <string name="waitlist_share_text">Games I'd love to get, with live prices: %1$s</string>
 </resources>

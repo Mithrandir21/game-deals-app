@@ -404,6 +404,7 @@ private fun AppNavHost(startDestination: Destination) {
             when (shortcut) {
                 AppShortcut.Giveaways -> navigateTopLevel(Destination.Giveaways)
                 is AppShortcut.Game -> navController.navigate(Destination.Game(shortcut.gameId))
+                is AppShortcut.SharedWishlist -> navController.navigate(Destination.SharedWishlist(shortcut.gameIds.joinToString(",")))
                 AppShortcut.Waitlist -> {
                     navController.navigate(Destination.WaitlistList)
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.

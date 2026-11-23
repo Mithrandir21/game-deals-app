@@ -8,7 +8,8 @@
 	<array>
 		<string>group.pm.bam.gamedeals</string>
 	</array>
-	<!-- Universal Links for shared game links (https://gamedeals.bam.pm/g/<id>). Associated Domains must be enabled on
+	<!-- Universal Links for shared game and wishlist links (https://gamedeals.bam.pm/g/<id>, /w/<ids>; the paths are in
+	     the Worker's apple-app-site-association). Associated Domains must be enabled on
 	     this target's App ID, and the release profile regenerated, before a signed build can carry this. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>

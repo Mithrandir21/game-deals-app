@@ -11,12 +11,14 @@ import pm.bam.gamedeals.feature.account.ui.MyNotesViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationDayViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationSettingsViewModel
 import pm.bam.gamedeals.feature.account.ui.NotificationsViewModel
+import pm.bam.gamedeals.feature.account.ui.SharedWishlistViewModel
 import pm.bam.gamedeals.feature.account.ui.SignInPromptViewModel
 import pm.bam.gamedeals.feature.account.ui.WaitlistListViewModel
 
 val accountModule = module {
     viewModel { AccountViewModel(get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { WaitlistListViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { WaitlistListViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SharedWishlistViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { CollectionListViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { FollowedSeriesViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }

@@ -42,6 +42,14 @@ sealed interface Destination {
     @Serializable
     data object YearInDeals : Destination
 
+    /**
+     * A friend's wishlist, opened from a shared `gamedeals.bam.pm/w/…` link (see `ShareLinks`). [gameIds] is the
+     * comma-joined ITAD game ids in the friend's order, kept as one string so the route stays on nav-compose's
+     * primitive argument types (like [DiscoverResults]).
+     */
+    @Serializable
+    data class SharedWishlist(val gameIds: String) : Destination
+
     /** Top-level tab: the full, browsable all-stores deals list (epic #219, Phase 4). */
     @Serializable
     data object Deals : Destination

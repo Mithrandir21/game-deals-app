@@ -173,7 +173,7 @@ test("Apple's association file claims game links for the iOS app", async () => {
   assert.deepEqual(JSON.parse(await response.text()), JSON.parse(appleAppSiteAssociationJson()));
   const details = JSON.parse(appleAppSiteAssociationJson()).applinks.details[0];
   assert.deepEqual(details.appIDs, ["36N7FDX928.pm.bam.gamedeals.ios"]);
-  assert.deepEqual(details.components, [{ "/": "/g/*" }]);
+  assert.deepEqual(details.components, [{ "/": "/g/*" }, { "/": "/w/*" }]);
 });
 
 test("assetlinks.json is only served once a valid signing fingerprint is configured", async () => {

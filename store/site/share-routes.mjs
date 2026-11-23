@@ -17,10 +17,10 @@ export const GAME_PATH = "/g/";
 // to Google Play. Decided from the User-Agent of this one request; nothing is kept.
 export const APP_PATH = "/app";
 const GAME_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const ITAD = "https://api.isthereanydeal.com";
+export const ITAD = "https://api.isthereanydeal.com";
 const PLAY_URL = "https://play.google.com/store/apps/details?id=pm.bam.gamedeals";
 const APP_STORE_URL = "https://apps.apple.com/app/id6818586859";
-const SITE = "https://gamedeals.bam.pm";
+export const SITE = "https://gamedeals.bam.pm";
 const FALLBACK_COUNTRY = "US";
 const MAX_STORES = 5;
 // How long a rendered page is reused for the same game and country. Prices move, but not by the minute, and this
@@ -102,7 +102,7 @@ export async function handleShareRequest(request, env, ctx, deps = {}) {
   return page(html, status, ttl, head);
 }
 
-function countryOf(request) {
+export function countryOf(request) {
   const country = request.cf?.country;
   return typeof country === "string" && /^[A-Z]{2}$/.test(country) && country !== "XX" && country !== "T1"
     ? country
@@ -146,18 +146,18 @@ export async function loadGame(fetchImpl, apiKey, gameId, country) {
   };
 }
 
-function isUsableDeal(d) {
+export function isUsableDeal(d) {
   return d && d.shop && typeof d.shop.name === "string" && d.price && typeof d.price.amount === "number" &&
     typeof d.price.currency === "string" && typeof d.url === "string" && d.url.startsWith("https://");
 }
 
-function firstHttps(...urls) {
+export function firstHttps(...urls) {
   return urls.find((u) => typeof u === "string" && u.startsWith("https://")) ?? null;
 }
 
 // ---------------------------------------------------------------- rendering
 
-function money(price) {
+export function money(price) {
   try {
     return new Intl.NumberFormat("en", { style: "currency", currency: price.currency }).format(price.amount);
   } catch {
@@ -165,13 +165,13 @@ function money(price) {
   }
 }
 
-function escapeHtml(value) {
+export function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-function isLowestEver(deal) {
+export function isLowestEver(deal) {
   return deal.flag === "N" || deal.flag === "H";
 }
 
@@ -243,7 +243,7 @@ function renderUnavailable(gameId) {
   });
 }
 
-function getTheApp(pitch) {
+export function getTheApp(pitch) {
   return `
     <section class="app">
       <h2>Get Game Deals</h2>
@@ -255,7 +255,7 @@ function getTheApp(pitch) {
     </section>`;
 }
 
-function shell({ title, description, canonical, image, body }) {
+export function shell({ title, description, canonical, image, body }) {
   const t = escapeHtml(title);
   const d = escapeHtml(description);
   const img = image ? escapeHtml(image) : null;
@@ -298,6 +298,14 @@ p { margin: 0; }
 .app { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .button { flex: 1 1 10rem; text-align: center; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; padding: 12px 16px; border-radius: 8px; }
+.games { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.games li + li { border-top: 1px solid var(--line); }
+.game { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; }
+.thumb { width: 96px; height: 45px; object-fit: cover; border-radius: 6px; background: var(--line); }
+.game .title { color: inherit; font-weight: 600; text-decoration: none; }
+.game .title:hover { text-decoration: underline; }
+.deal { color: var(--muted); font-size: 0.9rem; }
+.buy { background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; padding: 8px 14px; border-radius: 8px; white-space: nowrap; }
 a { color: var(--accent); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
@@ -311,7 +319,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 // ---------------------------------------------------------------- responses
 
-const PAGE_HEADERS = {
+export const PAGE_HEADERS = {
   "content-type": "text/html; charset=utf-8",
   "x-content-type-options": "nosniff",
   "referrer-policy": "no-referrer",
