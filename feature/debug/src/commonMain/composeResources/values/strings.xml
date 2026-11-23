@@ -18,4 +18,9 @@
     <string name="debug_section_winter_sale">Winter Sale guide</string>
     <string name="debug_winter_sale_test_row">Use the test event file</string>
     <string name="debug_winter_sale_test_row_desc">Reads winter-sale-2026-test.json instead of the real file. Applies at the next event check, e.g. after reopening the app.</string>
+
+    <string name="debug_section_share_card">Share a card</string>
+    <string name="debug_share_card_desc">Captures the card below as an image and opens the share sheet with it and a real game link (Hades).</string>
+    <string name="debug_share_card_button">Share test card</string>
+    <string name="debug_share_card_failed">The card couldn't be captured. Scroll it fully into view and try again.</string>
 </resources>

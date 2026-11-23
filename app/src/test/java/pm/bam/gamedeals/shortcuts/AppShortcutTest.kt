@@ -10,6 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.w3c.dom.Element
 import pm.bam.gamedeals.MainActivity
+import pm.bam.gamedeals.common.links.ShareLinks
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -66,6 +67,43 @@ class AppShortcutTest {
         AppShortcutBus.deliver(AppShortcut.Deals)
 
         assertEquals(AppShortcut.Deals, AppShortcutBus.requests.first())
+    }
+
+    private fun viewIntent(url: String?, action: String = Intent.ACTION_VIEW): Intent = mockk {
+        every { this@mockk.action } returns action
+        every { dataString } returns url
+    }
+
+    @Test
+    fun a_shared_game_link_opens_that_game() {
+        val id = "018d937f-07c2-7155-b6e2-f5f9b3c5b7a5"
+        assertEquals(AppShortcut.Game(id), viewIntent("https://gamedeals.bam.pm/g/$id").toSharedLinkShortcut())
+    }
+
+    @Test
+    fun other_links_and_non_view_intents_are_not_shared_links() {
+        val id = "018d937f-07c2-7155-b6e2-f5f9b3c5b7a5"
+        assertNull(viewIntent("https://gamedeals.bam.pm/").toSharedLinkShortcut())
+        assertNull(viewIntent("https://gamedeals.bam.pm/g/not-a-game").toSharedLinkShortcut())
+        assertNull(viewIntent("pm.bam.gamedeals://shortcut/game/$id").toSharedLinkShortcut())
+        assertNull(viewIntent(null).toSharedLinkShortcut())
+        assertNull(viewIntent("https://gamedeals.bam.pm/g/$id", action = Intent.ACTION_MAIN).toSharedLinkShortcut())
+    }
+
+    @Test
+    fun the_manifest_claims_exactly_the_game_link_path_and_asks_android_to_verify_it() {
+        // The path must match ShareLinks.GAME_PATH and the Worker's app-links.mjs, or links fall back to the browser.
+        val document = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+            .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml"))
+        val filters = document.getElementsByTagName("intent-filter").elements()
+            .filter { filter -> filter.getElementsByTagName("data").elements().any { it.androidAttribute("host") == ShareLinks.HOST } }
+        assertEquals(1, filters.size)
+        val filter = filters.single()
+        assertEquals("true", filter.androidAttribute("autoVerify"))
+        assertEquals(MainActivity::class.java.simpleName, (filter.parentNode as Element).androidAttribute("name").substringAfterLast('.'))
+        val data = filter.getElementsByTagName("data").elements()
+        assertEquals(listOf("https"), data.mapNotNull { it.androidAttribute("scheme").ifEmpty { null } })
+        assertEquals(listOf(ShareLinks.GAME_PATH), data.mapNotNull { it.androidAttribute("pathPrefix").ifEmpty { null } })
     }
 
     private fun org.w3c.dom.NodeList.elements(): List<Element> = (0 until length).map { item(it) as Element }

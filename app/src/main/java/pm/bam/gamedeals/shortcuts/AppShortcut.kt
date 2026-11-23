@@ -7,6 +7,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import pm.bam.gamedeals.MainActivity
+import pm.bam.gamedeals.common.links.ShareLinks
+import pm.bam.gamedeals.common.links.SharedLink
 
 /** Intent extra naming the [AppShortcut] a launcher shortcut or a widget asks [MainActivity] to open. */
 internal const val EXTRA_APP_SHORTCUT = "extra_app_shortcut"
@@ -52,6 +54,18 @@ internal fun Intent.toAppShortcut(): AppShortcut? = when (getStringExtra(EXTRA_A
     AppShortcut.Waitlist.key -> AppShortcut.Waitlist
     AppShortcut.GAME_KEY -> getStringExtra(EXTRA_GAME_ID)?.takeIf { it.isNotBlank() }?.let(AppShortcut::Game)
     else -> null
+}
+
+/**
+ * A shared game link (`https://gamedeals.bam.pm/g/<id>`, see [ShareLinks]) opened from another app, as the game shortcut
+ * it stands for; `null` for any other intent. Android only routes verified links here (the manifest's App Links filter).
+ */
+internal fun Intent.toSharedLinkShortcut(): AppShortcut? {
+    if (action != Intent.ACTION_VIEW) return null
+    return when (val link = dataString?.let(ShareLinks::parse)) {
+        is SharedLink.Game -> AppShortcut.Game(link.gameId)
+        null -> null
+    }
 }
 
 /**

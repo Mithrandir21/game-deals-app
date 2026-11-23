@@ -23,6 +23,7 @@ import pm.bam.gamedeals.navigation.NavGraph
 import pm.bam.gamedeals.notifications.toNotificationRoute
 import pm.bam.gamedeals.shortcuts.AppShortcutBus
 import pm.bam.gamedeals.shortcuts.toAppShortcut
+import pm.bam.gamedeals.shortcuts.toSharedLinkShortcut
 
 class MainActivity : ComponentActivity() {
 
@@ -33,7 +34,9 @@ class MainActivity : ComponentActivity() {
         // targetSdk 35+ forces edge-to-edge; call this explicitly so the system-bar scrims/contrast are
         // applied on older API levels too. Per-surface insets are handled in the shell + screen scaffolds.
         enableEdgeToEdge()
-        handleLaunchIntent(intent) // cold-start notification tap, launcher shortcut or widget tap
+        // Cold-start notification tap, launcher shortcut, widget tap or shared link. Only on a fresh start: after a
+        // rotation or process restore the intent is the same one already handled, and the back stack is restored.
+        if (savedInstanceState == null) handleLaunchIntent(intent)
         setContent {
             // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the (fast)
             // Storage read lands. Recomposes live when the user changes it from the Account hub.
@@ -74,6 +77,6 @@ class MainActivity : ComponentActivity() {
      */
     private fun handleLaunchIntent(intent: Intent?) {
         intent?.toNotificationRoute()?.let { NotificationRouteBus.deliver(it) }
-        intent?.toAppShortcut()?.let { AppShortcutBus.deliver(it) }
+        (intent?.toAppShortcut() ?: intent?.toSharedLinkShortcut())?.let { AppShortcutBus.deliver(it) }
     }
 }

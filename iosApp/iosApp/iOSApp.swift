@@ -14,7 +14,13 @@ struct iOSApp: App {
                 // Widget links: `pm.bam.gamedeals://giveaways` (Free Games), `://waitlist` and `://game/<id>` (Waitlist
                 // deals). The same scheme carries the ITAD OAuth redirect, but ASWebAuthenticationSession consumes that one
                 // itself, so it never lands here.
+                // Shared game links, `https://gamedeals.bam.pm/g/<id>`, arrive here too as Universal Links (the Associated
+                // Domains entitlement plus the Worker's apple-app-site-association file).
                 .onOpenURL { url in
+                    if url.scheme == "https" {
+                        _ = AppShortcutsKt.openSharedLink(url: url.absoluteString)
+                        return
+                    }
                     switch url.host {
                     case "giveaways": AppShortcutsKt.openGiveawaysShortcut()
                     case "waitlist": AppShortcutsKt.openWaitlistShortcut()

@@ -29,6 +29,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Shared game links, https://gamedeals.bam.pm/g/<id> (common/links/ShareLinks.kt). Verified against the
+                 Worker's /.well-known/assetlinks.json, so they open here instead of the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="gamedeals.bam.pm" />
+                <data android:pathPrefix="/g/" />
+            </intent-filter>
+
             <!-- Launcher shortcuts: Free games, Deals, Waitlist (shortcuts/AppShortcut.kt). -->
             <meta-data
                 android:name="android.app.shortcuts"
@@ -83,6 +96,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/waitlist_deals_widget_info" />
         </receiver>
+
+        <!-- Hands shared card images (a deal card, a year card) to the app the user shares to. Authority suffix must
+             match SHARE_IMAGE_AUTHORITY_SUFFIX in common/ui PlatformActions.android.kt. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.shareimages"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_images" />
+        </provider>
 
         <profileable android:shell="true" />
     </application>

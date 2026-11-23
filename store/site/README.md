@@ -7,8 +7,18 @@ Before a deployment, run:
 ```bash
 python3 store/site/validate_event.py
 python3 -m unittest discover -s store/site -p 'test_*.py'
-node store/site/test_site_routes.mjs
+node --test store/site/test_site_routes.mjs store/site/test_share_routes.mjs
 cd store/site && npx wrangler@4 deploy --dry-run
 ```
+
+## Shared game links
+
+`share-routes.mjs` serves `https://gamedeals.bam.pm/g/<ITAD game id>`, the link the app shares for a game. With the app installed, Android App Links and iOS Universal Links open the game in the app. Otherwise the visitor gets a preview page: the cover, the best current price, the five cheapest stores, Google Play and App Store buttons, and the tags chat apps read for a link preview. The path rules match `ShareLinks.kt` in `common/links`; change both together.
+
+- **ITAD key:** the page reads prices from IsThereAnyDeal with the app's API key, set as the Worker secret `ITAD_API_KEY` (never in a file). Without it, game links show a "prices aren't loading" page.
+- **Shared allowance:** ITAD's call limit is shared with every app user. Each rendered page is kept in the edge cache for an hour per game and country, so a link shared widely costs two ITAD calls per hour per country, not two per visit.
+- **Privacy:** the visitor's country picks the price region for that response only. The cache key holds the game id and country, nothing else, and request logs stay off.
+- **App-link files:** `app-links.mjs` holds the Android package and signing fingerprints for `/.well-known/assetlinks.json` and the iOS app id for `/.well-known/apple-app-site-association`. Android needs **Play App Signing's** SHA-256 fingerprint (Play Console → App integrity), not the upload key's. Until one is added, `assetlinks.json` returns 404 and Android shows links in the browser.
+- **Testing on a debug build:** a debug build isn't signed with the Play key, so verification fails. Approve the domain by hand instead: `adb shell pm set-app-links-user-selection --user cur --package pm.bam.gamedeals true gamedeals.bam.pm`.
 
 The `gamedeals-site` Worker serves `gamedeals.bam.pm`. The separate `bam.pm` Pages site belongs to DuoPoint; deploying this Worker does not update the privacy policy there. To turn the guide off, set `enabled` to `false`, validate, and deploy this Worker. The app treats a freshly fetched disabled document as authoritative and limits use of a cached enabled document to 12 hours when offline.
