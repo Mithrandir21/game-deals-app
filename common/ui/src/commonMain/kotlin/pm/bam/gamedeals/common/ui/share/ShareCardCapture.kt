@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -16,7 +17,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * ```
  * val capture = rememberShareCardCapture()
- * DealCard(modifier = Modifier.captureContent(capture))
+ * DealCard(modifier = Modifier.captureContent(capture, MaterialTheme.colorScheme.background))
  * Button(onClick = { scope.launch { capture.capturePng()?.let { actions.shareImage(it, link) } } }) { … }
  * ```
  *
@@ -42,9 +43,18 @@ fun rememberShareCardCapture(): ShareCardCapture {
     return remember(layer) { ShareCardCapture(layer) }
 }
 
-/** Records everything this element draws into [capture], and still draws it on screen as normal. */
-fun Modifier.captureContent(capture: ShareCardCapture): Modifier = drawWithContent {
-    capture.layer.record { this@drawWithContent.drawContent() }
+/**
+ * Records everything this element draws into [capture], and still draws it on screen as normal.
+ *
+ * [background] fills the image behind the content. Pass the colour the card sits on: the shared image then has no
+ * see-through pixels, which matters because chat apps that convert images to JPEG (WhatsApp, for one) turn them black,
+ * so a rounded card would arrive with black corners.
+ */
+fun Modifier.captureContent(capture: ShareCardCapture, background: Color): Modifier = drawWithContent {
+    capture.layer.record {
+        drawRect(background)
+        this@drawWithContent.drawContent()
+    }
     drawLayer(capture.layer)
 }
 

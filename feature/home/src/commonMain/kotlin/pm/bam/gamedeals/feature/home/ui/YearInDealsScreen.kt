@@ -174,7 +174,10 @@ private fun YearInDealsReady(year: YearInDeals, shareText: String) {
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        YearInDealsCard(year = year, modifier = Modifier.fillMaxWidth().captureContent(capture))
+        YearInDealsCard(
+            year = year,
+            modifier = Modifier.fillMaxWidth().captureContent(capture, MaterialTheme.colorScheme.background),
+        )
         if (year.fullPriceValue != null) {
             Text(
                 text = stringResource(Res.string.year_in_deals_full_price_note),

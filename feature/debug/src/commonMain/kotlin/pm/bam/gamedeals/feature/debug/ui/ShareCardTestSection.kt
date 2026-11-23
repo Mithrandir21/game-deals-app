@@ -56,7 +56,7 @@ internal fun ShareCardTestSection() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Surface(
-            modifier = Modifier.fillMaxWidth().captureContent(capture),
+            modifier = Modifier.fillMaxWidth().captureContent(capture, MaterialTheme.colorScheme.background),
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
         ) {
