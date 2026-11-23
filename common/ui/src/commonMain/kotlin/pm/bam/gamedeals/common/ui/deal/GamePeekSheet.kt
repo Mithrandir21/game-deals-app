@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -62,6 +63,17 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.signals.RowReview
+import pm.bam.gamedeals.common.ui.signals.rowReview
+import pm.bam.gamedeals.common.ui.signals.formatCompactCount
+import pm.bam.gamedeals.domain.models.GameSignals
+import pm.bam.gamedeals.common.ui.generated.resources.deal_review_steam
+import pm.bam.gamedeals.common.ui.generated.resources.deal_review_other
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_buzz_title
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_review_steam
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_players_now
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_wanted
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_owned
 import pm.bam.gamedeals.common.ui.components.RareBadge
 import pm.bam.gamedeals.common.ui.components.formatMonthYear
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
@@ -331,6 +343,37 @@ private fun LowPriceLine(flag: DealLowFlag) {
     }
 }
 
+/**
+ * What the crowd thinks, from the Worker's per-game signals: the review, players right now, and how many ITAD users
+ * want and own the game. Only the parts the game has; nothing at all without signals.
+ */
+@Composable
+private fun BuzzSection(signals: GameSignals) {
+    val review = when (val row = signals.rowReview()) {
+        is RowReview.SteamPositive -> signals.reviewCount
+            ?.let { stringResource(Res.string.game_peek_review_steam, row.percent, formatCompactCount(it)) }
+            ?: stringResource(Res.string.deal_review_steam, row.percent)
+        is RowReview.Scored -> stringResource(Res.string.deal_review_other, row.source, row.score)
+        null -> null
+    }
+    val players = signals.playersRecent?.takeIf { it > 0 }?.let { stringResource(Res.string.game_peek_players_now, formatCompactCount(it)) }
+    val wanted = signals.waitlisted?.takeIf { it > 0 }?.let { stringResource(Res.string.game_peek_wanted, formatCompactCount(it)) }
+    val owned = signals.collected?.takeIf { it > 0 }?.let { stringResource(Res.string.game_peek_owned, formatCompactCount(it)) }
+    val crowd = listOfNotNull(wanted, owned).joinToString(" · ").ifEmpty { null }
+    val lines = listOfNotNull(review, players, crowd)
+    if (lines.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall)) {
+        Text(
+            text = stringResource(Res.string.game_peek_buzz_title),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.semantics { heading() },
+        )
+        lines.forEach { line ->
+            Text(text = line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 /** "[Rare] Rare discount: last this deep in Mar 2025" (or "the deepest in 2 years"). */
 @Composable
 private fun RareLine(rare: RareDiscount) {
@@ -438,6 +481,8 @@ private fun PeekBody(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
+
+        signals[data.gameId]?.let { BuzzSection(it) }
 
         // Primary "Go to deal" + secondary "View game page" actions, side by side at the bottom of the sheet.
         Row(

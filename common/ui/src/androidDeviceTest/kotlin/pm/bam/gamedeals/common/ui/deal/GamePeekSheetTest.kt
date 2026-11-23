@@ -162,6 +162,28 @@ class GamePeekSheetTest {
     }
 
     @Test
+    fun theCrowdsViewShowsReviewsPlayersAndItadCounts() {
+        val buzz = GameSignals(
+            gameId = GAME_ID, updatedEpochMs = 0, weeklyMaxCut = emptyList(),
+            reviewScore = 97, reviewCount = 250_000, reviewSource = "Steam",
+            playersRecent = 4_012, waitlisted = 45_678, collected = 120_000,
+        )
+        setContent(dataState, signals = mapOf(GAME_ID to buzz))
+
+        composeTestRule.onNodeWithText("Players and reviews").assertIsDisplayed()
+        composeTestRule.onNodeWithText("97% positive from 250k Steam reviews").assertIsDisplayed()
+        composeTestRule.onNodeWithText("4k playing now").assertIsDisplayed()
+        composeTestRule.onNodeWithText("45k IsThereAnyDeal users want it · 120k own it").assertIsDisplayed()
+    }
+
+    @Test
+    fun withoutSignalsThereIsNoCrowdSection() {
+        setContent(dataState)
+
+        composeTestRule.onAllNodesWithText("Players and reviews").assertCountEquals(0)
+    }
+
+    @Test
     fun eachLowPriceLetterIsSpelledOutOnOneLine() {
         setContent(
             dataState.copy(

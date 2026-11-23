@@ -56,6 +56,7 @@ import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
@@ -211,6 +212,7 @@ private fun StoreDeals(
                     isWaitlisted = isFavourite,
                     isCollected = isCollected,
                     isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
+                    reviewText = signals.reviewText(deal.gameID),
                 )
             }
         }

@@ -78,6 +78,7 @@ import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
 import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.components.RecentlyViewedCarousel
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
@@ -844,6 +845,7 @@ private fun TrendingDealRow(
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
         isRare = LocalRowSignals.current.isRare(deal.gameID, deal.savings.roundToInt()),
+        reviewText = LocalRowSignals.current.reviewText(deal.gameID),
     )
 }
 
@@ -877,6 +879,7 @@ private fun RankedGameRow(
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
         isRare = game.priceDenominated != null && LocalRowSignals.current.isRare(game.gameId, game.cutPercent ?: 0),
+        reviewText = LocalRowSignals.current.reviewText(game.gameId),
     )
 }
 

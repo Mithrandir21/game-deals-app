@@ -98,6 +98,7 @@ import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.adaptive.rememberIsWideLayout
 import pm.bam.gamedeals.common.ui.deal.GamePeekContent
@@ -687,6 +688,7 @@ private fun DealsListPane(
                             isWaitlisted = isWaitlisted,
                             isCollected = isCollected,
                             isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
+                            reviewText = signals.reviewText(deal.gameID),
                         )
                     }
                     if (data.appending) {
@@ -900,6 +902,7 @@ private fun SearchResultsBody(
                         isCollected = group.gameID in collectionIds,
                         store = storesById[group.cheapestDeal.storeID],
                         isRare = signals.isRare(group.gameID, group.cheapestDeal.savings.roundToInt()),
+                        reviewText = signals.reviewText(group.gameID),
                         onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.artwork.thumbnail) },
                     )
                 }
@@ -917,6 +920,7 @@ private fun SearchResultListItem(
     store: Store?,
     onGame: () -> Unit,
     isRare: Boolean = false,
+    reviewText: String? = null,
 ) {
     val showBadge = dealCount > 1
     // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
@@ -948,6 +952,7 @@ private fun SearchResultListItem(
             isWaitlisted = isWaitlisted,
             isCollected = isCollected,
             isRare = isRare,
+            reviewText = reviewText,
         )
         if (showBadge) {
             DealCountBadge(count = dealCount)

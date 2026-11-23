@@ -49,6 +49,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Store
@@ -198,6 +199,7 @@ internal fun WinterSaleListContent(
                         isWaitlisted = deal.gameId in waitlistIds,
                         isCollected = deal.gameId in collectionIds,
                         isRare = signals.isRare(deal.gameId, deal.cutPercent),
+                        reviewText = signals.reviewText(deal.gameId),
                     )
                 }
                 if (state.deals.isNotEmpty()) item(key = "footer") {

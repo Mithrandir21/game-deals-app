@@ -47,6 +47,14 @@
     <string name="game_peek_rare_title">Rare discount</string>
     <string name="game_peek_rare_last_deep">last this deep in %1$s</string>
     <string name="game_peek_rare_deepest">the deepest in 2 years</string>
+    <!-- Crowd signals from the Worker: the review line on rows, and the full set on the game sheet. -->
+    <string name="deal_review_steam">%1$d% positive</string>
+    <string name="deal_review_other">%1$s %2$d</string>
+    <string name="game_peek_buzz_title">Players and reviews</string>
+    <string name="game_peek_review_steam">%1$d% positive from %2$s Steam reviews</string>
+    <string name="game_peek_players_now">%1$s playing now</string>
+    <string name="game_peek_wanted">%1$s IsThereAnyDeal users want it</string>
+    <string name="game_peek_owned">%1$s own it</string>
     <string name="deal_store_low_content_suffix">, lowest price at this store</string>
     <string name="deal_all_time_low_content_suffix">, at its lowest price ever</string>
     <string name="deal_voucher_content_suffix">, voucher available</string>

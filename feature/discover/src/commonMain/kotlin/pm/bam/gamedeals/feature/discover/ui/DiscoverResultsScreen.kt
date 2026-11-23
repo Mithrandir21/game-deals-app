@@ -44,6 +44,7 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.share.DealShareSheet
@@ -227,6 +228,7 @@ private fun DiscoverResultsContent(
                                 isWaitlisted = result.gameId in waitlistIds,
                                 isCollected = result.gameId in collectionIds,
                                 isRare = salePrice != null && signals.isRare(result.gameId, price?.bestCutPercent ?: 0),
+                                reviewText = signals.reviewText(result.gameId),
                             )
                         }
                         if (state.appending) {

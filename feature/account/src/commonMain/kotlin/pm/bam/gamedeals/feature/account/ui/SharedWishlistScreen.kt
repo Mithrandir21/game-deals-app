@@ -47,6 +47,7 @@ import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
 import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
 import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -248,6 +249,7 @@ private fun SharedWishlistRow(row: SharedWishlistRowUi, onClick: () -> Unit) {
         storeIconUrl = row.storeIconUrl,
         isWaitlisted = row.isWaitlisted,
         isRare = row.salePrice != null && LocalRowSignals.current.isRare(row.gameId, row.discountPercent),
+        reviewText = LocalRowSignals.current.reviewText(row.gameId),
     )
 }
 
