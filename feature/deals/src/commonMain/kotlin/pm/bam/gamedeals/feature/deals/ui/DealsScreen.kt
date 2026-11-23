@@ -97,6 +97,8 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.adaptive.rememberIsWideLayout
 import pm.bam.gamedeals.common.ui.deal.GamePeekContent
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
@@ -586,6 +588,7 @@ private fun DealsListPane(
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
     // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
+    val signals = rememberGameSignals(visibleDeals.map { it.gameID })
     val shouldLoadMore by remember(visibleDeals.size, data.deals.size, searching) {
         derivedStateOf {
             if (searching) return@derivedStateOf false
@@ -683,6 +686,7 @@ private fun DealsListPane(
                             storeIconUrl = store?.iconUrl,
                             isWaitlisted = isWaitlisted,
                             isCollected = isCollected,
+                            isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
                         )
                     }
                     if (data.appending) {
@@ -854,6 +858,7 @@ private fun SearchResultsBody(
         is SearchResultsState.Results -> {
             // Hide ignored games from the results; the id set is Room-backed (cold-start/offline correct).
             val visible = remember(state.results, ignoredIds) { state.results.filter { it.gameID !in ignoredIds } }
+    val signals = rememberGameSignals(visible.map { it.gameID })
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 // Reserve the system nav-bar inset so the last row clears the safe zone (see AppShellScaffold).
@@ -894,6 +899,7 @@ private fun SearchResultsBody(
                         isWaitlisted = group.gameID in waitlistIds,
                         isCollected = group.gameID in collectionIds,
                         store = storesById[group.cheapestDeal.storeID],
+                        isRare = signals.isRare(group.gameID, group.cheapestDeal.savings.roundToInt()),
                         onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.artwork.thumbnail) },
                     )
                 }
@@ -910,6 +916,7 @@ private fun SearchResultListItem(
     isCollected: Boolean,
     store: Store?,
     onGame: () -> Unit,
+    isRare: Boolean = false,
 ) {
     val showBadge = dealCount > 1
     // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
@@ -940,6 +947,7 @@ private fun SearchResultListItem(
             storeIconUrl = store?.iconUrl,
             isWaitlisted = isWaitlisted,
             isCollected = isCollected,
+            isRare = isRare,
         )
         if (showBadge) {
             DealCountBadge(count = dealCount)

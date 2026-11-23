@@ -75,6 +75,9 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.BundleListRow
 import pm.bam.gamedeals.common.ui.components.DealHeroTile
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
+import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
+import pm.bam.gamedeals.common.ui.signals.isRare
 import pm.bam.gamedeals.common.ui.components.RecentlyViewedCarousel
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
@@ -385,325 +388,333 @@ private fun HomeFeed(
     }
     val otherCols = bundleCols // Recommended / New Releases share the bundle 1/2/3 gradation.
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomInset) {
-        // Track whether we've already emitted a section so each subsequent section is preceded by a
-        // separator + spacing, while the first one stays flush to the top (no stray divider).
-        var renderedSection = false
+    // One signals call for every deal-carrying game on the feed (the "Rare" badge); rows read it from LocalRowSignals.
+    val signalIds = remember(data) {
+        data.featuredHero.map { it.gameID } + data.trending.map { it.gameID } +
+            data.mostWaitlisted.map { it.gameId } + data.mostCollected.map { it.gameId }
+    }
+    ProvideGameSignals(signalIds) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomInset) {
+            // Track whether we've already emitted a section so each subsequent section is preceded by a
+            // separator + spacing, while the first one stays flush to the top (no stray divider).
+            var renderedSection = false
 
-        winterSaleEvent?.let { event ->
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
-            renderedSection = true
-        }
-
-        // Year in deals (signed-in users, December and January).
-        yearInDealsYear?.let { year ->
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { YearInDealsHomeCard(year, onOpenYearInDeals) }
-            renderedSection = true
-        }
-
-        // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
-        accountStats?.let { stats ->
-            item(contentType = CONTENT_TYPE_STAT_ROW) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // On wide screens two weighted cards would stretch to enormous widths; cap the row so
-                        // they stay a sensible size, left-aligned. Compact keeps the full-width phone layout.
-                        .then(if (widthClass != WidthSizeClass.COMPACT) Modifier.widthIn(max = 480.dp) else Modifier)
-                        .padding(
-                            start = GameDealsCustomTheme.spacing.medium,
-                            top = GameDealsCustomTheme.spacing.large,
-                            end = GameDealsCustomTheme.spacing.medium,
-                            bottom = GameDealsCustomTheme.spacing.medium
-                        ),
-                    horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
-                ) {
-                    StatCard(
-                        label = stringResource(Res.string.home_screen_stat_waitlisted),
-                        value = stats.waitlistedCount.toString(),
-                        icon = Icons.Filled.Bookmark,
-                        onClick = onViewWaitlist,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatCard(
-                        label = stringResource(Res.string.home_screen_stat_collected),
-                        value = stats.collectedCount.toString(),
-                        icon = Icons.Filled.LibraryAddCheck,
-                        onClick = onViewCollection,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+            winterSaleEvent?.let { event ->
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
+                renderedSection = true
             }
-            renderedSection = true
-        }
 
-        // 2. Featured hero grid (top-discount deals): 2 tiles/row on phones, widening to 3/4 columns.
-        if (data.featuredHero.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_featured_label)) }
-            gridSection(
-                items = data.featuredHero,
-                columns = heroCols,
-                key = { it.dealID },
-                contentType = CONTENT_TYPE_HERO_ROW,
-            ) { deal, cellModifier ->
-                val store = stores[deal.storeID]
-                DealHeroTile(
-                    deal = deal,
-                    storeName = store?.storeName,
-                    storeIconUrl = store?.iconUrl,
-                    contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
-                    onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
-                    isWaitlisted = deal.gameID in waitlistIds,
-                    isCollected = deal.gameID in collectionIds,
-                    modifier = cellModifier,
-                )
+            // Year in deals (signed-in users, December and January).
+            yearInDealsYear?.let { year ->
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { YearInDealsHomeCard(year, onOpenYearInDeals) }
+                renderedSection = true
             }
-        }
 
-        // 3. Trending / Most Waitlisted / Most Collected.
-        // Compact: three stacked full-width lazy sections (phone layout). Medium: Trending stays
-        // full-width, Waitlisted + Collected pair side-by-side. Expanded: all three side-by-side.
-        // Side-by-side columns are non-lazy (the feed is the only vertical scroller) so they cap at
-        // SIDE_BY_SIDE_CAP. Trending has no "View all" (there's no Trending destination).
-        val foldTrending = widthClass == WidthSizeClass.EXPANDED
-
-        if (!foldTrending && data.trending.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_trending_label)) }
-            items(
-                count = data.trending.size,
-                key = { index -> "trending-${data.trending[index].dealID}" },
-                contentType = { CONTENT_TYPE_DEAL },
-            ) { index ->
-                TrendingDealRow(data.trending[index], stores, waitlistIds, collectionIds, onPeekGame)
-            }
-        }
-
-        // 3b. Recently-viewed games (#211) — device-local history. Hidden when empty.
-        if (recentlyViewed.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_RECENTLY_VIEWED) {
-                RecentlyViewedCarousel(
-                    games = recentlyViewed,
-                    onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
-                    onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
-                    onClearAll = onClearRecentlyViewed,
-                )
-            }
-        }
-
-        when (widthClass) {
-            WidthSizeClass.EXPANDED -> {
-                // All three lists side-by-side in one row.
-                if (data.trending.isNotEmpty() || data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
-                    if (renderedSection) sectionDivider()
-                    renderedSection = true
-                    item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
-                        SideBySideRow {
-                            if (data.trending.isNotEmpty()) {
-                                DealColumn(
-                                    title = stringResource(Res.string.home_screen_trending_label),
-                                    deals = data.trending,
-                                    stores = stores,
-                                    waitlistIds = waitlistIds,
-                                    collectionIds = collectionIds,
-                                    onPeekGame = onPeekGame,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (data.mostWaitlisted.isNotEmpty()) {
-                                RankedColumn(
-                                    title = stringResource(Res.string.home_screen_most_waitlisted_label),
-                                    games = data.mostWaitlisted,
-                                    waitlistIds = waitlistIds,
-                                    collectionIds = collectionIds,
-                                    onPeekGame = onPeekGame,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (data.mostCollected.isNotEmpty()) {
-                                RankedColumn(
-                                    title = stringResource(Res.string.home_screen_most_collected_label),
-                                    games = data.mostCollected,
-                                    waitlistIds = waitlistIds,
-                                    collectionIds = collectionIds,
-                                    onPeekGame = onPeekGame,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            WidthSizeClass.MEDIUM -> {
-                // Waitlisted + Collected paired side-by-side (Trending already emitted full-width above).
-                if (data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
-                    if (renderedSection) sectionDivider()
-                    renderedSection = true
-                    item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
-                        SideBySideRow {
-                            if (data.mostWaitlisted.isNotEmpty()) {
-                                RankedColumn(
-                                    title = stringResource(Res.string.home_screen_most_waitlisted_label),
-                                    games = data.mostWaitlisted,
-                                    waitlistIds = waitlistIds,
-                                    collectionIds = collectionIds,
-                                    onPeekGame = onPeekGame,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (data.mostCollected.isNotEmpty()) {
-                                RankedColumn(
-                                    title = stringResource(Res.string.home_screen_most_collected_label),
-                                    games = data.mostCollected,
-                                    waitlistIds = waitlistIds,
-                                    collectionIds = collectionIds,
-                                    onPeekGame = onPeekGame,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            WidthSizeClass.COMPACT -> {
-                // 4. Most Waitlisted.
-                if (data.mostWaitlisted.isNotEmpty()) {
-                    if (renderedSection) sectionDivider()
-                    renderedSection = true
-                    rankedSection(
-                        titleRes = Res.string.home_screen_most_waitlisted_label,
-                        games = data.mostWaitlisted,
-                        keyPrefix = "waitlisted",
-                        waitlistIds = waitlistIds,
-                        collectionIds = collectionIds,
-                        onPeekGame = onPeekGame,
-                    )
-                }
-
-                // 5. Most Collected.
-                if (data.mostCollected.isNotEmpty()) {
-                    if (renderedSection) sectionDivider()
-                    renderedSection = true
-                    rankedSection(
-                        titleRes = Res.string.home_screen_most_collected_label,
-                        games = data.mostCollected,
-                        keyPrefix = "collected",
-                        waitlistIds = waitlistIds,
-                        collectionIds = collectionIds,
-                        onPeekGame = onPeekGame,
-                    )
-                }
-            }
-        }
-
-        // 5.4. Most Anticipated (IGDB hype) — upcoming, not-yet-released games. Placed here so it sits
-        // directly below Most Collected on compact (and above New Releases in every width class). Same
-        // title-only row anatomy as New Releases (neutral "Upcoming" chip; tap resolves the title → game).
-        if (data.mostAnticipated.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_most_anticipated_label)) }
-            gridSection(
-                items = data.mostAnticipated,
-                columns = otherCols,
-                key = { "anticipated-${it.title}" },
-                contentType = CONTENT_TYPE_RELEASE,
-            ) { release, cellModifier ->
-                DealListRow(
-                    title = release.title,
-                    contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
-                    onClick = { onPeekRelease(release.title, release.image) },
-                    imageUrl = release.image,
-                    neutralChip = upcomingChip,
-                    modifier = cellModifier,
-                )
-            }
-        }
-
-        // 5.5. Recommended for you (#6) — IGDB games similar to the user's waitlist/collection. Title-only
-        // rows like New Releases; the tap resolves the title → game on open (price shown on the game page).
-        if (data.recommendations.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_recommended_label)) }
-            gridSection(
-                items = data.recommendations,
-                columns = otherCols,
-                key = { it.id },
-                contentType = CONTENT_TYPE_RELEASE,
-            ) { rec, cellModifier ->
-                val image = rec.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }
-                DealListRow(
-                    title = rec.name,
-                    contentDescription = stringResource(Res.string.home_screen_recommendation_row_description, rec.name),
-                    onClick = {
-                        analytics.capture(
-                            AnalyticsEvents.RECOMMENDATION_OPENED,
-                            mapOf("game_id" to rec.id, "source" to "for_you"),
+            // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
+            accountStats?.let { stats ->
+                item(contentType = CONTENT_TYPE_STAT_ROW) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // On wide screens two weighted cards would stretch to enormous widths; cap the row so
+                            // they stay a sensible size, left-aligned. Compact keeps the full-width phone layout.
+                            .then(if (widthClass != WidthSizeClass.COMPACT) Modifier.widthIn(max = 480.dp) else Modifier)
+                            .padding(
+                                start = GameDealsCustomTheme.spacing.medium,
+                                top = GameDealsCustomTheme.spacing.large,
+                                end = GameDealsCustomTheme.spacing.medium,
+                                bottom = GameDealsCustomTheme.spacing.medium
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+                    ) {
+                        StatCard(
+                            label = stringResource(Res.string.home_screen_stat_waitlisted),
+                            value = stats.waitlistedCount.toString(),
+                            icon = Icons.Filled.Bookmark,
+                            onClick = onViewWaitlist,
+                            modifier = Modifier.weight(1f),
                         )
-                        onPeekRelease(rec.name, image)
-                    },
-                    imageUrl = image,
-                    modifier = cellModifier,
-                )
-            }
-        }
-
-        // 6. New Releases (IGDB) — title-only rows; the price column is a neutral "Upcoming" chip and the
-        // tap resolves the title → game on open (peek with a no-deals state when nothing is sold yet).
-        if (data.releases.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
-            gridSection(
-                items = data.releases,
-                columns = otherCols,
-                key = { it.title },
-                contentType = CONTENT_TYPE_RELEASE,
-            ) { release, cellModifier ->
-                DealListRow(
-                    title = release.title,
-                    contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
-                    onClick = { onPeekRelease(release.title, release.image) },
-                    imageUrl = release.image,
-                    neutralChip = upcomingChip,
-                    modifier = cellModifier,
-                )
-            }
-        }
-
-        // 7. Bundles.
-        if (data.bundles.isNotEmpty()) {
-            if (renderedSection) sectionDivider()
-            renderedSection = true
-            item(contentType = CONTENT_TYPE_SECTION_HEADER) {
-                SectionHeader(
-                    text = stringResource(Res.string.home_screen_bundles_label),
-                    actionText = stringResource(Res.string.home_screen_all_bundles_label),
-                    onActionClick = onViewBundles,
-                )
-            }
-            if (bundleCols == 1) {
-                items(
-                    count = data.bundles.size,
-                    key = { index -> "bundle-${data.bundles[index].id}" },
-                    contentType = { CONTENT_TYPE_BUNDLE },
-                ) { index ->
-                    HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
+                        StatCard(
+                            label = stringResource(Res.string.home_screen_stat_collected),
+                            value = stats.collectedCount.toString(),
+                            icon = Icons.Filled.LibraryAddCheck,
+                            onClick = onViewCollection,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
-            } else {
+                renderedSection = true
+            }
+
+            // 2. Featured hero grid (top-discount deals): 2 tiles/row on phones, widening to 3/4 columns.
+            if (data.featuredHero.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_featured_label)) }
                 gridSection(
-                    items = data.bundles,
-                    columns = bundleCols,
+                    items = data.featuredHero,
+                    columns = heroCols,
+                    key = { it.dealID },
+                    contentType = CONTENT_TYPE_HERO_ROW,
+                ) { deal, cellModifier ->
+                    val store = stores[deal.storeID]
+                    DealHeroTile(
+                        deal = deal,
+                        storeName = store?.storeName,
+                        storeIconUrl = store?.iconUrl,
+                        contentDescription = stringResource(Res.string.home_screen_hero_deal_description, deal.title, deal.normalPriceDenominated, deal.salePriceDenominated),
+                        onClick = { onPeekGame(deal.gameID, deal.title, deal.artwork.thumbnail) },
+                        isWaitlisted = deal.gameID in waitlistIds,
+                        isCollected = deal.gameID in collectionIds,
+                        isRare = LocalRowSignals.current.isRare(deal.gameID, deal.savings.roundToInt()),
+                        modifier = cellModifier,
+                    )
+                }
+            }
+
+            // 3. Trending / Most Waitlisted / Most Collected.
+            // Compact: three stacked full-width lazy sections (phone layout). Medium: Trending stays
+            // full-width, Waitlisted + Collected pair side-by-side. Expanded: all three side-by-side.
+            // Side-by-side columns are non-lazy (the feed is the only vertical scroller) so they cap at
+            // SIDE_BY_SIDE_CAP. Trending has no "View all" (there's no Trending destination).
+            val foldTrending = widthClass == WidthSizeClass.EXPANDED
+
+            if (!foldTrending && data.trending.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_trending_label)) }
+                items(
+                    count = data.trending.size,
+                    key = { index -> "trending-${data.trending[index].dealID}" },
+                    contentType = { CONTENT_TYPE_DEAL },
+                ) { index ->
+                    TrendingDealRow(data.trending[index], stores, waitlistIds, collectionIds, onPeekGame)
+                }
+            }
+
+            // 3b. Recently-viewed games (#211) — device-local history. Hidden when empty.
+            if (recentlyViewed.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_RECENTLY_VIEWED) {
+                    RecentlyViewedCarousel(
+                        games = recentlyViewed,
+                        onOpen = { game -> onPeekGame(game.gameId, game.title, game.boxart) },
+                        onRemove = { game -> onRemoveRecentlyViewed(game.gameId) },
+                        onClearAll = onClearRecentlyViewed,
+                    )
+                }
+            }
+
+            when (widthClass) {
+                WidthSizeClass.EXPANDED -> {
+                    // All three lists side-by-side in one row.
+                    if (data.trending.isNotEmpty() || data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
+                        if (renderedSection) sectionDivider()
+                        renderedSection = true
+                        item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
+                            SideBySideRow {
+                                if (data.trending.isNotEmpty()) {
+                                    DealColumn(
+                                        title = stringResource(Res.string.home_screen_trending_label),
+                                        deals = data.trending,
+                                        stores = stores,
+                                        waitlistIds = waitlistIds,
+                                        collectionIds = collectionIds,
+                                        onPeekGame = onPeekGame,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (data.mostWaitlisted.isNotEmpty()) {
+                                    RankedColumn(
+                                        title = stringResource(Res.string.home_screen_most_waitlisted_label),
+                                        games = data.mostWaitlisted,
+                                        waitlistIds = waitlistIds,
+                                        collectionIds = collectionIds,
+                                        onPeekGame = onPeekGame,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (data.mostCollected.isNotEmpty()) {
+                                    RankedColumn(
+                                        title = stringResource(Res.string.home_screen_most_collected_label),
+                                        games = data.mostCollected,
+                                        waitlistIds = waitlistIds,
+                                        collectionIds = collectionIds,
+                                        onPeekGame = onPeekGame,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                WidthSizeClass.MEDIUM -> {
+                    // Waitlisted + Collected paired side-by-side (Trending already emitted full-width above).
+                    if (data.mostWaitlisted.isNotEmpty() || data.mostCollected.isNotEmpty()) {
+                        if (renderedSection) sectionDivider()
+                        renderedSection = true
+                        item(contentType = CONTENT_TYPE_SIDE_BY_SIDE) {
+                            SideBySideRow {
+                                if (data.mostWaitlisted.isNotEmpty()) {
+                                    RankedColumn(
+                                        title = stringResource(Res.string.home_screen_most_waitlisted_label),
+                                        games = data.mostWaitlisted,
+                                        waitlistIds = waitlistIds,
+                                        collectionIds = collectionIds,
+                                        onPeekGame = onPeekGame,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (data.mostCollected.isNotEmpty()) {
+                                    RankedColumn(
+                                        title = stringResource(Res.string.home_screen_most_collected_label),
+                                        games = data.mostCollected,
+                                        waitlistIds = waitlistIds,
+                                        collectionIds = collectionIds,
+                                        onPeekGame = onPeekGame,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                WidthSizeClass.COMPACT -> {
+                    // 4. Most Waitlisted.
+                    if (data.mostWaitlisted.isNotEmpty()) {
+                        if (renderedSection) sectionDivider()
+                        renderedSection = true
+                        rankedSection(
+                            titleRes = Res.string.home_screen_most_waitlisted_label,
+                            games = data.mostWaitlisted,
+                            keyPrefix = "waitlisted",
+                            waitlistIds = waitlistIds,
+                            collectionIds = collectionIds,
+                            onPeekGame = onPeekGame,
+                        )
+                    }
+
+                    // 5. Most Collected.
+                    if (data.mostCollected.isNotEmpty()) {
+                        if (renderedSection) sectionDivider()
+                        renderedSection = true
+                        rankedSection(
+                            titleRes = Res.string.home_screen_most_collected_label,
+                            games = data.mostCollected,
+                            keyPrefix = "collected",
+                            waitlistIds = waitlistIds,
+                            collectionIds = collectionIds,
+                            onPeekGame = onPeekGame,
+                        )
+                    }
+                }
+            }
+
+            // 5.4. Most Anticipated (IGDB hype) — upcoming, not-yet-released games. Placed here so it sits
+            // directly below Most Collected on compact (and above New Releases in every width class). Same
+            // title-only row anatomy as New Releases (neutral "Upcoming" chip; tap resolves the title → game).
+            if (data.mostAnticipated.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_most_anticipated_label)) }
+                gridSection(
+                    items = data.mostAnticipated,
+                    columns = otherCols,
+                    key = { "anticipated-${it.title}" },
+                    contentType = CONTENT_TYPE_RELEASE,
+                ) { release, cellModifier ->
+                    DealListRow(
+                        title = release.title,
+                        contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
+                        onClick = { onPeekRelease(release.title, release.image) },
+                        imageUrl = release.image,
+                        neutralChip = upcomingChip,
+                        modifier = cellModifier,
+                    )
+                }
+            }
+
+            // 5.5. Recommended for you (#6) — IGDB games similar to the user's waitlist/collection. Title-only
+            // rows like New Releases; the tap resolves the title → game on open (price shown on the game page).
+            if (data.recommendations.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_recommended_label)) }
+                gridSection(
+                    items = data.recommendations,
+                    columns = otherCols,
                     key = { it.id },
-                    contentType = CONTENT_TYPE_GRID_BUNDLE,
-                ) { bundle, cellModifier ->
-                    BundleListRow(bundle = bundle, onClick = { onViewBundle(bundle.id) }, modifier = cellModifier)
+                    contentType = CONTENT_TYPE_RELEASE,
+                ) { rec, cellModifier ->
+                    val image = rec.coverImageId?.let { igdbImageUrl(it, IgdbImageSize.CoverBig) }
+                    DealListRow(
+                        title = rec.name,
+                        contentDescription = stringResource(Res.string.home_screen_recommendation_row_description, rec.name),
+                        onClick = {
+                            analytics.capture(
+                                AnalyticsEvents.RECOMMENDATION_OPENED,
+                                mapOf("game_id" to rec.id, "source" to "for_you"),
+                            )
+                            onPeekRelease(rec.name, image)
+                        },
+                        imageUrl = image,
+                        modifier = cellModifier,
+                    )
+                }
+            }
+
+            // 6. New Releases (IGDB) — title-only rows; the price column is a neutral "Upcoming" chip and the
+            // tap resolves the title → game on open (peek with a no-deals state when nothing is sold yet).
+            if (data.releases.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { SectionHeader(stringResource(Res.string.home_screen_new_releases_label)) }
+                gridSection(
+                    items = data.releases,
+                    columns = otherCols,
+                    key = { it.title },
+                    contentType = CONTENT_TYPE_RELEASE,
+                ) { release, cellModifier ->
+                    DealListRow(
+                        title = release.title,
+                        contentDescription = stringResource(Res.string.home_screen_release_row_description, release.title),
+                        onClick = { onPeekRelease(release.title, release.image) },
+                        imageUrl = release.image,
+                        neutralChip = upcomingChip,
+                        modifier = cellModifier,
+                    )
+                }
+            }
+
+            // 7. Bundles.
+            if (data.bundles.isNotEmpty()) {
+                if (renderedSection) sectionDivider()
+                renderedSection = true
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) {
+                    SectionHeader(
+                        text = stringResource(Res.string.home_screen_bundles_label),
+                        actionText = stringResource(Res.string.home_screen_all_bundles_label),
+                        onActionClick = onViewBundles,
+                    )
+                }
+                if (bundleCols == 1) {
+                    items(
+                        count = data.bundles.size,
+                        key = { index -> "bundle-${data.bundles[index].id}" },
+                        contentType = { CONTENT_TYPE_BUNDLE },
+                    ) { index ->
+                        HomeBundleRow(data.bundles[index]) { onViewBundle(data.bundles[index].id) }
+                    }
+                } else {
+                    gridSection(
+                        items = data.bundles,
+                        columns = bundleCols,
+                        key = { it.id },
+                        contentType = CONTENT_TYPE_GRID_BUNDLE,
+                    ) { bundle, cellModifier ->
+                        BundleListRow(bundle = bundle, onClick = { onViewBundle(bundle.id) }, modifier = cellModifier)
+                    }
                 }
             }
         }
@@ -832,6 +843,7 @@ private fun TrendingDealRow(
         storeIconUrl = store?.iconUrl,
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
+        isRare = LocalRowSignals.current.isRare(deal.gameID, deal.savings.roundToInt()),
     )
 }
 
@@ -864,6 +876,7 @@ private fun RankedGameRow(
         storeName = game.storeName,
         isWaitlisted = isWaitlisted,
         isCollected = isCollected,
+        isRare = game.priceDenominated != null && LocalRowSignals.current.isRare(game.gameId, game.cutPercent ?: 0),
     )
 }
 

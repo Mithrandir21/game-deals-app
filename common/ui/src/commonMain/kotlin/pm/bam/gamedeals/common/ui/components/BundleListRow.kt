@@ -167,6 +167,12 @@ fun formatBundleShortDate(epochMs: Long): String {
     return "${MONTH_ABBREV[date.month.ordinal]} ${date.day}, ${date.year}"
 }
 
+/** A month and year, e.g. "Mar 2025", in the phone's time zone. */
+fun formatMonthYear(epochMs: Long): String {
+    val date = Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault()).date
+    return "${MONTH_ABBREV[date.month.ordinal]} ${date.year}"
+}
+
 private val MONTH_ABBREV = listOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

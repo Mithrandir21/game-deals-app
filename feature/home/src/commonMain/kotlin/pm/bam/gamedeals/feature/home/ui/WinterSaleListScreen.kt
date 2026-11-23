@@ -48,6 +48,8 @@ import kotlin.time.ExperimentalTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.thumbnail
@@ -165,6 +167,7 @@ internal fun WinterSaleListContent(
             LaunchedEffect(state.deals.size, nearEnd) { if (nearEnd) currentLoadMore() }
 
             val bottomInset = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues()
+            val signals = rememberGameSignals(state.deals.map { it.gameId })
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(padding), contentPadding = bottomInset) {
                 state.saleEndEpochMillis?.takeIf { it > 0 }?.let { end ->
                     item(key = "banner") { SaleStrip(saleCountdown(end - nowEpochMillis())) }
@@ -194,6 +197,7 @@ internal fun WinterSaleListContent(
                         storeIconUrl = stores[deal.shopId]?.iconUrl?.takeIf { it.isNotBlank() },
                         isWaitlisted = deal.gameId in waitlistIds,
                         isCollected = deal.gameId in collectionIds,
+                        isRare = signals.isRare(deal.gameId, deal.cutPercent),
                     )
                 }
                 if (state.deals.isNotEmpty()) item(key = "footer") {

@@ -13,7 +13,9 @@ import androidx.compose.runtime.produceState
 import org.koin.android.ext.android.inject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.ThemeMode
@@ -47,7 +49,10 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             GameDealsTheme(darkTheme = darkTheme) {
-                CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
+                CompositionLocalProvider(
+                    LocalPlatformActions provides rememberPlatformActions(),
+                    LocalGameSignals provides koinInject(),
+                ) {
                     // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast)
                     // Storage read is in flight — render nothing for that frame rather than flashing Home
                     // and bouncing into onboarding.

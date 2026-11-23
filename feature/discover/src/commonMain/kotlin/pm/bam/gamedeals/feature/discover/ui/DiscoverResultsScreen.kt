@@ -43,6 +43,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.share.DealShareSheet
 import pm.bam.gamedeals.common.ui.share.rememberDealSharer
@@ -155,6 +157,7 @@ private fun DiscoverResultsContent(
     }
 
     val noPriceLabel = stringResource(Res.string.discover_results_no_price)
+    val signals = rememberGameSignals(state.results.map { it.gameId })
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -223,6 +226,7 @@ private fun DiscoverResultsContent(
                                 storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
                                 isWaitlisted = result.gameId in waitlistIds,
                                 isCollected = result.gameId in collectionIds,
+                                isRare = salePrice != null && signals.isRare(result.gameId, price?.bestCutPercent ?: 0),
                             )
                         }
                         if (state.appending) {

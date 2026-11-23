@@ -68,4 +68,12 @@ class DealBadgeSemanticsTest {
         assertEquals(DealLowFlag.STORE_LOW, dealLowFlag(isNewHistoricalLow = false, isLowestEver = false, isStoreLow = true))
         assertEquals(null, dealLowFlag(isNewHistoricalLow = false, isLowestEver = false, isStoreLow = false))
     }
+
+    @Test
+    fun a_rare_discount_is_said_first() {
+        assertEquals(
+            listOf(DealBadgeSuffix.RARE, DealBadgeSuffix.ALL_TIME_LOW, DealBadgeSuffix.VOUCHER),
+            dealBadgeSuffixes(isNewHistoricalLow = false, isStoreLow = false, hasVoucher = true, isLowestEver = true, isRare = true),
+        )
+    }
 }

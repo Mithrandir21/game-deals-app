@@ -55,6 +55,8 @@ import pm.bam.gamedeals.common.ui.PreviewDeal
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
@@ -170,6 +172,7 @@ private fun StoreDeals(
     goToGame: (gameId: String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+    val signals = rememberGameSignals(deals.map { it.gameID })
 
     Scaffold(
         topBar = { StoreToolbar(onBack, storeDetails) },
@@ -207,6 +210,7 @@ private fun StoreDeals(
                     // store label omitted: this screen is already scoped to a single store
                     isWaitlisted = isFavourite,
                     isCollected = isCollected,
+                    isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
                 )
             }
         }

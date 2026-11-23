@@ -44,6 +44,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
+import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
+import pm.bam.gamedeals.common.ui.signals.isRare
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -74,6 +77,7 @@ internal fun SharedWishlistScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LibraryPeekHost(peek = viewModel.peek, goToGame = goToGame, goToWeb = goToWeb) {
+        ProvideGameSignals((state.bothWant + state.others).map { it.gameId }) {
         SharedWishlistContent(
             state = state,
             onBack = onBack,
@@ -81,6 +85,7 @@ internal fun SharedWishlistScreen(
             onSignIn = { SignInPromptController.request() },
             onRowClick = { row -> viewModel.peek.peek(row.gameId, row.title, row.imageUrl) },
         )
+        }
     }
 }
 
@@ -242,6 +247,7 @@ private fun SharedWishlistRow(row: SharedWishlistRowUi, onClick: () -> Unit) {
         storeName = row.storeName,
         storeIconUrl = row.storeIconUrl,
         isWaitlisted = row.isWaitlisted,
+        isRare = row.salePrice != null && LocalRowSignals.current.isRare(row.gameId, row.discountPercent),
     )
 }
 

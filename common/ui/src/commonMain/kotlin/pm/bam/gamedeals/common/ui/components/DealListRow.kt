@@ -75,6 +75,7 @@ fun DealListRow(
     isWaitlisted: Boolean = false,
     isCollected: Boolean = false,
     supportingText: String? = null,
+    isRare: Boolean = false,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the row's content description, keeping each badge and its TalkBack
@@ -84,6 +85,7 @@ fun DealListRow(
         isLowestEver = isLowestEver,
         isStoreLow = isStoreLow,
         hasVoucher = hasVoucher,
+        isRare = isRare,
     ) + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected)
     Row(
         modifier = modifier
@@ -155,6 +157,7 @@ fun DealListRow(
                     isNewHistoricalLow = isNewHistoricalLow,
                     isLowestEver = isLowestEver,
                     isStoreLow = isStoreLow,
+                    isRare = isRare,
                 )
                 if (salePrice != null) {
                     PriceBlock(

@@ -41,6 +41,12 @@
     <!-- Spoken-only suffixes appended to a deal's merged content description for each badge shown, so
          TalkBack announces what the visual badges convey. -->
     <string name="deal_new_low_content_suffix">, new lowest price ever</string>
+    <!-- "Rare": the deepest discount this game has had in a year (from the Worker's per-game signals). -->
+    <string name="deal_rare_badge_label">Rare</string>
+    <string name="deal_rare_content_suffix">, rare discount</string>
+    <string name="game_peek_rare_title">Rare discount</string>
+    <string name="game_peek_rare_last_deep">last this deep in %1$s</string>
+    <string name="game_peek_rare_deepest">the deepest in 2 years</string>
     <string name="deal_store_low_content_suffix">, lowest price at this store</string>
     <string name="deal_all_time_low_content_suffix">, at its lowest price ever</string>
     <string name="deal_voucher_content_suffix">, voucher available</string>

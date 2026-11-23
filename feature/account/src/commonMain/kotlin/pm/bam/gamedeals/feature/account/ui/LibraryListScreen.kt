@@ -63,6 +63,9 @@ import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
+import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
+import pm.bam.gamedeals.common.ui.signals.isRare
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.share.DealShareSheet
@@ -141,6 +144,7 @@ internal fun WaitlistListScreen(
         )
     }
     LibraryPeekHost(peek = viewModel.peek, goToGame = goToGame, goToWeb = goToWeb) {
+        ProvideGameSignals(state.rows.map { it.gameId }) {
         LibraryScaffold(
             title = stringResource(Res.string.account_section_waitlist),
             loading = state.loading,
@@ -161,6 +165,7 @@ internal fun WaitlistListScreen(
                 WaitlistRow(row) { viewModel.peek.peek(row.gameId, row.title, row.imageUrl) }
                 if (index < state.rows.lastIndex) HorizontalDivider()
             }
+        }
         }
     }
 }
@@ -372,6 +377,7 @@ private fun WaitlistRow(row: WaitlistRowUi, onClick: () -> Unit) {
             storeName = row.storeName,
             storeIconUrl = row.storeIconUrl,
             isWaitlisted = true,
+            isRare = row.salePrice != null && LocalRowSignals.current.isRare(row.gameId, row.discountPercent),
         )
         if (ago != null) {
             Row(

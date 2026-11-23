@@ -52,7 +52,9 @@ import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.version.AppInfo
+import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
@@ -347,7 +349,10 @@ private fun App() {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
     GameDealsTheme(darkTheme = darkTheme) {
-        CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
+        CompositionLocalProvider(
+            LocalPlatformActions provides rememberPlatformActions(),
+            LocalGameSignals provides koinInject(),
+        ) {
             // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast) Storage read
             // is in flight — render nothing rather than flashing Home and bouncing into onboarding.
             val startDestination by produceState<Destination?>(initialValue = null) {
