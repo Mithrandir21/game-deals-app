@@ -33,10 +33,18 @@ enum class FeatureFlag(val key: String, val default: Boolean) {
 
     /**
      * Gates the "Year in deals" card on Home and its screen. Even when on, the card only shows in its own
-     * December–January window and only to signed-in users. Defaults to off like every staged feature: turn
-     * `year_in_deals` on in PostHog when the release that carries it is out. The developer screen's sample switch
-     * shows the card in debug builds regardless.
+     * December–January window and only to signed-in users. Defaults to on: with no remote flag provider
+     * integrated, an off default would mean the card never shows. The developer screen's sample switch shows the
+     * card in debug builds outside its window.
      */
-    YearInDeals(key = "year_in_deals", default = false),
+    YearInDeals(key = "year_in_deals", default = true),
+
+    /**
+     * Gates shared deal links: with it on, sharing a deal shows an image card first and the share text carries the
+     * game's gamedeals.bam.pm link (which opens the app, or a preview page) instead of the store link. Defaults to
+     * on, as no remote flag provider is integrated. A release carrying it must not go out before the Worker serving
+     * those links is live with its ITAD key, or shared links show a "prices aren't loading" page.
+     */
+    DealLinks(key = "deal_links", default = true),
 
 }

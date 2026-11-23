@@ -19,7 +19,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.deal.StoreDealPair
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -85,7 +86,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
         every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
     }
@@ -122,7 +123,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         accountRepository = accountRepository,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
@@ -297,7 +298,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun onShareClicked_emits_ShareDeal_event() = runTest {
-        every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
+        every { dealShareBuilder.build(any(), any(), any(), any(), any()) } returns DealShare("Built share text")
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -307,7 +308,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(1, events.size)
-        assertEquals(HomeViewModel.HomeUiEvent.ShareDeal("Built share text"), events.first())
+        assertEquals(HomeViewModel.HomeUiEvent.ShareDeal(DealShare("Built share text")), events.first())
     }
 
     @Test

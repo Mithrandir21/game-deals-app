@@ -190,6 +190,8 @@ data class RemoteItadDealEntry(
      * leaves it absent otherwise). Presence drives the "with voucher" scissors badge.
      */
     @SerialName("voucher") val voucher: String? = null,
+    /** When the sale price ends (ISO-8601), or null when the store gives no end time. */
+    @SerialName("expiry") val expiry: String? = null,
 )
 
 @Serializable

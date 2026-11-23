@@ -32,7 +32,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -102,7 +103,7 @@ internal class HomeViewModel(
     private val accountRepository: AccountRepository,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
@@ -268,14 +269,15 @@ internal class HomeViewModel(
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(HomeUiEvent.ShareDeal(text))
+        events.tryEmit(HomeUiEvent.ShareDeal(share))
     }
 
     private suspend fun loadReleases(matureOptIn: Boolean): List<Release> {
@@ -331,7 +333,7 @@ internal class HomeViewModel(
     }
 
     internal sealed interface HomeUiEvent {
-        data class ShareDeal(val text: String) : HomeUiEvent
+        data class ShareDeal(val share: DealShare) : HomeUiEvent
         data object SignInRequired : HomeUiEvent
         data object ActionFailed : HomeUiEvent
     }

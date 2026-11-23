@@ -21,7 +21,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.IgdbTagFilter
 import pm.bam.gamedeals.domain.models.TagDiscoveryResult
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.repositories.discovery.DISCOVERY_PAGE_SIZE
 import pm.bam.gamedeals.domain.repositories.discovery.DiscoveryPage
 import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
@@ -56,7 +56,7 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf())
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -64,7 +64,7 @@ class DiscoverResultsViewModelTest : MainDispatcherTest() {
     private fun createViewModel(args: Map<String, Any?> = mapOf("genreIds" to "12")) =
         DiscoverResultsViewModel(
             TestingLoggingListener(), tagDiscoveryRepository, gamesRepository, storesRepository,
-            waitlistRepository, collectionRepository, ignoredRepository, dealShareTextBuilder, SavedStateHandle(args),
+            waitlistRepository, collectionRepository, ignoredRepository, dealShareBuilder, SavedStateHandle(args),
         )
 
     @Test

@@ -110,5 +110,8 @@ data class GameDetails(
         /** ITAD's deal flag `"S"`: the lowest price this store has offered. */
         @SerialName("isStoreLow")
         val isStoreLow: Boolean = false,
+        /** When the sale price ends, or null when the store gives no end time (and in caches from before it was kept). */
+        @SerialName("expiryEpochMs")
+        val expiryEpochMs: Long? = null,
     )
 }

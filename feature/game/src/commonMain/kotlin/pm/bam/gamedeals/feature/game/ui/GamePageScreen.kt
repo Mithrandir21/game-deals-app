@@ -95,7 +95,8 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
 import pm.bam.gamedeals.common.ui.components.PriceBlock
 import pm.bam.gamedeals.common.ui.components.StoreIcon
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.DealQuality
@@ -178,13 +179,14 @@ internal fun GamePageScreen(
     val isIgnored = viewModel.isIgnored.collectAsStateWithLifecycle()
     val note = viewModel.note.collectAsStateWithLifecycle()
     val followedFranchiseIds = viewModel.followedFranchiseIds.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is GamePageViewModel.GameUiEvent.ShareDeal -> platformActions.share(event.text)
+            is GamePageViewModel.GameUiEvent.ShareDeal -> dealSharer.share(event.share)
             GamePageViewModel.GameUiEvent.SignInRequired -> SignInPromptController.request()
             GamePageViewModel.GameUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }

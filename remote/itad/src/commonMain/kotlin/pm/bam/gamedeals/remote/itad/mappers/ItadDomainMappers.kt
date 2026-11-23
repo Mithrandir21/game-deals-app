@@ -242,6 +242,7 @@ private fun ItadDeal.toGameDeal(): GameDetails.GameDeal {
         isLowestEver = isLowestEver,
         isNewHistoricalLow = isNewHistoricalLow,
         isStoreLow = isStoreLow,
+        expiryEpochMs = expiryEpochMs,
     )
 }
 

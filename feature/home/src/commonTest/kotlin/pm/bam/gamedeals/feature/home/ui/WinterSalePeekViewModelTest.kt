@@ -23,7 +23,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.deal.StoreDealPair
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -66,14 +67,14 @@ class WinterSalePeekViewModelTest : MainDispatcherTest() {
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit) {
         every { observeIgnoredIds() } returns flowOf(persistentSetOf("i1"))
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
     private fun viewModel() = WinterSalePeekViewModel(
-        gamesRepository, storesRepository, waitlistRepository, collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        gamesRepository, storesRepository, waitlistRepository, collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
     @Test
@@ -194,16 +195,17 @@ class WinterSalePeekViewModelTest : MainDispatcherTest() {
 
     @Test
     fun share_uses_the_best_deal_and_does_nothing_without_one() = runTest {
-        every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Hades is $8 on Steam"
+        every { dealShareBuilder.build(any(), any(), any(), any(), any()) } returns DealShare("Hades is $8 on Steam")
         val vm = viewModel()
         val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
 
-        vm.share(peekData(best = StoreDealPair(steam, gameDeal(storeID = 61, priceDenominated = "$8", url = "https://steam/hades"))))
+        val best = gameDeal(storeID = 61, priceDenominated = "$8", url = "https://steam/hades")
+        vm.share(peekData(best = StoreDealPair(steam, best)))
         vm.share(peekData(best = null))
         advanceUntilIdle()
 
-        assertEquals(listOf<WinterSalePeekViewModel.Event>(WinterSalePeekViewModel.Event.Share("Hades is $8 on Steam")), events)
-        verify(exactly(1)) { dealShareTextBuilder.build("Hades", "$8", "Steam", "https://steam/hades") }
+        assertEquals(listOf<WinterSalePeekViewModel.Event>(WinterSalePeekViewModel.Event.Share(DealShare("Hades is $8 on Steam"))), events)
+        verify(exactly(1)) { dealShareBuilder.build("g1", "Hades", "thumb", "Steam", best) }
     }
 
     private fun kotlinx.coroutines.test.TestScope.observeAll(vm: WinterSalePeekViewModel) {

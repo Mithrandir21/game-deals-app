@@ -32,6 +32,7 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
 import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.platform.PlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShare
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -148,7 +149,7 @@ class WinterSaleGuidePeekScreenTest {
             composeTestRule.onAllNodes(androidx.compose.ui.test.hasText(text.getValue("failed"))).fetchSemanticsNodes().isNotEmpty()
         }
 
-        events.tryEmit(WinterSalePeekViewModel.Event.Share(SHARE_TEXT))
+        events.tryEmit(WinterSalePeekViewModel.Event.Share(DealShare(SHARE_TEXT)))
         composeTestRule.waitUntil(5_000) { shared.isNotEmpty() }
         assertEquals(listOf(SHARE_TEXT), shared)
     }

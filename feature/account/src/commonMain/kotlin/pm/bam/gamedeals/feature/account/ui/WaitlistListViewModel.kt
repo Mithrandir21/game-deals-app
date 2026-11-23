@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
 import pm.bam.gamedeals.domain.models.thumbnail
@@ -83,14 +83,14 @@ internal class WaitlistListViewModel(
     gamesRepository: GamesRepository,
     collectionRepository: CollectionRepository,
     ignoredRepository: IgnoredRepository,
-    dealShareTextBuilder: DealShareTextBuilder,
+    dealShareBuilder: DealShareBuilder,
     private val logger: Logger,
 ) : ViewModel() {
 
     /** Tapping a row opens the shared game-centric peek sheet (same as Home/Deals/Discover). */
     val peek = GamePeekDelegate(
         viewModelScope, gamesRepository, storesRepository, waitlistRepository,
-        collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
     val uiState: StateFlow<WaitlistUiState>

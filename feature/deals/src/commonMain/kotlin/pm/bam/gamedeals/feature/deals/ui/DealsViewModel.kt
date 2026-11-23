@@ -36,7 +36,8 @@ import pm.bam.gamedeals.common.flatMapLatestDelayAtLeast
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealFlag
 import pm.bam.gamedeals.domain.models.DealsFilter
@@ -87,7 +88,7 @@ internal class DealsViewModel(
     private val logger: Logger,
     private val dealsRepository: DealsRepository,
     storesRepository: StoresRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
@@ -441,14 +442,15 @@ internal class DealsViewModel(
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(DealsUiEvent.ShareDeal(text))
+        events.tryEmit(DealsUiEvent.ShareDeal(share))
     }
 
     private data class SortSelection(val field: DealsSortField, val direction: DealsSortDirection)
@@ -467,7 +469,7 @@ internal class DealsViewModel(
     }
 
     internal sealed interface DealsUiEvent {
-        data class ShareDeal(val text: String) : DealsUiEvent
+        data class ShareDeal(val share: DealShare) : DealsUiEvent
         data object LoadMoreError : DealsUiEvent
         data object SignInRequired : DealsUiEvent
         data object ActionFailed : DealsUiEvent

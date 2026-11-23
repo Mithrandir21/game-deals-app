@@ -101,7 +101,8 @@ import pm.bam.gamedeals.common.ui.adaptive.rememberIsWideLayout
 import pm.bam.gamedeals.common.ui.deal.GamePeekContent
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
@@ -224,7 +225,6 @@ internal fun DealsScreen(
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val savedSearches by viewModel.savedSearches.collectAsStateWithLifecycle()
     val currentSearchSaved by viewModel.currentSearchSaved.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
     val searchSavedConfirmation = stringResource(Res.string.deals_search_saved_confirmation)
 
@@ -237,9 +237,11 @@ internal fun DealsScreen(
         viewModel.setSearchQuery(activeSearch.orEmpty())
     }
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is DealsViewModel.DealsUiEvent.ShareDeal -> platformActions.share(event.text)
+            is DealsViewModel.DealsUiEvent.ShareDeal -> dealSharer.share(event.share)
             DealsViewModel.DealsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DealsViewModel.DealsUiEvent.SignInRequired -> SignInPromptController.request()
             DealsViewModel.DealsUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)

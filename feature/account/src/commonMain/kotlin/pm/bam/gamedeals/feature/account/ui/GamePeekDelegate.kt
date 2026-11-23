@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
@@ -37,7 +38,7 @@ internal class GamePeekDelegate(
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val logger: Logger,
 ) {
     private val controller = GamePeekController(gamesRepository, storesRepository, logger)
@@ -82,19 +83,20 @@ internal class GamePeekDelegate(
 
     fun share(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "library_deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(GamePeekEvent.ShareDeal(text))
+        events.tryEmit(GamePeekEvent.ShareDeal(share))
     }
 }
 
 internal sealed interface GamePeekEvent {
     data object SignInRequired : GamePeekEvent
     data object ActionFailed : GamePeekEvent
-    data class ShareDeal(val text: String) : GamePeekEvent
+    data class ShareDeal(val share: DealShare) : GamePeekEvent
 }

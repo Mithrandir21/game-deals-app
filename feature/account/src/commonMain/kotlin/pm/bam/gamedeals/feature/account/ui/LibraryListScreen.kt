@@ -62,7 +62,8 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -183,15 +184,16 @@ private fun LibraryPeekHost(
     val waitlistIds by peek.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by peek.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by peek.ignoredIds.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(peek.events) { event ->
         when (event) {
             GamePeekEvent.SignInRequired -> SignInPromptController.request()
             GamePeekEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
-            is GamePeekEvent.ShareDeal -> platformActions.share(event.text)
+            is GamePeekEvent.ShareDeal -> dealSharer.share(event.share)
         }
     }
 

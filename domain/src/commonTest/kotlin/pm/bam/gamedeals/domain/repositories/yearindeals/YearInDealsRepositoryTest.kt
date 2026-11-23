@@ -111,13 +111,13 @@ class YearInDealsRepositoryTest {
 
     @Test
     fun offered_in_season_with_the_flag_on_and_never_with_it_off() {
-        val on = object : FeatureFlags by NoOpFeatureFlags {
-            override fun isEnabled(flag: FeatureFlag) = flag == FeatureFlag.YearInDeals || NoOpFeatureFlags.isEnabled(flag)
+        // The flag ships on, so the built-in value offers the card in its window.
+        assertTrue(repository(now = at(2026, 12, 1)).isOffered())
+        assertTrue(repository(now = at(2027, 1, 31)).isOffered())
+        assertFalse(repository(now = at(2026, 11, 30)).isOffered())
+        val off = object : FeatureFlags by NoOpFeatureFlags {
+            override fun isEnabled(flag: FeatureFlag) = flag != FeatureFlag.YearInDeals && NoOpFeatureFlags.isEnabled(flag)
         }
-        assertTrue(repository(now = at(2026, 12, 1), flags = on).isOffered())
-        assertTrue(repository(now = at(2027, 1, 31), flags = on).isOffered())
-        assertFalse(repository(now = at(2026, 11, 30), flags = on).isOffered())
-        // The flag ships off, so with no remote value the card is never offered.
-        assertFalse(repository(now = at(2026, 12, 1)).isOffered())
+        assertFalse(repository(now = at(2026, 12, 1), flags = off).isOffered())
     }
 }

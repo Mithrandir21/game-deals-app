@@ -33,8 +33,8 @@ class NoOpFeatureFlagsTest {
     fun `no flag ships defaulted on`() {
         // A default of `true` would ship the feature to everyone the moment it merged, with the remote flag
         // able only to turn it *off* — the opposite of a staged rollout. Deliberate exceptions belong here.
-        // DiscoverByTag ships on because no remote provider is integrated to roll it out.
-        val shippedOn = setOf(FeatureFlag.DiscoverByTag)
+        // These ship on because no remote provider is integrated to roll them out.
+        val shippedOn = setOf(FeatureFlag.DiscoverByTag, FeatureFlag.YearInDeals, FeatureFlag.DealLinks)
         FeatureFlag.entries.filterNot { it in shippedOn }.forEach { flag ->
             assertEquals(false, flag.default, "${flag.key} defaults to on")
         }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.CollectionEntry
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -62,14 +62,14 @@ internal class CollectionListViewModel(
     storesRepository: StoresRepository,
     waitlistRepository: WaitlistRepository,
     ignoredRepository: IgnoredRepository,
-    dealShareTextBuilder: DealShareTextBuilder,
+    dealShareBuilder: DealShareBuilder,
     private val logger: Logger,
 ) : ViewModel() {
 
     /** Tapping a row opens the shared game-centric peek sheet (same as Home/Deals/Discover). */
     val peek = GamePeekDelegate(
         viewModelScope, gamesRepository, storesRepository, waitlistRepository,
-        collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
     val uiState: StateFlow<CollectionUiState>

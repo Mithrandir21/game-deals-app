@@ -59,6 +59,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.SingleEventEffect
@@ -66,7 +68,6 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealBadgeCluster
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
@@ -113,7 +114,6 @@ internal fun BundleDetailScreen(
     val waitlistIds by viewModel.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
@@ -141,10 +141,13 @@ internal fun BundleDetailScreen(
         onRetry = viewModel::load,
     )
 
+    val dealSharer = rememberDealSharer()
+
+    DealShareSheet(dealSharer)
     // Collect one-shot UI events and dispatch them (share sheet / sign-in snackbar).
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is BundleDetailViewModel.BundleDetailUiEvent.ShareDeal -> platformActions.share(event.text)
+            is BundleDetailViewModel.BundleDetailUiEvent.ShareDeal -> dealSharer.share(event.share)
             BundleDetailViewModel.BundleDetailUiEvent.SignInRequired -> SignInPromptController.request()
             BundleDetailViewModel.BundleDetailUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }

@@ -20,7 +20,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -71,7 +71,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         everySuspend { fetchGameDetailsByTitle(any()) } returns null
         everySuspend { fetchTimeToBeat(any()) } returns null
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeIsWaitlisted(any()) } returns flowOf(false)
     }
@@ -99,7 +99,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         gamesRepository = gamesRepository,
         storesRepository = storesRepository,
         igdbRepository = igdbRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
         ignoredRepository = ignoredRepository,

@@ -75,7 +75,8 @@ import pm.bam.gamedeals.common.ui.components.discountColors
 import pm.bam.gamedeals.common.ui.components.StoreIcon
 import pm.bam.gamedeals.common.ui.components.gameStateContentSuffix
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsElevation
 import pm.bam.gamedeals.domain.models.Store
@@ -184,7 +185,6 @@ internal fun WinterSalePeekHost(
     val waitlistIds by peek.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by peek.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by peek.ignoredIds.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
     val peekGameId = gamePeek?.gameId
@@ -204,9 +204,11 @@ internal fun WinterSalePeekHost(
         onRetry = peek::retry,
     )
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(peek.events) { event ->
         when (event) {
-            is WinterSalePeekViewModel.Event.Share -> platformActions.share(event.text)
+            is WinterSalePeekViewModel.Event.Share -> dealSharer.share(event.share)
             WinterSalePeekViewModel.Event.SignInRequired -> SignInPromptController.request()
             WinterSalePeekViewModel.Event.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }

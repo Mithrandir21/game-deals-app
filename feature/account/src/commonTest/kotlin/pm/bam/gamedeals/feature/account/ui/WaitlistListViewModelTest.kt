@@ -12,7 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
@@ -41,7 +41,7 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit)
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
@@ -49,7 +49,7 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
 
     private fun viewModel() = WaitlistListViewModel(
         waitlistRepository, storesRepository, regionRepository,
-        gamesRepository, collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        gamesRepository, collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
     private fun stubs(

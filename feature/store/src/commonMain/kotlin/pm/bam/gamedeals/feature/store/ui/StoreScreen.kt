@@ -57,11 +57,12 @@ import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
@@ -94,13 +95,14 @@ internal fun StoreScreen(
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
     val errorMessage = stringResource(Res.string.store_screen_data_loading_error_msg)
     val errorRetry = stringResource(Res.string.store_screen_data_loading_error_retry)
-    val platformActions = LocalPlatformActions.current
 
     val store = (uiState as? StoreScreenData.Data)?.store
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is StoreViewModel.StoreUiEvent.ShareDeal -> platformActions.share(event.text)
+            is StoreViewModel.StoreUiEvent.ShareDeal -> dealSharer.share(event.share)
             StoreViewModel.StoreUiEvent.SignInRequired -> SignInPromptController.request()
             StoreViewModel.StoreUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }

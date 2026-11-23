@@ -64,6 +64,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.PreviewDeal
@@ -82,7 +84,6 @@ import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.adaptive.WidthSizeClass
 import pm.bam.gamedeals.common.ui.adaptive.rememberWidthSizeClass
 import pm.bam.gamedeals.common.ui.home.StatCard
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Bundle
@@ -169,7 +170,6 @@ internal fun HomeScreen(
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
     val stores = viewModel.stores.collectAsStateWithLifecycle()
     val recentlyViewed = viewModel.recentlyViewed.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
     val widthClass = rememberWidthSizeClass()
@@ -215,10 +215,13 @@ internal fun HomeScreen(
         onOpenYearInDeals = onViewYearInDeals,
     )
 
+    val dealSharer = rememberDealSharer()
+
+    DealShareSheet(dealSharer)
     // Collect one-shot UI events and dispatch them.
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is HomeViewModel.HomeUiEvent.ShareDeal -> platformActions.share(event.text)
+            is HomeViewModel.HomeUiEvent.ShareDeal -> dealSharer.share(event.share)
             HomeViewModel.HomeUiEvent.SignInRequired -> SignInPromptController.request()
             HomeViewModel.HomeUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
         }

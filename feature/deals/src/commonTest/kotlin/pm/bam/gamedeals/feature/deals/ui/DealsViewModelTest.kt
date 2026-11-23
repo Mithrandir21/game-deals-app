@@ -23,7 +23,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.DealsFilter
@@ -62,7 +62,7 @@ class DealsViewModelTest : MainDispatcherTest() {
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit) {
         every { observeStores() } returns flowOf(emptyList())
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
@@ -113,7 +113,7 @@ class DealsViewModelTest : MainDispatcherTest() {
         logger = TestingLoggingListener(),
         dealsRepository = dealsRepository,
         storesRepository = storesRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
         regionRepository = regionRepository,

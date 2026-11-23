@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.withMinimumDuration
+import pm.bam.gamedeals.domain.models.hero
 import pm.bam.gamedeals.domain.models.thumbnail
 import pm.bam.gamedeals.domain.repositories.games.GamesRepository
 import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
@@ -88,6 +89,7 @@ class GamePeekController(
                     otherStores = pairs.drop(1).take(MAX_OTHER_STORES).toImmutableList(),
                     cheapestPriceEver = details.cheapestPriceEver.takeIf { best != null },
                     upcoming = best == null,
+                    heroArt = details.info.artwork.hero?.takeIf { it.isNotBlank() },
                 )
             }
             data.emit(result)

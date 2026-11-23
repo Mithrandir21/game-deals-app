@@ -25,7 +25,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.favicon.FaviconResolver
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
@@ -35,6 +36,7 @@ import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.hero
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FranchiseFollowSeeder
@@ -71,7 +73,7 @@ internal class GamePageViewModel(
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository,
     private val igdbRepository: IgdbRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
@@ -377,14 +379,15 @@ internal class GamePageViewModel(
     }
 
     fun onShareDealClicked(gameInfo: GameDetails.GameInfo, store: Store, deal: GameDetails.GameDeal) {
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = gameIdFlow.value.orEmpty(),
             gameTitle = gameInfo.title,
-            salePriceDenominated = deal.priceDenominated,
+            coverUrl = gameInfo.artwork.hero,
             storeName = store.storeName,
-            dealUrl = deal.url,
+            deal = deal,
         )
         info(logger, tag = "deal_shared") { "dealId=${deal.dealID} store=${store.storeName}" }
-        events.tryEmit(GameUiEvent.ShareDeal(text))
+        events.tryEmit(GameUiEvent.ShareDeal(share))
     }
 
     // --- IGDB title-match warning + candidate picker (from the old GameDetailsViewModel) ---
@@ -490,7 +493,7 @@ internal class GamePageViewModel(
     }
 
     internal sealed interface GameUiEvent {
-        data class ShareDeal(val text: String) : GameUiEvent
+        data class ShareDeal(val share: DealShare) : GameUiEvent
         data object SignInRequired : GameUiEvent
         data object ActionFailed : GameUiEvent
     }

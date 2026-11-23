@@ -97,4 +97,14 @@
     <string name="recently_viewed_remove_confirm_action">Remove</string>
     <string name="recently_viewed_remove_cancel">Cancel</string>
 
+    <string name="deal_share_sheet_title">Share this deal</string>
+    <string name="deal_share_button">Share</string>
+    <string name="deal_share_link_only">Share the link only</string>
+    <string name="deal_share_failed">The card couldn't be captured. Try again, or share the link only.</string>
+    <string name="deal_share_new_low">New lowest price ever</string>
+    <string name="deal_share_lowest_ever">Lowest price ever</string>
+    <string name="deal_share_ends">Sale ends %1$s</string>
+    <string name="deal_share_footer">Found with Game Deals</string>
+    <string name="deal_share_footer_site">gamedeals.bam.pm</string>
+
 </resources>

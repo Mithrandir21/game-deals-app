@@ -10,6 +10,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadShopRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ItadMappersTest {
@@ -166,6 +167,14 @@ class ItadMappersTest {
         freeEntry(flag = "H", cut = 100).toItadDeal(gameId = "uuid", gameTitle = "Game").let { assertTrue(it.isLowestEver) }
         // A full-price game that has never been cheaper keeps its H.
         dealEntry(flag = "H", voucher = null).copy(cut = 0).toItadDeal(gameId = "uuid", gameTitle = "Game").let { assertTrue(it.isLowestEver) }
+    }
+
+    @Test
+    fun toItadDeal_keeps_the_sale_end_time_and_ignores_a_missing_or_unreadable_one() {
+        val ends = dealEntry(flag = null, voucher = null).copy(expiry = "2026-12-20T18:00:00+01:00")
+        assertEquals(1_797_786_000_000, ends.toItadDeal(gameId = "uuid", gameTitle = "Game").expiryEpochMs)
+        assertNull(dealEntry(flag = null, voucher = null).toItadDeal(gameId = "uuid", gameTitle = "Game").expiryEpochMs)
+        assertNull(dealEntry(flag = null, voucher = null).copy(expiry = "soon").toItadDeal(gameId = "uuid", gameTitle = "Game").expiryEpochMs)
     }
 
     private fun freeEntry(flag: String?, cut: Int): RemoteItadDealEntry =
