@@ -10,3 +10,10 @@ rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = true }]
 # Keep request logs off: the privacy policy says we do not keep a log of event-file requests.
 [observability]
 enabled = false
+# Per-game public signals (signals-routes.mjs). Create once with `npx wrangler@4 d1 create gamedeals-signals`, put
+# its id here, then apply migrations/ (see README). Holds public game data only, never anything about users.
+[[d1_databases]]
+binding = "SIGNALS_DB"
+database_name = "gamedeals-signals"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

@@ -90,6 +90,8 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryIm
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepository
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepositoryImpl
@@ -181,6 +183,7 @@ val domainModule = module {
     // Year in deals (next-versions M2): built on demand from the collection, waitlist, prices and all-time lows.
     single<YearInDealsSampleMode> { YearInDealsSampleModeImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SharedWishlistRepository> { SharedWishlistRepositoryImpl(get(), get()) }
+    single<GameSignalsRepository> { GameSignalsRepositoryImpl(get(), get(), get()) }
     single<YearInDealsRepository> { YearInDealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     single<NotificationCacheStore> { NotificationCacheStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get()) }
