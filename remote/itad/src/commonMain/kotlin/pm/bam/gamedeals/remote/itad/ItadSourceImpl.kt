@@ -17,6 +17,7 @@ import pm.bam.gamedeals.domain.models.DealsFilter
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameHistoryLow
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.ProductType
@@ -38,6 +39,7 @@ import pm.bam.gamedeals.remote.itad.mappers.toDeal
 import pm.bam.gamedeals.remote.itad.mappers.toDealDetails
 import pm.bam.gamedeals.remote.itad.mappers.toGame
 import pm.bam.gamedeals.remote.itad.mappers.toGameDetails
+import pm.bam.gamedeals.remote.itad.mappers.toGameHistoryLow
 import pm.bam.gamedeals.remote.itad.mappers.toGameMeta
 import pm.bam.gamedeals.remote.itad.mappers.toItadDeal
 import pm.bam.gamedeals.remote.itad.mappers.toItadGamePrices
@@ -198,6 +200,15 @@ internal class ItadSourceImpl(
         if (gameIds.isEmpty()) return emptyList()
         return fetchGamePrices(gameIds, country = regionRepository.getSelectedCountryCode())
             .map { it.toBundleGamePrice() }
+    }
+
+    override suspend fun fetchHistoryLows(gameIds: List<String>): List<GameHistoryLow> {
+        if (gameIds.isEmpty()) return emptyList()
+        return gamesApi.getHistoryLows(gameIds, country = regionRepository.getSelectedCountryCode())
+            .log(logger, tag = TAG)
+            .mapAnyFailure { remoteExceptionTransformer.transformApiException(this) }
+            .getOrThrow()
+            .mapNotNull { it.toGameHistoryLow() }
     }
 
     override suspend fun fetchRegionalPrices(gameId: String, countries: List<Country>): List<RegionalPrice> =

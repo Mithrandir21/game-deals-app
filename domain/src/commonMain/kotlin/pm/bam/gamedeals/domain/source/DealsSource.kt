@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.domain.source
 
 import pm.bam.gamedeals.domain.models.Bundle
+import pm.bam.gamedeals.domain.models.GameHistoryLow
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.Deal
@@ -94,6 +95,13 @@ interface DealsSource {
      * pricing return an empty list.
      */
     suspend fun fetchBundleGamePrices(gameIds: List<String>): List<BundleGamePrice>
+
+    /**
+     * Each game's all-time low in the user's region, with when it was set — one batched
+     * `/games/historylow/v1` call. Feeds the Year in deals "waitlist wins". Games ITAD has no low for are
+     * omitted. Callers keep batches to about 100 ids.
+     */
+    suspend fun fetchHistoryLows(gameIds: List<String>): List<GameHistoryLow>
 
     /**
      * The game's cheapest current price in each of [countries] (epic #291, Phase 7 — the Game Page's

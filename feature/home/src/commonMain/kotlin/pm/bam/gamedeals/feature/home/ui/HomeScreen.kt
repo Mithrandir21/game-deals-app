@@ -152,12 +152,15 @@ internal fun HomeScreen(
     onViewBundle: (bundleId: Int) -> Unit,
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewWinterSale: () -> Unit = {},
+    onViewYearInDeals: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
-    winterSaleEntry: WinterSaleEntryViewModel = koinViewModel()
+    winterSaleEntry: WinterSaleEntryViewModel = koinViewModel(),
+    yearInDealsEntry: YearInDealsEntryViewModel = koinViewModel(),
 ) {
     val data = viewModel.uiState.collectAsStateWithLifecycle()
     val winterSaleEvent by winterSaleEntry.event.collectAsStateWithLifecycle()
     val winterSaleTotals by winterSaleEntry.totals.collectAsStateWithLifecycle()
+    val yearInDealsYear by yearInDealsEntry.offeredYear.collectAsStateWithLifecycle()
     WinterSaleResumeEffect(winterSaleEntry::onResume, winterSaleEntry::onPause)
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
@@ -208,6 +211,8 @@ internal fun HomeScreen(
         winterSaleEvent = winterSaleEvent,
         winterSaleTotals = winterSaleTotals,
         onOpenWinterSale = onViewWinterSale,
+        yearInDealsYear = yearInDealsYear,
+        onOpenYearInDeals = onViewYearInDeals,
     )
 
     // Collect one-shot UI events and dispatch them.
@@ -253,6 +258,8 @@ private fun HomeScreenContent(
     winterSaleEvent: WinterSaleEventState.Available? = null,
     winterSaleTotals: WinterSaleDealTotals? = null,
     onOpenWinterSale: () -> Unit = {},
+    yearInDealsYear: Int? = null,
+    onOpenYearInDeals: () -> Unit = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
@@ -295,6 +302,8 @@ private fun HomeScreenContent(
                         winterSaleEvent = winterSaleEvent,
                         winterSaleTotals = winterSaleTotals,
                         onOpenWinterSale = onOpenWinterSale,
+                        yearInDealsYear = yearInDealsYear,
+                        onOpenYearInDeals = onOpenYearInDeals,
                     )
                 }
 
@@ -348,6 +357,8 @@ private fun HomeFeed(
     winterSaleEvent: WinterSaleEventState.Available? = null,
     winterSaleTotals: WinterSaleDealTotals? = null,
     onOpenWinterSale: () -> Unit = {},
+    yearInDealsYear: Int? = null,
+    onOpenYearInDeals: () -> Unit = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
@@ -378,6 +389,12 @@ private fun HomeFeed(
 
         winterSaleEvent?.let { event ->
             item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
+            renderedSection = true
+        }
+
+        // Year in deals (signed-in users, December and January).
+        yearInDealsYear?.let { year ->
+            item(contentType = CONTENT_TYPE_SECTION_HEADER) { YearInDealsHomeCard(year, onOpenYearInDeals) }
             renderedSection = true
         }
 

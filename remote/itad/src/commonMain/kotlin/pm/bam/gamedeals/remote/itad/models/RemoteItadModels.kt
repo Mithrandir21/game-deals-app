@@ -224,6 +224,22 @@ data class RemoteItadRankedGame(
     @SerialName("count") val count: Int? = null,
 )
 
+// --- /games/historylow/v1 (batch all-time lows, each with the date it was set) ---
+@Serializable
+data class RemoteItadHistoryLowEntry(
+    @SerialName("id") val id: String,
+    @SerialName("low") val low: RemoteItadHistoryLowDeal? = null,
+)
+
+@Serializable
+data class RemoteItadHistoryLowDeal(
+    @SerialName("shop") val shop: RemoteItadShopRef? = null,
+    @SerialName("price") val price: RemoteItadPrice,
+    @SerialName("regular") val regular: RemoteItadPrice? = null,
+    @SerialName("cut") val cut: Int = 0,
+    @SerialName("timestamp") val timestamp: String? = null,
+)
+
 // --- /games/prices/v3 ---
 @Serializable
 data class RemoteItadHistoryLow(

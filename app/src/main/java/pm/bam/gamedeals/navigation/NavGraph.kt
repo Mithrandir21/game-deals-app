@@ -44,6 +44,7 @@ import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
+import pm.bam.gamedeals.feature.home.navigation.yearInDealsScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -153,7 +154,10 @@ internal fun NavGraph(
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
                 goToWinterSale = { navActions.navigateToWinterSaleGuide() },
+                goToYearInDeals = { navActions.navigateToYearInDeals() },
             )
+
+            yearInDealsScreen(onBack = { navController.popBackStack() })
 
             winterSaleGuideScreen(
                 onBack = { navController.popBackStack() },

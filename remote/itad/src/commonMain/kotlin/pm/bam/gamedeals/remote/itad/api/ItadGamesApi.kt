@@ -14,6 +14,7 @@ import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGamePrices
 import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryEntry
+import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryLowEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadLookupResponse
 import pm.bam.gamedeals.remote.itad.models.RemoteItadOverviewResponse
 import pm.bam.gamedeals.remote.itad.models.RemoteItadSearchGame
@@ -91,6 +92,21 @@ class ItadGamesApi(private val httpClient: HttpClient) {
                 contentType(ContentType.Application.Json)
                 setBody(gameIds)
             }.body<List<RemoteItadGamePrices>>()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ApiResponse.exception(t)
+    }
+
+    /** All-time lows for many games at once, each with when it was set — `/games/historylow/v1` (POST, JSON array of UUIDs). */
+    suspend fun getHistoryLows(gameIds: List<String>, country: String? = null): ApiResponse<List<RemoteItadHistoryLowEntry>> = try {
+        ApiResponse.Success(
+            httpClient.post("/games/historylow/v1") {
+                parameter("country", country)
+                contentType(ContentType.Application.Json)
+                setBody(gameIds)
+            }.body<List<RemoteItadHistoryLowEntry>>()
         )
     } catch (e: CancellationException) {
         throw e

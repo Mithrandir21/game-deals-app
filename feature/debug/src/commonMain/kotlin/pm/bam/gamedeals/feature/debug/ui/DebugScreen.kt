@@ -29,6 +29,7 @@ import pm.bam.gamedeals.feature.debug.generated.resources.debug_navigation_back
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_intro
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_app_update
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_share_card
+import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_year_in_deals
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_section_winter_sale
 import pm.bam.gamedeals.feature.debug.generated.resources.debug_title
 
@@ -95,6 +96,11 @@ internal fun DebugScreen(onBack: () -> Unit) {
 
                 DebugSectionHeader(stringResource(Res.string.debug_section_share_card))
                 ShareCardTestSection()
+
+                HorizontalDivider()
+
+                DebugSectionHeader(stringResource(Res.string.debug_section_year_in_deals))
+                YearInDealsSampleSection()
 
                 HorizontalDivider()
             }

@@ -31,4 +31,12 @@ enum class FeatureFlag(val key: String, val default: Boolean) {
      */
     ForceUpdate(key = "force_update", default = false),
 
+    /**
+     * Gates the "Year in deals" card on Home and its screen. Even when on, the card only shows in its own
+     * December–January window and only to signed-in users. Defaults to off like every staged feature: turn
+     * `year_in_deals` on in PostHog when the release that carries it is out. The developer screen's sample switch
+     * shows the card in debug builds regardless.
+     */
+    YearInDeals(key = "year_in_deals", default = false),
+
 }

@@ -20,6 +20,8 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     fun navigateToWinterSaleForYou() { navController.navigate(Destination.WinterSaleForYou) }
 
+    fun navigateToYearInDeals() { navController.navigate(Destination.YearInDeals) }
+
     fun navigateToWinterSaleList(shelf: String, saleEndEpochMillis: Long) {
         navController.navigate(Destination.WinterSaleList(shelf, saleEndEpochMillis))
     }

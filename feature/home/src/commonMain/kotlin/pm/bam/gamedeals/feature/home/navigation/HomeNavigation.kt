@@ -9,6 +9,7 @@ import pm.bam.gamedeals.feature.home.ui.HomeScreen
 import pm.bam.gamedeals.feature.home.ui.WinterSaleEntryScreen
 import pm.bam.gamedeals.feature.home.ui.WinterSaleGuideScreen
 import pm.bam.gamedeals.feature.home.ui.WinterSaleListScreen
+import pm.bam.gamedeals.feature.home.ui.YearInDealsScreen
 
 fun NavGraphBuilder.homeScreen(
     goToGame: (gameId: String) -> Unit,
@@ -19,6 +20,7 @@ fun NavGraphBuilder.homeScreen(
     goToBundles: () -> Unit,
     goToBundle: (bundleId: Int) -> Unit,
     goToWinterSale: () -> Unit,
+    goToYearInDeals: () -> Unit,
 ) {
     // Search + Settings live on the app-shell top bar / overflow. Giveaways moved off Home to their
     // own tab, so Home is now 100% in-app content.
@@ -32,7 +34,14 @@ fun NavGraphBuilder.homeScreen(
             onViewBundle = goToBundle.dropUnlessResumed(),
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) }.dropUnlessResumed(),
             onViewWinterSale = dropUnlessResumed(block = goToWinterSale),
+            onViewYearInDeals = dropUnlessResumed(block = goToYearInDeals),
         )
+    }
+}
+
+fun NavGraphBuilder.yearInDealsScreen(onBack: () -> Unit) {
+    composable<Destination.YearInDeals> {
+        YearInDealsScreen(onBack = dropUnlessResumed(block = onBack))
     }
 }
 

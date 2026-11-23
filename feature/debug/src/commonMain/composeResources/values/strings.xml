@@ -23,4 +23,8 @@
     <string name="debug_share_card_desc">Captures the card below as an image and opens the share sheet with it and a real game link (Hades).</string>
     <string name="debug_share_card_button">Share test card</string>
     <string name="debug_share_card_failed">The card couldn't be captured. Scroll it fully into view and try again.</string>
+
+    <string name="debug_section_year_in_deals">Year in deals</string>
+    <string name="debug_year_in_deals_sample_row">Show the year card with sample data</string>
+    <string name="debug_year_in_deals_sample_desc">Puts the Year in deals entry on Home in any month, signed in or not, and fills the card with sample games and numbers.</string>
 </resources>
