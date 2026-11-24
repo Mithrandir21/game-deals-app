@@ -13,6 +13,8 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.GameSignals
 import pm.bam.gamedeals.domain.models.GameSignalsBatch
 import pm.bam.gamedeals.domain.source.GameSignalsSource
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,7 +38,20 @@ class GameSignalsRepositoryTest {
         }
     }
 
-    private val repository = GameSignalsRepositoryImpl(source, clock, TestingLoggingListener())
+    private val flags = FakeFeatureFlags()
+    private val repository = GameSignalsRepositoryImpl(source, clock, TestingLoggingListener(), flags)
+
+    @Test
+    fun switched_off_there_are_no_signals_and_no_worker_calls_even_from_memory() = runTest {
+        repository.getSignals(listOf(id(1)))
+        flags.set(FeatureFlag.GameSignals, false)
+
+        assertEquals(emptyMap(), repository.getSignals(listOf(id(1), id(2))))
+        assertEquals(1, calls.size)
+
+        flags.set(FeatureFlag.GameSignals, true)
+        assertEquals(setOf(id(1), id(2)), repository.getSignals(listOf(id(1), id(2))).keys)
+    }
 
     @Test
     fun fetches_the_games_once_and_answers_from_memory_while_fresh() = runTest {

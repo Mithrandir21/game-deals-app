@@ -111,9 +111,8 @@ internal class WaitlistListViewModel(
         collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
-    // Wishlist links open the Worker's preview page for anyone without the app, so they share the deal-links switch.
     val uiState: StateFlow<WaitlistUiState>
-        field = MutableStateFlow(WaitlistUiState(loading = true, shareEnabled = featureFlags.isEnabled(FeatureFlag.DealLinks)))
+        field = MutableStateFlow(WaitlistUiState(loading = true, shareEnabled = featureFlags.isEnabled(FeatureFlag.WishlistLinks)))
 
     val events: SharedFlow<WaitlistEvent>
         field = MutableSharedFlow<WaitlistEvent>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -125,6 +124,10 @@ internal class WaitlistListViewModel(
 
     init {
         refresh()
+        // The share button follows its remote switch while the screen is open.
+        viewModelScope.launch {
+            featureFlags.observe(FeatureFlag.WishlistLinks).collect { on -> uiState.update { it.copy(shareEnabled = on) } }
+        }
         // Re-price when the user changes region (the first emission is the current region — skip it).
         viewModelScope.launch {
             regionRepository.observeSelectedCountry().drop(1).collect { refresh() }

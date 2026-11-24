@@ -15,21 +15,29 @@ import pm.bam.gamedeals.domain.models.YearInDeals
 import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepository
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleMode
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Home's "Year in deals" entry: the year the card is about, shown to signed-in users while the card is in season and
- * its flag is on; null hides the entry.
+ * its switch is on; null hides the entry. Follows the switch live, so turning it off hides the entry at once.
  */
 internal class YearInDealsEntryViewModel(
     accountRepository: AccountRepository,
     private val yearInDeals: YearInDealsRepository,
     sampleMode: YearInDealsSampleMode,
+    featureFlags: FeatureFlags,
 ) : ViewModel() {
 
-    val offeredYear: StateFlow<Int?> = combine(accountRepository.observeAuthState(), sampleMode.observe()) { auth, sample ->
+    val offeredYear: StateFlow<Int?> = combine(
+        accountRepository.observeAuthState(),
+        sampleMode.observe(),
+        featureFlags.observe(FeatureFlag.YearInDeals),
+    ) { auth, sample, switchedOn ->
         // The developer screen's sample switch shows the entry any time, signed in or not.
-        if (sample || (auth is AuthState.LoggedIn && yearInDeals.isOffered())) yearInDeals.reportYear() else null
+        val offered = sample || (switchedOn && auth is AuthState.LoggedIn && yearInDeals.isOffered())
+        if (offered) yearInDeals.reportYear() else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 

@@ -46,10 +46,9 @@ import pm.bam.gamedeals.feature.debug.generated.resources.debug_update_title
 /**
  * Minimum-version gate override — a [DebugScreen] section.
  *
- * It exists because builds without a remote flag provider bind `NoOpFeatureFlags` — so `force_update` always
- * resolves to its `false` default and the update dialog could otherwise only ever be seen by a release build
- * talking to a live provider. Setting a minimum version here writes the same JSON a remote flag payload would
- * carry, which `:feature:appupdate` consumes in preference to the (absent) remote one.
+ * Without it, the update dialog only shows when `force_update` is turned on in the Worker's switch file, which
+ * reaches every phone. Setting a minimum version here writes the same JSON the switch's payload carries, which
+ * `:feature:appupdate` consumes in preference to the remote one, on this phone only.
  *
  * Reachability is gated by the Account hub's debug entry point (`AppInfo.isDebug`); consumption of whatever
  * this writes is independently gated in `AppUpdateViewModel`, so a release build ignores the stored value even

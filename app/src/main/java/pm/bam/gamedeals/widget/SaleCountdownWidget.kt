@@ -32,6 +32,8 @@ import org.koin.core.component.inject
 import pm.bam.gamedeals.R
 import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepository
 import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCountdown
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.shortcuts.AppShortcut
 import java.util.Date
 import java.util.Locale
@@ -43,11 +45,13 @@ class SaleCountdownWidgetReceiver : GlanceAppWidgetReceiver() {
 /**
  * The sale to count down to on Steam, Epic or GOG, from the Worker's hand-typed dates ([SaleCalendarRepository], which
  * picks between big sales and smaller fests): "Steam Winter Sale · Ends in 5 days". Redrawn every hour by the system
- * (`sale_countdown_widget_info.xml`), so the count is right to the hour. Tapping opens the Deals tab.
+ * (`sale_countdown_widget_info.xml`), so the count is right to the hour. Tapping opens the Deals tab. With the
+ * [FeatureFlag.SaleCountdown] switch off it is a plain "Tap for today's deals" tile, as a placed widget can't be removed.
  */
 class SaleCountdownWidget : GlanceAppWidget(), KoinComponent {
 
     private val saleCalendarRepository: SaleCalendarRepository by inject()
+    private val featureFlags: FeatureFlags by inject()
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val state = load(context, System.currentTimeMillis())
@@ -59,8 +63,24 @@ class SaleCountdownWidget : GlanceAppWidget(), KoinComponent {
     }
 
     @VisibleForTesting
-    internal suspend fun load(context: Context, nowMillis: Long): SaleCountdownUi? =
-        saleCalendarRepository.currentCountdown()?.toUi(context, nowMillis)
+    internal suspend fun load(context: Context, nowMillis: Long): SaleCountdownState {
+        // The hourly redraw runs without the app being opened, so it is also how a switch flip reaches the widget.
+        featureFlags.awaitRefresh()
+        if (!featureFlags.isEnabled(FeatureFlag.SaleCountdown)) return SaleCountdownState.SwitchedOff
+        val countdown = saleCalendarRepository.currentCountdown() ?: return SaleCountdownState.NoSale
+        return SaleCountdownState.Counting(countdown.toUi(context, nowMillis))
+    }
+}
+
+/** What the countdown widget shows. */
+internal sealed interface SaleCountdownState {
+    /** The sale countdown is switched off: a plain tile that opens Deals. */
+    data object SwitchedOff : SaleCountdownState
+
+    /** No sale is listed ahead. */
+    data object NoSale : SaleCountdownState
+
+    data class Counting(val ui: SaleCountdownUi) : SaleCountdownState
 }
 
 @Immutable
@@ -109,7 +129,7 @@ internal fun timeLeft(nowMillis: Long, targetMillis: Long): TimeLeft {
 }
 
 @Composable
-private fun SaleCountdownContent(state: SaleCountdownUi?) {
+private fun SaleCountdownContent(state: SaleCountdownState) {
     val context = LocalContext.current
     Column(
         modifier = GlanceModifier
@@ -120,26 +140,46 @@ private fun SaleCountdownContent(state: SaleCountdownUi?) {
             .padding(12.dp)
             .clickable(actionStartActivity(AppShortcut.Deals.intent(context))),
     ) {
-        WidgetHeader(R.string.widget_sale_countdown_header, R.drawable.ic_widget_timer)
-        Spacer(GlanceModifier.height(6.dp))
-        if (state == null) {
-            WidgetMessage(R.string.widget_sale_none)
-        } else {
-            Text(
-                text = state.name,
-                maxLines = 1,
-                style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-            )
-            Text(
-                text = state.headline,
-                maxLines = 1,
-                style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold),
-            )
-            Text(
-                text = state.detail,
-                maxLines = 1,
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp),
-            )
+        when (state) {
+            SaleCountdownState.SwitchedOff -> {
+                WidgetHeader(R.string.app_name, R.drawable.ic_widget_gift)
+                Spacer(GlanceModifier.height(6.dp))
+                Text(
+                    text = context.getString(R.string.widget_sale_switched_off),
+                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                )
+            }
+            SaleCountdownState.NoSale -> {
+                WidgetHeader(R.string.widget_sale_countdown_header, R.drawable.ic_widget_timer)
+                Spacer(GlanceModifier.height(6.dp))
+                WidgetMessage(R.string.widget_sale_none)
+            }
+            is SaleCountdownState.Counting -> {
+                WidgetHeader(R.string.widget_sale_countdown_header, R.drawable.ic_widget_timer)
+                Spacer(GlanceModifier.height(6.dp))
+                SaleCountdownLines(state.ui)
+            }
         }
+    }
+}
+
+@Composable
+private fun SaleCountdownLines(state: SaleCountdownUi) {
+    Column {
+        Text(
+            text = state.name,
+            maxLines = 1,
+            style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+        )
+        Text(
+            text = state.headline,
+            maxLines = 1,
+            style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold),
+        )
+        Text(
+            text = state.detail,
+            maxLines = 1,
+            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp),
+        )
     }
 }

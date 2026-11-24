@@ -110,6 +110,66 @@ enum SaleCalendar {
     }
 }
 
+/// The app's remote `sale_countdown` switch, from the Worker's switch file (`store/site/flags-routes.mjs`). The widget
+/// extension can't use the shared code, so it reads the switch itself; the key matches Kotlin's `FeatureFlag.SaleCountdown`.
+/// Off, the widget is a plain "Tap for today's deals" tile and no Live Activity starts.
+enum SaleCountdownSwitch {
+    static let url = URL(string: "https://gamedeals.bam.pm/api/flags/v1")!
+    static let key = "sale_countdown"
+    /// The last value read, per process (the app and the widget extension each keep their own).
+    private static let savedKey = "SaleCountdownSwitch.lastValue"
+
+    /// The last value this process read, or on (the default) when it has read none.
+    static var saved: Bool { UserDefaults.standard.object(forKey: savedKey) as? Bool ?? true }
+
+    /// The switch from the file, saved for next time; the last value read when the file can't be fetched or read.
+    static func isOn() async -> Bool {
+        guard let fetched = await fetch() else { return saved }
+        UserDefaults.standard.set(fetched, forKey: savedKey)
+        return fetched
+    }
+
+    /// The switch, or nil when the file couldn't be fetched or read (a 503 means the file was mistyped). Nothing is sent.
+    static func fetch() async -> Bool? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return decode(data)
+    }
+
+    private struct File: Decodable {
+        let schemaVersion: Int
+        let flags: [String: Value]
+    }
+
+    /// `true`/`false`, or `{"enabled": …, "payload": …}`; anything else can't be read.
+    private enum Value: Decodable {
+        case on(Bool?)
+
+        private struct Object: Decodable { let enabled: Bool? }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let value = try? container.decode(Bool.self) {
+                self = .on(value)
+            } else if let object = try? container.decode(Object.self) {
+                self = .on(object.enabled)
+            } else {
+                self = .on(nil)
+            }
+        }
+    }
+
+    /// The switch in a switch file: nil for a file of another schema or not a switch file; on when the file doesn't
+    /// list it or it can't be read, as in the Kotlin reader.
+    static func decode(_ data: Data) -> Bool? {
+        guard let file = try? JSONDecoder().decode(File.self, from: data), file.schemaVersion == 1 else { return nil }
+        guard case .on(let value)? = file.flags[key] else { return true }
+        return value ?? true
+    }
+}
+
 extension SaleCalendar {
     /// The dates built into this app version, used when the Worker can't be reached. A copy of `store/site/sales.json`:
     /// `python3 store/site/validate_sales.py` refreshes it, and a test in :domain fails when the two differ.

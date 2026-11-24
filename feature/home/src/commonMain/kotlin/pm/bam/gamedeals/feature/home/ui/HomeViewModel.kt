@@ -63,6 +63,8 @@ import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
@@ -112,6 +114,7 @@ internal class HomeViewModel(
     private val recentlyViewedRepository: RecentlyViewedRepository,
     private val settingsRepository: SettingsRepository,
     private val logger: Logger,
+    featureFlags: FeatureFlags,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeScreenData>
@@ -149,6 +152,10 @@ internal class HomeViewModel(
         .onStart { emit(null) }
         .catch { emit(null) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Whether Home offers the deal swipe card (to signed-in users, under the stat cards); follows its remote switch. */
+    val dealSwipeOffered: StateFlow<Boolean> = featureFlags.observe(FeatureFlag.DealSwipe)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), featureFlags.isEnabled(FeatureFlag.DealSwipe))
 
     /** Stores keyed by id, for resolving each feed deal's store name/icon in the UI (UI Improvements #248). */
     val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()

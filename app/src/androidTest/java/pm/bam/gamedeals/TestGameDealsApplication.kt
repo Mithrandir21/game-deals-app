@@ -26,6 +26,8 @@ import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.NoOpFeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -86,6 +88,8 @@ class TestGameDealsApplication : Application() {
                 discoverModule,
                 onboardingModule,
                 appUpdateModule,
+                // Every switch at its default, without reading the Worker's switch file.
+                module { single<FeatureFlags> { NoOpFeatureFlags } },
                 testNetworkOverridesModule,
                 testDatabaseOverridesModule,
                 testImageLoaderOverridesModule,

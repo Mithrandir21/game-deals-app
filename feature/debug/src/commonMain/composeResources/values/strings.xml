@@ -27,4 +27,14 @@
     <string name="debug_section_year_in_deals">Year in deals</string>
     <string name="debug_year_in_deals_sample_row">Show the year card with sample data</string>
     <string name="debug_year_in_deals_sample_desc">Puts the Year in deals entry on Home in any month, signed in or not, and fills the card with sample games and numbers.</string>
+
+    <string name="debug_section_switches">Remote feature switches</string>
+    <string name="debug_switches_desc">Force a switch on this phone, or follow the switch file (gamedeals.bam.pm/api/flags/v1). Forced values apply at once. The file is read at most every 15 minutes; Fetch now reads it at once.</string>
+    <string name="debug_switches_fetch">Fetch now</string>
+    <string name="debug_switches_fetched">Fetched (or kept the last values if it failed)</string>
+    <string name="debug_switches_file">File</string>
+    <string name="debug_switches_on">On</string>
+    <string name="debug_switches_off">Off</string>
+    <string name="debug_switches_now_on">Now on</string>
+    <string name="debug_switches_now_off">Now off</string>
 </resources>

@@ -68,7 +68,14 @@ private fun pm.bam.gamedeals.widget.PriceLine(deal: pm.bam.gamedeals.widget.Widg
     - deal: STABLE (marked @Stable or @Immutable)
 
 @Composable
-private fun pm.bam.gamedeals.widget.SaleCountdownContent(state: pm.bam.gamedeals.widget.SaleCountdownUi?): kotlin.Unit
+private fun pm.bam.gamedeals.widget.SaleCountdownContent(state: pm.bam.gamedeals.widget.SaleCountdownState): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (class with no mutable properties)
+
+@Composable
+private fun pm.bam.gamedeals.widget.SaleCountdownLines(state: pm.bam.gamedeals.widget.SaleCountdownUi): kotlin.Unit
   skippable: true
   restartable: true
   params:

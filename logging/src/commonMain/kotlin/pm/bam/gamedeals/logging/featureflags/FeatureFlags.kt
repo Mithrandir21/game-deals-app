@@ -5,9 +5,9 @@ import kotlinx.coroutines.flow.Flow
 /**
  * App-facing feature-flag seam. Deliberately tiny and provider-agnostic — a sibling of `Analytics`, not an
  * extension of it (reading flags and sending events are separate concerns). Feature code references the typed
- * [FeatureFlag] catalogue and never imports a flag-provider SDK; a concrete provider binding is swapped in Koin.
- * No remote provider is integrated today, so every build binds [NoOpFeatureFlags] and callers never need to
- * null-check.
+ * [FeatureFlag] catalogue and never imports a provider; the binding is swapped in Koin. Apps bind the switch-file
+ * reader in `:domain` (`RemoteFeatureFlags`, which reads the Worker's `/api/flags/v1`); tests bind a fake or
+ * [NoOpFeatureFlags].
  *
  * Remote providers deliver flags asynchronously over the network, so the two reads serve different needs:
  * [isEnabled] is a synchronous snapshot for one-shot decisions, while [observe] is reactive so UI updates the
@@ -29,11 +29,6 @@ interface FeatureFlags {
     fun observe(flag: FeatureFlag): Flow<Boolean>
 
     /**
-     * Triggers a remote (re)load of all flags, updating what [observe] emits when it completes. Fire-and-forget;
-     * a no-op for providers without remote config ([NoOpFeatureFlags]). Call once after the provider is set up,
-     * and again whenever the targeting identity changes (e.g. after `identify`).
-     */
-    /**
      * Synchronous snapshot of [flag]'s **JSON payload**, or `null` when the flag carries none, nothing has
      * loaded yet, or the provider has no remote config. Callers parse it themselves (kotlinx-serialization),
      * so a flag can carry structured configuration and not just an on/off bit.
@@ -51,5 +46,15 @@ interface FeatureFlags {
      */
     fun observePayload(flag: FeatureFlag): Flow<String?>
 
+    /**
+     * Starts a remote (re)load of all flags, updating what [observe] emits when it completes. Fire-and-forget; a
+     * provider may skip it when it loaded recently. A no-op for [NoOpFeatureFlags].
+     */
     fun refresh()
+
+    /**
+     * [refresh], waiting for it to finish (or be skipped). For background work that decides on the values right
+     * after, such as a widget redraw or the background check. Never throws a load failure; the values stay as they were.
+     */
+    suspend fun awaitRefresh()
 }

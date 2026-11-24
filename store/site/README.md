@@ -8,7 +8,7 @@ Before a deployment, run:
 python3 store/site/validate_event.py
 python3 store/site/validate_sales.py
 python3 -m unittest discover -s store/site -p 'test_*.py'
-node --test store/site/test_site_routes.mjs store/site/test_share_routes.mjs store/site/test_wishlist_routes.mjs store/site/test_signals_routes.mjs
+node --test store/site/test_*.mjs
 cd store/site && npx wrangler@4 deploy --dry-run
 ```
 
@@ -23,6 +23,17 @@ Where the first dates came from (23 Nov 2026):
 - GOG hasn't announced its winter sale yet; add it when it does.
 
 When publishing through the Cloudflare connector, upload `sales.json` like the event documents: as `export default {…};` with type `application/javascript+module`.
+
+## Feature switches
+
+`flags-routes.mjs` serves `GET /api/flags/v1`: the app's remote on/off switches, one per feature. The value lives in the Cloudflare key-value namespace `gamedeals-flags` (binding `FLAGS`) under the key `flags`, so a switch flips without a deploy. `flags.json` is the template with every switch at its shipped value.
+
+- **Format:** `{"schemaVersion": 1, "flags": {"deal_swipe": false, …}}`. A switch is `true` or `false`, or `{"enabled": …, "payload": {…}}` for one that carries settings (`force_update`). A switch missing from the file takes the app's default (on for every feature switch). Keys the app doesn't know are ignored.
+- **Mistakes are safe:** a value that isn't a valid switch file answers 503, and phones keep the last good values they have. Run `node --test store/site/test_flags_routes.mjs` to check the template, or paste a changed file into `validFlags` in a node shell.
+- **Who follows a change:** the answer is cached for a minute. Phones fetch it at app start, when the app comes back to the front (at most every 15 minutes), from the background check, and when a sale countdown widget redraws. The iOS widget and Live Activity read `sale_countdown` themselves.
+- **Setting it up (once):** `npx wrangler@4 kv namespace create gamedeals-flags`, put its id in `wrangler.toml`, then `npx wrangler@4 kv key put flags --path flags.json --binding FLAGS --remote` (or paste `flags.json` as the key `flags` in the dashboard). With no namespace or no key, the endpoint serves an empty list and every switch takes its default. When publishing through the Cloudflare connector, list `{ "type": "kv_namespace", "name": "FLAGS", "namespace_id": "<id>" }` in the upload's `bindings` too.
+- **Flipping one:** Cloudflare dashboard → Storage & databases → KV → `gamedeals-flags` → `flags`, change `true` to `false`, save.
+- **Privacy:** a plain GET with nothing about the user; request logs stay off.
 
 ## Shared game links
 

@@ -44,6 +44,8 @@
     <string name="widget_sale_starts_on">%1$s · starts %2$s</string>
     <string name="widget_sale_ends_on">%1$s · ends %2$s</string>
     <string name="widget_sale_none">No sale announced yet.</string>
+    <!-- The countdown widget when the sale countdown is switched off remotely. -->
+    <string name="widget_sale_switched_off">Tap for today\'s deals</string>
     <plurals name="widget_sale_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

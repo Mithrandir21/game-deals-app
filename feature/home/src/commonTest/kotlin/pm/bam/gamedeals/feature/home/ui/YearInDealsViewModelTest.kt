@@ -17,6 +17,8 @@ import pm.bam.gamedeals.domain.repositories.account.AccountRepository
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepository
 import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleMode
 import pm.bam.gamedeals.testing.MainDispatcherTest
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -53,6 +55,7 @@ class YearInDealsViewModelTest : MainDispatcherTest() {
     }
     private val repository = FakeYearRepository()
     private val sampleMode = FakeSampleMode()
+    private val flags = FakeFeatureFlags()
 
     private val withCollection = YearInDeals(2026, CollectedGames(23, persistentListOf()), "$412.77", null, null)
 
@@ -61,7 +64,7 @@ class YearInDealsViewModelTest : MainDispatcherTest() {
 
     @Test
     fun the_home_entry_shows_only_to_signed_in_users_while_the_card_is_offered() = runTest {
-        val vm = YearInDealsEntryViewModel(accountRepository, repository, sampleMode)
+        val vm = YearInDealsEntryViewModel(accountRepository, repository, sampleMode, flags)
         backgroundScope.launch { vm.offeredYear.collect {} }
         advanceUntilIdle()
         assertNull(vm.offeredYear.value, "signed out")
@@ -77,9 +80,26 @@ class YearInDealsViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun turning_the_switch_off_hides_the_entry_at_once_and_on_brings_it_back() = runTest {
+        authState.value = AuthState.LoggedIn("bam")
+        val vm = YearInDealsEntryViewModel(accountRepository, repository, sampleMode, flags)
+        backgroundScope.launch { vm.offeredYear.collect {} }
+        advanceUntilIdle()
+        assertEquals(2026, vm.offeredYear.value)
+
+        flags.set(FeatureFlag.YearInDeals, false)
+        advanceUntilIdle()
+        assertNull(vm.offeredYear.value)
+
+        flags.set(FeatureFlag.YearInDeals, true)
+        advanceUntilIdle()
+        assertEquals(2026, vm.offeredYear.value)
+    }
+
+    @Test
     fun the_sample_switch_shows_the_entry_any_time_signed_in_or_not() = runTest {
         repository.offered = false
-        val vm = YearInDealsEntryViewModel(accountRepository, repository, sampleMode)
+        val vm = YearInDealsEntryViewModel(accountRepository, repository, sampleMode, flags)
         backgroundScope.launch { vm.offeredYear.collect {} }
         sampleMode.on.value = true
         advanceUntilIdle()

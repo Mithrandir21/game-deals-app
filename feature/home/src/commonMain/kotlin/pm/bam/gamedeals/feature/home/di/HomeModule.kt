@@ -14,12 +14,12 @@ import pm.bam.gamedeals.feature.home.ui.WinterSalePeekViewModel
 
 val homeModule = module {
     viewModel { WinterSaleEntryViewModel(get(), get(), get(), get()) }
-    viewModel { YearInDealsEntryViewModel(get(), get(), get()) }
+    viewModel { YearInDealsEntryViewModel(get(), get(), get(), get()) }
     viewModel { YearInDealsViewModel(get()) }
     viewModel { DealSwipeViewModel(get(), get(), get(), get(), get()) }
     viewModel { WinterSalePeekViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WinterSaleGuideViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WinterSaleHubViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WinterSaleListViewModel(get(), get(), get(), get(), get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

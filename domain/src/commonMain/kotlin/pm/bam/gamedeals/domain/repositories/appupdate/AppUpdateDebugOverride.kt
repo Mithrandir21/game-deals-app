@@ -11,11 +11,10 @@ import pm.bam.gamedeals.common.storage.save
 
 /**
  * A locally-stored stand-in for the `force_update` flag payload, so the minimum-version gate can be exercised
- * on a device **without** a remote flag provider.
+ * on one test device without touching the switch file every phone reads.
  *
- * This exists because builds without a remote flag provider bind `NoOpFeatureFlags` — every flag resolves to its
- * default, so the prompt could otherwise never appear outside a release talking to a live provider. That would
- * mean shipping this UI having never seen it run.
+ * Without it, `force_update` only turns on through the Worker's switch file (`store/site/flags.json`), which reaches
+ * every phone; this lets the prompt be seen on one phone first.
  *
  * It lives in `:domain` rather than in `:feature:appupdate` for two reasons. It is persisted state, which is
  * what `:domain` is for (it sits beside `SettingsRepository`, sharing the same [Storage] seam). And it is

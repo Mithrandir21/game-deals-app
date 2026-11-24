@@ -17,3 +17,8 @@ binding = "SIGNALS_DB"
 database_name = "gamedeals-signals"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
+# The app's remote feature switches (flags-routes.mjs). Create once with `npx wrangler@4 kv namespace create
+# gamedeals-flags`, put its id here, then store flags.json as the key `flags` (see README). Public settings only.
+[[kv_namespaces]]
+binding = "FLAGS"
+id = "00000000000000000000000000000000"

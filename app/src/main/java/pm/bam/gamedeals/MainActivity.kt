@@ -14,6 +14,7 @@ import org.koin.android.ext.android.inject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
 import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.shell.RefreshFeatureSwitchesOnStart
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     // Minimum-version gate. A sibling of the nav host rather than a child, so it covers every
                     // route — onboarding included — and shows even while startDestination is still resolving.
                     AppUpdateHost()
+                    RefreshFeatureSwitchesOnStart()
                 }
             }
         }

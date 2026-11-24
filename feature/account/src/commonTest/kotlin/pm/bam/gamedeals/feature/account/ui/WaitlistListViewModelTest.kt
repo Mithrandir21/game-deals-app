@@ -26,6 +26,7 @@ import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.featureflags.FeatureFlag
 import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.featureflags.NoOpFeatureFlags
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import pm.bam.gamedeals.testing.MainDispatcherTest
 import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.TestingLoggingListener
@@ -52,9 +53,7 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private val linksOff = object : FeatureFlags by NoOpFeatureFlags {
-        override fun isEnabled(flag: FeatureFlag) = flag != FeatureFlag.DealLinks && NoOpFeatureFlags.isEnabled(flag)
-    }
+    private fun wishlistLinksOff() = FakeFeatureFlags(initial = mapOf(FeatureFlag.WishlistLinks to false))
 
     private fun viewModel(featureFlags: FeatureFlags = NoOpFeatureFlags) = WaitlistListViewModel(
         waitlistRepository, storesRepository, regionRepository,
@@ -165,7 +164,7 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
     @Test
     fun the_waitlist_cannot_be_shared_when_share_links_are_off_or_it_is_empty() = runTest {
         stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
-        val off = viewModel(linksOff)
+        val off = viewModel(wishlistLinksOff())
         advanceUntilIdle()
         assertFalse(off.uiState.value.canShare)
         off.openSharePicker()
@@ -175,6 +174,31 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
         val empty = viewModel()
         advanceUntilIdle()
         assertFalse(empty.uiState.value.canShare)
+    }
+
+    @Test
+    fun the_share_button_follows_its_switch_while_the_screen_is_open() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val flags = FakeFeatureFlags()
+        val vm = viewModel(flags)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+
+        flags.set(FeatureFlag.WishlistLinks, false)
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.canShare)
+
+        flags.set(FeatureFlag.WishlistLinks, true)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+    }
+
+    @Test
+    fun turning_off_deal_links_leaves_wishlist_sharing_alone() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val vm = viewModel(FakeFeatureFlags(initial = mapOf(FeatureFlag.DealLinks to false)))
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
     }
 
     @Test

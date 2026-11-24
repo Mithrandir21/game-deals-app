@@ -50,6 +50,8 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
 import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -110,6 +112,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         everySuspend { getMatureOptIn() } returns false
     }
     private val logger = TestingLoggingListener()
+    private val featureFlags = FakeFeatureFlags()
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -132,6 +135,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         recentlyViewedRepository = recentlyViewedRepository,
         settingsRepository = settingsRepository,
         logger = logger,
+        featureFlags = featureFlags,
     )
 
     @Test
@@ -229,6 +233,18 @@ class HomeViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertNull(emissions.last())
+    }
+
+    @Test
+    fun the_swipe_card_follows_its_switch() = runTest {
+        val vm = createViewModel()
+        val emissions = vm.dealSwipeOffered.observeEmissions(backgroundScope, testDispatcher)
+        advanceUntilIdle()
+        assertEquals(true, emissions.last())
+
+        featureFlags.set(FeatureFlag.DealSwipe, false)
+        advanceUntilIdle()
+        assertEquals(false, emissions.last())
     }
 
     @Test

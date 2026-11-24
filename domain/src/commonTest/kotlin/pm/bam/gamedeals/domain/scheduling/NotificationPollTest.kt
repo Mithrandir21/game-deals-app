@@ -15,7 +15,10 @@ import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /** The shared poll body driven by the Android worker / iOS BGTask handler. */
@@ -29,7 +32,33 @@ class NotificationPollTest {
         everySuspend { collectNewAlerts() } returns emptyList()
     }
 
+    private val flags = FakeFeatureFlags()
+
     private fun alert(id: String) = PendingNotificationAlert(id, "title-$id", emptyList())
+
+    @Test
+    fun the_switches_are_refreshed_before_anything_is_checked() = runTest {
+        everySuspend { sync.syncAndCollectNew() } returns emptyList()
+        everySuspend { checker.collectCrossedAlerts() } returns emptyList()
+
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
+
+        assertEquals(1, flags.refreshCount)
+    }
+
+    @Test
+    fun bundle_watch_switched_off_is_skipped_and_the_rest_still_runs() = runTest {
+        val itad = listOf(alert("n1"))
+        everySuspend { sync.syncAndCollectNew() } returns itad
+        everySuspend { checker.collectCrossedAlerts() } returns emptyList()
+        everySuspend { bundleWatch.collectNewAlerts() } returns listOf(alert("b1"))
+        flags.set(FeatureFlag.BundleWatch, false)
+
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
+
+        verifySuspend(exactly(0)) { bundleWatch.collectNewAlerts() }
+        verifySuspend(exactly(1)) { presenter.present(itad) }
+    }
 
     @Test
     fun new_alerts_from_both_arms_are_unioned_and_handed_to_the_presenter() = runTest {
@@ -38,7 +67,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } returns franchise
 
-        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
 
         verifySuspend(exactly(1)) { presenter.present(itad + franchise) }
         verifySuspend(exactly(1)) { reminder.onSummaryPosted() }
@@ -49,7 +78,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns emptyList()
         everySuspend { checker.collectCrossedAlerts() } returns emptyList()
 
-        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
         verifySuspend(exactly(1)) { reminder.sync() }
@@ -60,7 +89,7 @@ class NotificationPollTest {
     fun a_sync_failure_propagates_so_the_worker_can_retry() = runTest {
         everySuspend { sync.syncAndCollectNew() } throws RuntimeException("boom")
 
-        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter, reminder, bundleWatch) }
+        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags) }
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
         verifySuspend(exactly(1)) { reminder.sync() }
@@ -72,7 +101,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } throws RuntimeException("igdb down")
 
-        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
 
         verifySuspend(exactly(1)) { presenter.present(itad) }
     }
@@ -85,7 +114,7 @@ class NotificationPollTest {
         everySuspend { checker.collectCrossedAlerts() } returns emptyList()
         everySuspend { bundleWatch.collectNewAlerts() } returns bundles
 
-        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch, flags)
 
         verifySuspend(exactly(1)) { presenter.present(itad + bundles) }
     }

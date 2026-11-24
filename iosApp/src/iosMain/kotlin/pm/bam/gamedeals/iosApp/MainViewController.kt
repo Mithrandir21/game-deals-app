@@ -49,6 +49,7 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.navigation.SignInPromptController
+import pm.bam.gamedeals.common.ui.shell.RefreshFeatureSwitchesOnStart
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.version.AppInfo
@@ -97,6 +98,8 @@ import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.reportSwitchesToSentry
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
 import pm.bam.gamedeals.logging.configureSentryOptions
@@ -264,6 +267,7 @@ private fun bootstrapKoin() {
     }
 
     attachSentryUser()
+    startFeatureSwitches()
     startNotificationLifecycle()
     startLibraryLifecycle()
 }
@@ -283,6 +287,24 @@ private fun attachSentryUser() {
             throw ce
         } catch (t: Throwable) {
             runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to attach Sentry user." } }
+        }
+    }
+}
+
+/**
+ * Mirrors Android's `GameDealsApplication.startFeatureSwitches`: load the remote feature switches at launch (the saved
+ * copy, then the switch file unless fetched in the last 15 minutes) and keep Sentry reports stamped with their values.
+ */
+private fun startFeatureSwitches() {
+    sentryUserScope.launch {
+        try {
+            val featureFlags = KoinPlatform.getKoin().get<FeatureFlags>()
+            featureFlags.refresh()
+            reportSwitchesToSentry(featureFlags)
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Feature switches couldn't be started." } }
         }
     }
 }
@@ -364,6 +386,7 @@ private fun App() {
             // Minimum-version gate. A sibling of the nav host rather than a child, so it covers every route —
             // onboarding included — and shows even while startDestination is still resolving. Mirrors MainActivity.
             AppUpdateHost()
+            RefreshFeatureSwitchesOnStart()
         }
     }
 }

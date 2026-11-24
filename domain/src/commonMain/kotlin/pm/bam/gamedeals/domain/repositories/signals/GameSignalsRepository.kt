@@ -7,11 +7,14 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.GameSignals
 import pm.bam.gamedeals.domain.source.GameSignalsSource
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.warn
 
 /**
  * Public per-game signals (sale history, reviews, players, ITAD counts) for list rows, from the Game Deals Worker.
  * The Worker refreshes each game from ITAD once a day, so this costs the shared ITAD allowance nothing per phone.
+ * With the [FeatureFlag.GameSignals] switch off there are none.
  */
 interface GameSignalsRepository {
     /**
@@ -30,6 +33,7 @@ internal class GameSignalsRepositoryImpl(
     private val source: GameSignalsSource,
     private val clock: Clock,
     private val logger: Logger,
+    private val featureFlags: FeatureFlags,
 ) : GameSignalsRepository {
 
     private class Cached(val signals: GameSignals, val fetchedAt: Long)
@@ -41,6 +45,8 @@ internal class GameSignalsRepositoryImpl(
     private val pendingUntil = mutableMapOf<String, Long>()
 
     override suspend fun getSignals(gameIds: Collection<String>): Map<String, GameSignals> {
+        // Switched off: no Worker calls, and what is already in memory isn't shown either.
+        if (!featureFlags.isEnabled(FeatureFlag.GameSignals)) return emptyMap()
         val ids = gameIds.filter { ITAD_ID.matches(it) }.distinct()
         if (ids.isEmpty()) return emptyMap()
         val now = clock.nowMillis()

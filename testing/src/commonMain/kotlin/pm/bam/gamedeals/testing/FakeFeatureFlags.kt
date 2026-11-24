@@ -11,7 +11,7 @@ import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 /**
  * In-memory [FeatureFlags] for tests. Backed by a [MutableStateFlow] so a test can flip a flag with [set] and
  * assert that an [observe] collector (e.g. a ViewModel `StateFlow`) reacts. Unset flags resolve to their
- * [FeatureFlag.default]. [refreshCount] records how many times [refresh] was called.
+ * [FeatureFlag.default]. [refreshCount] records how many times [refresh] or [awaitRefresh] was called.
  *
  * Payloads are set independently of the on/off state via [setPayload], because the two are independent in
  * remote flag providers too — a flag can be enabled with no payload, or carry a stale payload while disabled. Tests for
@@ -46,6 +46,10 @@ class FakeFeatureFlags(
         payloads.map { it[flag] }.distinctUntilChanged()
 
     override fun refresh() {
+        refreshCount++
+    }
+
+    override suspend fun awaitRefresh() {
         refreshCount++
     }
 }

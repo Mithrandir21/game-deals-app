@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
@@ -6,6 +7,7 @@ import ActivityKit
 /// Starts a lock-screen countdown when a big sale (not a fest) has under eight hours left and the app comes to the foreground, and
 /// ends countdowns whose sale is over. Apple caps a Live Activity at about eight hours and only the app can start one,
 /// so this covers a sale's last day, not the whole sale. No push: the countdown runs on the phone's clock.
+/// With the remote `sale_countdown` switch off, none starts and running ones end; a flip also redraws the widget.
 enum SaleLiveActivity {
     /// Apple ends a Live Activity after eight hours, so start only within that window.
     static let window: TimeInterval = 8 * 60 * 60
@@ -15,10 +17,15 @@ enum SaleLiveActivity {
         guard #available(iOS 16.2, *) else { return }
         Task {
             let now = Date()
-            for activity in Activity<SaleCountdownAttributes>.activities where activity.content.state.endsAt <= now {
+            let wasOn = SaleCountdownSwitch.saved
+            let on = await SaleCountdownSwitch.isOn()
+            // The widget reads the switch itself, but only every few hours; tell it now.
+            if on != wasOn { WidgetCenter.shared.reloadTimelines(ofKind: "SaleCountdownWidget") }
+            for activity in Activity<SaleCountdownAttributes>.activities where !on || activity.content.state.endsAt <= now {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
-            guard ActivityAuthorizationInfo().areActivitiesEnabled,
+            guard on,
+                  ActivityAuthorizationInfo().areActivitiesEnabled,
                   let sales = await SaleCalendar.load(),
                   case .running(let sale)? = SaleCalendar.countdown(sales, at: now),
                   sale.kind == .big,

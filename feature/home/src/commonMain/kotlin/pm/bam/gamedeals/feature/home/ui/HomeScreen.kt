@@ -170,6 +170,7 @@ internal fun HomeScreen(
     WinterSaleResumeEffect(winterSaleEntry::onResume, winterSaleEntry::onPause)
     val gamePeek = viewModel.gamePeek.collectAsStateWithLifecycle()
     val accountStats = viewModel.accountStats.collectAsStateWithLifecycle()
+    val dealSwipeOffered by viewModel.dealSwipeOffered.collectAsStateWithLifecycle()
     val waitlistIds = viewModel.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds = viewModel.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds = viewModel.ignoredIds.collectAsStateWithLifecycle()
@@ -218,7 +219,8 @@ internal fun HomeScreen(
         onOpenWinterSale = onViewWinterSale,
         yearInDealsYear = yearInDealsYear,
         onOpenYearInDeals = onViewYearInDeals,
-        onOpenDealSwipe = onViewDealSwipe,
+        // Null hides the card (its remote switch is off).
+        onOpenDealSwipe = onViewDealSwipe.takeIf { dealSwipeOffered },
     )
 
     val dealSharer = rememberDealSharer()
@@ -269,7 +271,7 @@ private fun HomeScreenContent(
     onOpenWinterSale: () -> Unit = {},
     yearInDealsYear: Int? = null,
     onOpenYearInDeals: () -> Unit = {},
-    onOpenDealSwipe: () -> Unit = {},
+    onOpenDealSwipe: (() -> Unit)? = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
@@ -370,7 +372,7 @@ private fun HomeFeed(
     onOpenWinterSale: () -> Unit = {},
     yearInDealsYear: Int? = null,
     onOpenYearInDeals: () -> Unit = {},
-    onOpenDealSwipe: () -> Unit = {},
+    onOpenDealSwipe: (() -> Unit)? = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
@@ -449,8 +451,10 @@ private fun HomeFeed(
                         )
                     }
                 }
-                // Deal swipe, under the counts it feeds.
-                item(contentType = CONTENT_TYPE_SECTION_HEADER) { DealSwipeHomeCard(onOpenDealSwipe) }
+                // Deal swipe, under the counts it feeds (null when its switch is off).
+                onOpenDealSwipe?.let { open ->
+                    item(contentType = CONTENT_TYPE_SECTION_HEADER) { DealSwipeHomeCard(open) }
+                }
                 renderedSection = true
             }
 

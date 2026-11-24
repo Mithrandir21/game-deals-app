@@ -8,6 +8,7 @@ import org.koin.mp.KoinPlatform
 import platform.BackgroundTasks.BGTask
 import platform.BackgroundTasks.BGTaskScheduler
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
@@ -47,7 +48,7 @@ private object NotificationBackgroundPoll {
             // Re-arm only while still opted in — cancel() already cleared the request on opt-out/logout.
             if (koin.get<NotificationSettings>().isEnabled()) koin.get<NotificationScheduler>().schedule()
             runCatching {
-                runNotificationPoll(koin.get<NotificationSync>(), koin.get<FollowedFranchiseChecker>(), koin.get<NotificationPresenter>(), koin.get<WinterSaleReminder>(), koin.get<BundleWatchChecker>())
+                runNotificationPoll(koin.get<NotificationSync>(), koin.get<FollowedFranchiseChecker>(), koin.get<NotificationPresenter>(), koin.get<WinterSaleReminder>(), koin.get<BundleWatchChecker>(), koin.get<FeatureFlags>())
             }.onFailure { error(logger, it) { "Background notification poll failed." } }
         }
         task.expirationHandler = { job.cancel() }

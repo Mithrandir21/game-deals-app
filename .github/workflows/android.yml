@@ -43,11 +43,18 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # The support site / Winter Sale control worker (store/site) is uploaded by hand through the Cloudflare
-    # dashboard, so CI is the only automatic check of its routes (real + test event file) and the event validator.
+    # The signals routes' tests use node:sqlite, which needs Node 22.5 or later.
+    - name: Node 22 Setup
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    # The gamedeals.bam.pm Worker (store/site) is deployed by hand, so CI is the only automatic check of its routes
+    # (support page, event and sale files, shared game and wishlist links, game signals, feature switches) and of
+    # the event and sale validators.
     - name: Site worker tests
       run: |
-        node --test store/site/test_site_routes.mjs
+        node --test store/site/test_*.mjs
         python3 -m unittest discover -s store/site -p 'test_*.py'
 
     - name: Build with Gradle
