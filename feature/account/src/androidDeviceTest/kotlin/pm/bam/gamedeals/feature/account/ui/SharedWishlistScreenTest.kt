@@ -99,6 +99,21 @@ class SharedWishlistScreenTest {
     }
 
     @Test
+    fun gamesThatCouldNotLoadAreMentionedAndOtherwiseNot() {
+        show(SharedWishlistUiState(loading = false, others = persistentListOf(row("2", "Celeste", false)), unavailableCount = 2))
+
+        composeTestRule.onNodeWithText("Some games on this list couldn't be loaded right now.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Celeste").assertIsDisplayed()
+    }
+
+    @Test
+    fun aListWithEverythingLoadedDoesNotMentionMissingGames() {
+        show(SharedWishlistUiState(loading = false, others = persistentListOf(row("2", "Celeste", false))))
+
+        composeTestRule.onNodeWithText("Some games on this list couldn't be loaded right now.").assertDoesNotExist()
+    }
+
+    @Test
     fun aRowTapOpensThePeekSheet() {
         show(SharedWishlistUiState(loading = false, others = persistentListOf(row("2", "Celeste", false))))
 

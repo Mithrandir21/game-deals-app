@@ -27,8 +27,8 @@ internal const val ROUTE_GIVEAWAYS = "giveaways"
 internal const val WAITLIST_SUMMARY_ID = Int.MIN_VALUE
 private const val FRANCHISE_SUMMARY_ID = Int.MIN_VALUE + 1
 // Int.MIN_VALUE + 2 is the Winter Sale reminder.
-private const val BUNDLE_WATCH_BUNDLES_ID = Int.MIN_VALUE + 3
-private const val BUNDLE_WATCH_GIVEAWAYS_ID = Int.MIN_VALUE + 4
+internal const val BUNDLE_WATCH_BUNDLES_ID = Int.MIN_VALUE + 3
+internal const val BUNDLE_WATCH_GIVEAWAYS_ID = Int.MIN_VALUE + 4
 
 /** Cap the per-game lines listed in an expanded notification so the tray text stays readable. */
 private const val MAX_GAME_LINES = 6
@@ -170,21 +170,22 @@ internal class AndroidNotificationPresenter(
         }
     }
 
-    private fun routeIntent(route: String, requestCode: Int): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(EXTRA_NOTIFICATION_ROUTE, route)
-        }
-        return PendingIntent.getActivity(context, requestCode, intent, PENDING_FLAGS)
-    }
+    private fun routeIntent(route: String, requestCode: Int): PendingIntent =
+        PendingIntent.getActivity(context, requestCode, notificationRouteIntent(context, route), PENDING_FLAGS)
 
     private fun markAllReadIntent(): PendingIntent {
         val intent = Intent(context, NotificationActionReceiver::class.java).setAction(ACTION_MARK_ALL_READ)
         return PendingIntent.getBroadcast(context, WAITLIST_SUMMARY_ID, intent, PENDING_FLAGS)
     }
 
-    private companion object {
+    companion object {
         const val CHANNEL_ID = "itad_waitlist"
-        const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        private const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     }
+}
+
+/** What a summary's tap opens: the app, routed to [route] (read back by [toNotificationRoute]). */
+internal fun notificationRouteIntent(context: Context, route: String): Intent = Intent(context, MainActivity::class.java).apply {
+    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+    putExtra(EXTRA_NOTIFICATION_ROUTE, route)
 }

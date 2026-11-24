@@ -165,6 +165,38 @@ class SharedWishlistViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun signing_out_on_the_screen_drops_the_overlap_and_keeps_their_whole_list() = runTest {
+        auth.value = AuthState.LoggedIn("bam")
+        waitlistIds.value = setOf("pricey", "cheap").toPersistentSet()
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(2, vm.uiState.value.bothWant.size)
+
+        // The waitlist ids are cleared a moment later by the app-wide sign-out; the screen mustn't wait for that.
+        auth.value = AuthState.LoggedOut
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertFalse(state.signedIn)
+        assertTrue(state.bothWant.isEmpty())
+        assertEquals(listOf("cheap", "mid", "pricey", "none"), state.others.map { it.gameId })
+        assertFalse(state.others.any { it.isWaitlisted })
+    }
+
+    @Test
+    fun signed_in_with_an_empty_waitlist_there_is_no_overlap_and_their_list_shows_in_full() = runTest {
+        auth.value = AuthState.LoggedIn("bam")
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.signedIn)
+        assertTrue(state.bothWant.isEmpty())
+        assertEquals(4, state.others.size)
+        assertEquals(1, state.unavailableCount)
+    }
+
+    @Test
     fun a_failed_load_can_be_retried() = runTest {
         everySuspend { sharedWishlistRepository.load(any()) } sequentially {
             throws(IllegalStateException("offline"))

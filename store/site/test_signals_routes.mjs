@@ -245,3 +245,50 @@ test("a database failure gets a clear error, not a crash", async () => {
   const response = await handleSignalsRequest(post({ ids: [ID] }), { ITAD_API_KEY: "k", SIGNALS_DB: db }, undefined, {});
   assert.equal(response.status, 503);
 });
+
+// ---------------------------------------------------------------- ITAD trouble (hardening, 2026-11-24)
+
+test("ITAD rate-limiting the info call keeps the claim too, so it isn't hammered", async () => {
+  const db = d1();
+  await ask(db, [ID], { itad: fakeItad({ infoStatus: () => 429 }) });
+  assert.equal(db.row(ID).data, null);
+  assert.equal(db.row(ID).claimed_at, NOW);
+  const retry = await ask(db, [ID], { now: NOW + 60_000 });
+  assert.equal(retry.itad.calls.length, 0);
+  assert.deepEqual(retry.body.pending, [ID]);
+  const later = await ask(db, [ID], { now: NOW + CLAIM_TIMEOUT_MS });
+  assert.equal(later.itad.calls.length, 2, "tried again once the claim times out");
+});
+
+test("an ITAD answer of the wrong shape still stores a row, with what can't be read left empty", async () => {
+  const db = d1();
+  const odd = {
+    title: 5, tags: "Indie", developers: { name: "Nobody" }, reviews: "great", stats: [1, 2], players: 7, appid: "1145360",
+    releaseDate: 2020,
+  };
+  const fetch = async (url) => new Response(JSON.stringify(url.includes("/games/info/v2") ? odd : { not: "a list" }), { status: 200 });
+  await ask(db, [ID], { itad: { fetch, calls: [] } });
+
+  const stored = JSON.parse(db.row(ID).data);
+  assert.deepEqual(stored.tags, []);
+  assert.equal(stored.developer, null);
+  assert.equal(stored.review, null);
+  assert.equal(stored.players, null);
+  assert.equal(stored.waitlisted, null);
+  assert.equal(stored.steamAppId, null);
+  assert.equal(stored.releaseYear, null);
+  assert.equal(stored.weeklyMaxCut.length, WEEKS);
+  assert.ok(stored.weeklyMaxCut.every((cut) => cut === 0));
+  const next = await ask(db, [ID], { now: NOW + 60_000 });
+  assert.deepEqual(Object.keys(next.body.games), [ID], "the row is served");
+});
+
+test("a body that isn't an object, or ids padded with junk, is refused before touching the database", async () => {
+  let touched = false;
+  const db = { prepare: () => { touched = true; throw new Error("should not be reached"); } };
+  for (const body of [null, [ID], { ids: [ID, null] }, { ids: [` ${ID}`] }, { ids: [`${ID}x`] }]) {
+    const response = await handleSignalsRequest(post(body), { ITAD_API_KEY: "k", SIGNALS_DB: db }, undefined, {});
+    assert.equal(response.status, 400, JSON.stringify(body));
+  }
+  assert.equal(touched, false);
+});

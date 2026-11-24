@@ -8,6 +8,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import pm.bam.gamedeals.domain.models.GameSignals
 import pm.bam.gamedeals.domain.models.GameSignalsBatch
 import pm.bam.gamedeals.domain.source.GameSignalsSource
@@ -25,13 +27,17 @@ internal class GameSignalsHttpSource(private val client: HttpClient) : GameSigna
             setBody(RemoteSignalsRequest(gameIds))
         }.body()
         return GameSignalsBatch(
-            games = response.games.map { (id, signals) -> signals.toDomain(id) },
+            // Each game is read on its own: one game of the wrong shape is dropped, not the whole answer.
+            games = response.games.mapNotNull { (id, element) ->
+                runCatching { gameJson.decodeFromJsonElement(RemoteGameSignals.serializer(), element) }.getOrNull()?.toDomain(id)
+            },
             pending = response.pending,
         )
     }
 
     private companion object {
         const val PATH = "/api/signals/v1"
+        val gameJson = Json { ignoreUnknownKeys = true }
     }
 }
 
@@ -40,7 +46,7 @@ internal data class RemoteSignalsRequest(@SerialName("ids") val ids: List<String
 
 @Serializable
 internal data class RemoteSignalsResponse(
-    @SerialName("games") val games: Map<String, RemoteGameSignals> = emptyMap(),
+    @SerialName("games") val games: Map<String, JsonElement> = emptyMap(),
     @SerialName("pending") val pending: List<String> = emptyList(),
 )
 

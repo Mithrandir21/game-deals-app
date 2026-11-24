@@ -93,6 +93,32 @@ class YearInDealsRepositoryTest {
     }
 
     @Test
+    fun a_big_collection_prices_in_batches_and_one_failed_batch_leaves_out_only_the_full_price() = runTest {
+        val day = 24L * 60 * 60 * 1000
+        // Spread over the year, so no day looks like a bulk import.
+        val big = (1..2_050).map { CollectionEntry(gameId = "c$it", title = "C$it", addedEpochMs = at(2026, 1, 1) + (it % 340) * day) }
+        val collections: CollectionRepository = mock(MockMode.autoUnit) { everySuspend { getCollection() } returns big }
+        var batches = 0
+        val flaky: DealsSource = mock(MockMode.autoUnit) {
+            everySuspend { fetchBundleGamePrices(any()) } calls { (ids: List<String>) ->
+                batches++
+                if (batches == 7) throw IllegalStateException("429")
+                ids.map { BundleGamePrice(it, "Steam", 10.0, null, 0, historicalLowValue = null, historicalLowDenominated = null, currency = "USD", bestRegularValue = 10.0) }
+            }
+            everySuspend { fetchHistoryLows(any()) } returns listOf(GameHistoryLow("w1", 5.0, 20.0, 75, "USD", at(2026, 8, 1)))
+        }
+        val year = YearInDealsRepositoryImpl(
+            TestingLoggingListener(), collections, waitlistRepository, flaky, NoOpFeatureFlags, FakeSampleMode(), { at(2026, 12, 15) }, { zone },
+        ).getYearInDeals()
+
+        assertEquals(2_050, year.collected!!.count)
+        assertNull(year.fullPriceValue, "a total missing a batch would understate the year, so none is shown")
+        assertEquals(1, year.waitlistWins!!.count)
+        assertNotNull(year.longestWait)
+        assertEquals(7, batches, "no calls after the failed batch")
+    }
+
+    @Test
     fun when_the_collection_cannot_load_the_whole_card_fails() = runTest {
         val offline: CollectionRepository = mock(MockMode.autoUnit) { everySuspend { getCollection() } throws IllegalStateException("offline") }
         val repo = YearInDealsRepositoryImpl(

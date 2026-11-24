@@ -17,6 +17,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Deal
@@ -274,6 +275,56 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
         assertFalse("a" in waitlistIds.value)
         assertEquals(0, vm.state.value.addedCount)
         verifySuspend(exactly(2)) { waitlistRepository.toggleWaitlist("a") }
+    }
+
+    @Test
+    fun undo_pressed_twice_quickly_takes_back_once() = runTest {
+        deck.pages[0] = page("a", "b", "c")
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.onSwipeRight(vm.top())
+        advanceUntilIdle()
+        vm.onUndo()
+        vm.onUndo()
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b", "c"), vm.ids(), "the card comes back once")
+        assertFalse("a" in waitlistIds.value)
+        verifySuspend(exactly(2)) { waitlistRepository.toggleWaitlist("a") }
+    }
+
+    @Test
+    fun a_swipe_while_the_first_page_is_still_loading_is_ignored() = runTest {
+        deck.pages[0] = page("a", "b")
+        deck.gate = CompletableDeferred()
+        val vm = viewModel()
+        runCurrent()
+
+        vm.onSwipeRight(deal("a"))
+        vm.onSwipeLeft(deal("a"))
+        assertFalse(vm.state.value.canUndo)
+
+        deck.gate?.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b"), vm.ids())
+        verifySuspend(exactly(0)) { waitlistRepository.toggleWaitlist(any()) }
+        assertTrue(deck.skipped.isEmpty())
+    }
+
+    @Test
+    fun a_page_that_fails_because_a_library_list_failed_offers_retry() = runTest {
+        deck.pages[0] = page("a")
+        deck.failNext = true
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(DealSwipeViewModel.Status.FAILED, vm.state.value.status)
+
+        vm.onRetry()
+        advanceUntilIdle()
+
+        assertEquals(listOf("a"), vm.ids())
     }
 
     @Test

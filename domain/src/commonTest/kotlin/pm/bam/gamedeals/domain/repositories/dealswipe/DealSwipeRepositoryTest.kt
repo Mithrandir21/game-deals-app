@@ -10,6 +10,7 @@ import dev.mokkery.mock
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.DeserializationStrategy
@@ -32,6 +33,7 @@ import pm.bam.gamedeals.domain.utils.millisInDay
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -104,6 +106,20 @@ class DealSwipeRepositoryTest {
         val page = repository.nextPage(0)
 
         assertEquals(listOf("a", "b"), page.deals.map { it.gameID })
+    }
+
+    @Test
+    fun a_library_list_that_cannot_load_fails_the_page_rather_than_deal_games_the_user_has() = runTest {
+        pages = { listOf(deal("owned"), deal("a")) }
+        val brokenCollection: CollectionRepository = mock {
+            every { observeCollectionIds() } returns flow { throw IllegalStateException("database closed") }
+        }
+        val repository = DealSwipeRepositoryImpl(
+            dealsRepository, waitlistRepository, brokenCollection, ignoredRepository, settingsRepository, storage, Clock { now },
+            gameSignalsRepository, igdbRepository, TestingLoggingListener(),
+        )
+
+        assertFailsWith<IllegalStateException> { repository.nextPage(0) }
     }
 
     @Test

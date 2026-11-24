@@ -74,6 +74,21 @@ class GameSignalsHttpSourceTest {
     }
 
     @Test
+    fun a_game_of_the_wrong_shape_is_dropped_and_the_rest_of_the_answer_kept() = runTest {
+        val body = """
+            {"games": {
+              "$id": {"updated": 5, "tags": "Indie"},
+              "$id2": {"updated": 6, "review": {"score": 98, "count": 10, "source": "Steam"}}
+            }, "pending": []}
+        """.trimIndent()
+
+        val batch = source(body = body).fetch(listOf(id, id2))
+
+        assertEquals(listOf(id2), batch.games.map { it.gameId })
+        assertEquals(98, batch.games.single().reviewScore)
+    }
+
+    @Test
     fun missing_parts_are_null() = runTest {
         val batch = source(body = """{"games": {"$id": {"updated": 5, "review": null, "players": null}}}""").fetch(listOf(id))
         val signals = batch.games.single()

@@ -93,7 +93,7 @@ internal data class SaleCountdownUi(
     val detail: String,
 )
 
-private fun SaleCountdown.toUi(context: Context, nowMillis: Long): SaleCountdownUi {
+internal fun SaleCountdown.toUi(context: Context, nowMillis: Long): SaleCountdownUi {
     val running = this is SaleCountdown.Running
     val target = if (running) sale.endEpochMs else sale.startEpochMs
     val amount = when (val left = timeLeft(nowMillis, target)) {
@@ -129,7 +129,7 @@ internal fun timeLeft(nowMillis: Long, targetMillis: Long): TimeLeft {
 }
 
 @Composable
-private fun SaleCountdownContent(state: SaleCountdownState) {
+internal fun SaleCountdownContent(state: SaleCountdownState) {
     val context = LocalContext.current
     Column(
         modifier = GlanceModifier

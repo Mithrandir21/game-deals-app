@@ -8,6 +8,9 @@ import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.GameSignals
@@ -111,6 +114,48 @@ class GameSignalsRepositoryTest {
         everySuspend { source.fetch(any()) } throws IllegalStateException("offline")
         val result = repository.getSignals(listOf(id(1), id(2)))
         assertEquals(setOf(id(1)), result.keys)
+    }
+
+    @Test
+    fun screens_asking_at_the_same_time_share_one_call_per_game() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        everySuspend { source.fetch(any()) } calls { (ids: List<String>) ->
+            calls += ids
+            gate.await()
+            GameSignalsBatch(games = ids.map { signals(it) }, pending = emptyList())
+        }
+
+        val home = async { repository.getSignals(listOf(id(1), id(2))) }
+        val deals = async { repository.getSignals(listOf(id(2), id(3))) }
+        val waitlist = async { repository.getSignals(listOf(id(1), id(2), id(3))) }
+        runCurrent()
+        gate.complete(Unit)
+
+        assertEquals(setOf(id(1), id(2)), home.await().keys)
+        assertEquals(setOf(id(2), id(3)), deals.await().keys)
+        assertEquals(setOf(id(1), id(2), id(3)), waitlist.await().keys)
+        assertEquals(listOf(id(1), id(2), id(3)), calls.flatten().sorted(), "each game asked for once")
+    }
+
+    @Test
+    fun a_shared_call_that_fails_leaves_every_screen_without_those_games_and_they_are_asked_for_again_later() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        everySuspend { source.fetch(any()) } calls { (ids: List<String>) ->
+            calls += ids
+            gate.await()
+            throw IllegalStateException("offline")
+        }
+
+        val first = async { repository.getSignals(listOf(id(1))) }
+        val second = async { repository.getSignals(listOf(id(1))) }
+        runCurrent()
+        gate.complete(Unit)
+
+        assertTrue(first.await().isEmpty())
+        assertTrue(second.await().isEmpty())
+        assertEquals(1, calls.size)
+        repository.getSignals(listOf(id(1)))
+        assertEquals(2, calls.size, "a failure isn't remembered")
     }
 
     @Test

@@ -1,8 +1,11 @@
 package pm.bam.gamedeals.domain.repositories.signals
 
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.GameSignals
 import pm.bam.gamedeals.domain.source.GameSignalsSource
@@ -44,6 +47,9 @@ internal class GameSignalsRepositoryImpl(
     // Games the Worker said it is still fetching: not asked about again until this time.
     private val pendingUntil = mutableMapOf<String, Long>()
 
+    // Games being fetched right now, so a second screen asking for one waits for that call instead of making its own.
+    private val inFlight = mutableMapOf<String, CompletableDeferred<Unit>>()
+
     override suspend fun getSignals(gameIds: Collection<String>): Map<String, GameSignals> {
         // Switched off: no Worker calls, and what is already in memory isn't shown either.
         if (!featureFlags.isEnabled(FeatureFlag.GameSignals)) return emptyMap()
@@ -51,32 +57,52 @@ internal class GameSignalsRepositoryImpl(
         if (ids.isEmpty()) return emptyMap()
         val now = clock.nowMillis()
         val result = mutableMapOf<String, GameSignals>()
+        val awaited = mutableListOf<Pair<String, CompletableDeferred<Unit>>>()
         val toFetch = mutex.withLock {
             ids.filter { id ->
                 val cached = cache[id]
                 cached?.let { result[id] = it.signals }
                 val fresh = cached != null && now - cached.fetchedAt < GameSignalsRepository.FRESH_FOR_MS
-                !fresh && (pendingUntil[id] ?: 0L) <= now
+                when {
+                    fresh || (pendingUntil[id] ?: 0L) > now -> false
+                    id in inFlight -> {
+                        awaited += id to inFlight.getValue(id)
+                        false
+                    }
+                    else -> {
+                        inFlight[id] = CompletableDeferred()
+                        true
+                    }
+                }
             }
         }
         for (chunk in toFetch.chunked(GameSignalsSource.MAX_IDS)) {
-            val batch = try {
-                source.fetch(chunk)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                warn(logger, error) { "Game signals couldn't be loaded for ${chunk.size} games" }
-                continue
-            }
-            mutex.withLock {
-                batch.games.forEach { signals ->
-                    cache[signals.gameId] = Cached(signals, now)
-                    pendingUntil.remove(signals.gameId)
-                    if (signals.gameId in chunk) result[signals.gameId] = signals
+            try {
+                val batch = try {
+                    source.fetch(chunk)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    warn(logger, error) { "Game signals couldn't be loaded for ${chunk.size} games" }
+                    continue
                 }
-                batch.pending.forEach { pendingUntil[it] = now + PENDING_RETRY_MS }
-                trim()
+                mutex.withLock {
+                    batch.games.forEach { signals ->
+                        cache[signals.gameId] = Cached(signals, now)
+                        pendingUntil.remove(signals.gameId)
+                        if (signals.gameId in chunk) result[signals.gameId] = signals
+                    }
+                    batch.pending.forEach { pendingUntil[it] = now + PENDING_RETRY_MS }
+                    trim()
+                }
+            } finally {
+                // Release the waiting screens whatever happened, cancellation included.
+                withContext(NonCancellable) { mutex.withLock { chunk.forEach { inFlight.remove(it)?.complete(Unit) } } }
             }
+        }
+        for ((id, done) in awaited) {
+            done.await()
+            mutex.withLock { cache[id]?.let { result[id] = it.signals } }
         }
         return result
     }

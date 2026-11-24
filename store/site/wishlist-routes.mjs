@@ -12,7 +12,7 @@
 // Path rules must match ShareLinks.kt (common/links); the tests use the same golden encodings.
 
 import {
-  GAME_PATH, ITAD, SITE, PAGE_HEADERS, countryOf, escapeHtml, firstHttps, getTheApp, isLowestEver, isUsableDeal,
+  GAME_PATH, ITAD, ITAD_TIMEOUT_MS, SITE, PAGE_HEADERS, countryOf, escapeHtml, firstHttps, getTheApp, isLowestEver, isUsableDeal,
   money, shell,
 } from "./share-routes.mjs";
 
@@ -95,7 +95,7 @@ export function wishlistPath(ids) {
  * @param {Request} request
  * @param {{ ITAD_API_KEY?: string }} env
  * @param {{ waitUntil?: (p: Promise<unknown>) => void }} [ctx]
- * @param {{ fetch?: typeof fetch, cache?: Cache | null }} [deps] injected in tests
+ * @param {{ fetch?: typeof fetch, cache?: Cache | null, timeoutMs?: number }} [deps] injected in tests
  */
 export async function handleWishlistRequest(request, env, ctx, deps = {}) {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -115,7 +115,8 @@ export async function handleWishlistRequest(request, env, ctx, deps = {}) {
   const fetchImpl = deps.fetch ?? fetch;
   let list;
   try {
-    list = await loadWishlist({ fetch: fetchImpl, cache, ctx, apiKey: env.ITAD_API_KEY }, ids, country);
+    const signal = AbortSignal.timeout(deps.timeoutMs ?? ITAD_TIMEOUT_MS);
+    list = await loadWishlist({ fetch: fetchImpl, cache, ctx, apiKey: env.ITAD_API_KEY, signal }, ids, country);
   } catch {
     return listPage(renderUnavailable(), 503, head);
   }
@@ -125,7 +126,8 @@ export async function handleWishlistRequest(request, env, ctx, deps = {}) {
 
 /**
  * Each game's title, art and prices, in the link's order. Games ITAD doesn't know are left out; games whose info
- * call failed are counted in `failed`. Throws when there's no API key or when every game failed.
+ * call failed (or ran past `io.signal`, the page's 5-second limit) are counted in `failed`. Throws when there's no API
+ * key or when every game failed.
  */
 export async function loadWishlist(io, ids, country) {
   if (!io.apiKey) throw new Error("ITAD_API_KEY is not set");
@@ -152,7 +154,7 @@ async function loadInfo(io, headers, id) {
   const key = cacheKey(`info/${id}`);
   const hit = io.cache ? await io.cache.match(key) : undefined;
   if (hit) return (await hit.json()).info;
-  const response = await io.fetch(`${ITAD}/games/info/v2?id=${id}`, { headers });
+  const response = await io.fetch(`${ITAD}/games/info/v2?id=${id}`, { headers, signal: io.signal });
   let info;
   if (response.status === 400 || response.status === 404) {
     info = null;
@@ -186,6 +188,7 @@ async function loadPrices(io, headers, ids, country) {
     method: "POST",
     headers: { ...headers, "content-type": "application/json" },
     body: JSON.stringify(missing),
+    signal: io.signal,
   });
   if (!response.ok) return result;
   const body = await response.json();

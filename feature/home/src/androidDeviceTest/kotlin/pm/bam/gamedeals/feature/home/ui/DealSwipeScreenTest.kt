@@ -1,5 +1,15 @@
 package pm.bam.gamedeals.feature.home.ui
 
+import kotlinx.coroutines.CompletableDeferred
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -225,5 +235,76 @@ class DealSwipeScreenTest {
         composeTestRule.onNodeWithText("Swipe today's deals").performClick()
 
         assertEquals(1, opens)
+    }
+
+    // ---- Hardening (matrix 8.4)
+
+    @Test
+    fun a_long_title_and_description_stay_inside_the_card_on_a_small_screen_with_large_text() {
+        val longTitle = "The Elder Scrolls V: Skyrim Special Edition – Anniversary Upgrade with Every Creation Club Item Ever Made"
+        val longDescription = List(12) { "A very long description that keeps going and going." }.joinToString(" ")
+        val skyrim = deal("skyrim", longTitle)
+        val noSignals = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = emptyMap<String, GameSignals>()
+        }
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f), LocalGameSignals provides noSignals) {
+                GameDealsTheme {
+                    Box(Modifier.size(320.dp, 560.dp)) {
+                        DealSwipeContent(
+                            state = State(status = Status.READY, cards = persistentListOf(skyrim, celeste)),
+                            stores = stores, onBack = {}, onOpen = {}, onSwipeRight = {}, onSwipeLeft = {}, onUndo = {},
+                            onRetry = {}, onSignIn = {}, descriptions = persistentMapOf("skyrim" to longDescription),
+                        )
+                    }
+                }
+            }
+        }
+
+        fun layout(text: String): TextLayoutResult {
+            val layouts = mutableListOf<TextLayoutResult>()
+            composeTestRule.onNodeWithText(text).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            return layouts.single()
+        }
+        assertTrue(layout(longTitle).lineCount <= 2)
+        assertTrue(layout(longDescription).lineCount <= 3)
+        // The buttons under the card stay on screen, below the description.
+        composeTestRule.onNodeWithContentDescription("Add to waitlist").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Skip").assertIsDisplayed()
+        val description = composeTestRule.onNodeWithText(longDescription).fetchSemanticsNode().boundsInRoot
+        val add = composeTestRule.onNodeWithContentDescription("Add to waitlist").fetchSemanticsNode().boundsInRoot
+        assertTrue("the description ends above the buttons", description.bottom <= add.top)
+    }
+
+    @Test
+    fun the_details_appear_when_the_signals_arrive_after_the_card() {
+        val gate = CompletableDeferred<Unit>()
+        val hadesSignals = GameSignals(
+            gameId = "hades", updatedEpochMs = 0, weeklyMaxCut = emptyList(), developer = "Supergiant Games", releaseYear = 2020,
+        )
+        val slowSignals = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>): Map<String, GameSignals> {
+                gate.await()
+                return mapOf("hades" to hadesSignals).filterKeys { it in gameIds }
+            }
+        }
+        composeTestRule.setContent {
+            GameDealsTheme {
+                CompositionLocalProvider(LocalGameSignals provides slowSignals) {
+                    DealSwipeContent(
+                        state = ready(), stores = stores, onBack = {}, onOpen = {}, onSwipeRight = {}, onSwipeLeft = {},
+                        onUndo = {}, onRetry = {}, onSignIn = {},
+                    )
+                }
+            }
+        }
+        composeTestRule.onNodeWithText("Hades").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Supergiant Games · 2020").assertDoesNotExist()
+
+        gate.complete(Unit)
+
+        composeTestRule.waitUntil(5_000) { composeTestRule.onAllNodesWithText("Supergiant Games · 2020").fetchSemanticsNodes().isNotEmpty() }
+        composeTestRule.onNodeWithText("Supergiant Games · 2020").assertIsDisplayed()
     }
 }

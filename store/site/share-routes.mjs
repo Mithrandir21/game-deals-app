@@ -27,6 +27,8 @@ const MAX_STORES = 5;
 // keeps a link that goes viral from spending the app's shared ITAD allowance.
 const PAGE_TTL_SECONDS = 60 * 60;
 const MISSING_TTL_SECONDS = 10 * 60;
+// ITAD calls for one page give up after this long, so a stalled ITAD shows the "prices aren't loading" page quickly.
+export const ITAD_TIMEOUT_MS = 5_000;
 
 /** True when this Worker should answer [pathname] through [handleShareRequest]. */
 export function isShareRoute(pathname) {
@@ -42,7 +44,7 @@ export function isShareRoute(pathname) {
  * @param {Request} request
  * @param {{ ITAD_API_KEY?: string }} env
  * @param {{ waitUntil?: (p: Promise<unknown>) => void }} [ctx]
- * @param {{ fetch?: typeof fetch, cache?: Cache | null }} [deps] injected in tests
+ * @param {{ fetch?: typeof fetch, cache?: Cache | null, timeoutMs?: number }} [deps] injected in tests
  */
 export async function handleShareRequest(request, env, ctx, deps = {}) {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -85,15 +87,16 @@ export async function handleShareRequest(request, env, ctx, deps = {}) {
   let status;
   let ttl;
   try {
-    const game = await loadGame(fetchImpl, env.ITAD_API_KEY, gameId, country);
+    const game = await loadGame(fetchImpl, env.ITAD_API_KEY, gameId, country, deps.timeoutMs ?? ITAD_TIMEOUT_MS);
+    // A page whose prices didn't load (ITAD rate-limited or failed that call) is shown but never kept.
     [html, status, ttl] = game === null
       ? [renderMissing(), 404, MISSING_TTL_SECONDS]
-      : [renderGame(game, country), 200, PAGE_TTL_SECONDS];
+      : [renderGame(game, country), 200, game.pricesLoaded ? PAGE_TTL_SECONDS : 0];
   } catch {
-    // ITAD is down or rejected us: say so plainly, keep the get-the-app buttons, and don't cache the failure.
+    // ITAD is down, rejected us or took too long: say so plainly, keep the get-the-app buttons, and don't cache it.
     return page(renderUnavailable(gameId), 503, 0, head);
   }
-  if (cache) {
+  if (cache && ttl > 0) {
     // The edge copy carries a public lifetime so the Cache API keeps it; visitors get the private headers below.
     const edgeCopy = new Response(html, { status, headers: { ...PAGE_HEADERS, "cache-control": `public, max-age=${ttl}` } });
     const store = cache.put(cacheKey, edgeCopy);
@@ -109,16 +112,21 @@ export function countryOf(request) {
     : FALLBACK_COUNTRY;
 }
 
-/** Game info + current prices from ITAD, or null when ITAD doesn't know the game. Throws on any other failure. */
-export async function loadGame(fetchImpl, apiKey, gameId, country) {
+/**
+ * Game info + current prices from ITAD, or null when ITAD doesn't know the game. Throws on any other failure, and when
+ * the calls take longer than [timeoutMs] together. `pricesLoaded` is false when only the prices call failed.
+ */
+export async function loadGame(fetchImpl, apiKey, gameId, country, timeoutMs = ITAD_TIMEOUT_MS) {
   if (!apiKey) throw new Error("ITAD_API_KEY is not set");
   const headers = { "ITAD-API-Key": apiKey, accept: "application/json" };
+  const signal = AbortSignal.timeout(timeoutMs);
   const [infoResponse, pricesResponse] = await Promise.all([
-    fetchImpl(`${ITAD}/games/info/v2?id=${gameId}`, { headers }),
+    fetchImpl(`${ITAD}/games/info/v2?id=${gameId}`, { headers, signal }),
     fetchImpl(`${ITAD}/games/prices/v3?country=${country}`, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
       body: JSON.stringify([gameId]),
+      signal,
     }),
   ]);
   if (infoResponse.status === 400 || infoResponse.status === 404) return null;
@@ -138,6 +146,7 @@ export async function loadGame(fetchImpl, apiKey, gameId, country) {
   }
   deals.sort((a, b) => a.price.amount - b.price.amount);
   return {
+    pricesLoaded: pricesResponse.ok,
     id: gameId,
     title: info.title,
     image: firstHttps(info.assets?.banner600, info.assets?.banner400, info.assets?.boxart, info.assets?.banner300),

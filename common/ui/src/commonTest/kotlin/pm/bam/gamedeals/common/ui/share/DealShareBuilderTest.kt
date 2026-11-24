@@ -32,11 +32,16 @@ class DefaultDealShareBuilderTest {
         override fun isEnabled(flag: FeatureFlag) = flag != FeatureFlag.DealLinks && NoOpFeatureFlags.isEnabled(flag)
     }
 
-    private fun build(flags: FeatureFlags, gameId: String = hollowKnight) =
+    private fun build(
+        flags: FeatureFlags,
+        gameId: String = hollowKnight,
+        deal: GameDetails.GameDeal = this.deal,
+        coverUrl: String? = "https://assets/banner600.jpg",
+    ) =
         DefaultDealShareBuilder(flags).build(
             gameId = gameId,
             gameTitle = "Hollow Knight",
-            coverUrl = "https://assets/banner600.jpg",
+            coverUrl = coverUrl,
             storeName = "Steam",
             deal = deal,
         )
@@ -77,5 +82,32 @@ class DefaultDealShareBuilderTest {
         val share = build(linksOn, gameId = "not-an-itad-id")
         assertEquals("Hollow Knight — \$7.49 at Steam: https://itad.link/abc/", share.text)
         assertNull(share.card)
+    }
+
+    @Test
+    fun a_deal_with_no_end_date_leaves_the_date_off_the_card() {
+        assertNull(build(linksOn, deal = deal.copy(expiryEpochMs = null)).card!!.endsAtEpochMs)
+    }
+
+    @Test
+    fun a_free_deal_reads_as_its_price_with_the_full_cut() {
+        val share = build(linksOn, deal = deal.copy(priceValue = 0.0, priceDenominated = "$0.00", savings = 100))
+        assertEquals("Hollow Knight — \$0.00 at Steam: https://gamedeals.bam.pm/g/$hollowKnight", share.text)
+        assertEquals(100, share.card!!.cutPercent)
+        assertEquals("$14.99", share.card!!.regularDenominated)
+    }
+
+    @Test
+    fun a_blank_cover_counts_as_no_cover_so_the_card_uses_the_placeholder() {
+        assertNull(build(linksOn, coverUrl = " ").card!!.coverUrl)
+        assertNull(build(linksOn, coverUrl = null).card!!.coverUrl)
+    }
+
+    @Test
+    fun deal_links_off_does_not_depend_on_the_wishlist_switch() {
+        val wishlistOff = object : FeatureFlags by NoOpFeatureFlags {
+            override fun isEnabled(flag: FeatureFlag) = flag != FeatureFlag.WishlistLinks && NoOpFeatureFlags.isEnabled(flag)
+        }
+        assertNotNull(build(wishlistOff).card)
     }
 }

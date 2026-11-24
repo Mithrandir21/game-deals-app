@@ -65,6 +65,30 @@ class BundleWatchCheckerTest {
     )
 
     @Test
+    fun a_big_waitlist_against_many_bundles_loads_each_source_once_and_finds_every_match() = runTest {
+        var waitlistLoads = 0
+        var bundleLoads = 0
+        everySuspend { waitlistRepository.getWaitlist() } calls { waitlistLoads++; waitlist }
+        everySuspend { bundlesRepository.getBundles() } calls { bundleLoads++; bundles }
+        waitlist = (1..1_000).map { WaitlistEntry(gameId = "w$it", title = "Waitlisted $it") }
+        // 50 bundles of 20 games; every tenth game in each is waitlisted, plus a repeat across two bundles.
+        bundles = (1..50).map { b ->
+            bundle(b, "Bundle $b", *(1..20).map { g -> if (g % 10 == 0) "w${b * 10 + g}" else "other-$b-$g" }.toTypedArray())
+        } + bundle(51, "Repeat", "w20")
+        giveaways.value = (1..100).map { giveaway(id = it, title = "Waitlisted ${it * 7} (Steam) Giveaway") }
+
+        val alerts = checker.collectNewAlerts()
+
+        assertEquals(1, waitlistLoads)
+        assertEquals(1, bundleLoads)
+        // 50 bundles × 2 matches, the repeat in bundle 51, and giveaways for every multiple of 7 up to 700.
+        assertEquals(101, alerts.count { it.kind == AlertKind.WAITLIST_BUNDLE })
+        assertEquals(100, alerts.count { it.kind == AlertKind.WAITLIST_GIVEAWAY })
+        assertEquals(alerts.size, alerts.map { it.notificationId }.toSet().size, "no duplicates")
+        assertTrue(checker.collectNewAlerts().isEmpty(), "all remembered")
+    }
+
+    @Test
     fun a_waitlisted_game_in_a_new_bundle_alerts_once() = runTest {
         bundles = listOf(bundle(1, "Humble Choice", "other", "hades-id"))
 

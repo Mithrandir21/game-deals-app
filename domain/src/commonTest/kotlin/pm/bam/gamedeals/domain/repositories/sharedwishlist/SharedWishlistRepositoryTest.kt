@@ -68,6 +68,18 @@ class SharedWishlistRepositoryTest {
     }
 
     @Test
+    fun a_full_link_of_ten_with_prices_rate_limited_shows_every_game_in_order_without_prices() = runTest {
+        everySuspend { dealsSource.fetchBundleGamePrices(any()) } throws IllegalStateException("ITAD 429")
+        val ids = (1..10).map { "g$it" }
+
+        val list = repository().load(ids)
+
+        assertEquals(ids, list.games.map { it.gameId })
+        assertEquals(List(10) { null }, list.games.map { it.price })
+        assertEquals(0, list.unavailableCount)
+    }
+
+    @Test
     fun throws_when_no_game_could_be_read() = runTest {
         everySuspend { dealsSource.fetchGame(any()) } throws IllegalStateException("offline")
         assertFailsWith<IllegalStateException> { repository().load(listOf("a", "b")) }

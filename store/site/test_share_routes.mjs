@@ -215,3 +215,54 @@ test("the summary line reads naturally with and without a discount", () => {
   const full = { deals: [deal("Steam", 29.99, 0, null)] };
   assert.equal(summaryLine(full), "$29.99 at Steam");
 });
+
+// ---------------------------------------------------------------- ITAD trouble (hardening, 2026-11-24)
+
+/** A fetch that never answers until its signal gives up, like a stalled ITAD. */
+const stalled = (url, init = {}) => new Promise((_, reject) => {
+  if (!init.signal) return reject(new Error("no time limit on this call"));
+  init.signal.addEventListener("abort", () => reject(init.signal.reason));
+});
+
+test("both ITAD calls carry the page's time limit", async () => {
+  const itad = fakeItad();
+  await handleShareRequest(request(`/g/${ID}`), env, undefined, { fetch: itad.fetch, cache: null });
+  assert.equal(itad.calls.length, 2);
+  for (const call of itad.calls) assert.ok(call.init.signal instanceof AbortSignal, call.url);
+});
+
+test("a stalled ITAD gives up after the time limit and shows the unavailable page, uncached", async () => {
+  const cache = fakeCache();
+  const started = Date.now();
+  const response = await handleShareRequest(request(`/g/${ID}`), env, undefined, { fetch: stalled, cache, timeoutMs: 30 });
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.match(await response.text(), /Get Game Deals/);
+  assert.ok(Date.now() - started < 2_000, "gave up quickly");
+  assert.equal(cache.store.size, 0);
+});
+
+test("prices that stall take the page down with them rather than wait", async () => {
+  const itad = fakeItad();
+  const fetch = (url, init) => (url.includes("/games/prices/v3") ? stalled(url, init) : itad.fetch(url, init));
+  const response = await handleShareRequest(request(`/g/${ID}`), env, undefined, { fetch, cache: fakeCache(), timeoutMs: 30 });
+  assert.equal(response.status, 503);
+});
+
+test("ITAD rate-limiting the game (429) shows the unavailable page and is never cached", async () => {
+  const cache = fakeCache();
+  const itad = fakeItad({ infoStatus: 429, infoBody: { status: 429 } });
+  const response = await handleShareRequest(request(`/g/${ID}`), env, undefined, { fetch: itad.fetch, cache });
+  assert.equal(response.status, 503);
+  assert.equal(cache.store.size, 0);
+});
+
+test("a page whose prices were rate-limited shows the game but is never kept", async () => {
+  const cache = fakeCache();
+  const itad = fakeItad({ pricesStatus: 429, pricesBody: { status: 429 } });
+  const response = await handleShareRequest(request(`/g/${ID}`), env, undefined, { fetch: itad.fetch, cache });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.match(await response.text(), /No store is selling it right now/);
+  assert.equal(cache.store.size, 0);
+});

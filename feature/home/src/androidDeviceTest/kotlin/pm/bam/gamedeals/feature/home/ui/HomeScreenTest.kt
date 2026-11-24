@@ -69,6 +69,7 @@ class HomeScreenTest {
         every { yearInDealsEntry.offeredYear } returns MutableStateFlow<Int?>(null)
         every { viewModel.gamePeek } returns MutableStateFlow(null)
         every { viewModel.accountStats } returns MutableStateFlow(null)
+        every { viewModel.dealSwipeOffered } returns MutableStateFlow(true)
         every { viewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
         every { viewModel.collectionIds } returns MutableStateFlow(persistentSetOf())
         every { viewModel.ignoredIds } returns MutableStateFlow(persistentSetOf())
@@ -172,6 +173,17 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText(SWIPE_CARD_TITLE).performClick()
 
         verify(exactly = 1) { onViewDealSwipe() }
+    }
+
+    @Test
+    fun dealSwipeCardStaysHiddenWhileItsSwitchIsOff() {
+        every { viewModel.uiState } returns MutableStateFlow(HomeScreenData(status = HomeScreenStatus.DATA))
+        every { viewModel.accountStats } returns MutableStateFlow(AccountStats(waitlistedCount = 1, collectedCount = 2))
+        every { viewModel.dealSwipeOffered } returns MutableStateFlow(false)
+
+        setupCompose()
+
+        composeTestRule.onNodeWithText(SWIPE_CARD_TITLE).assertDoesNotExist()
     }
 
     @Test

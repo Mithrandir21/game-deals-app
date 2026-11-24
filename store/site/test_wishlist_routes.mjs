@@ -232,3 +232,51 @@ test("the preview line names up to three games", () => {
   assert.equal(titlesLine([g("A"), g("B"), g("C")]), "A, B and C");
   assert.equal(titlesLine([g("A"), g("B"), g("C"), g("D"), g("E")]), "A, B, C and 2 more");
 });
+
+// ---------------------------------------------------------------- ITAD trouble (hardening, 2026-11-24)
+
+/** A fetch that never answers until its signal gives up, like a stalled ITAD. */
+const stalled = (url, init = {}) => new Promise((_, reject) => {
+  if (!init.signal) return reject(new Error("no time limit on this call"));
+  init.signal.addEventListener("abort", () => reject(init.signal.reason));
+});
+
+test("every ITAD call carries the page's time limit", async () => {
+  const itad = fakeItad();
+  await visit(`/w/${ENC}${ENC2}`, { fetch: itad.fetch, cache: null });
+  assert.equal(itad.calls.length, 3);
+  for (const call of itad.calls) assert.ok(call.init.signal instanceof AbortSignal, call.url);
+});
+
+test("a stalled ITAD gives up after the time limit and says prices aren't loading, caching nothing", async () => {
+  const cache = fakeCache();
+  const started = Date.now();
+  const response = await visit(`/w/${ENC}${ENC2}`, { fetch: stalled, cache, timeoutMs: 30 });
+  assert.equal(response.status, 503);
+  assert.match(await response.text(), /Prices aren't loading/);
+  assert.ok(Date.now() - started < 2_000, "gave up quickly");
+  assert.equal(cache.store.size, 0);
+});
+
+test("prices that stall leave the games showing without prices, and nothing priced is cached", async () => {
+  const itad = fakeItad();
+  const fetch = (url, init) => (url.includes("/games/prices/v3") ? stalled(url, init) : itad.fetch(url, init));
+  const cache = fakeCache();
+  const response = await visit(`/w/${ENC}`, { fetch, cache, timeoutMs: 30 });
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Not on sale anywhere right now/);
+  assert.ok(![...cache.store.keys()].some((k) => k.includes("/price/")), "no price cached");
+});
+
+test("ITAD rate-limiting some games' info counts them as not loaded and caches nothing for them", async () => {
+  const cache = fakeCache();
+  const itad = fakeItad({ infoStatus: (id) => (id === ID2 ? 429 : 200), pricesStatus: 429 });
+  const response = await visit(`/w/${ENC}${ENC2}`, { fetch: itad.fetch, cache });
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /1 game couldn't be loaded right now/);
+  assert.match(html, /Hades/);
+  const keys = [...cache.store.keys()];
+  assert.ok(!keys.some((k) => k.includes(`/info/${ID2}`)), "the rate-limited game isn't cached");
+  assert.ok(!keys.some((k) => k.includes("/price/")), "rate-limited prices aren't cached");
+});
