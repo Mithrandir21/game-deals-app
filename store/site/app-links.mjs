@@ -5,7 +5,8 @@
 // signing (not the upload key). Format "AB:CD:…" (32 colon-separated bytes). While this list is empty the Worker
 // serves no assetlinks.json, so a half-configured file is never live.
 export const ANDROID_PACKAGE = "pm.bam.gamedeals";
-export const ANDROID_CERT_SHA256 = [];
+// Play App Signing key (Play Console → App integrity → App signing), added 2026-11-24.
+export const ANDROID_CERT_SHA256 = ["CB:80:73:86:41:6C:DF:90:5C:B3:AD:71:41:68:C0:2C:5A:F5:58:F1:10:77:54:29:71:76:89:D8:8E:C2:75:4A"];
 
 // iOS Universal Links: <Team ID>.<bundle id>, from iosApp.xcodeproj (DEVELOPMENT_TEAM / PRODUCT_BUNDLE_IDENTIFIER).
 export const IOS_APP_ID = "36N7FDX928.pm.bam.gamedeals.ios";

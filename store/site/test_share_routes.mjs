@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { handleShareRequest, isShareRoute, summaryLine } from "./share-routes.mjs";
-import { assetLinksJson, appleAppSiteAssociationJson } from "./app-links.mjs";
+import { ANDROID_CERT_SHA256, assetLinksJson, appleAppSiteAssociationJson } from "./app-links.mjs";
 
 const ID = "018d937f-07c2-7155-b6e2-f5f9b3c5b7a5";
 const env = { ITAD_API_KEY: "test-key" };
@@ -178,7 +178,11 @@ test("Apple's association file claims game links for the iOS app", async () => {
 
 test("assetlinks.json is only served once a valid signing fingerprint is configured", async () => {
   const response = await handleShareRequest(request("/.well-known/assetlinks.json"), env, undefined, {});
-  assert.equal(response.status, 404, "no fingerprint configured yet");
+  assert.equal(response.status, 200, "the Play App Signing key is configured");
+  const served = JSON.parse(await response.text());
+  assert.deepEqual(served[0].relation, ["delegate_permission/common.handle_all_urls"]);
+  assert.deepEqual(served[0].target.sha256_cert_fingerprints, ANDROID_CERT_SHA256);
+  assert.equal(assetLinksJson([]), null, "no fingerprint, no file");
   const fp = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, "0")).join(":");
   const statements = JSON.parse(assetLinksJson([fp, "not-a-fingerprint"]));
   assert.equal(statements[0].target.package_name, "pm.bam.gamedeals");
