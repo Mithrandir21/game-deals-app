@@ -176,9 +176,16 @@ internal class DealSwipeViewModel(
         }
     }
 
-    /** Tries a failed add again (the snackbar's retry). */
+    /**
+     * Tries a failed add again (the snackbar's retry). When that swipe is still the one undo takes back, undo now waits
+     * for this retry, so it takes the game back off the waitlist. A swipe already undone has its card back in the deck,
+     * so there is nothing to retry.
+     */
     fun onRetryAdd(deal: Deal) {
-        viewModelScope.launch { add(deal) }
+        if (mutableState.value.cards.any { it.dealID == deal.dealID }) return
+        val retry = viewModelScope.async { add(deal) }
+        val last = lastSwipe
+        if (last != null && last.right && last.deal.dealID == deal.dealID) lastSwipe = LastSwipe(deal, right = true, write = retry)
     }
 
     /** Tries the first page again after it failed. */

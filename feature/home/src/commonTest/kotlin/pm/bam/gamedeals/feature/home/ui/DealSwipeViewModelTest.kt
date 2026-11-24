@@ -203,6 +203,48 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun undo_after_a_retried_add_takes_the_game_back_off_the_waitlist() = runTest {
+        // Found on the emulator: offline add, Try again once back online, then Undo left the game on the waitlist.
+        deck.pages[0] = page("a", "b")
+        toggleResult = RepoUpdateResult.FAILED
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val a = vm.top()
+        vm.onSwipeRight(a)
+        advanceUntilIdle()
+        toggleResult = RepoUpdateResult.UPDATED
+        vm.onRetryAdd(a)
+        advanceUntilIdle()
+        vm.onUndo()
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b"), vm.ids())
+        assertFalse("a" in waitlistIds.value)
+        assertEquals(0, vm.state.value.addedCount)
+    }
+
+    @Test
+    fun retrying_an_add_whose_swipe_was_undone_adds_nothing() = runTest {
+        deck.pages[0] = page("a", "b")
+        toggleResult = RepoUpdateResult.FAILED
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val a = vm.top()
+        vm.onSwipeRight(a)
+        advanceUntilIdle()
+        vm.onUndo()
+        advanceUntilIdle()
+        toggleResult = RepoUpdateResult.UPDATED
+        vm.onRetryAdd(a)
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b"), vm.ids(), "the card is back in the deck to swipe again")
+        assertFalse("a" in waitlistIds.value)
+    }
+
+    @Test
     fun an_add_after_signing_out_shows_the_sign_in_state() = runTest {
         deck.pages[0] = page("a", "b")
         toggleResult = RepoUpdateResult.NOT_LOGGED_IN
