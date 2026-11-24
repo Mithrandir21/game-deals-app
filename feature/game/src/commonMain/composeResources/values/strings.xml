@@ -102,6 +102,8 @@
     <string name="game_details_no_match_message">We couldn't find game details for "%1$s" in our catalogue. The store may have added edition info to the title that doesn't match. You can search the deal database directly instead.</string>
     <string name="game_details_no_match_search_button">Search deals</string>
     <string name="game_details_no_match_back_button">Go back</string>
+    <string name="game_not_found_toolbar_title">Game not found</string>
+    <string name="game_not_found_message">This game isn't on IsThereAnyDeal any more. The link may be mistyped, or the game was removed.</string>
 
     <!-- Unified Game Page (epic #291) -->
     <string name="game_page_tab_overview">Overview</string>

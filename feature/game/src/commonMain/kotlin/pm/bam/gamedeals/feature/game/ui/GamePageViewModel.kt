@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.common.exceptions.isHttpNotFound
 import pm.bam.gamedeals.common.favicon.FaviconResolver
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.share.DealShare
@@ -145,12 +146,13 @@ internal class GamePageViewModel(
         // Each facet captures its own outcome: Loaded(value | null | empty) when the fetch ran (even if it
         // returned nothing), Error when it threw — so the tabs can tell "no data" apart from "load failed".
         var gameId: String? = gameIdArg
+        var dealsNotFound = false
         val dealsState: SectionState<GameDetails?>
         val igdbResolution: IgdbResolution
 
         if (gameIdArg != null) {
             // Deal entry: ITAD details anchor the page; IGDB is enrichment off the resolved Steam-appid/title.
-            dealsState = fetchSection { gamesRepository.getGameDetails(gameIdArg) }
+            dealsState = fetchSection(onError = { dealsNotFound = it.isHttpNotFound() }) { gamesRepository.getGameDetails(gameIdArg) }
             igdbResolution = resolveIgdbForCurrentArgs(gameDetails = (dealsState as? SectionState.Loaded)?.value)
         } else {
             // Metadata entry: IGDB anchors; resolve the ITAD id from the Steam-appid so deals can load.
@@ -168,10 +170,12 @@ internal class GamePageViewModel(
         val igdbGame = (igdbResolution.state as? SectionState.Loaded)?.value
 
         if (gameDetails == null && igdbGame == null) {
-            // No usable data on either side. A thrown fetch → retryable Error; otherwise it's a genuine miss.
+            // No usable data on either side. ITAD saying the id doesn't exist → NotFound (a shared link to a removed or
+            // mistyped game); another thrown fetch → retryable Error; otherwise it's a genuine miss.
             val errored = dealsState is SectionState.Error || igdbResolution.state is SectionState.Error
             emit(
                 when {
+                    dealsNotFound && titleArg == null -> GamePageData.NotFound
                     errored -> GamePageData.Error
                     titleArg != null -> GamePageData.NoMatch(titleArg)
                     else -> GamePageData.Error
@@ -234,11 +238,12 @@ internal class GamePageViewModel(
             ?: persistentListOf()
 
     /** A captured fetch outcome wrapped for the UI: [SectionState.Loaded] on success (value may be null/empty), [SectionState.Error] when it threw. */
-    private suspend fun <T> fetchSection(block: suspend () -> T): SectionState<T> = try {
+    private suspend fun <T> fetchSection(onError: (Throwable) -> Unit = {}, block: suspend () -> T): SectionState<T> = try {
         SectionState.Loaded(block())
     } catch (ce: CancellationException) {
         throw ce
-    } catch (_: Throwable) {
+    } catch (error: Throwable) {
+        onError(error)
         SectionState.Error
     }
 
@@ -515,6 +520,9 @@ internal class GamePageViewModel(
     sealed class GamePageData {
         data object Loading : GamePageData()
         data object Error : GamePageData()
+
+        /** ITAD doesn't know the game id (a shared link to a removed or mistyped game). Nothing to retry. */
+        data object NotFound : GamePageData()
         data class NoMatch(val title: String) : GamePageData()
 
         @Immutable

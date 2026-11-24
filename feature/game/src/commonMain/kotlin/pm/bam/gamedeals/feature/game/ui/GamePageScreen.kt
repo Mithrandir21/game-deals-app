@@ -110,6 +110,8 @@ import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_b
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_message
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_search_button
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_no_match_title
+import pm.bam.gamedeals.feature.game.generated.resources.game_not_found_message
+import pm.bam.gamedeals.feature.game.generated.resources.game_not_found_toolbar_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_details_released_label
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_all_time_low_title
 import pm.bam.gamedeals.feature.game.generated.resources.game_page_deal_quality_elevated_title
@@ -269,6 +271,7 @@ private fun GamePageContent(
     val title = when (data) {
         is GamePageData.Data -> data.title
         is GamePageData.NoMatch -> data.title
+        GamePageData.NotFound -> stringResource(Res.string.game_not_found_toolbar_title)
         else -> stringResource(Res.string.game_screen_toolbar_title_loading)
     }
 
@@ -299,6 +302,8 @@ private fun GamePageContent(
                         }
                     },
                     actions = {
+                        // A game that doesn't exist has nothing to waitlist, collect or note.
+                        if (data == GamePageData.NotFound) return@TopAppBar
                         val isUncertainMatch = (data as? GamePageData.Data)?.isUncertainMatch == true
                         val canAct = data is GamePageData.Data
                         if (isUncertainMatch) {
@@ -390,6 +395,8 @@ private fun GamePageContent(
                     val result = snackbarHostState.showSnackbar(message = errorMessage, actionLabel = errorRetry)
                     if (result == SnackbarResult.ActionPerformed) currentOnRetry()
                 }
+
+                GamePageData.NotFound -> NotFoundSection(modifier = Modifier.padding(innerPadding), onBack = onBack)
 
                 is GamePageData.NoMatch -> NoMatchSection(
                     modifier = Modifier.padding(innerPadding),
@@ -737,6 +744,24 @@ internal fun openStoreDeal(
 }
 
 @Composable
+private fun NotFoundSection(modifier: Modifier, onBack: () -> Unit) {
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GameDealsCustomTheme.spacing.large),
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+                text = stringResource(Res.string.game_not_found_message),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        TextButton(modifier = Modifier.fillMaxWidth(), onClick = onBack) { Text(stringResource(Res.string.game_details_no_match_back_button)) }
+    }
+}
+
+@Composable
 private fun NoMatchSection(modifier: Modifier, title: String, onSearch: () -> Unit, onBack: () -> Unit) {
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(GameDealsCustomTheme.spacing.large),
@@ -796,6 +821,12 @@ private fun GamePage_Loading_Preview() {
 @Composable
 private fun GamePage_NoMatch_Preview() {
     GamePagePreview(GamePageData.NoMatch(title = "Some Obscure Game"))
+}
+
+@Preview
+@Composable
+private fun GamePage_NotFound_Preview() {
+    GamePagePreview(GamePageData.NotFound)
 }
 
 @Preview
