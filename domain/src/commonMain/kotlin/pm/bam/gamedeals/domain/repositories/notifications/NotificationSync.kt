@@ -23,7 +23,24 @@ data class PendingNotificationAlert(
     val title: String,
     val games: List<NotificationDealGame>,
     val gameId: String? = null,
+    /** Which tray summary the alert joins and where tapping it goes. ITAD alerts carry games, followed-series ones a gameId. */
+    val kind: AlertKind = if (gameId != null) AlertKind.FOLLOWED_SERIES else AlertKind.WAITLIST,
 )
+
+/** The kinds of alert the background poll posts, one tray summary each. */
+enum class AlertKind {
+    /** ITAD's own waitlist price alerts. */
+    WAITLIST,
+
+    /** A game in a followed series went on sale. */
+    FOLLOWED_SERIES,
+
+    /** A waitlisted game turned up in a bundle (bundle watch). */
+    WAITLIST_BUNDLE,
+
+    /** A waitlisted game is being given away (bundle watch). */
+    WAITLIST_GIVEAWAY,
+}
 
 /**
  * The shared, platform-agnostic core of background notification delivery: works out which ITAD

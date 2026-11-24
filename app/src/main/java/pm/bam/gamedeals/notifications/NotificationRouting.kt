@@ -14,5 +14,7 @@ internal fun Intent.toNotificationRoute(): NotificationRoute? =
         ROUTE_NOTIFICATIONS -> NotificationRoute.Notifications
         ROUTE_FOLLOWED_SERIES -> NotificationRoute.FollowedSeries
         ROUTE_WINTER_SALE_GUIDE -> NotificationRoute.WinterSaleGuide
+        ROUTE_BUNDLES -> NotificationRoute.Bundles
+        ROUTE_GIVEAWAYS -> NotificationRoute.Giveaways
         else -> null
     }

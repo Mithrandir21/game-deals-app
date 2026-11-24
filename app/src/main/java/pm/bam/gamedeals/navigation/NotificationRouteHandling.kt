@@ -22,6 +22,8 @@ internal suspend fun openNotificationRoute(
         NotificationRoute.FollowedSeries -> navActions.navigateToFollowedSeries()
         NotificationRoute.WinterSaleGuide ->
             if (winterSaleAvailable()) navActions.navigateToWinterSaleGuide() else navActions.navigateTopLevel(Destination.Home)
+        NotificationRoute.Bundles -> navActions.navigateToBundles()
+        NotificationRoute.Giveaways -> navActions.navigateTopLevel(Destination.Giveaways)
     }
 }
 
@@ -30,4 +32,6 @@ private val NotificationRoute.analyticsName: String
         NotificationRoute.Notifications -> "notifications"
         NotificationRoute.FollowedSeries -> "followed_series"
         NotificationRoute.WinterSaleGuide -> "winter_sale_guide"
+        NotificationRoute.Bundles -> "bundles"
+        NotificationRoute.Giveaways -> "giveaways"
     }

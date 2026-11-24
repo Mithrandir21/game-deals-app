@@ -89,6 +89,11 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchCheckerImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStore
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStoreImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.EnglishBundleWatchCopy
 import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepository
 import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
 import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepositoryImpl
@@ -210,6 +215,11 @@ val domainModule = module {
         }
     }
     single<FollowedFranchiseChecker> { get<FollowedFranchiseCheckerImpl>() }
+    // Bundle watch: waitlisted games in new bundles and giveaways, checked in the same background poll.
+    single<BundleWatchSeenStore> { BundleWatchSeenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<BundleWatchChecker> {
+        BundleWatchCheckerImpl(get(), get(), get(), get(), get(), EnglishBundleWatchCopy, get())
+    }
     single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }

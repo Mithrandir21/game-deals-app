@@ -9,6 +9,7 @@ import dev.mokkery.mock
 import dev.mokkery.verify.VerifyMode.Companion.exactly
 import dev.mokkery.verifySuspend
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
@@ -24,6 +25,9 @@ class NotificationPollTest {
     private val checker: FollowedFranchiseChecker = mock(MockMode.autoUnit)
     private val presenter: NotificationPresenter = mock(MockMode.autoUnit)
     private val reminder: WinterSaleReminder = mock(MockMode.autoUnit)
+    private val bundleWatch: BundleWatchChecker = mock(MockMode.autoUnit) {
+        everySuspend { collectNewAlerts() } returns emptyList()
+    }
 
     private fun alert(id: String) = PendingNotificationAlert(id, "title-$id", emptyList())
 
@@ -34,7 +38,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } returns franchise
 
-        runNotificationPoll(sync, checker, presenter, reminder)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
 
         verifySuspend(exactly(1)) { presenter.present(itad + franchise) }
         verifySuspend(exactly(1)) { reminder.onSummaryPosted() }
@@ -45,7 +49,7 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns emptyList()
         everySuspend { checker.collectCrossedAlerts() } returns emptyList()
 
-        runNotificationPoll(sync, checker, presenter, reminder)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
         verifySuspend(exactly(1)) { reminder.sync() }
@@ -56,7 +60,7 @@ class NotificationPollTest {
     fun a_sync_failure_propagates_so_the_worker_can_retry() = runTest {
         everySuspend { sync.syncAndCollectNew() } throws RuntimeException("boom")
 
-        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter, reminder) }
+        assertFailsWith<RuntimeException> { runNotificationPoll(sync, checker, presenter, reminder, bundleWatch) }
 
         verifySuspend(exactly(0)) { presenter.present(any()) }
         verifySuspend(exactly(1)) { reminder.sync() }
@@ -68,8 +72,21 @@ class NotificationPollTest {
         everySuspend { sync.syncAndCollectNew() } returns itad
         everySuspend { checker.collectCrossedAlerts() } throws RuntimeException("igdb down")
 
-        runNotificationPoll(sync, checker, presenter, reminder)
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
 
         verifySuspend(exactly(1)) { presenter.present(itad) }
+    }
+
+    @Test
+    fun bundle_watch_alerts_join_the_others() = runTest {
+        val itad = listOf(alert("n1"))
+        val bundles = listOf(alert("b1"))
+        everySuspend { sync.syncAndCollectNew() } returns itad
+        everySuspend { checker.collectCrossedAlerts() } returns emptyList()
+        everySuspend { bundleWatch.collectNewAlerts() } returns bundles
+
+        runNotificationPoll(sync, checker, presenter, reminder, bundleWatch)
+
+        verifySuspend(exactly(1)) { presenter.present(itad + bundles) }
     }
 }

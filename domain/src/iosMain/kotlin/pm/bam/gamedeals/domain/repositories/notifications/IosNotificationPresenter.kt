@@ -31,8 +31,9 @@ internal class IosNotificationPresenter(
 
     override suspend fun present(alerts: List<PendingNotificationAlert>) {
         if (alerts.isEmpty()) return
-        // A followed-franchise alert carries a gameId (and no games); an ITAD waitlist alert carries games.
-        val (franchiseAlerts, waitlistAlerts) = alerts.partition { it.gameId != null }
+        val byKind = alerts.groupBy { it.kind }
+        val waitlistAlerts = byKind[AlertKind.WAITLIST].orEmpty()
+        val franchiseAlerts = byKind[AlertKind.FOLLOWED_SERIES].orEmpty()
 
         if (waitlistAlerts.isNotEmpty()) {
             // One line per game — a game that dropped several times this poll collapses to its cheapest deal.
@@ -60,6 +61,29 @@ internal class IosNotificationPresenter(
             )
             analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "franchise", "count" to franchiseGames.size))
         }
+        // Bundle watch: one summary for bundles, one for giveaways; each alert's title self-describes.
+        byKind[AlertKind.WAITLIST_BUNDLE]?.let { bundleAlerts ->
+            post(
+                identifier = BUNDLE_WATCH_BUNDLES_ID,
+                title = "Waitlisted games in bundles",
+                lines = bundleAlerts.map { it.title }.distinct(),
+                fallback = "${bundleAlerts.size} new bundles",
+                route = NotificationRoute.Bundles,
+                category = null,
+            )
+            analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "bundle_watch_bundles", "count" to bundleAlerts.size))
+        }
+        byKind[AlertKind.WAITLIST_GIVEAWAY]?.let { giveawayAlerts ->
+            post(
+                identifier = BUNDLE_WATCH_GIVEAWAYS_ID,
+                title = "Waitlisted games for free",
+                lines = giveawayAlerts.map { it.title }.distinct(),
+                fallback = "${giveawayAlerts.size} new giveaways",
+                route = NotificationRoute.Giveaways,
+                category = null,
+            )
+            analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "bundle_watch_giveaways", "count" to giveawayAlerts.size))
+        }
     }
 
     private fun post(
@@ -68,7 +92,7 @@ internal class IosNotificationPresenter(
         lines: List<String>,
         fallback: String,
         route: NotificationRoute,
-        category: String,
+        category: String?,
     ) {
         val body = when {
             lines.isEmpty() -> fallback
@@ -80,7 +104,8 @@ internal class IosNotificationPresenter(
             setBody(body)
             setSound(UNNotificationSound.defaultSound)
             setUserInfo(mapOf<Any?, Any?>(ROUTE_USER_INFO_KEY to route.key))
-            setCategoryIdentifier(category)
+            // A summary without its own action buttons has no category; tapping still follows the route.
+            category?.let { setCategoryIdentifier(it) }
         }
         // Reusing a stable identifier replaces an undelivered summary rather than stacking copies.
         val request = UNNotificationRequest.requestWithIdentifier(identifier, content, trigger = null)
@@ -97,6 +122,8 @@ internal class IosNotificationPresenter(
     private companion object {
         const val WAITLIST_SUMMARY_ID = "waitlist_summary"
         const val FRANCHISE_SUMMARY_ID = "franchise_summary"
+        const val BUNDLE_WATCH_BUNDLES_ID = "bundle_watch_bundles"
+        const val BUNDLE_WATCH_GIVEAWAYS_ID = "bundle_watch_giveaways"
         const val MAX_GAME_LINES = 6
     }
 }

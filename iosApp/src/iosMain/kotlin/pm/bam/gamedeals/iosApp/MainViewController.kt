@@ -374,6 +374,16 @@ private fun AppNavHost(startDestination: Destination) {
     // stays in-context — mirrors the Android NavGraph's Custom Tab routing.
     val platformActions = LocalPlatformActions.current
 
+    // Top-level (bottom-nav tab) navigation: pop to Home saving state, single-top, restore — mirrors the Android
+    // `NavigationActions.navigateTopLevel`. Home, not the graph's start destination, which is Onboarding on first run.
+    fun navigateTopLevel(destination: Destination) {
+        navController.navigate(destination) {
+            popUpTo(Destination.Home) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     // Route taps on background (OS-tray) notifications into the nav graph — mirrors the Android NavGraph.
     // The bus is consume-once, so this won't re-navigate.
     val winterSaleEvents = remember { KoinPlatform.getKoin().get<WinterSaleEventRepository>() }
@@ -389,17 +399,9 @@ private fun AppNavHost(startDestination: Destination) {
                     } else {
                         navController.navigate(Destination.Home) { popUpTo(Destination.Home); launchSingleTop = true }
                     }
+                NotificationRoute.Bundles -> navController.navigate(Destination.Bundles)
+                NotificationRoute.Giveaways -> navigateTopLevel(Destination.Giveaways)
             }
-        }
-    }
-
-    // Top-level (bottom-nav tab) navigation: pop to Home saving state, single-top, restore — mirrors the Android
-    // `NavigationActions.navigateTopLevel`. Home, not the graph's start destination, which is Onboarding on first run.
-    fun navigateTopLevel(destination: Destination) {
-        navController.navigate(destination) {
-            popUpTo(Destination.Home) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
         }
     }
 

@@ -1,13 +1,15 @@
 package pm.bam.gamedeals.domain.scheduling
 
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
 
 /**
- * The shared body of one background notification poll: drive the ITAD [NotificationSync] **and** the
- * client-side [FollowedFranchiseChecker] (followed-franchise deal alerts), then hand any genuinely-new
+ * The shared body of one background notification poll: drive the ITAD [NotificationSync], the
+ * client-side [FollowedFranchiseChecker] (followed-franchise deal alerts) and [BundleWatchChecker] (waitlisted games
+ * in bundles and giveaways), then hand any genuinely-new
  * alerts to the platform [NotificationPresenter]. Extracted from the Android [NotificationPollWorker] so the
  * present-only-when-there's-something guard is unit-testable (and reusable by the iOS BGTask handler).
  *
@@ -21,11 +23,14 @@ internal suspend fun runNotificationPoll(
     checker: FollowedFranchiseChecker,
     presenter: NotificationPresenter,
     reminder: WinterSaleReminder,
+    bundleWatch: BundleWatchChecker,
 ) {
     reminder.sync()
     val syncAlerts = sync.syncAndCollectNew()
     val franchiseAlerts = runCatching { checker.collectCrossedAlerts() }.getOrDefault(emptyList())
-    val alerts = syncAlerts + franchiseAlerts
+    // Never throws; signed out it is empty.
+    val bundleAlerts = bundleWatch.collectNewAlerts()
+    val alerts = syncAlerts + franchiseAlerts + bundleAlerts
     if (alerts.isNotEmpty()) {
         presenter.present(alerts)
         reminder.onSummaryPosted()

@@ -103,7 +103,7 @@
 
     <!-- Background notification delivery toggle -->
     <string name="account_row_notification_delivery">Background alerts</string>
-    <string name="account_row_notification_delivery_desc">Get waitlist and followed-series deal alerts even when the app is closed</string>
+    <string name="account_row_notification_delivery_desc">Get waitlist and followed-series deal alerts, and hear when a waitlisted game is in a bundle or free, even when the app is closed</string>
     <string name="account_notification_permission_denied">Notifications are blocked. Enable them in system settings to get alerts.</string>
     <string name="account_notification_open_settings">Open settings</string>
 
