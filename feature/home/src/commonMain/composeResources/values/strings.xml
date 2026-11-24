@@ -201,6 +201,7 @@
     <string name="deal_swipe_finished_title">That's all of today's hot deals</string>
     <string name="deal_swipe_finished_body">Come back tomorrow for new ones. Games you skip stay out of the deck for 30 days.</string>
     <string name="deal_swipe_failed">Couldn't load deals. Check your connection and try again.</string>
+    <string name="deal_swipe_itad_busy">IsThereAnyDeal is busy right now. Try again in a minute.</string>
     <string name="deal_swipe_retry">Try again</string>
     <string name="deal_swipe_signed_out">Sign in with IsThereAnyDeal to add games to your waitlist with a swipe.</string>
     <string name="deal_swipe_sign_in">Sign in</string>

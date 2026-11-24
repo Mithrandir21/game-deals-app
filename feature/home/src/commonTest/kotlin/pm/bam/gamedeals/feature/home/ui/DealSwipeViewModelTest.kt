@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.exceptions.HttpStatusFailure
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -45,6 +46,8 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
         /** Pages by offset; a missing offset ends the deck. */
         val pages = mutableMapOf<Int, DealSwipePage>()
         var failNext = false
+        /** What the next failure throws; a plain "offline" error unless a test sets an HTTP answer. */
+        var failure: Throwable? = null
         var gate: CompletableDeferred<Unit>? = null
         val asked = mutableListOf<Int>()
         val skipped = mutableListOf<String>()
@@ -57,7 +60,7 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
             gate?.await()
             if (failNext) {
                 failNext = false
-                error("offline")
+                throw failure ?: IllegalStateException("offline")
             }
             return pages[offset] ?: DealSwipePage(emptyList(), null)
         }
@@ -403,6 +406,33 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
 
         assertEquals(Status.READY, vm.state.value.status)
         assertEquals(listOf("a"), vm.ids())
+    }
+
+    @Test
+    fun a_rate_limited_first_page_says_itad_is_busy_and_retry_clears_it() = runTest {
+        deck.failNext = true
+        deck.failure = object : RuntimeException("HTTP 429"), HttpStatusFailure { override val httpStatus = 429 }
+        deck.pages[0] = page("a")
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(Status.FAILED, vm.state.value.status)
+        assertTrue(vm.state.value.itadBusy)
+
+        vm.onRetry()
+        advanceUntilIdle()
+
+        assertEquals(Status.READY, vm.state.value.status)
+        assertFalse(vm.state.value.itadBusy)
+    }
+
+    @Test
+    fun other_failures_are_not_called_busy() = runTest {
+        deck.failNext = true
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(Status.FAILED, vm.state.value.status)
+        assertFalse(vm.state.value.itadBusy)
     }
 
     @Test

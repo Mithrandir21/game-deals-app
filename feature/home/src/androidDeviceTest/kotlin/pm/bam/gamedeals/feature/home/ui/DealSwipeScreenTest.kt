@@ -217,6 +217,17 @@ class DealSwipeScreenTest {
     }
 
     @Test
+    fun a_rate_limited_load_says_itad_is_busy_instead_of_blaming_the_connection() {
+        val set = show(State(status = Status.FAILED))
+        composeTestRule.onNodeWithText("Check your connection", substring = true).assertIsDisplayed()
+
+        set(State(status = Status.FAILED, itadBusy = true))
+        composeTestRule.onNodeWithText("IsThereAnyDeal is busy right now. Try again in a minute.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Check your connection", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Try again").assertIsDisplayed()
+    }
+
+    @Test
     fun a_failed_load_offers_a_retry_and_signed_out_offers_sign_in() {
         val set = show(State(status = Status.FAILED))
         composeTestRule.onNodeWithText("Try again").performClick()

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.common.exceptions.isRateLimited
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -68,6 +69,8 @@ internal class DealSwipeViewModel(
         val canUndo: Boolean = false,
         /** Games added to the waitlist from this deck since the screen opened. */
         val addedCount: Int = 0,
+        /** With [Status.FAILED]: ITAD rate-limited the app, so the message says it's busy, not that the connection is down. */
+        val itadBusy: Boolean = false,
     )
 
     sealed interface Event {
@@ -181,7 +184,7 @@ internal class DealSwipeViewModel(
     /** Tries the first page again after it failed. */
     fun onRetry() {
         if (mutableState.value.status != Status.FAILED) return
-        mutableState.update { it.copy(status = Status.LOADING) }
+        mutableState.update { it.copy(status = Status.LOADING, itadBusy = false) }
         refill()
     }
 
@@ -241,7 +244,9 @@ internal class DealSwipeViewModel(
                 } catch (failure: Throwable) {
                     error(logger, failure) { "Couldn't load swipe deals at $offset" }
                     // With cards left, keep swiping; the next swipe tries again.
-                    if (mutableState.value.cards.isEmpty()) mutableState.update { it.copy(status = Status.FAILED) }
+                    if (mutableState.value.cards.isEmpty()) {
+                        mutableState.update { it.copy(status = Status.FAILED, itadBusy = failure.isRateLimited()) }
+                    }
                     return@launch
                 }
                 nextOffset = page.nextOffset

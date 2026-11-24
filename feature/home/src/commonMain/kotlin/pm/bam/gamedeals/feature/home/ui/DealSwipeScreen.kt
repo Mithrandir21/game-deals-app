@@ -111,6 +111,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_add_failed
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_added_count
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_back
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_failed
+import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_itad_busy
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_finished_body
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_finished_title
 import pm.bam.gamedeals.feature.home.generated.resources.deal_swipe_hint
@@ -245,7 +246,7 @@ internal fun DealSwipeContent(
                 }
                 Status.FAILED -> SwipeMessage(
                     title = null,
-                    body = stringResource(Res.string.deal_swipe_failed),
+                    body = stringResource(if (state.itadBusy) Res.string.deal_swipe_itad_busy else Res.string.deal_swipe_failed),
                     action = stringResource(Res.string.deal_swipe_retry),
                     onAction = onRetry,
                 )
