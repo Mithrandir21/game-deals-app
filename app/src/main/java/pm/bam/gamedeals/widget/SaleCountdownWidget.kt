@@ -170,10 +170,18 @@ internal suspend fun shownState(
 /** Below this height the header, sale name, count and date don't all fit, so the widget shows the name and count only. */
 private val FULL_LAYOUT_MIN_HEIGHT: Dp = 110.dp
 
+/**
+ * Narrower than this, the count can take two lines ("Starts in 15 days" on two cells of a five-column home
+ * screen, "Ends in under an hour" on most two-cell widgets), and the full layout needs the taller height below.
+ */
+private val ONE_LINE_COUNT_MIN_WIDTH: Dp = 240.dp
+private val FULL_LAYOUT_TWO_LINE_COUNT_MIN_HEIGHT: Dp = 136.dp
+
 @Composable
 internal fun SaleCountdownContent(state: SaleCountdownState) {
     val context = LocalContext.current
-    val compact = LocalSize.current.height < FULL_LAYOUT_MIN_HEIGHT
+    val size = LocalSize.current
+    val compact = size.height < if (size.width < ONE_LINE_COUNT_MIN_WIDTH) FULL_LAYOUT_TWO_LINE_COUNT_MIN_HEIGHT else FULL_LAYOUT_MIN_HEIGHT
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -219,7 +227,7 @@ private fun SaleCountdownLines(state: SaleCountdownUi) {
         )
         Text(
             text = state.headline,
-            maxLines = 1,
+            maxLines = 2,
             style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold),
         )
         Text(

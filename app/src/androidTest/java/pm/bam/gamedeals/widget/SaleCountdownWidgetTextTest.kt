@@ -76,6 +76,20 @@ class SaleCountdownWidgetTextTest {
     }
 
     @Test
+    fun two_cells_of_a_five_column_home_screen_keep_the_count_whole() = runGlanceAppWidgetUnitTest {
+        // A 2x1 widget dropped on Android 8's launcher is about 142 x 126 dp: tall enough for every line, but
+        // too narrow for "Starts in 15 days" on one, so the full layout cut the count off ("Starts in 15 …").
+        setContext(context)
+        setAppWidgetSize(DpSize(142.dp, 126.dp))
+        provideComposable { GlanceTheme { SaleCountdownContent(counting) } }
+
+        onNode(hasText("Steam Winter Sale")).assertExists()
+        onNode(hasText("Starts in 5 days")).assertExists()
+        onNode(hasText("Sales")).assertDoesNotExist()
+        onNode(hasText("Steam · starts Dec 17")).assertDoesNotExist()
+    }
+
+    @Test
     fun with_no_sale_ahead_the_widget_says_so() = runGlanceAppWidgetUnitTest {
         setContext(context)
         provideComposable { GlanceTheme { SaleCountdownContent(SaleCountdownState.NoSale) } }
