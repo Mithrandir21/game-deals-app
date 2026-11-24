@@ -42,7 +42,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -73,6 +79,7 @@ import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_home_body
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_home_title
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_longest_wait
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_longest_wait_label
+import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_newest_label
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_retry
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_share
 import pm.bam.gamedeals.feature.home.generated.resources.year_in_deals_share_failed
@@ -228,39 +235,61 @@ internal fun YearInDealsCard(year: YearInDeals, modifier: Modifier = Modifier) {
                 modifier = Modifier.semantics { heading() },
             )
 
+            val number = yearCardNumberStyle()
+            val title = SpanStyle(color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.SemiBold)
+
             year.collected?.let { collected ->
                 if (collected.highlights.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
-                        collected.highlights.forEach { game ->
-                            AsyncImage(
-                                model = game.artwork.portrait,
-                                contentDescription = game.title,
-                                contentScale = ContentScale.Crop,
-                                error = painterResource(CommonRes.drawable.videogame_thumb),
-                                modifier = Modifier.weight(1f).aspectRatio(0.75f).clip(RoundedCornerShape(8.dp)),
-                            )
+                    // The most recently added first, so say so: the row isn't a "best of".
+                    Labelled(stringResource(Res.string.year_in_deals_newest_label)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+                            collected.highlights.forEach { game ->
+                                AsyncImage(
+                                    model = game.artwork.portrait,
+                                    contentDescription = game.title,
+                                    contentScale = ContentScale.Crop,
+                                    error = painterResource(CommonRes.drawable.videogame_thumb),
+                                    modifier = Modifier.weight(1f).aspectRatio(0.75f).clip(RoundedCornerShape(8.dp)),
+                                )
+                            }
+                            // Keep covers the same size when there are fewer than four.
+                            repeat(4 - collected.highlights.size) { Box(Modifier.weight(1f)) }
                         }
-                        // Keep covers the same size when there are fewer than four.
-                        repeat(4 - collected.highlights.size) { Box(Modifier.weight(1f)) }
                     }
                 }
-                Stat(pluralStringResource(Res.plurals.year_in_deals_collected, collected.count, collected.count))
+                Stat(
+                    highlighted(collected.count.toString() to number) {
+                        pluralStringResource(Res.plurals.year_in_deals_collected, collected.count, *it)
+                    },
+                )
             }
-            year.fullPriceValue?.let { Stat(stringResource(Res.string.year_in_deals_full_price, it)) }
+            year.fullPriceValue?.let { value ->
+                Stat(highlighted(value to number) { stringResource(Res.string.year_in_deals_full_price, *it) })
+            }
             year.waitlistWins?.let { wins ->
-                Stat(pluralStringResource(Res.plurals.year_in_deals_wins, wins.count, wins.count))
+                Stat(
+                    highlighted(wins.count.toString() to number) {
+                        pluralStringResource(Res.plurals.year_in_deals_wins, wins.count, *it)
+                    },
+                )
                 wins.biggestDrop?.let { drop ->
-                    Labelled(
-                        label = stringResource(Res.string.year_in_deals_biggest_drop_label),
-                        text = stringResource(Res.string.year_in_deals_biggest_drop, drop.game.title, "${drop.cutPercent}%", drop.lowDenominated),
-                    )
+                    Labelled(stringResource(Res.string.year_in_deals_biggest_drop_label)) {
+                        Detail(
+                            highlighted(drop.game.title to title, "${drop.cutPercent}%" to number, drop.lowDenominated to number) {
+                                stringResource(Res.string.year_in_deals_biggest_drop, *it)
+                            },
+                        )
+                    }
                 }
             }
             year.longestWait?.let { wait ->
-                Labelled(
-                    label = stringResource(Res.string.year_in_deals_longest_wait_label),
-                    text = pluralStringResource(Res.plurals.year_in_deals_longest_wait, wait.days, wait.game.title, wait.days),
-                )
+                Labelled(stringResource(Res.string.year_in_deals_longest_wait_label)) {
+                    Detail(
+                        highlighted(wait.game.title to title, wait.days.toString() to number) {
+                            pluralStringResource(Res.plurals.year_in_deals_longest_wait, wait.days, *it)
+                        },
+                    )
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -272,14 +301,55 @@ internal fun YearInDealsCard(year: YearInDeals, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Stat(text: String) {
+private fun Stat(text: AnnotatedString) {
     Text(text = text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable
-private fun Labelled(label: String, text: String) {
+private fun Detail(text: AnnotatedString) {
+    Text(text, style = MaterialTheme.typography.bodyLarge)
+}
+
+@Composable
+private fun Labelled(label: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium)
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        content()
     }
 }
+
+/**
+ * The card's numbers in a warm orange, which stands apart from the green card and its text in both themes (at least
+ * 4.5:1 against the card). The card is primaryContainer, so its brightness tells the theme apart, also when the card
+ * is drawn off screen for sharing.
+ */
+@Composable
+private fun yearCardNumberStyle(): SpanStyle {
+    val darkCard = MaterialTheme.colorScheme.primaryContainer.luminance() < 0.5f
+    return SpanStyle(color = if (darkCard) Color(0xFFFFB68B) else Color(0xFFB33A00), fontWeight = FontWeight.Bold)
+}
+
+/**
+ * The string [resolve] makes, with each of [values] drawn in its style. [resolve] gets a marker per value to pass as
+ * the string's arguments, in order; the markers are then swapped for the values. The text itself is unchanged, so
+ * screen readers read the same sentence.
+ */
+@Composable
+private fun highlighted(vararg values: Pair<String, SpanStyle>, resolve: @Composable (Array<String>) -> String): AnnotatedString {
+    val template = resolve(Array(values.size) { "$MARKER_START$it$MARKER_END" })
+    return buildAnnotatedString {
+        var from = 0
+        MARKER.findAll(template).forEach { match ->
+            append(template.substring(from, match.range.first))
+            val (value, style) = values[match.groupValues[1].toInt()]
+            withStyle(style) { append(value) }
+            from = match.range.last + 1
+        }
+        append(template.substring(from))
+    }
+}
+
+// Private-use characters, which never appear in a translation.
+private const val MARKER_START = '\uE000'
+private const val MARKER_END = '\uE001'
+private val MARKER = Regex("$MARKER_START(\\d+)$MARKER_END")

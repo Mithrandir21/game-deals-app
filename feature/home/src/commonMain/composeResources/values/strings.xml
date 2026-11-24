@@ -165,6 +165,7 @@
         <item quantity="one">%1$d waitlist game hit its lowest price ever</item>
         <item quantity="other">%1$d waitlist games hit their lowest price ever</item>
     </plurals>
+    <string name="year_in_deals_newest_label">Newest in your collection</string>
     <string name="year_in_deals_biggest_drop_label">Biggest drop</string>
     <string name="year_in_deals_biggest_drop">%1$s, %2$s off, down to %3$s</string>
     <string name="year_in_deals_longest_wait_label">Longest wait</string>
