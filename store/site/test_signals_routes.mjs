@@ -57,7 +57,14 @@ function fakeItad({ infoStatus = () => 200, historyStatus = 200, history = [] } 
       const status = infoStatus(id);
       return new Response(JSON.stringify(status === 200 ? info(id) : { status }), { status });
     }
-    if (url.includes("/games/history/v2")) return new Response(JSON.stringify(history), { status: historyStatus });
+    if (url.includes("/games/history/v2")) {
+      // Like ITAD: a `since` with fractions of a second is refused ("Invalid 'since' format").
+      const since = new URL(url).searchParams.get("since");
+      if (since !== null && !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(Z|[+-]\d\d:\d\d)$/.test(since)) {
+        return new Response(JSON.stringify({ status_code: 400, reason_phrase: "Invalid 'since' format" }), { status: 400 });
+      }
+      return new Response(JSON.stringify(history), { status: historyStatus });
+    }
     throw new Error(`unexpected ${url}`);
   };
   return { fetch, calls };
@@ -162,7 +169,7 @@ test("a first ask answers at once with the games pending, and fetches them in th
   assert.equal(first.itad.calls.length, 4);
   const historyCall = first.itad.calls.find((c) => c.url.includes("history"));
   assert.match(historyCall.url, /country=US/);
-  assert.match(historyCall.url, /since=2024-11-1/);
+  assert.match(historyCall.url, /since=2024-11-1\dT\d\d%3A\d\d%3A\d\dZ(&|$)/, "whole seconds only: ITAD refuses milliseconds");
   for (const call of first.itad.calls) {
     assert.equal(call.init.headers["ITAD-API-Key"], "test-key");
     assert.doesNotMatch(call.url, /test-key/);

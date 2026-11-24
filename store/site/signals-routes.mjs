@@ -119,7 +119,8 @@ async function refreshGames(store, fetchImpl, apiKey, ids, now) {
 /** One game's signals from ITAD (two calls), `{ unknown: true }` when ITAD doesn't know it. Throws on failures. */
 export async function loadSignals(fetchImpl, apiKey, id, now) {
   const headers = { "ITAD-API-Key": apiKey, accept: "application/json" };
-  const since = new Date(now - (WEEKS + 1) * WEEK_MS).toISOString();
+  // Whole seconds: ITAD refuses a `since` with milliseconds ("Invalid 'since' format").
+  const since = new Date(now - (WEEKS + 1) * WEEK_MS).toISOString().replace(/\.\d+Z$/, "Z");
   const [infoResponse, historyResponse] = await Promise.all([
     fetchImpl(`${ITAD}/games/info/v2?id=${id}`, { headers }),
     fetchImpl(`${ITAD}/games/history/v2?id=${id}&country=${HISTORY_COUNTRY}&since=${encodeURIComponent(since)}`, { headers }),
