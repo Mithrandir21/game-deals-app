@@ -27,17 +27,4 @@ class SignalsTextTest {
         assertNull(signals(null, "Steam", 100).rowReview())
         assertNull(signals(90, null, 100).rowReview())
     }
-
-    @Test
-    fun counts_are_made_short() {
-        assertEquals("0", formatCompactCount(0))
-        assertEquals("999", formatCompactCount(999))
-        assertEquals("1k", formatCompactCount(1_000))
-        assertEquals("1.2k", formatCompactCount(1_250))
-        assertEquals("9.9k", formatCompactCount(9_999))
-        assertEquals("45k", formatCompactCount(45_678))
-        assertEquals("999k", formatCompactCount(999_999))
-        assertEquals("1.2M", formatCompactCount(1_250_000))
-        assertEquals("12M", formatCompactCount(12_500_000))
-    }
 }

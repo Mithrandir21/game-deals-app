@@ -162,7 +162,8 @@ class GamePeekSheetTest {
     }
 
     @Test
-    fun theCrowdsViewShowsReviewsPlayersAndItadCounts() {
+    fun theSheetLeavesPlayersAndReviewsToTheGamePage() {
+        // Bam, 2026-11-24: the game page already shows reviews and players, so the sheet doesn't repeat them.
         val buzz = GameSignals(
             gameId = GAME_ID, updatedEpochMs = 0, weeklyMaxCut = emptyList(),
             reviewScore = 97, reviewCount = 250_000, reviewSource = "Steam",
@@ -170,17 +171,9 @@ class GamePeekSheetTest {
         )
         setContent(dataState, signals = mapOf(GAME_ID to buzz))
 
-        composeTestRule.onNodeWithText("Players and reviews").assertIsDisplayed()
-        composeTestRule.onNodeWithText("97% positive from 250k Steam reviews").assertIsDisplayed()
-        composeTestRule.onNodeWithText("4k playing now").assertIsDisplayed()
-        composeTestRule.onNodeWithText("45k IsThereAnyDeal users want it · 120k own it").assertIsDisplayed()
-    }
-
-    @Test
-    fun withoutSignalsThereIsNoCrowdSection() {
-        setContent(dataState)
-
         composeTestRule.onAllNodesWithText("Players and reviews").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("playing now", substring = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("users want it", substring = true).assertCountEquals(0)
     }
 
     @Test

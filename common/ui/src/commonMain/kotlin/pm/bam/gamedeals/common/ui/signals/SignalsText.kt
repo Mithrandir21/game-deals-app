@@ -37,16 +37,3 @@ fun GameSignals.reviewText(): String? = when (val review = rowReview()) {
 /** [gameId]'s review line from these signals, if any. */
 @Composable
 fun Map<String, GameSignals>.reviewText(gameId: String?): String? = gameId?.let { this[it] }?.reviewText()
-
-/** A count made short for a glance: 950, 1.2k, 45k, 1.2M. */
-fun formatCompactCount(value: Int): String = when {
-    value < 1_000 -> value.toString()
-    value < 10_000 -> oneDecimal(value / 100, "k")
-    value < 1_000_000 -> "${value / 1_000}k"
-    value < 10_000_000 -> oneDecimal(value / 100_000, "M")
-    else -> "${value / 1_000_000}M"
-}
-
-/** [tenths] / 10 with one decimal, dropping ".0" (12 → "1.2k", 10 → "1k"). */
-private fun oneDecimal(tenths: Int, unit: String): String =
-    if (tenths % 10 == 0) "${tenths / 10}$unit" else "${tenths / 10}.${tenths % 10}$unit"
