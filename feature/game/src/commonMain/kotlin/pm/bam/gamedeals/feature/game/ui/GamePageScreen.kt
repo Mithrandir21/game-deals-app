@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -92,6 +93,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.ui.SingleEventEffect
+import pm.bam.gamedeals.common.ui.adaptive.readableSideMargin
 import pm.bam.gamedeals.common.ui.components.DiscountBadge
 import pm.bam.gamedeals.common.ui.components.PriceBlock
 import pm.bam.gamedeals.common.ui.components.StoreIcon
@@ -501,13 +503,17 @@ private fun GamePageBody(
     val contentTopPx = (heroOffset.floatValue + heroPx.floatValue + tabPx.floatValue + stickyPx * collapseFraction).coerceAtLeast(0f)
     val contentTopDp = with(density) { contentTopPx.toDp() }
 
-    Box(modifier = modifier.fillMaxSize().nestedScroll(connection)) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize().nestedScroll(connection)) {
+        // On tablets the page centres at a readable width; the tab lists stay full width so the margins scroll.
+        val side = readableSideMargin(maxWidth)
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             LazyColumn(
                 state = listStates[page],
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
+                    start = side,
                     top = contentTopDp + GameDealsCustomTheme.spacing.large,
+                    end = side,
                     bottom = GameDealsCustomTheme.spacing.large,
                 ),
                 verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
@@ -548,12 +554,12 @@ private fun GamePageBody(
                 data = data,
                 goToWeb = goToWeb,
                 onRatingsClick = { scope.launch { pagerState.animateScrollToPage(2) } },
-                modifier = Modifier.onSizeChanged { heroPx.floatValue = it.height.toFloat() },
+                modifier = Modifier.padding(horizontal = side).onSizeChanged { heroPx.floatValue = it.height.toFloat() },
             )
             TabRow(
                 selectedTabIndex = pagerState.currentPage,
                 containerColor = MaterialTheme.colorScheme.background,
-                modifier = Modifier.onSizeChanged { tabPx.floatValue = it.height.toFloat() },
+                modifier = Modifier.padding(horizontal = side).onSizeChanged { tabPx.floatValue = it.height.toFloat() },
             ) {
                 tabs.forEachIndexed { index, label ->
                     Tab(
@@ -566,7 +572,7 @@ private fun GamePageBody(
             // Condensed price bar — reserves height and fades in only as the hero collapses, so it doesn't
             // leave a blank band when the full hero (and its buy box) is visible.
             data.buyBox?.let { buyBox ->
-                Box(modifier = Modifier.height(STICKY_BAR_HEIGHT * collapseFraction).alpha(collapseFraction)) {
+                Box(modifier = Modifier.padding(horizontal = side).height(STICKY_BAR_HEIGHT * collapseFraction).alpha(collapseFraction)) {
                     StickyPriceBar(buyBox = buyBox, gameId = data.gameId, gameTitle = data.title, goToWeb = goToWeb)
                 }
             }

@@ -2,6 +2,7 @@ package pm.bam.gamedeals.feature.account.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +44,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
+import pm.bam.gamedeals.common.ui.adaptive.readableSideMargin
 import pm.bam.gamedeals.common.ui.components.DealListRow
 import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
 import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
@@ -149,50 +151,54 @@ private fun SharedWishlistContent(
                     )
                 }
 
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(GameDealsCustomTheme.spacing.large),
-                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-                ) {
-                    item(key = "intro") {
-                        Text(
-                            text = stringResource(Res.string.shared_wishlist_intro),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (!state.signedIn) {
-                        item(key = "sign-in") { SignInCard(onSignIn) }
-                    } else {
-                        sectionHeader("both-header", Res.string.shared_wishlist_both_want)
-                        if (state.bothWant.isEmpty()) {
-                            item(key = "both-none") {
+                else -> BoxWithConstraints(Modifier.fillMaxSize().padding(innerPadding)) {
+                    // On tablets the list centres at a readable width; the margins still scroll it.
+                    val side = GameDealsCustomTheme.spacing.large + readableSideMargin(maxWidth)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = side, vertical = GameDealsCustomTheme.spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+                    ) {
+                        item(key = "intro") {
+                            Text(
+                                text = stringResource(Res.string.shared_wishlist_intro),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (!state.signedIn) {
+                            item(key = "sign-in") { SignInCard(onSignIn) }
+                        } else {
+                            sectionHeader("both-header", Res.string.shared_wishlist_both_want)
+                            if (state.bothWant.isEmpty()) {
+                                item(key = "both-none") {
+                                    Text(
+                                        text = stringResource(Res.string.shared_wishlist_both_want_none),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            } else {
+                                rows(state.bothWant, onRowClick)
+                            }
+                        }
+                        if (state.others.isNotEmpty()) {
+                            val othersTitle = if (state.signedIn && state.bothWant.isNotEmpty()) {
+                                Res.string.shared_wishlist_also_on_list
+                            } else {
+                                Res.string.shared_wishlist_on_list
+                            }
+                            sectionHeader("others-header", othersTitle)
+                            rows(state.others, onRowClick)
+                        }
+                        if (state.unavailableCount > 0) {
+                            item(key = "unavailable") {
                                 Text(
-                                    text = stringResource(Res.string.shared_wishlist_both_want_none),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = stringResource(Res.string.shared_wishlist_unavailable),
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                        } else {
-                            rows(state.bothWant, onRowClick)
-                        }
-                    }
-                    if (state.others.isNotEmpty()) {
-                        val othersTitle = if (state.signedIn && state.bothWant.isNotEmpty()) {
-                            Res.string.shared_wishlist_also_on_list
-                        } else {
-                            Res.string.shared_wishlist_on_list
-                        }
-                        sectionHeader("others-header", othersTitle)
-                        rows(state.others, onRowClick)
-                    }
-                    if (state.unavailableCount > 0) {
-                        item(key = "unavailable") {
-                            Text(
-                                text = stringResource(Res.string.shared_wishlist_unavailable),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
                     }
                 }
