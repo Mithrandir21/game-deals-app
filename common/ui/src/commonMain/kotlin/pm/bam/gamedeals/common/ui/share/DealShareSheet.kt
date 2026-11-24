@@ -26,6 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,8 +85,41 @@ class DealSharer internal constructor(private val actions: PlatformActions) {
 @Composable
 fun rememberDealSharer(): DealSharer {
     val actions = LocalPlatformActions.current
-    return remember(actions) { DealSharer(actions) }
+    // Saveable, so an open preview survives the phone rotating, a theme switch or the app being restored.
+    return rememberSaveable(actions, saver = dealSharerSaver(actions)) { DealSharer(actions) }
 }
+
+/** Keeps the open preview's share as plain values: the text, then the card's fields when there is a card. */
+private fun dealSharerSaver(actions: PlatformActions): Saver<DealSharer, Any> = listSaver<DealSharer, Any?>(
+    save = { sharer ->
+        val share = sharer.pending ?: return@listSaver emptyList()
+        val card = share.card ?: return@listSaver listOf(share.text)
+        listOf(
+            share.text, card.title, card.coverUrl, card.priceDenominated, card.regularDenominated, card.cutPercent,
+            card.storeName, card.isNewHistoricalLow, card.isLowestEver, card.isStoreLow, card.endsAtEpochMs, card.link,
+        )
+    },
+    restore = { saved ->
+        DealSharer(actions).apply {
+            pending = DealShare(
+                text = saved[0] as String,
+                card = if (saved.size < 12) null else DealShareCard(
+                    title = saved[1] as String,
+                    coverUrl = saved[2] as String?,
+                    priceDenominated = saved[3] as String,
+                    regularDenominated = saved[4] as String,
+                    cutPercent = saved[5] as Int,
+                    storeName = saved[6] as String,
+                    isNewHistoricalLow = saved[7] as Boolean,
+                    isLowestEver = saved[8] as Boolean,
+                    isStoreLow = saved[9] as Boolean,
+                    endsAtEpochMs = saved[10] as Long?,
+                    link = saved[11] as String,
+                ),
+            )
+        }
+    },
+)
 
 /** The card preview with Share and Share-the-link-only buttons; shows while [sharer] has a card to share. */
 @OptIn(ExperimentalMaterial3Api::class)

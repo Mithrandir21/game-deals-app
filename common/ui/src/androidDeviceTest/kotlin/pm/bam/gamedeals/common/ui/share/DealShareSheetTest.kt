@@ -2,6 +2,7 @@ package pm.bam.gamedeals.common.ui.share
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -84,6 +85,33 @@ class DealShareSheetTest {
         assertTrue(text.contains(link))
         assertTrue(actions.texts.isEmpty())
         composeTestRule.onNodeWithText("Share this deal").assertDoesNotExist()
+    }
+
+    @Test
+    fun the_preview_stays_open_when_the_phone_rotates() {
+        // Found on the emulator: rotating the phone (or switching dark mode) closed the preview.
+        val actions = RecordingActions()
+        lateinit var sharer: DealSharer
+        val restoration = StateRestorationTester(composeTestRule)
+        restoration.setContent {
+            CompositionLocalProvider(LocalPlatformActions provides actions) {
+                GameDealsTheme {
+                    sharer = rememberDealSharer()
+                    DealShareSheet(sharer)
+                }
+            }
+        }
+        composeTestRule.runOnIdle { sharer.share(share.copy(card = card.copy(endsAtEpochMs = 1_796_000_000_000))) }
+        composeTestRule.onNodeWithText("Share this deal").assertIsDisplayed()
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        composeTestRule.onNodeWithText("Share this deal").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Hades").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Sale ends", substring = true).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Share the link only").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(listOf(share.text), actions.texts)
     }
 
     @Test
