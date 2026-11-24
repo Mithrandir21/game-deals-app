@@ -32,7 +32,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -67,6 +66,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.share.DealShareSheet
 import pm.bam.gamedeals.common.ui.share.rememberDealSharer
+import pm.bam.gamedeals.common.ui.shell.TabSnackbarHost
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 import pm.bam.gamedeals.common.ui.PreviewDeal
@@ -286,7 +286,7 @@ private fun HomeScreenContent(
             // The app shell owns the top bar + bottom nav and provides outer padding;
             // zero this Scaffold's insets so its content isn't double-inset under the shell.
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            snackbarHost = { TabSnackbarHost(hostState = snackbarHostState) },
         ) { innerPadding: PaddingValues ->
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                 if (data.status == HomeScreenStatus.LOADING) {

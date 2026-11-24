@@ -37,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -88,6 +87,7 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.adaptive.WidthSizeClass
 import pm.bam.gamedeals.common.ui.adaptive.rememberWidthSizeClass
 import pm.bam.gamedeals.common.ui.components.StoreLabel
+import pm.bam.gamedeals.common.ui.shell.TabSnackbarHost
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Giveaway
@@ -212,7 +212,7 @@ private fun GiveawaysScreenContent(
             // The app shell owns the top bar + bottom nav and insets the NavHost; this inner
             // Scaffold only hosts the snackbar, so it contributes no insets of its own.
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+            snackbarHost = { TabSnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding: PaddingValues ->
             Column(modifier = Modifier.padding(innerPadding)) {
                 // Filter affordance mirrors the Deals tab (the shared shell top bar is content-agnostic),

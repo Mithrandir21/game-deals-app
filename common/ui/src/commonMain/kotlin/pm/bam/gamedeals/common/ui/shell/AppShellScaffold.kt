@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -31,12 +35,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -44,13 +50,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.max
+import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
 import pm.bam.gamedeals.common.ui.generated.resources.Res
 import pm.bam.gamedeals.common.ui.generated.resources.app_shell_more_action
@@ -240,7 +250,15 @@ fun GameDealsAppShell(
         } else {
             padding
         }
-        content(contentPadding)
+        val navigationBars = WindowInsets.navigationBars
+        val density = LocalDensity.current
+        val bottomCover: () -> Int = {
+            val bar = if (showBottomBar) (bottomBarHeightPx * (1f - topScrollBehavior.state.collapsedFraction)).roundToInt() else 0
+            max(bar, navigationBars.getBottom(density))
+        }
+        CompositionLocalProvider(LocalShellBottomCover provides bottomCover) {
+            content(contentPadding)
+        }
     }
 }
 
@@ -310,4 +328,21 @@ private fun GameDealsAppShell_Preview() {
             }
         )
     }
+}
+
+/**
+ * How many pixels at the bottom of a tab screen the shell currently covers: the visible part of the bottom
+ * bar, or the system navigation bar once the bar has slid away. Read at placement time, so following the
+ * bar as it slides costs no recomposition.
+ */
+private val LocalShellBottomCover = staticCompositionLocalOf<() -> Int> { { 0 } }
+
+/**
+ * A tab screen's snackbar host. Tab content runs underneath the shell's bottom bar (so the bar can slide
+ * away on scroll), which left a plain host's messages hidden behind the bar; this one sits just above it.
+ */
+@Composable
+fun TabSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
+    val cover = LocalShellBottomCover.current
+    SnackbarHost(hostState = hostState, modifier = modifier.offset { IntOffset(0, -cover()) })
 }

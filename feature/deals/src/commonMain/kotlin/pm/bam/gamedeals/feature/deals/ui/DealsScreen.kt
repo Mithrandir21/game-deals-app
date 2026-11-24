@@ -53,7 +53,6 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -97,6 +96,7 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.shell.TabSnackbarHost
 import pm.bam.gamedeals.common.ui.signals.isRare
 import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
@@ -382,7 +382,7 @@ internal fun DealsContent(
         // The app shell owns the top bar + bottom nav and already insets the NavHost; this inner
         // Scaffold only hosts the snackbar, so it contributes no insets of its own.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { TabSnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding: PaddingValues ->
         Box(
             modifier = Modifier
