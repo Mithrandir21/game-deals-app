@@ -41,9 +41,9 @@ class SaleCountdownWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 /**
- * The next or current big sale on Steam, Epic or GOG, from the Worker's hand-typed dates ([SaleCalendarRepository]):
- * "Steam Winter Sale · Ends in 5 days". Redrawn every hour by the system (`sale_countdown_widget_info.xml`), so the
- * count is right to the hour. Tapping opens the Deals tab.
+ * The sale to count down to on Steam, Epic or GOG, from the Worker's hand-typed dates ([SaleCalendarRepository], which
+ * picks between big sales and smaller fests): "Steam Winter Sale · Ends in 5 days". Redrawn every hour by the system
+ * (`sale_countdown_widget_info.xml`), so the count is right to the hour. Tapping opens the Deals tab.
  */
 class SaleCountdownWidget : GlanceAppWidget(), KoinComponent {
 

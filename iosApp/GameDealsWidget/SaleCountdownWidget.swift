@@ -1,8 +1,9 @@
 import SwiftUI
 import WidgetKit
 
-// Home Screen widget: how long until the next big Steam, Epic or GOG sale starts, or how long the current one has
-// left. Fetches the Worker's public sales.json itself (SaleCalendar, shared with the app), so it needs no App Group.
+// Home Screen widget: how long until the next Steam, Epic or GOG sale starts, or how long the current one has
+// left. Fetches the Worker's public sales.json itself (SaleCalendar, shared with the app), so it needs no App Group;
+// the dates built into the app stand in when the Worker can't be reached.
 // The count is drawn with relative-date text, which the system keeps current without new timeline entries; the
 // timeline only adds entries for the moments a sale starts or ends. Tapping opens the app's Deals tab.
 
@@ -16,7 +17,7 @@ struct SaleCountdownWidget: Widget {
                 .widgetBackground()
         }
         .configurationDisplayName("Sale countdown")
-        .description("How long until the next big Steam, Epic or GOG sale starts, and how long the current one has left.")
+        .description("How long until the next Steam, Epic or GOG sale starts, and how long the current one has left.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -24,7 +25,7 @@ struct SaleCountdownWidget: Widget {
 struct SaleCountdownEntry: TimelineEntry {
     let date: Date
     let countdown: SaleCountdown?
-    /// The file couldn't be fetched, so there is nothing to show.
+    /// Neither the Worker's file nor the built-in dates could be read, so there is nothing to show.
     let failed: Bool
 }
 
@@ -42,7 +43,7 @@ struct SaleCountdownProvider: TimelineProvider {
             return
         }
         Task {
-            let sales = await SaleCalendar.fetch()
+            let sales = await SaleCalendar.load()
             let now = Date()
             completion(SaleCountdownEntry(date: now, countdown: sales.flatMap { SaleCalendar.countdown($0, at: now) }, failed: sales == nil))
         }
@@ -50,7 +51,7 @@ struct SaleCountdownProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SaleCountdownEntry>) -> Void) {
         Task {
-            let sales = await SaleCalendar.fetch()
+            let sales = await SaleCalendar.load()
             let now = Date()
             let refresh = now.addingTimeInterval(Self.refreshAfter)
             var entries = [SaleCountdownEntry(date: now, countdown: sales.flatMap { SaleCalendar.countdown($0, at: now) }, failed: sales == nil)]
@@ -63,7 +64,7 @@ struct SaleCountdownProvider: TimelineProvider {
         }
     }
 
-    static let sample = BigSale(
+    static let sample = StoreSale(
         id: "sample", store: "Steam", name: "Steam Winter Sale",
         start: Date().addingTimeInterval(-2 * 86_400), end: Date().addingTimeInterval(5 * 86_400)
     )
@@ -74,7 +75,7 @@ struct SaleCountdownView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label("Big sales", systemImage: "timer")
+            Label("Sales", systemImage: "timer")
                 .font(.caption.bold())
                 .foregroundStyle(Color.accentColor)
             if let countdown = entry.countdown {
@@ -95,7 +96,7 @@ struct SaleCountdownView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else {
-                Text(entry.failed ? "Couldn't load the sale dates. Tap to open the app." : "No big sale announced yet.")
+                Text(entry.failed ? "Couldn't load the sale dates. Tap to open the app." : "No sale announced yet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -3,7 +3,7 @@ import Foundation
 import ActivityKit
 #endif
 
-/// Starts a lock-screen countdown when a big sale has under eight hours left and the app comes to the foreground, and
+/// Starts a lock-screen countdown when a big sale (not a fest) has under eight hours left and the app comes to the foreground, and
 /// ends countdowns whose sale is over. Apple caps a Live Activity at about eight hours and only the app can start one,
 /// so this covers a sale's last day, not the whole sale. No push: the countdown runs on the phone's clock.
 enum SaleLiveActivity {
@@ -19,8 +19,9 @@ enum SaleLiveActivity {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
             guard ActivityAuthorizationInfo().areActivitiesEnabled,
-                  let sales = await SaleCalendar.fetch(),
+                  let sales = await SaleCalendar.load(),
                   case .running(let sale)? = SaleCalendar.countdown(sales, at: now),
+                  sale.kind == .big,
                   sale.end.timeIntervalSince(now) <= window,
                   !Activity<SaleCountdownAttributes>.activities.contains(where: { $0.attributes.saleId == sale.id })
             else { return }

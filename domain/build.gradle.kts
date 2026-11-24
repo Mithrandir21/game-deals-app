@@ -6,8 +6,36 @@ plugins {
     alias(libs.plugins.mokkery)
 }
 
+// The sale countdown's fallback dates: `store/site/sales.json` compiled in as a string, so the Worker's file stays the
+// only list to edit. Used when the phone has no saved copy and the Worker can't be reached (SaleCalendarRepository).
+val generateBundledSales by tasks.registering {
+    val salesFile = rootProject.layout.projectDirectory.file("store/site/sales.json")
+    val outputDir = layout.buildDirectory.dir("generated/bundledSales/kotlin")
+    inputs.file(salesFile)
+    outputs.dir(outputDir)
+    doLast {
+        val literal = salesFile.asFile.readText()
+            .replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$").replace("\n", "\\n")
+        val target = outputDir.get().file("pm/bam/gamedeals/domain/repositories/salecalendar/BundledSales.kt").asFile
+        target.parentFile.mkdirs()
+        target.writeText(
+            """
+            |// Generated from store/site/sales.json by :domain:generateBundledSales. Don't edit.
+            |package pm.bam.gamedeals.domain.repositories.salecalendar
+            |
+            |/** The sale dates built into this app version (`store/site/sales.json` at build time). */
+            |internal const val BUNDLED_SALES_JSON: String = "$literal"
+            |""".trimMargin(),
+        )
+    }
+}
+
 kotlin {
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generateBundledSales)
+        }
+
         commonMain.dependencies {
             api(libs.kotlinx)
             api(libs.kotlinx.collections.immutable)

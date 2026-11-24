@@ -18,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SaleCalendarRepositoryTest {
 
@@ -27,19 +28,39 @@ class SaleCalendarRepositoryTest {
     private val document = """
         {"schemaVersion": 1, "sales": [
           {"id": "epic-holiday-2026", "store": "Epic Games Store", "name": "Epic Holiday Sale", "start": "2026-12-10T16:00:00Z", "end": "2027-01-07T16:00:00Z"},
-          {"id": "steam-winter-2026", "store": "Steam", "name": "Steam Winter Sale", "start": "2026-12-17T18:00:00Z", "end": "2027-01-04T18:00:00Z"},
+          {"id": "steam-winter-2026", "store": "Steam", "name": "Steam Winter Sale", "kind": "big", "start": "2026-12-17T18:00:00Z", "end": "2027-01-04T18:00:00Z"},
           {"id": "broken", "store": "GOG", "name": "Broken", "start": "soon", "end": "2027-01-04T18:00:00Z"},
           {"id": "backwards", "store": "GOG", "name": "Backwards", "start": "2027-01-04T18:00:00Z", "end": "2026-12-04T18:00:00Z"}
         ]}
     """.trimIndent()
 
     private fun at(iso: String) = kotlin.time.Instant.parse(iso).toEpochMilliseconds()
-    private val epic = BigSale("epic-holiday-2026", "Epic Games Store", "Epic Holiday Sale", at("2026-12-10T16:00:00Z"), at("2027-01-07T16:00:00Z"))
-    private val steam = BigSale("steam-winter-2026", "Steam", "Steam Winter Sale", at("2026-12-17T18:00:00Z"), at("2027-01-04T18:00:00Z"))
+    private val epic = StoreSale("epic-holiday-2026", "Epic Games Store", "Epic Holiday Sale", at("2026-12-10T16:00:00Z"), at("2027-01-07T16:00:00Z"))
+    private val steam = StoreSale("steam-winter-2026", "Steam", "Steam Winter Sale", at("2026-12-17T18:00:00Z"), at("2027-01-04T18:00:00Z"))
 
     @Test
     fun the_document_is_read_and_bad_sales_skipped() {
         assertEquals(listOf(epic, steam), parseSales(document, json))
+    }
+
+    @Test
+    fun a_sale_is_big_unless_marked_as_a_fest() {
+        val text = """
+            {"schemaVersion": 1, "sales": [
+              {"id": "a", "store": "Steam", "name": "A", "kind": "fest", "start": "2027-01-14T18:00:00Z", "end": "2027-01-18T18:00:00Z"},
+              {"id": "b", "store": "Steam", "name": "B", "kind": "big", "start": "2027-01-14T18:00:00Z", "end": "2027-01-18T18:00:00Z"},
+              {"id": "c", "store": "Steam", "name": "C", "start": "2027-01-14T18:00:00Z", "end": "2027-01-18T18:00:00Z"},
+              {"id": "d", "store": "Steam", "name": "D", "kind": "mega", "start": "2027-01-14T18:00:00Z", "end": "2027-01-18T18:00:00Z"}
+            ]}
+        """.trimIndent()
+        assertEquals(listOf(SaleKind.FEST, SaleKind.BIG, SaleKind.BIG, SaleKind.BIG), parseSales(text, json).map { it.kind })
+    }
+
+    @Test
+    fun the_dates_built_into_the_app_all_read() {
+        val sales = parseSales(BUNDLED_SALES_JSON, json)
+        assertEquals(Regex("\"id\"").findAll(BUNDLED_SALES_JSON).count(), sales.size, "no sale dropped")
+        assertTrue(sales.any { it.kind == SaleKind.FEST })
     }
 
     @Test
@@ -56,7 +77,29 @@ class SaleCalendarRepositoryTest {
         assertEquals(SaleCountdown.Running(steam), sales.countdownAt(at("2026-12-20T00:00:00Z")))
         assertEquals(SaleCountdown.Running(epic), sales.countdownAt(steam.endEpochMs))
         assertNull(sales.countdownAt(epic.endEpochMs))
-        assertNull(emptyList<BigSale>().countdownAt(0))
+        assertNull(emptyList<StoreSale>().countdownAt(0))
+    }
+
+    private val rhythm = StoreSale("rhythm", "Steam", "Rhythm Fest", at("2027-03-08T18:00:00Z"), at("2027-03-15T17:00:00Z"), SaleKind.FEST)
+    private val spring = StoreSale("spring", "Steam", "Steam Spring Sale", at("2027-03-18T17:00:00Z"), at("2027-03-25T17:00:00Z"))
+    private val racing = StoreSale("racing", "Steam", "Racing Fest", at("2027-03-17T17:00:00Z"), at("2027-03-30T17:00:00Z"), SaleKind.FEST)
+
+    @Test
+    fun a_running_fest_shows_until_a_big_sale_is_a_week_away() {
+        val sales = listOf(rhythm, spring)
+        assertEquals(SaleCountdown.Upcoming(rhythm), sales.countdownAt(at("2027-03-01T00:00:00Z")))
+        assertEquals(SaleCountdown.Running(rhythm), sales.countdownAt(spring.startEpochMs - BIG_SALE_LEAD_MS - 1))
+        assertEquals(SaleCountdown.Upcoming(spring), sales.countdownAt(spring.startEpochMs - BIG_SALE_LEAD_MS))
+        assertEquals(SaleCountdown.Running(spring), sales.countdownAt(spring.startEpochMs))
+    }
+
+    @Test
+    fun a_big_sale_a_week_away_beats_a_fest_starting_sooner_and_a_running_big_sale_beats_a_fest() {
+        val sales = listOf(racing, spring)
+        assertEquals(SaleCountdown.Upcoming(spring), sales.countdownAt(at("2027-03-16T00:00:00Z")))
+        // Racing Fest runs on past the big sale's start; the big sale wins while it's on.
+        assertEquals(SaleCountdown.Running(spring), sales.countdownAt(at("2027-03-20T00:00:00Z")))
+        assertEquals(SaleCountdown.Running(racing), sales.countdownAt(spring.endEpochMs))
     }
 
     /** A Storage that keeps values in memory, encoded the way the real one does. */
@@ -103,10 +146,18 @@ class SaleCalendarRepositoryTest {
     }
 
     @Test
-    fun with_nothing_cached_a_failure_means_no_sales() = runTest {
+    fun with_nothing_cached_a_failure_falls_back_to_the_dates_built_into_the_app() = runTest {
         everySuspend { source.fetch() } throws IllegalStateException("offline")
-        assertEquals(emptyList(), repository.getSales())
+        val withBuiltIn = SaleCalendarRepositoryImpl(source, storage, json, Clock { now }, TestingLoggingListener(), bundledJson = document)
+        assertEquals(listOf(epic, steam), withBuiltIn.getSales())
         verifySuspend(exactly(1)) { source.fetch() }
+    }
+
+    @Test
+    fun unreadable_built_in_dates_mean_no_sales() = runTest {
+        everySuspend { source.fetch() } throws IllegalStateException("offline")
+        val broken = SaleCalendarRepositoryImpl(source, storage, json, Clock { now }, TestingLoggingListener(), bundledJson = "{")
+        assertEquals(emptyList(), broken.getSales())
     }
 
     @Test

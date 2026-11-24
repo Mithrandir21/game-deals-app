@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from validate_sales import validate_sales
+from validate_sales import IOS_COPY_PATH, validate_sales, with_ios_copy
 
 
 VALID = json.loads(Path(__file__).with_name("sales.json").read_text())
@@ -38,8 +38,18 @@ class SalesDocumentValidationTest(unittest.TestCase):
         sale = VALID["sales"][0]
         with self.assertRaisesRegex(ValueError, "Duplicate sale id"):
             validate_sales(json.dumps(dict(VALID, sales=[sale, sale])))
-        with self.assertRaisesRegex(ValueError, "exactly"):
+        with self.assertRaisesRegex(ValueError, "may have kind"):
             validate_sales(with_sale(extra=1))
+        missing = {key: value for key, value in VALID["sales"][0].items() if key != "end"}
+        with self.assertRaisesRegex(ValueError, "may have kind"):
+            validate_sales(json.dumps(dict(VALID, sales=[missing])))
+
+    def test_kind_is_optional_and_big_or_fest(self):
+        no_kind = {key: value for key, value in VALID["sales"][0].items() if key != "kind"}
+        self.assertEqual(1, len(validate_sales(json.dumps(dict(VALID, sales=[no_kind])))["sales"]))
+        self.assertEqual(1, len(validate_sales(with_sale(kind="fest"))["sales"]))
+        with self.assertRaisesRegex(ValueError, "kind must be"):
+            validate_sales(with_sale(kind="huge"))
 
     def test_names_are_short_and_present(self):
         with self.assertRaisesRegex(ValueError, "name"):
@@ -52,6 +62,19 @@ class SalesDocumentValidationTest(unittest.TestCase):
             validate_sales('{"schemaVersion":2,"sales":[]}')
         with self.assertRaisesRegex(ValueError, "Duplicate key"):
             validate_sales('{"schemaVersion":1,"schemaVersion":1,"sales":[]}')
+
+    def test_the_ios_copy_is_swapped_in_place(self):
+        swift = 'enum A {\n    static let bundledJSON = #"""\n{"old": 1}\n"""#\n}\n'
+        self.assertEqual(
+            'enum A {\n    static let bundledJSON = #"""\n{"new": 2}\n"""#\n}\n',
+            with_ios_copy(swift, '{"new": 2}\n'),
+        )
+        with self.assertRaisesRegex(ValueError, "bundledJSON"):
+            with_ios_copy("enum A {}", "{}")
+
+    def test_the_ios_copy_matches_the_file(self):
+        swift = IOS_COPY_PATH.read_text()
+        self.assertEqual(swift, with_ios_copy(swift, Path(__file__).with_name("sales.json").read_text()))
 
 
 if __name__ == "__main__":
