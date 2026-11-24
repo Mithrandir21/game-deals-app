@@ -138,11 +138,11 @@ internal const val DEAL_SWIPE_CARD_TAG = "deal_swipe_card"
 
 /** Home's entry to deal swipe, under the waitlist and collection counts (signed-in users only). */
 @Composable
-internal fun DealSwipeHomeCard(onOpen: () -> Unit) {
+internal fun DealSwipeHomeCard(modifier: Modifier = Modifier, onOpen: () -> Unit) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium)
             .clip(CardDefaults.shape)
             .clickable(role = Role.Button, onClick = onOpen),
         colors = CardDefaults.cardColors(

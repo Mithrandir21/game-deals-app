@@ -89,11 +89,11 @@ import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
 
 /** Home's entry to the year card: a tappable card in the app's green, shown in December and January. */
 @Composable
-internal fun YearInDealsHomeCard(year: Int, onOpen: () -> Unit) {
+internal fun YearInDealsHomeCard(year: Int, modifier: Modifier = Modifier, onOpen: () -> Unit) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small)
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium)
             .clip(CardDefaults.shape)
             .clickable(role = Role.Button, onClick = onOpen),
         colors = CardDefaults.cardColors(

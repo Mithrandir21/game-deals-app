@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
@@ -132,6 +133,7 @@ import pm.bam.gamedeals.feature.home.ui.HomeViewModel.HomeScreenStatus
 private const val CONTENT_TYPE_SECTION_HEADER = "section_header"
 private const val CONTENT_TYPE_SECTION_DIVIDER = "section_divider"
 private const val CONTENT_TYPE_STAT_ROW = "stat_row"
+private const val CONTENT_TYPE_TOP_CARDS_END = "top_cards_end"
 private const val CONTENT_TYPE_HERO_ROW = "hero_row"
 private const val CONTENT_TYPE_DEAL = "deal"
 private const val CONTENT_TYPE_RANKED = "ranked"
@@ -401,25 +403,38 @@ private fun HomeFeed(
         data.featuredHero.map { it.gameID } + data.trending.map { it.gameID } +
             data.mostWaitlisted.map { it.gameId } + data.mostCollected.map { it.gameId }
     }
+    // The cards at the top (sale, year, counts, swipe) share one rhythm, whichever of them show: 16 dp under the
+    // top bar, 12 dp between cards, and 12 dp from the last card to the divider (its own 8 dp plus 4 dp here).
+    val firstTopCardGap = GameDealsCustomTheme.spacing.large
+    val topCardGap = GameDealsCustomTheme.spacing.medium + GameDealsCustomTheme.spacing.small
+    val topCardsEnd = GameDealsCustomTheme.spacing.small
+
     ProvideGameSignals(signalIds) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomInset) {
             // Track whether we've already emitted a section so each subsequent section is preceded by a
             // separator + spacing, while the first one stays flush to the top (no stray divider).
             var renderedSection = false
+            var topCards = 0
+            fun nextTopCardGap(): Dp = if (topCards++ == 0) firstTopCardGap else topCardGap
 
             winterSaleEvent?.let { event ->
-                item(contentType = CONTENT_TYPE_SECTION_HEADER) { WinterSaleHomeCard(event, winterSaleTotals, onOpenWinterSale) }
+                val top = nextTopCardGap()
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) {
+                    WinterSaleHomeCard(event, winterSaleTotals, modifier = Modifier.padding(top = top), onOpen = onOpenWinterSale)
+                }
                 renderedSection = true
             }
 
             // Year in deals (signed-in users, December and January).
             yearInDealsYear?.let { year ->
-                item(contentType = CONTENT_TYPE_SECTION_HEADER) { YearInDealsHomeCard(year, onOpenYearInDeals) }
+                val top = nextTopCardGap()
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { YearInDealsHomeCard(year, modifier = Modifier.padding(top = top), onOpen = onOpenYearInDeals) }
                 renderedSection = true
             }
 
             // 1. Account stat cards (logged-in only) — tap through to the Waitlist / Collection lists.
             accountStats?.let { stats ->
+                val top = nextTopCardGap()
                 item(contentType = CONTENT_TYPE_STAT_ROW) {
                     Row(
                         modifier = Modifier
@@ -427,12 +442,7 @@ private fun HomeFeed(
                             // On wide screens two weighted cards would stretch to enormous widths; cap the row so
                             // they stay a sensible size, left-aligned. Compact keeps the full-width phone layout.
                             .then(if (widthClass != WidthSizeClass.COMPACT) Modifier.widthIn(max = 480.dp) else Modifier)
-                            .padding(
-                                start = GameDealsCustomTheme.spacing.medium,
-                                top = GameDealsCustomTheme.spacing.large,
-                                end = GameDealsCustomTheme.spacing.medium,
-                                bottom = GameDealsCustomTheme.spacing.medium
-                            ),
+                            .padding(start = GameDealsCustomTheme.spacing.medium, top = top, end = GameDealsCustomTheme.spacing.medium),
                         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
                     ) {
                         StatCard(
@@ -453,10 +463,12 @@ private fun HomeFeed(
                 }
                 // Deal swipe, under the counts it feeds (null when its switch is off).
                 onOpenDealSwipe?.let { open ->
-                    item(contentType = CONTENT_TYPE_SECTION_HEADER) { DealSwipeHomeCard(open) }
+                    val swipeTop = nextTopCardGap()
+                    item(contentType = CONTENT_TYPE_SECTION_HEADER) { DealSwipeHomeCard(modifier = Modifier.padding(top = swipeTop), onOpen = open) }
                 }
                 renderedSection = true
             }
+            if (topCards > 0) item(contentType = CONTENT_TYPE_TOP_CARDS_END) { Spacer(Modifier.height(topCardsEnd)) }
 
             // 2. Featured hero grid (top-discount deals): 2 tiles/row on phones, widening to 3/4 columns.
             if (data.featuredHero.isNotEmpty()) {
