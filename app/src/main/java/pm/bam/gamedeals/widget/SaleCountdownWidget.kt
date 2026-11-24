@@ -5,20 +5,27 @@ import android.text.format.DateFormat
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -35,6 +42,7 @@ import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCountdown
 import pm.bam.gamedeals.logging.featureflags.FeatureFlag
 import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.shortcuts.AppShortcut
+import kotlinx.coroutines.flow.Flow
 import java.util.Date
 import java.util.Locale
 
@@ -47,8 +55,12 @@ class SaleCountdownWidgetReceiver : GlanceAppWidgetReceiver() {
  * picks between big sales and smaller fests): "Steam Winter Sale · Ends in 5 days". Redrawn every hour by the system
  * (`sale_countdown_widget_info.xml`), so the count is right to the hour. Tapping opens the Deals tab. With the
  * [FeatureFlag.SaleCountdown] switch off it is a plain "Tap for today's deals" tile, as a placed widget can't be removed.
+ * One row high (its default size) it shows only the sale and its count, as the full layout needs about two rows.
  */
 class SaleCountdownWidget : GlanceAppWidget(), KoinComponent {
+
+    // The real size, so the layout can drop lines when the widget is one row high.
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     private val saleCalendarRepository: SaleCalendarRepository by inject()
     private val featureFlags: FeatureFlags by inject()
@@ -57,7 +69,11 @@ class SaleCountdownWidget : GlanceAppWidget(), KoinComponent {
         val state = load(context, System.currentTimeMillis())
         provideContent {
             GlanceTheme {
-                SaleCountdownContent(state)
+                LiveSaleCountdownContent(
+                    loaded = state,
+                    switchedOn = featureFlags.observe(FeatureFlag.SaleCountdown),
+                    reload = { load(context, System.currentTimeMillis()) },
+                )
             }
         }
     }
@@ -128,17 +144,45 @@ internal fun timeLeft(nowMillis: Long, targetMillis: Long): TimeLeft {
     }
 }
 
+/**
+ * [loaded], but following the remote switch live. While a widget's session is open (about a minute after each
+ * redraw), an update only recomposes it without loading again, so a switch flipped in that time would otherwise
+ * not show until the next hourly redraw. Switched back on after loading as off, it reads the sale dates then.
+ */
+@Composable
+internal fun LiveSaleCountdownContent(loaded: SaleCountdownState, switchedOn: Flow<Boolean>, reload: suspend () -> SaleCountdownState) {
+    val on by switchedOn.collectAsState(initial = loaded != SaleCountdownState.SwitchedOff)
+    val shown by produceState(initialValue = loaded, on) { value = shownState(loaded, on, reload) }
+    SaleCountdownContent(shown)
+}
+
+/** What to draw while the switch is [switchedOn], given what the session [loaded]. */
+internal suspend fun shownState(
+    loaded: SaleCountdownState,
+    switchedOn: Boolean,
+    reload: suspend () -> SaleCountdownState,
+): SaleCountdownState = when {
+    !switchedOn -> SaleCountdownState.SwitchedOff
+    loaded == SaleCountdownState.SwitchedOff -> reload()
+    else -> loaded
+}
+
+/** Below this height the header, sale name, count and date don't all fit, so the widget shows the name and count only. */
+private val FULL_LAYOUT_MIN_HEIGHT: Dp = 110.dp
+
 @Composable
 internal fun SaleCountdownContent(state: SaleCountdownState) {
     val context = LocalContext.current
+    val compact = LocalSize.current.height < FULL_LAYOUT_MIN_HEIGHT
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
             .background(GlanceTheme.colors.widgetBackground)
             .cornerRadius(16.dp)
-            .padding(12.dp)
+            .padding(horizontal = 12.dp, vertical = if (compact) 8.dp else 12.dp)
             .clickable(actionStartActivity(AppShortcut.Deals.intent(context))),
+        verticalAlignment = if (compact) Alignment.CenterVertically else Alignment.Top,
     ) {
         when (state) {
             SaleCountdownState.SwitchedOff -> {
@@ -154,7 +198,9 @@ internal fun SaleCountdownContent(state: SaleCountdownState) {
                 Spacer(GlanceModifier.height(6.dp))
                 WidgetMessage(R.string.widget_sale_none)
             }
-            is SaleCountdownState.Counting -> {
+            is SaleCountdownState.Counting -> if (compact) {
+                CompactSaleCountdownLines(state.ui)
+            } else {
                 WidgetHeader(R.string.widget_sale_countdown_header, R.drawable.ic_widget_timer)
                 Spacer(GlanceModifier.height(6.dp))
                 SaleCountdownLines(state.ui)
@@ -180,6 +226,23 @@ private fun SaleCountdownLines(state: SaleCountdownUi) {
             text = state.detail,
             maxLines = 1,
             style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp),
+        )
+    }
+}
+
+/** One row high: the sale and its count. The count may take two lines ("Ends in under an hour" on a narrow widget). */
+@Composable
+private fun CompactSaleCountdownLines(state: SaleCountdownUi) {
+    Column {
+        Text(
+            text = state.name,
+            maxLines = 1,
+            style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+        )
+        Text(
+            text = state.headline,
+            maxLines = 2,
+            style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 16.sp, fontWeight = FontWeight.Bold),
         )
     }
 }

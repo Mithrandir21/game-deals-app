@@ -2,6 +2,8 @@ package pm.bam.gamedeals.widget
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.hasText
@@ -46,17 +48,31 @@ class SaleCountdownWidgetTextTest {
         assertEquals("Steam · ends Jan 4", SaleCountdown.Running(winter).toUi(context, end - day * 3).detail)
     }
 
+    private val counting = SaleCountdownState.Counting(SaleCountdownUi("Steam Winter Sale", "Starts in 5 days", "Steam · starts Dec 17"))
+
     @Test
-    fun the_widget_shows_the_counting_lines() = runGlanceAppWidgetUnitTest {
+    fun two_rows_high_the_widget_shows_the_header_sale_count_and_date() = runGlanceAppWidgetUnitTest {
         setContext(context)
-        provideComposable {
-            GlanceTheme { SaleCountdownContent(SaleCountdownState.Counting(SaleCountdownUi("Steam Winter Sale", "Starts in 5 days", "Steam · starts Dec 17"))) }
-        }
+        setAppWidgetSize(DpSize(160.dp, 180.dp))
+        provideComposable { GlanceTheme { SaleCountdownContent(counting) } }
 
         onNode(hasText("Sales")).assertExists()
         onNode(hasText("Steam Winter Sale")).assertExists()
         onNode(hasText("Starts in 5 days")).assertExists()
         onNode(hasText("Steam · starts Dec 17")).assertExists()
+    }
+
+    @Test
+    fun one_row_high_the_widget_keeps_the_sale_and_its_count_and_drops_the_rest() = runGlanceAppWidgetUnitTest {
+        // A 2x1 widget on Lite_Phone_36 is about 156 x 82 dp; all four lines cut off the count there.
+        setContext(context)
+        setAppWidgetSize(DpSize(156.dp, 82.dp))
+        provideComposable { GlanceTheme { SaleCountdownContent(counting) } }
+
+        onNode(hasText("Steam Winter Sale")).assertExists()
+        onNode(hasText("Starts in 5 days")).assertExists()
+        onNode(hasText("Sales")).assertDoesNotExist()
+        onNode(hasText("Steam · starts Dec 17")).assertDoesNotExist()
     }
 
     @Test
