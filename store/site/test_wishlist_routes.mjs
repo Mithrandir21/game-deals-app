@@ -280,3 +280,15 @@ test("ITAD rate-limiting some games' info counts them as not loaded and caches n
   assert.ok(!keys.some((k) => k.includes(`/info/${ID2}`)), "the rate-limited game isn't cached");
   assert.ok(!keys.some((k) => k.includes("/price/")), "rate-limited prices aren't cached");
 });
+
+test("fetch is called on its own, as Cloudflare requires, not as a method of another object", async () => {
+  // Cloudflare's fetch throws "Illegal invocation" when called with any `this` but the global one.
+  const itad = fakeItad();
+  const strictFetch = function (url, init) {
+    if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+    return itad.fetch(url, init);
+  };
+  const response = await visit(`/w/${ENC}${ENC2}`, { fetch: strictFetch, cache: null });
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Hollow Knight/);
+});

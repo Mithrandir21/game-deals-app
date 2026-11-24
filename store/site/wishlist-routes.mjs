@@ -112,11 +112,13 @@ export async function handleWishlistRequest(request, env, ctx, deps = {}) {
 
   const country = countryOf(request);
   const cache = deps.cache === undefined ? globalThis.caches?.default ?? null : deps.cache;
+  // Called as a plain function: Cloudflare's fetch throws "Illegal invocation" when called as `io.fetch(…)`.
   const fetchImpl = deps.fetch ?? fetch;
+  const callItad = (input, init) => fetchImpl(input, init);
   let list;
   try {
     const signal = AbortSignal.timeout(deps.timeoutMs ?? ITAD_TIMEOUT_MS);
-    list = await loadWishlist({ fetch: fetchImpl, cache, ctx, apiKey: env.ITAD_API_KEY, signal }, ids, country);
+    list = await loadWishlist({ fetch: callItad, cache, ctx, apiKey: env.ITAD_API_KEY, signal }, ids, country);
   } catch {
     return listPage(renderUnavailable(), 503, head);
   }
