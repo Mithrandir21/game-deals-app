@@ -119,6 +119,5 @@
     <string name="deal_share_lowest_ever">Lowest price ever</string>
     <string name="deal_share_ends">Sale ends %1$s</string>
     <string name="deal_share_footer">Found with Game Deals</string>
-    <string name="deal_share_footer_site">gamedeals.bam.pm</string>
 
 </resources>

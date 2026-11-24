@@ -57,7 +57,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import pm.bam.gamedeals.common.links.ShareLinks
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
 import pm.bam.gamedeals.common.ui.share.captureContent
 import pm.bam.gamedeals.common.ui.share.rememberShareCardCapture
@@ -292,10 +291,8 @@ internal fun YearInDealsCard(year: YearInDeals, modifier: Modifier = Modifier) {
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(Res.string.year_in_deals_footer), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Text(ShareLinks.APP_URL.removePrefix("https://"), style = MaterialTheme.typography.labelMedium)
-            }
+            // No web address on the card (Bam, 2026-11-24).
+            Text(stringResource(Res.string.year_in_deals_footer), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }

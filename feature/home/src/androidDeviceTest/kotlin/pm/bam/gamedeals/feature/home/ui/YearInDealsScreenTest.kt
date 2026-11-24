@@ -101,6 +101,8 @@ class YearInDealsScreenTest {
     fun a_ready_year_shares_the_card_as_an_image_with_its_line_of_text() {
         show()
         answer(0, Result.success(year))
+        composeTestRule.onNodeWithText("Made with Game Deals").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("bam.pm", substring = true).assertDoesNotExist()
 
         composeTestRule.onNodeWithText("Share my year").performScrollTo().performClick()
         composeTestRule.waitUntil(5_000) { actions.images.isNotEmpty() }

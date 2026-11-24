@@ -49,7 +49,6 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_share_button
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_ends
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_failed
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_footer
-import pm.bam.gamedeals.common.ui.generated.resources.deal_share_footer_site
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_link_only
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_lowest_ever
 import pm.bam.gamedeals.common.ui.generated.resources.deal_share_new_low
@@ -220,18 +219,13 @@ fun DealShareCardView(card: DealShareCard, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Column(modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.medium)) {
-                Text(
-                    text = stringResource(Res.string.deal_share_footer),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = stringResource(Res.string.deal_share_footer_site),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // No web address on the card (Bam, 2026-11-24): the link travels in the share text.
+            Text(
+                text = stringResource(Res.string.deal_share_footer),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = GameDealsCustomTheme.spacing.medium),
+            )
         }
     }
 }

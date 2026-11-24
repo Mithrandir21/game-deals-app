@@ -74,6 +74,8 @@ class DealShareSheetTest {
         composeTestRule.onNodeWithText("Hades").assertIsDisplayed()
         composeTestRule.onNodeWithText("$8.99").assertIsDisplayed()
         composeTestRule.onNodeWithText("Lowest price ever").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Found with Game Deals").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("bam.pm", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Share").performScrollTo().performClick()
         composeTestRule.waitUntil(5_000) { actions.images.isNotEmpty() }
 
