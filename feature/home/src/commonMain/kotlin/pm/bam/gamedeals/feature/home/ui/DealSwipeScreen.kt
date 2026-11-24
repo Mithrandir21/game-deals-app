@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
@@ -172,6 +176,7 @@ internal fun DealSwipeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val stores by viewModel.stores.collectAsStateWithLifecycle()
+    val descriptions by viewModel.descriptions.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     SingleEventEffect(viewModel.events) { event ->
@@ -199,6 +204,7 @@ internal fun DealSwipeScreen(
         onUndo = viewModel::onUndo,
         onRetry = viewModel::onRetry,
         onSignIn = { SignInPromptController.request() },
+        descriptions = descriptions,
     )
 }
 
@@ -214,6 +220,8 @@ internal fun DealSwipeContent(
     onUndo: () -> Unit,
     onRetry: () -> Unit,
     onSignIn: () -> Unit,
+    /** Game id → a short description, for the cards that have one. */
+    descriptions: ImmutableMap<String, String> = persistentMapOf(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Scaffold(
@@ -258,6 +266,7 @@ internal fun DealSwipeContent(
                 Status.READY -> SwipeDeck(
                     state = state,
                     stores = stores,
+                    descriptions = descriptions,
                     onOpen = onOpen,
                     onSwipeRight = onSwipeRight,
                     onSwipeLeft = onSwipeLeft,
@@ -272,6 +281,7 @@ internal fun DealSwipeContent(
 private fun SwipeDeck(
     state: DealSwipeViewModel.State,
     stores: ImmutableMap<Int, Store>,
+    descriptions: ImmutableMap<String, String>,
     onOpen: (Deal) -> Unit,
     onSwipeRight: (Deal) -> Unit,
     onSwipeLeft: (Deal) -> Unit,
@@ -309,6 +319,7 @@ private fun SwipeDeck(
                     deal = next,
                     store = stores[next.storeID],
                     signals = signals,
+                    description = descriptions[next.gameID],
                     modifier = Modifier
                         .graphicsLayer {
                             val grow = abs(topState.progress)
@@ -326,7 +337,7 @@ private fun SwipeDeck(
                 onAdd = { swipe(SwipeDirection.Right) },
                 onSkip = { swipe(SwipeDirection.Left) },
             ) {
-                SwipeDealCard(deal = top, store = stores[top.storeID], signals = signals)
+                SwipeDealCard(deal = top, store = stores[top.storeID], signals = signals, description = descriptions[top.gameID])
             }
         }
         SwipeButtons(
@@ -503,6 +514,7 @@ private fun SwipeDealCard(
     deal: Deal,
     store: Store?,
     signals: Map<String, GameSignals>,
+    description: String?,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -529,8 +541,9 @@ private fun SwipeDealCard(
                 modifier = Modifier.align(Alignment.BottomStart).padding(GameDealsCustomTheme.spacing.small),
             )
         }
+        // Takes what height is left under the art, so on a short screen the description is cut, not the price.
         Column(
-            modifier = Modifier.fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
+            modifier = Modifier.weight(1f, fill = false).fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
             verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
         ) {
             Text(
@@ -550,9 +563,49 @@ private fun SwipeDealCard(
             signals.reviewText(deal.gameID)?.let { review ->
                 Text(review, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            SwipeGameDetails(signals[deal.gameID], description)
         }
     }
 }
+
+/** What the game is: "Developer · Year", up to three specific tags, and a short description. Each part only when known. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColumnScope.SwipeGameDetails(signals: GameSignals?, description: String?) {
+    val maker = listOfNotNull(signals?.developer, signals?.releaseYear?.toString()).joinToString(" · ")
+    if (maker.isNotEmpty()) {
+        Text(maker, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    val tags = signals?.specificTags().orEmpty()
+    if (tags.isNotEmpty()) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+        ) {
+            tags.forEach { tag ->
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.secondaryContainer) {
+                    Text(
+                        text = tag,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.small, vertical = 4.dp),
+                    )
+                }
+            }
+        }
+    }
+    if (description != null) {
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = DESCRIPTION_LINES,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+    }
+}
+
+private const val DESCRIPTION_LINES = 3
 
 @Composable
 private fun SwipeButtons(canUndo: Boolean, onSkip: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {

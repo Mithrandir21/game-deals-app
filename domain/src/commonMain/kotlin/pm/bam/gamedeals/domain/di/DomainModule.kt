@@ -230,7 +230,9 @@ val domainModule = module {
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get(), get()) }
     // Deal swipe (next-versions M8): the hottest deals minus the user's library, with phone-only skips.
-    single<DealSwipeRepository> { DealSwipeRepositoryImpl(get(), get(), get(), get(), get(), get(SETTINGS_QUALIFIER), get()) }
+    single<DealSwipeRepository> {
+        DealSwipeRepositoryImpl(get(), get(), get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get())
+    }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.

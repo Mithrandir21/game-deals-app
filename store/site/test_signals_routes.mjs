@@ -34,6 +34,10 @@ function d1() {
 const info = (id) => ({
   id,
   title: "Hades",
+  releaseDate: "2020-09-17",
+  appid: 1145360,
+  tags: ["Action Roguelike", "Indie", "  Hack and Slash ", "", 7, "x".repeat(61), "A", "B", "C", "D", "E", "F", "G", "H"],
+  developers: [{ id: 1, name: "  " }, { id: 2, name: "Supergiant Games" }],
   reviews: [
     { score: 88, source: "Metascore", count: 50 },
     { score: 98, source: "Steam", count: 250000, url: "https://store.steampowered.com/app/1145360" },
@@ -112,6 +116,19 @@ test("signals carry Steam's review, players and ITAD counts, with missing parts 
   assert.equal(toSignals({}, [], NOW).review, null);
 });
 
+test("signals say what the game is: up to ten tags, the first named developer, the release year and the Steam app", () => {
+  const signals = toSignals(info(ID), [], NOW);
+  assert.deepEqual(signals.tags, ["Action Roguelike", "Indie", "Hack and Slash", "A", "B", "C", "D", "E", "F", "G"]);
+  assert.equal(signals.developer, "Supergiant Games");
+  assert.equal(signals.releaseYear, 2020);
+  assert.equal(signals.steamAppId, 1145360);
+  const bare = toSignals({ releaseDate: "TBA", developers: "nope", tags: "nope" }, [], NOW);
+  assert.deepEqual(bare.tags, []);
+  assert.equal(bare.developer, null);
+  assert.equal(bare.releaseYear, null);
+  assert.equal(bare.steamAppId, null);
+});
+
 // ---------------------------------------------------------------- the request
 
 test("only POST is accepted, and only a list of 1 to 50 ITAD ids", async () => {
@@ -166,7 +183,7 @@ test("the database holds public game data keyed by game id, and nothing else", a
   const row = db.row(ID);
   assert.equal(row.updated_at, NOW);
   assert.equal(row.claimed_at, null);
-  assert.deepEqual(Object.keys(JSON.parse(row.data)).sort(), ["collected", "players", "rank", "review", "updated", "waitlisted", "weeklyMaxCut"]);
+  assert.deepEqual(Object.keys(JSON.parse(row.data)).sort(), ["collected", "developer", "players", "rank", "releaseYear", "review", "steamAppId", "tags", "updated", "waitlisted", "weeklyMaxCut"]);
 });
 
 test("rows older than a day are served while they refresh", async () => {

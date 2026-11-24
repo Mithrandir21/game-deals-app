@@ -48,6 +48,8 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
         val asked = mutableListOf<Int>()
         val skipped = mutableListOf<String>()
         val unskipped = mutableListOf<String>()
+        val describedIds = mutableListOf<String>()
+        val descriptionsById = mutableMapOf<String, String>()
 
         override suspend fun nextPage(offset: Int): DealSwipePage {
             asked += offset
@@ -61,6 +63,10 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
 
         override suspend fun skip(gameId: String) { skipped += gameId }
         override suspend fun unskip(gameId: String) { unskipped += gameId }
+        override suspend fun description(deal: Deal): String? {
+            describedIds += deal.gameID
+            return descriptionsById[deal.gameID]
+        }
     }
 
     private val authState = MutableStateFlow<AuthState>(AuthState.LoggedIn("bam"))
@@ -380,6 +386,26 @@ class DealSwipeViewModelTest : MainDispatcherTest() {
         authState.value = AuthState.LoggedIn("bam")
         advanceUntilIdle()
         assertEquals(listOf("a", "b"), vm.ids())
+    }
+
+    @Test
+    fun the_top_three_cards_get_descriptions_each_asked_for_once() = runTest {
+        deck.pages[0] = page("a", "b", "c", "d", "e", "f")
+        deck.descriptionsById["a"] = "About a."
+        deck.descriptionsById["d"] = "About d."
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b", "c"), deck.describedIds)
+        assertEquals(mapOf("a" to "About a."), vm.descriptions.value)
+
+        vm.onSwipeLeft(vm.top())
+        advanceUntilIdle()
+        vm.onUndo()
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b", "c", "d"), deck.describedIds, "the undone card isn't asked about again")
+        assertEquals(mapOf("a" to "About a.", "d" to "About d."), vm.descriptions.value)
     }
 
     @Test

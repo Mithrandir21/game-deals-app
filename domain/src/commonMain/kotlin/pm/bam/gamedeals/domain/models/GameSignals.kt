@@ -27,6 +27,34 @@ data class GameSignals(
     val waitlisted: Int? = null,
     val collected: Int? = null,
     val rank: Int? = null,
+    /** Steam's player tags, most votes first (via ITAD); see [specificTags]. */
+    val tags: List<String> = emptyList(),
+    val developer: String? = null,
+    val releaseYear: Int? = null,
+    val steamAppId: Int? = null,
+) {
+    /**
+     * Up to [count] tags that say what the game is. Tags true of most games (Indie, Singleplayer, Great Soundtrack)
+     * are left out; very broad genres (Action, Adventure) only fill in when too few specific ones are left.
+     */
+    fun specificTags(count: Int = 3): List<String> {
+        val kept = tags.filterNot { it.lowercase() in VAGUE_TAGS }
+        val (broad, specific) = kept.partition { it.lowercase() in BROAD_TAGS }
+        return (specific + broad).take(count)
+    }
+}
+
+/** Steam tags that fit thousands of games, so they say nothing about this one. Lower case. */
+private val VAGUE_TAGS = setOf(
+    "indie", "singleplayer", "multiplayer", "great soundtrack", "atmospheric", "beautiful", "colorful", "cute",
+    "funny", "classic", "cult classic", "masterpiece", "addictive", "family friendly", "replay value", "controller",
+    "free to play", "early access",
+)
+
+/** Tags so broad (genres, viewpoints) that they only fill in when a game has too few specific ones. Lower case. */
+private val BROAD_TAGS = setOf(
+    "action", "adventure", "simulation", "strategy", "rpg", "casual", "story rich", "2d", "3d", "first-person",
+    "third person",
 )
 
 /** One answer from the Worker: the games it has, and the ones it is still fetching (ask again later). */

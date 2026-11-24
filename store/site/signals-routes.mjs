@@ -2,8 +2,9 @@
 //
 // For each game the Worker keeps one row in the D1 database (binding SIGNALS_DB), refreshed from IsThereAnyDeal at
 // most once a day: the deepest discount in each of the last 104 weeks (from the US price history; discounts are
-// almost always the same percentage in every region), the review score, player counts, and how many ITAD users
-// waitlist and own the game. Every app user's rows read from this one copy, so a game costs ITAD two calls a day no
+// almost always the same percentage in every region), the review score, player counts, how many ITAD users
+// waitlist and own the game, and what the game is (its Steam tags, developer, release year and Steam app id, which
+// the app uses to look up a description). Every app user's rows read from this one copy, so a game costs ITAD two calls a day no
 // matter how many phones show it. That is what keeps the shared ITAD allowance from running out as installs grow.
 //
 // Privacy: the database holds public game data only, keyed by game id. The ids a phone asks about (which can be its
@@ -22,6 +23,9 @@ export const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
 // keeps its claim until then, which spaces out retries while ITAD is down or limiting us.
 export const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 export const MAX_REFRESH_PER_REQUEST = 10;
+// ITAD's tags are Steam's player tags, most votes first. The app skips the vague ones and shows three, so keep a few.
+export const MAX_TAGS = 10;
+const MAX_TEXT = 60;
 const HISTORY_COUNTRY = "US";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const GAME_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -143,7 +147,24 @@ export function toSignals(info, history, now) {
     waitlisted: int(stats?.waitlisted),
     collected: int(stats?.collected),
     rank: int(stats?.rank),
+    tags: Array.isArray(info?.tags) ? info.tags.map(text).filter((tag) => tag !== null).slice(0, MAX_TAGS) : [],
+    developer: Array.isArray(info?.developers) ? info.developers.map((d) => text(d?.name)).find((n) => n !== null) ?? null : null,
+    releaseYear: releaseYear(info?.releaseDate),
+    steamAppId: int(info?.appid),
   };
+}
+
+/** A short trimmed string, or null for anything else. */
+function text(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_TEXT ? trimmed : null;
+}
+
+/** The year of ITAD's "2020-09-17" release date, or null. */
+function releaseYear(date) {
+  const match = typeof date === "string" ? /^(\d{4})-\d{2}-\d{2}/.exec(date) : null;
+  return match ? Number(match[1]) : null;
 }
 
 /** Steam's review when ITAD has one (most players read that one), else the first with a score. */

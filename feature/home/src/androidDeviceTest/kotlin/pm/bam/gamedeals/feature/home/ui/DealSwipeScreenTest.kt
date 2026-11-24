@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.feature.home.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -19,14 +20,18 @@ import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
+import pm.bam.gamedeals.domain.models.GameSignals
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.Store.StoreImages
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
 import pm.bam.gamedeals.feature.home.ui.DealSwipeViewModel.State
 import pm.bam.gamedeals.feature.home.ui.DealSwipeViewModel.Status
 
@@ -53,11 +58,18 @@ class DealSwipeScreenTest {
         isOnSale = true, savings = 75.0,
     )
 
-    private fun show(initial: State): (State) -> Unit {
+    private fun show(
+        initial: State,
+        signals: Map<String, GameSignals> = emptyMap(),
+        descriptions: Map<String, String> = emptyMap(),
+    ): (State) -> Unit {
         var state by mutableStateOf(initial)
+        val signalsSource = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = signals.filterKeys { it in gameIds }
+        }
         composeTestRule.setContent {
             GameDealsTheme {
-                DealSwipeContent(
+                CompositionLocalProvider(LocalGameSignals provides signalsSource) { DealSwipeContent(
                     state = state,
                     stores = stores,
                     onBack = {},
@@ -68,7 +80,8 @@ class DealSwipeScreenTest {
                     onUndo = { undos++ },
                     onRetry = { retries++ },
                     onSignIn = { signIns++ },
-                )
+                    descriptions = descriptions.toImmutableMap(),
+                ) }
             }
         }
         return { state = it }
@@ -85,6 +98,32 @@ class DealSwipeScreenTest {
         composeTestRule.onNodeWithText("$5.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Swipe right to waitlist, left to skip. Tap a card for details.").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Undo last swipe").assertIsNotEnabled()
+    }
+
+    @Test
+    fun the_card_says_what_the_game_is() {
+        val hadesSignals = GameSignals(
+            gameId = "hades", updatedEpochMs = 0, weeklyMaxCut = emptyList(),
+            tags = listOf("Indie", "Action Roguelike", "Great Soundtrack", "Hack and Slash", "Mythology", "Isometric"),
+            developer = "Supergiant Games", releaseYear = 2020,
+        )
+        show(ready(), signals = mapOf("hades" to hadesSignals), descriptions = mapOf("hades" to "Battle out of hell in this rogue-like dungeon crawler."))
+
+        composeTestRule.onNodeWithText("Supergiant Games · 2020").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Action Roguelike").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Hack and Slash").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Mythology").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Indie").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Isometric").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Battle out of hell in this rogue-like dungeon crawler.").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_card_without_details_shows_just_the_deal() {
+        show(ready())
+
+        composeTestRule.onNodeWithText("Hades").assertIsDisplayed()
+        composeTestRule.onNodeWithText("· ", substring = true).assertDoesNotExist()
     }
 
     @Test

@@ -19,12 +19,17 @@ import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealsQuery
 import pm.bam.gamedeals.domain.models.DealsSortField
+import pm.bam.gamedeals.domain.models.GameSignals
+import pm.bam.gamedeals.domain.models.IgdbGame
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
 import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.domain.utils.millisInDay
+import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -53,8 +58,21 @@ class DealSwipeRepositoryTest {
     }
     private val storage = FakeStorage()
 
+    private var signals: Map<String, GameSignals> = emptyMap()
+    private val gameSignalsRepository: GameSignalsRepository = mock {
+        everySuspend { getSignals(any()) } calls { signals }
+    }
+    private val igdbCalls = mutableListOf<String>()
+    private var bySteamId: (Int) -> IgdbGame? = { null }
+    private var byTitle: (String) -> IgdbGame? = { null }
+    private val igdbRepository: IgdbRepository = mock {
+        everySuspend { fetchGameBySteamId(any()) } calls { (id: Int) -> igdbCalls += "steam:$id"; bySteamId(id) }
+        everySuspend { fetchGameDetailsByTitle(any()) } calls { (title: String) -> igdbCalls += "title:$title"; byTitle(title) }
+    }
+
     private val repository = DealSwipeRepositoryImpl(
         dealsRepository, waitlistRepository, collectionRepository, ignoredRepository, settingsRepository, storage, Clock { now },
+        gameSignalsRepository, igdbRepository, TestingLoggingListener(),
     )
 
     private fun deal(gameId: String, dealId: String = "d-$gameId") = Deal(
@@ -166,6 +184,50 @@ class DealSwipeRepositoryTest {
         assertTrue("old" !in saved, "expired")
         assertTrue("g0" !in saved, "the oldest goes over the cap")
         assertTrue("g$SWIPE_SKIP_CAP" in saved)
+    }
+
+    private fun igdb(name: String, summary: String?) = IgdbGame(id = 1, name = name, summary = summary)
+    private fun signalsWithSteamId(gameId: String, steamAppId: Int?) =
+        GameSignals(gameId = gameId, updatedEpochMs = 0, weeklyMaxCut = emptyList(), steamAppId = steamAppId)
+
+    @Test
+    fun the_description_comes_from_the_steam_id_when_the_worker_knows_it() = runTest {
+        signals = mapOf("hades" to signalsWithSteamId("hades", 1145360))
+        bySteamId = { igdb("Hades", "  Battle out of hell.  ") }
+
+        assertEquals("Battle out of hell.", repository.description(deal("hades")))
+        assertEquals(listOf("steam:1145360"), igdbCalls)
+    }
+
+    @Test
+    fun without_a_steam_match_only_an_exact_title_match_counts() = runTest {
+        byTitle = { igdb("HADES™", "Battle out of hell.") }
+        assertEquals("Battle out of hell.", repository.description(deal("hades").copy(title = "Hades")))
+
+        byTitle = { igdb("Doom Eternal", "Rip and tear.") }
+        assertNull(repository.description(deal("doom").copy(title = "DOOM Eternal Deluxe Edition")))
+    }
+
+    @Test
+    fun a_description_is_looked_up_once_but_a_failed_lookup_is_tried_again() = runTest {
+        byTitle = { error("IGDB down") }
+        assertNull(repository.description(deal("hades")))
+
+        byTitle = { igdb("hades", "Battle out of hell.") }
+        assertEquals("Battle out of hell.", repository.description(deal("hades")))
+        assertEquals("Battle out of hell.", repository.description(deal("hades")))
+        assertEquals(2, igdbCalls.size)
+
+        byTitle = { null }
+        assertNull(repository.description(deal("unknown")))
+        assertNull(repository.description(deal("unknown")))
+        assertEquals(3, igdbCalls.size, "no match is remembered too")
+    }
+
+    @Test
+    fun a_blank_summary_counts_as_none() = runTest {
+        byTitle = { igdb("hades", " ") }
+        assertNull(repository.description(deal("hades")))
     }
 
     @Test

@@ -42,6 +42,9 @@ import kotlin.coroutines.cancellation.CancellationException
 /** Fewer cards than this left in the deck and the next page is fetched. */
 internal const val SWIPE_LOW_WATER = 5
 
+/** How many cards from the top get their description looked up ahead of time. */
+internal const val SWIPE_DESCRIBE_AHEAD = 3
+
 /**
  * Deal swipe (next-versions M8): a deck of today's hottest deals for signed-in users. A right swipe adds the game to
  * the ITAD waitlist; a left swipe skips it, which only hides it from the deck for a while, on this phone. The last
@@ -81,6 +84,14 @@ internal class DealSwipeViewModel(
     private val mutableEvents = MutableSharedFlow<Event>(extraBufferCapacity = 4)
     val events: SharedFlow<Event> = mutableEvents.asSharedFlow()
 
+    private val mutableDescriptions = MutableStateFlow<ImmutableMap<String, String>>(persistentMapOf())
+
+    /** Game id → a short description, for the cards near the top that have one. */
+    val descriptions: StateFlow<ImmutableMap<String, String>> = mutableDescriptions.asStateFlow()
+
+    /** Games whose description was already asked for this visit. */
+    private val described = mutableSetOf<String>()
+
     /** Stores keyed by id, for each card's store name and icon. */
     val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()
         .map { list -> list.associateBy { it.storeID }.toImmutableMap() }
@@ -107,6 +118,18 @@ internal class DealSwipeViewModel(
                 .map { it is AuthState.LoggedIn }
                 .distinctUntilChanged()
                 .collect { signedIn -> if (signedIn) restart() else signOut() }
+        }
+        viewModelScope.launch {
+            mutableState.map { it.cards.take(SWIPE_DESCRIBE_AHEAD) }
+                .distinctUntilChanged()
+                .collect { top -> top.filter { described.add(it.gameID) }.forEach { describe(it) } }
+        }
+    }
+
+    private fun describe(deal: Deal) {
+        viewModelScope.launch {
+            val text = dealSwipeRepository.description(deal) ?: return@launch
+            mutableDescriptions.update { (it + (deal.gameID to text)).toImmutableMap() }
         }
     }
 

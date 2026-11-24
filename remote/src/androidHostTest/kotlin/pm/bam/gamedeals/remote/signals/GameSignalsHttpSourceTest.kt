@@ -43,7 +43,9 @@ class GameSignalsHttpSourceTest {
         {"games": {"$id": {"updated": 1795000000000, "weeklyMaxCut": [0, 50, 120, -5],
           "review": {"score": 98, "count": 250000, "source": "Steam"},
           "players": {"recent": 4000, "day": 9000, "week": 15000, "peak": 37000},
-          "waitlisted": 45000, "collected": 120000, "rank": 12, "later": true}},
+          "waitlisted": 45000, "collected": 120000, "rank": 12,
+          "tags": ["Action Roguelike", "Indie"], "developer": "Supergiant Games", "releaseYear": 2020, "steamAppId": 1145360,
+          "later": true}},
          "pending": ["$id2"]}
     """.trimIndent()
 
@@ -63,6 +65,7 @@ class GameSignalsHttpSourceTest {
                     gameId = id, updatedEpochMs = 1_795_000_000_000, weeklyMaxCut = listOf(0, 50, 100, 0),
                     reviewScore = 98, reviewCount = 250_000, reviewSource = "Steam", playersRecent = 4000, playersPeak = 37_000,
                     waitlisted = 45_000, collected = 120_000, rank = 12,
+                    tags = listOf("Action Roguelike", "Indie"), developer = "Supergiant Games", releaseYear = 2020, steamAppId = 1_145_360,
                 ),
             ),
             batch.games,
@@ -77,6 +80,9 @@ class GameSignalsHttpSourceTest {
         assertEquals(emptyList<Int>(), signals.weeklyMaxCut)
         assertEquals(null, signals.reviewScore)
         assertEquals(null, signals.playersRecent)
+        assertEquals(emptyList<String>(), signals.tags)
+        assertEquals(null, signals.developer)
+        assertEquals(null, signals.steamAppId)
         assertEquals(emptyList<String>(), batch.pending)
     }
 

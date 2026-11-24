@@ -53,6 +53,10 @@ internal data class RemoteGameSignals(
     @SerialName("waitlisted") val waitlisted: Int? = null,
     @SerialName("collected") val collected: Int? = null,
     @SerialName("rank") val rank: Int? = null,
+    @SerialName("tags") val tags: List<String> = emptyList(),
+    @SerialName("developer") val developer: String? = null,
+    @SerialName("releaseYear") val releaseYear: Int? = null,
+    @SerialName("steamAppId") val steamAppId: Int? = null,
 ) {
     fun toDomain(gameId: String) = GameSignals(
         gameId = gameId,
@@ -66,6 +70,10 @@ internal data class RemoteGameSignals(
         waitlisted = waitlisted,
         collected = collected,
         rank = rank,
+        tags = tags,
+        developer = developer,
+        releaseYear = releaseYear,
+        steamAppId = steamAppId,
     )
 }
 
