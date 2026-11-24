@@ -6,10 +6,23 @@ Before a deployment, run:
 
 ```bash
 python3 store/site/validate_event.py
+python3 store/site/validate_sales.py
 python3 -m unittest discover -s store/site -p 'test_*.py'
 node --test store/site/test_site_routes.mjs store/site/test_share_routes.mjs store/site/test_wishlist_routes.mjs store/site/test_signals_routes.mjs
 cd store/site && npx wrangler@4 deploy --dry-run
 ```
+
+## Big-sale dates
+
+`sales.json` lists the big seasonal sales on Steam, Epic and GOG, served at `/events/sales.json` (public, cached for an hour). The countdown widgets on Android and iOS, and the iOS Live Activity for a sale's last hours, read it. The dates are typed by hand and everyone sees them, so check each one against the store before deploying, and run `python3 store/site/validate_sales.py`. Times are UTC: Steam sales start and end at 10:00 Pacific (18:00 UTC in winter, 17:00 UTC in summer time), Epic's at 11:00 Eastern (16:00 UTC in winter). Remove past sales now and then. The file holds at most 40.
+
+Where the first dates came from (23 Nov 2026):
+- Steam Winter Sale 2026: Valve's Steamworks page (partner.steamgames.com/doc/marketing/upcoming_events/2026_winter_sale).
+- Steam Spring and Summer Sale 2027: Valve's published 2027 schedule, as reported by several sale calendars (pcgamer.com/steam-sale-dates, gamedevproducer.com/steam-sale-dates). Start times are assumed to be Valve's usual 10:00 Pacific.
+- Epic Holiday Sale 2026: Epic's developer promotion schedule, as reported by SteamDB (steamdb.com/en/promo-codes/epic-games-store). Epic can move it.
+- GOG hasn't announced its winter sale yet; add it when it does.
+
+When publishing through the Cloudflare connector, upload `sales.json` like the event documents: as `export default {…};` with type `application/javascript+module`.
 
 ## Shared game links
 

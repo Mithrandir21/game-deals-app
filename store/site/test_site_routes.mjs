@@ -48,3 +48,14 @@ test("without a test document the test path redirects like any unknown path", ()
   const response = handleSiteRequest(request("/events/winter-sale-2026-test.json"), "<html></html>", eventJson);
   assert.equal(response.status, 302);
 });
+
+test("the sales dates are served as public JSON for the countdown widgets", async () => {
+  const salesJson = '{"schemaVersion":1,"sales":[]}';
+  const response = handleSiteRequest(request("/events/sales.json"), "<html></html>", eventJson, testEventJson, salesJson);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+  assert.equal(await response.text(), salesJson);
+  const head = handleSiteRequest(request("/events/sales.json", "HEAD"), "", eventJson, testEventJson, salesJson);
+  assert.equal(await head.text(), "");
+});

@@ -12,6 +12,12 @@ struct GameDealsWidgetBundle: WidgetBundle {
     var body: some Widget {
         FreeGamesWidget()
         WaitlistDealsWidget()
+        SaleCountdownWidget()
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            SaleCountdownLiveActivity()
+        }
+        #endif
     }
 }
 

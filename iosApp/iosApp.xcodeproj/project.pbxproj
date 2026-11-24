@@ -14,6 +14,11 @@
 		B100000000000000000000B7 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* AppShortcuts.swift */; };
 		B100000000000000000000BA /* WaitlistDealsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AB /* WaitlistDealsWidget.swift */; };
 		B100000000000000000000B8 /* GameDealsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A8 /* GameDealsWidget.swift */; };
+		B100000000000000000000BB /* SaleCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AE /* SaleCalendar.swift */; };
+		B100000000000000000000BC /* SaleCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AE /* SaleCalendar.swift */; };
+		B100000000000000000000BD /* SaleLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AF /* SaleLiveActivity.swift */; };
+		B100000000000000000000C1 /* SaleCountdownWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BE /* SaleCountdownWidget.swift */; };
+		B100000000000000000000C2 /* SaleCountdownLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000BF /* SaleCountdownLiveActivity.swift */; };
 		B100000000000000000000B9 /* GameDealsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A100000000000000000000AA /* GameDealsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B100000000000000000000B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* PrivacyInfo.xcprivacy */; };
 		B100000000000000000000B5 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = S100000000000000000000P1 /* Sentry-Dynamic */; };
@@ -28,6 +33,10 @@
 		A100000000000000000000A4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A100000000000000000000A6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A100000000000000000000AB /* WaitlistDealsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitlistDealsWidget.swift; sourceTree = "<group>"; };
+		A100000000000000000000AE /* SaleCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaleCalendar.swift; sourceTree = "<group>"; };
+		A100000000000000000000AF /* SaleLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaleLiveActivity.swift; sourceTree = "<group>"; };
+		A100000000000000000000BE /* SaleCountdownWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaleCountdownWidget.swift; sourceTree = "<group>"; };
+		A100000000000000000000BF /* SaleCountdownLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaleCountdownLiveActivity.swift; sourceTree = "<group>"; };
 		A100000000000000000000AC /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
 		A100000000000000000000AD /* GameDealsWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GameDealsWidget.entitlements; sourceTree = "<group>"; };
 		A100000000000000000000A8 /* GameDealsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDealsWidget.swift; sourceTree = "<group>"; };
@@ -95,6 +104,8 @@
 				A100000000000000000000A1 /* iOSApp.swift */,
 				A100000000000000000000A2 /* ContentView.swift */,
 				A100000000000000000000A7 /* AppShortcuts.swift */,
+				A100000000000000000000AE /* SaleCalendar.swift */,
+				A100000000000000000000AF /* SaleLiveActivity.swift */,
 				A100000000000000000000A3 /* Assets.xcassets */,
 				A100000000000000000000A6 /* PrivacyInfo.xcprivacy */,
 				A100000000000000000000AC /* iosApp.entitlements */,
@@ -125,6 +136,8 @@
 			children = (
 				A100000000000000000000A8 /* GameDealsWidget.swift */,
 				A100000000000000000000AB /* WaitlistDealsWidget.swift */,
+				A100000000000000000000BE /* SaleCountdownWidget.swift */,
+				A100000000000000000000BF /* SaleCountdownLiveActivity.swift */,
 				A100000000000000000000A9 /* Info.plist */,
 				A100000000000000000000AD /* GameDealsWidget.entitlements */,
 			);
@@ -282,6 +295,8 @@
 				B100000000000000000000B2 /* ContentView.swift in Sources */,
 				B100000000000000000000B1 /* iOSApp.swift in Sources */,
 				B100000000000000000000B7 /* AppShortcuts.swift in Sources */,
+				B100000000000000000000BB /* SaleCalendar.swift in Sources */,
+				B100000000000000000000BD /* SaleLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +306,9 @@
 			files = (
 				B100000000000000000000B8 /* GameDealsWidget.swift in Sources */,
 				B100000000000000000000BA /* WaitlistDealsWidget.swift in Sources */,
+				B100000000000000000000BC /* SaleCalendar.swift in Sources */,
+				B100000000000000000000C1 /* SaleCountdownWidget.swift in Sources */,
+				B100000000000000000000C2 /* SaleCountdownLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

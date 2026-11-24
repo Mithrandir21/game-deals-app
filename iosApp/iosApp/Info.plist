@@ -85,5 +85,7 @@
 	<array>
 		<string>pm.bam.gamedeals.notificationpoll</string>
 	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

@@ -94,6 +94,8 @@ import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchCheckerImpl
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStore
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStoreImpl
 import pm.bam.gamedeals.domain.repositories.bundlewatch.EnglishBundleWatchCopy
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepository
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepository
 import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
 import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepositoryImpl
@@ -189,6 +191,7 @@ val domainModule = module {
     single<YearInDealsSampleMode> { YearInDealsSampleModeImpl(get(SETTINGS_QUALIFIER), get()) }
     single<SharedWishlistRepository> { SharedWishlistRepositoryImpl(get(), get()) }
     single<GameSignalsRepository> { GameSignalsRepositoryImpl(get(), get(), get()) }
+    single<SaleCalendarRepository> { SaleCalendarRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get()) }
     single<YearInDealsRepository> { YearInDealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     single<NotificationCacheStore> { NotificationCacheStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get()) }

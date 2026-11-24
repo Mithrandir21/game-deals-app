@@ -35,6 +35,23 @@
     <string name="widget_free_games_error">Couldn\'t load giveaways. Tap to open the app.</string>
     <string name="widget_free_games_empty">No free PC games right now. Check back soon.</string>
     <string name="widget_free_games_ends">ends %1$s</string>
+    <string name="widget_sale_countdown_name">Sale countdown</string>
+    <string name="widget_sale_countdown_description">How long until the next big Steam, Epic or GOG sale starts, and how long the current one has left.</string>
+    <string name="widget_sale_countdown_header">Big sales</string>
+    <string name="widget_sale_starts_in">Starts in %1$s</string>
+    <string name="widget_sale_ends_in">Ends in %1$s</string>
+    <string name="widget_sale_under_an_hour">under an hour</string>
+    <string name="widget_sale_starts_on">%1$s · starts %2$s</string>
+    <string name="widget_sale_ends_on">%1$s · ends %2$s</string>
+    <string name="widget_sale_none">No big sale announced yet.</string>
+    <plurals name="widget_sale_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="widget_sale_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
 
     <!-- Waitlist deals home-screen widget. -->
     <string name="widget_waitlist_deals_name">Waitlist Deals</string>
