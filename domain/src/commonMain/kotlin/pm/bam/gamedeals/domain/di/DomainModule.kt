@@ -93,6 +93,8 @@ import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchCheckerImpl
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStore
 import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStoreImpl
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepository
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.bundlewatch.EnglishBundleWatchCopy
 import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepository
 import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepositoryImpl
@@ -227,6 +229,8 @@ val domainModule = module {
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get(), get()) }
+    // Deal swipe (next-versions M8): the hottest deals minus the user's library, with phone-only skips.
+    single<DealSwipeRepository> { DealSwipeRepositoryImpl(get(), get(), get(), get(), get(), get(SETTINGS_QUALIFIER), get()) }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.

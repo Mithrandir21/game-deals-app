@@ -91,6 +91,7 @@ import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
 import pm.bam.gamedeals.feature.home.navigation.yearInDealsScreen
+import pm.bam.gamedeals.feature.home.navigation.dealSwipeScreen
 import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
@@ -471,8 +472,13 @@ private fun AppNavHost(startDestination: Destination) {
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
             goToWinterSale = { navController.navigate(Destination.WinterSaleGuide) },
             goToYearInDeals = { navController.navigate(Destination.YearInDeals) },
+            goToDealSwipe = { navController.navigate(Destination.DealSwipe) },
         )
         yearInDealsScreen(onBack = { navController.popBackStack() })
+        dealSwipeScreen(
+            onBack = { navController.popBackStack() },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
+        )
         winterSaleGuideScreen(
             onBack = { navController.popBackStack() },
             goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },

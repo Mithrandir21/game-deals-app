@@ -158,6 +158,7 @@ internal fun HomeScreen(
     goToWeb: (url: String, gameTitle: String) -> Unit,
     onViewWinterSale: () -> Unit = {},
     onViewYearInDeals: () -> Unit = {},
+    onViewDealSwipe: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     winterSaleEntry: WinterSaleEntryViewModel = koinViewModel(),
     yearInDealsEntry: YearInDealsEntryViewModel = koinViewModel(),
@@ -217,6 +218,7 @@ internal fun HomeScreen(
         onOpenWinterSale = onViewWinterSale,
         yearInDealsYear = yearInDealsYear,
         onOpenYearInDeals = onViewYearInDeals,
+        onOpenDealSwipe = onViewDealSwipe,
     )
 
     val dealSharer = rememberDealSharer()
@@ -267,6 +269,7 @@ private fun HomeScreenContent(
     onOpenWinterSale: () -> Unit = {},
     yearInDealsYear: Int? = null,
     onOpenYearInDeals: () -> Unit = {},
+    onOpenDealSwipe: () -> Unit = {},
 ) {
     val currentOnRetry by rememberUpdatedState(onRetry)
     val errorMessage = stringResource(Res.string.home_screen_data_loading_error_msg)
@@ -311,6 +314,7 @@ private fun HomeScreenContent(
                         onOpenWinterSale = onOpenWinterSale,
                         yearInDealsYear = yearInDealsYear,
                         onOpenYearInDeals = onOpenYearInDeals,
+                        onOpenDealSwipe = onOpenDealSwipe,
                     )
                 }
 
@@ -366,6 +370,7 @@ private fun HomeFeed(
     onOpenWinterSale: () -> Unit = {},
     yearInDealsYear: Int? = null,
     onOpenYearInDeals: () -> Unit = {},
+    onOpenDealSwipe: () -> Unit = {},
 ) {
     val upcomingChip = stringResource(Res.string.home_screen_release_upcoming)
     val analytics: Analytics = koinInject()
@@ -444,6 +449,8 @@ private fun HomeFeed(
                         )
                     }
                 }
+                // Deal swipe, under the counts it feeds.
+                item(contentType = CONTENT_TYPE_SECTION_HEADER) { DealSwipeHomeCard(onOpenDealSwipe) }
                 renderedSection = true
             }
 

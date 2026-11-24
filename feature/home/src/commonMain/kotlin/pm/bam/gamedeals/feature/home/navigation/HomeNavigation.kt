@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.ui.dropUnlessResumed
+import pm.bam.gamedeals.feature.home.ui.DealSwipeScreen
 import pm.bam.gamedeals.feature.home.ui.HomeScreen
 import pm.bam.gamedeals.feature.home.ui.WinterSaleEntryScreen
 import pm.bam.gamedeals.feature.home.ui.WinterSaleGuideScreen
@@ -21,6 +22,7 @@ fun NavGraphBuilder.homeScreen(
     goToBundle: (bundleId: Int) -> Unit,
     goToWinterSale: () -> Unit,
     goToYearInDeals: () -> Unit,
+    goToDealSwipe: () -> Unit,
 ) {
     // Search + Settings live on the app-shell top bar / overflow. Giveaways moved off Home to their
     // own tab, so Home is now 100% in-app content.
@@ -35,6 +37,7 @@ fun NavGraphBuilder.homeScreen(
             goToWeb = { url: String, gameTitle: String -> goToWeb(url, gameTitle) }.dropUnlessResumed(),
             onViewWinterSale = dropUnlessResumed(block = goToWinterSale),
             onViewYearInDeals = dropUnlessResumed(block = goToYearInDeals),
+            onViewDealSwipe = dropUnlessResumed(block = goToDealSwipe),
         )
     }
 }
@@ -42,6 +45,12 @@ fun NavGraphBuilder.homeScreen(
 fun NavGraphBuilder.yearInDealsScreen(onBack: () -> Unit) {
     composable<Destination.YearInDeals> {
         YearInDealsScreen(onBack = dropUnlessResumed(block = onBack))
+    }
+}
+
+fun NavGraphBuilder.dealSwipeScreen(onBack: () -> Unit, goToGame: (gameId: String) -> Unit) {
+    composable<Destination.DealSwipe> {
+        DealSwipeScreen(onBack = dropUnlessResumed(block = onBack), goToGame = goToGame.dropUnlessResumed())
     }
 }
 

@@ -42,6 +42,10 @@ sealed interface Destination {
     @Serializable
     data object YearInDeals : Destination
 
+    /** Deal swipe: a deck of today's hottest deals for signed-in users, opened from its Home card. */
+    @Serializable
+    data object DealSwipe : Destination
+
     /**
      * A friend's wishlist, opened from a shared `gamedeals.bam.pm/w/…` link (see `ShareLinks`). [gameIds] is the
      * comma-joined ITAD game ids in the friend's order, kept as one string so the route stays on nav-compose's

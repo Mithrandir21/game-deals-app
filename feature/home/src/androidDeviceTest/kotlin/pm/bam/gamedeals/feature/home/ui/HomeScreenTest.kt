@@ -58,6 +58,7 @@ class HomeScreenTest {
 
     private val viewModel: HomeViewModel = mockk(relaxed = true)
     private val winterSaleEntry: WinterSaleEntryViewModel = mockk(relaxed = true)
+    private val yearInDealsEntry: YearInDealsEntryViewModel = mockk(relaxed = true)
 
     private lateinit var labels: Labels
 
@@ -65,6 +66,7 @@ class HomeScreenTest {
     fun setup() {
         every { winterSaleEntry.event } returns MutableStateFlow<WinterSaleEventState.Available?>(null)
         every { winterSaleEntry.totals } returns MutableStateFlow(null)
+        every { yearInDealsEntry.offeredYear } returns MutableStateFlow<Int?>(null)
         every { viewModel.gamePeek } returns MutableStateFlow(null)
         every { viewModel.accountStats } returns MutableStateFlow(null)
         every { viewModel.waitlistIds } returns MutableStateFlow(persistentSetOf())
@@ -83,6 +85,7 @@ class HomeScreenTest {
         onViewBundles: () -> Unit = {},
         onViewBundle: (Int) -> Unit = {},
         goToWeb: (String, String) -> Unit = { _, _ -> },
+        onViewDealSwipe: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             labels = Labels.load()
@@ -96,6 +99,8 @@ class HomeScreenTest {
                 goToWeb = goToWeb,
                 viewModel = viewModel,
                 winterSaleEntry = winterSaleEntry,
+                yearInDealsEntry = yearInDealsEntry,
+                onViewDealSwipe = onViewDealSwipe,
             )
         }
     }
@@ -151,6 +156,22 @@ class HomeScreenTest {
 
         verify(exactly = 1) { onViewWaitlist() }
         verify(exactly = 1) { onViewCollection() }
+    }
+
+    @Test
+    fun dealSwipeCardShowsWhenSignedInAndOpensTheDeck() {
+        every { viewModel.uiState } returns MutableStateFlow(HomeScreenData(status = HomeScreenStatus.DATA))
+        val stats = MutableStateFlow<AccountStats?>(null)
+        every { viewModel.accountStats } returns stats
+        val onViewDealSwipe = mockk<() -> Unit>(relaxed = true)
+
+        setupCompose(onViewDealSwipe = onViewDealSwipe)
+        composeTestRule.onNodeWithText(SWIPE_CARD_TITLE).assertDoesNotExist()
+
+        stats.value = AccountStats(waitlistedCount = 1, collectedCount = 2)
+        composeTestRule.onNodeWithText(SWIPE_CARD_TITLE).performClick()
+
+        verify(exactly = 1) { onViewDealSwipe() }
     }
 
     @Test
@@ -219,6 +240,7 @@ class HomeScreenTest {
     companion object {
         private const val TRENDING_TITLE = "Trending Game"
         private const val TRENDING_GAME_ID = "trend-g"
+        private const val SWIPE_CARD_TITLE = "Swipe today's deals"
 
         // HomeScreen resolves an Analytics via koinInject() for its non-loading content. Koin is kept up for
         // the whole class (not per-test) so a late resolution during Compose disposal never hits a closed
