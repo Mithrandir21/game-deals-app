@@ -232,16 +232,17 @@ test("a game ITAD doesn't know is left out, not pending, and not asked about aga
   assert.equal(next.itad.calls.length, 0);
 });
 
-test("one request refreshes at most ten games, missing ones before stale ones", async () => {
+test("one request refreshes at most three games, missing ones before stale ones", async () => {
   const db = d1();
   const ids = many(MAX_IDS);
   const first = await ask(db, ids);
+  assert.equal(MAX_REFRESH_PER_REQUEST, 3, "kept small for the Workers Free CPU budget");
   assert.equal(first.body.pending.length, MAX_IDS);
   assert.equal(first.itad.calls.length, MAX_REFRESH_PER_REQUEST * 2);
   const fetched = new Set(first.itad.calls.map((c) => new URL(c.url).searchParams.get("id")));
   assert.deepEqual([...fetched].sort(), ids.slice(0, MAX_REFRESH_PER_REQUEST).sort());
 
-  // A day later the first ten are stale and forty are still missing: the missing ones go first.
+  // A day later the first three are stale and the rest are still missing: the missing ones go first.
   const later = await ask(db, ids, { now: NOW + REFRESH_AFTER_MS + CLAIM_TIMEOUT_MS });
   const next = new Set(later.itad.calls.map((c) => new URL(c.url).searchParams.get("id")));
   assert.deepEqual([...next].sort(), ids.slice(MAX_REFRESH_PER_REQUEST, 2 * MAX_REFRESH_PER_REQUEST).sort());

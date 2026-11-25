@@ -22,7 +22,10 @@ export const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
 // A refresh that hasn't finished in this time (the Worker died, or ITAD failed) may be claimed again. A failed refresh
 // keeps its claim until then, which spaces out retries while ITAD is down or limiting us.
 export const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
-export const MAX_REFRESH_PER_REQUEST = 10;
+// Each refresh parses up to two years of ITAD price history in the request's CPU time. On Workers Free a request gets
+// about 10 ms, and ten refreshes in one request measured up to 64 ms live (2026-11-24); three keeps a request near the
+// budget. Rows still fill quickly, because every phone's request refreshes a few.
+export const MAX_REFRESH_PER_REQUEST = 3;
 // ITAD's tags are Steam's player tags, most votes first. The app skips the vague ones and shows three, so keep a few.
 export const MAX_TAGS = 10;
 const MAX_TEXT = 60;
