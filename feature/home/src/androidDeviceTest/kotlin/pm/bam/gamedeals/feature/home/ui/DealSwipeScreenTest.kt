@@ -7,7 +7,10 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.activity.ComponentActivity
@@ -286,6 +289,62 @@ class DealSwipeScreenTest {
         val description = composeTestRule.onNodeWithText(longDescription).fetchSemanticsNode().boundsInRoot
         val add = composeTestRule.onNodeWithContentDescription("Add to waitlist").fetchSemanticsNode().boundsInRoot
         assertTrue("the description ends above the buttons", description.bottom <= add.top)
+    }
+
+    @Test
+    fun a_phone_held_sideways_shows_the_title_and_price_beside_the_art() {
+        // Found on the emulator: held sideways, the card showed only its art; the title, price and store were cut off.
+        val noSignals = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = emptyMap<String, GameSignals>()
+        }
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalGameSignals provides noSignals) {
+                GameDealsTheme {
+                    // A 360 dp phone in landscape, less the status bar. Required, since the test phone is narrower.
+                    Box(Modifier.requiredSize(800.dp, 330.dp)) {
+                        DealSwipeContent(
+                            // Its own price, so the card underneath (also $5.00) can't be mistaken for it.
+                            state = State(status = Status.READY, cards = persistentListOf(hades.copy(salePriceDenominated = "$4.99"), celeste)),
+                            stores = stores, onBack = {}, onOpen = {}, onSwipeRight = {}, onSwipeLeft = {},
+                            onUndo = {}, onRetry = {}, onSignIn = {}, descriptions = persistentMapOf("hades" to "Battle out of hell."),
+                        )
+                    }
+                }
+            }
+        }
+
+        val card = composeTestRule.onNodeWithTag(DEAL_SWIPE_CARD_TAG).fetchSemanticsNode().boundsInRoot
+        for (text in listOf("Hades", "$4.99")) {
+            // Unmerged: the card merges its text into one node for screen readers.
+            val part = composeTestRule.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            assertTrue("$text is inside the card", part.top >= card.top && part.bottom <= card.bottom)
+        }
+        val title = composeTestRule.onNodeWithText("Hades", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("the title sits beside the art, not under it", title.left > card.left + card.width / 3)
+        val add = composeTestRule.onNodeWithContentDescription("Add to waitlist").fetchSemanticsNode().boundsInRoot
+        assertTrue("the buttons stay under the card", add.top >= card.bottom)
+    }
+
+    @Test
+    fun in_a_right_to_left_language_the_add_button_stays_on_the_side_a_right_swipe_goes() {
+        // Found on the emulator: in Arabic the buttons swapped sides, but a swipe to the right still adds.
+        val noSignals = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = emptyMap<String, GameSignals>()
+        }
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalGameSignals provides noSignals) {
+                GameDealsTheme {
+                    DealSwipeContent(
+                        state = ready(), stores = stores, onBack = {}, onOpen = {}, onSwipeRight = {}, onSwipeLeft = {},
+                        onUndo = {}, onRetry = {}, onSignIn = {},
+                    )
+                }
+            }
+        }
+
+        val add = composeTestRule.onNodeWithContentDescription("Add to waitlist").fetchSemanticsNode().boundsInRoot
+        val skip = composeTestRule.onNodeWithContentDescription("Skip").fetchSemanticsNode().boundsInRoot
+        assertTrue("Add stays on the right", add.left > skip.left)
     }
 
     @Test

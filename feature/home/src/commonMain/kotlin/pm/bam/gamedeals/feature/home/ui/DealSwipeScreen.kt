@@ -12,12 +12,14 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -68,6 +71,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
@@ -79,6 +83,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -313,7 +318,9 @@ private fun SwipeDeck(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            // A phone held sideways leaves too little height for the art above the details, so they sit side by side.
+            val wide = maxHeight < WIDE_CARD_BELOW_HEIGHT && maxWidth > maxHeight * 1.5f
             // The next card waits underneath, growing to full size as the top one is dragged away.
             cards.getOrNull(1)?.let { next ->
                 SwipeDealCard(
@@ -321,6 +328,7 @@ private fun SwipeDeck(
                     store = stores[next.storeID],
                     signals = signals,
                     description = descriptions[next.gameID],
+                    wide = wide,
                     modifier = Modifier
                         .graphicsLayer {
                             val grow = abs(topState.progress)
@@ -333,12 +341,13 @@ private fun SwipeDeck(
             SwipeableCard(
                 deal = top,
                 state = topState,
+                wide = wide,
                 onSwiped = { direction -> if (direction == SwipeDirection.Right) onSwipeRight(top) else onSwipeLeft(top) },
                 onOpen = { onOpen(top) },
                 onAdd = { swipe(SwipeDirection.Right) },
                 onSkip = { swipe(SwipeDirection.Left) },
             ) {
-                SwipeDealCard(deal = top, store = stores[top.storeID], signals = signals, description = descriptions[top.gameID])
+                SwipeDealCard(deal = top, store = stores[top.storeID], signals = signals, description = descriptions[top.gameID], wide = wide)
             }
         }
         SwipeButtons(
@@ -387,6 +396,7 @@ internal class SwipeCardState {
 private fun SwipeableCard(
     deal: Deal,
     state: SwipeCardState,
+    wide: Boolean,
     onSwiped: (SwipeDirection) -> Unit,
     onOpen: () -> Unit,
     onAdd: () -> Unit,
@@ -410,8 +420,9 @@ private fun SwipeableCard(
 
     Box(
         modifier = Modifier
-            .widthIn(max = CARD_MAX_WIDTH)
+            .widthIn(max = if (wide) WIDE_CARD_MAX_WIDTH else CARD_MAX_WIDTH)
             .fillMaxWidth()
+            .then(if (wide) Modifier.fillMaxHeight() else Modifier)
             .onSizeChanged { state.widthPx = it.width.toFloat() }
             // Outside the moving layer, so the drag is measured in the screen's frame, not the card's.
             .pointerInput(state) {
@@ -480,6 +491,10 @@ private fun SwipeableCard(
 }
 
 private val CARD_MAX_WIDTH = 420.dp
+
+/** Below this height (and when much wider than tall) the card puts its art beside the details. */
+private val WIDE_CARD_BELOW_HEIGHT = 360.dp
+private val WIDE_CARD_MAX_WIDTH = 640.dp
 private const val STAMP_MIN = 0.05f
 private const val STAMP_TILT = 12f
 
@@ -509,64 +524,100 @@ private fun BoxScope.SwipeStamp(text: String, color: Color, strength: Float, ali
     }
 }
 
-/** A deal as a swipe card: wide art with the deal's badges, then the title, price, store and review score. */
+/**
+ * A deal as a swipe card: wide art with the deal's badges, then the title, price, store and review score. When [wide]
+ * (a phone held sideways), the art sits on the left and the details on the right, so the price stays in view.
+ */
 @Composable
 private fun SwipeDealCard(
     deal: Deal,
     store: Store?,
     signals: Map<String, GameSignals>,
     description: String?,
+    wide: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.widthIn(max = CARD_MAX_WIDTH).fillMaxWidth(),
+        modifier = if (wide) modifier.widthIn(max = WIDE_CARD_MAX_WIDTH).fillMaxWidth().fillMaxHeight()
+        else modifier.widthIn(max = CARD_MAX_WIDTH).fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
-            AsyncImage(
-                model = deal.artwork.hero,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                error = painterResource(CommonRes.drawable.videogame_thumb),
-                modifier = Modifier.fillMaxSize(),
-            )
-            DealBadgeCluster(
-                discountPercent = deal.savings.roundToInt(),
-                hasVoucher = deal.hasVoucher,
-                isNewHistoricalLow = deal.isNewHistoricalLow,
-                isLowestEver = deal.isLowestEver,
-                isStoreLow = deal.isStoreLow,
-                onArt = true,
-                isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
-                modifier = Modifier.align(Alignment.BottomStart).padding(GameDealsCustomTheme.spacing.small),
-            )
-        }
-        // Takes what height is left under the art, so on a short screen the description is cut, not the price.
-        Column(
-            modifier = Modifier.weight(1f, fill = false).fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
-            verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
-        ) {
-            Text(
-                text = deal.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            PriceBlock(
-                salePrice = deal.salePriceDenominated,
-                regularPrice = deal.normalPriceDenominated,
-                salePriceStyle = MaterialTheme.typography.headlineMedium,
-                horizontalAlignment = Alignment.Start,
-            )
-            store?.let { StoreLabel(storeName = it.storeName, iconUrl = it.iconUrl) }
-            signals.reviewText(deal.gameID)?.let { review ->
-                Text(review, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (wide) {
+            Row(Modifier.fillMaxSize()) {
+                SwipeDealArt(deal, signals, Modifier.weight(WIDE_ART_SHARE).fillMaxHeight())
+                Column(
+                    modifier = Modifier.weight(1f - WIDE_ART_SHARE).fillMaxHeight().padding(GameDealsCustomTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+                ) {
+                    SwipeDealDetails(deal, store, signals, description, compact = true)
+                }
             }
-            SwipeGameDetails(signals[deal.gameID], description)
+        } else {
+            SwipeDealArt(deal, signals, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
+            // Takes what height is left under the art, so on a short screen the description is cut, not the price.
+            Column(
+                modifier = Modifier.weight(1f, fill = false).fillMaxWidth().padding(GameDealsCustomTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small),
+            ) {
+                SwipeDealDetails(deal, store, signals, description, compact = false)
+            }
         }
     }
+}
+
+private const val WIDE_ART_SHARE = 0.42f
+
+@Composable
+private fun SwipeDealArt(deal: Deal, signals: Map<String, GameSignals>, modifier: Modifier) {
+    Box(modifier) {
+        AsyncImage(
+            model = deal.artwork.hero,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            error = painterResource(CommonRes.drawable.videogame_thumb),
+            modifier = Modifier.fillMaxSize(),
+        )
+        DealBadgeCluster(
+            discountPercent = deal.savings.roundToInt(),
+            hasVoucher = deal.hasVoucher,
+            isNewHistoricalLow = deal.isNewHistoricalLow,
+            isLowestEver = deal.isLowestEver,
+            isStoreLow = deal.isStoreLow,
+            onArt = true,
+            isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
+            modifier = Modifier.align(Alignment.BottomStart).padding(GameDealsCustomTheme.spacing.small),
+        )
+    }
+}
+
+/** Title, price, store, review and what the game is; [compact] uses smaller type for the sideways card. */
+@Composable
+private fun ColumnScope.SwipeDealDetails(
+    deal: Deal,
+    store: Store?,
+    signals: Map<String, GameSignals>,
+    description: String?,
+    compact: Boolean,
+) {
+    Text(
+        text = deal.title,
+        style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+    PriceBlock(
+        salePrice = deal.salePriceDenominated,
+        regularPrice = deal.normalPriceDenominated,
+        salePriceStyle = if (compact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+        horizontalAlignment = Alignment.Start,
+    )
+    store?.let { StoreLabel(storeName = it.storeName, iconUrl = it.iconUrl) }
+    signals.reviewText(deal.gameID)?.let { review ->
+        Text(review, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    SwipeGameDetails(signals[deal.gameID], description)
 }
 
 /** What the game is: "Developer · Year", up to three specific tags, and a short description. Each part only when known. */
@@ -610,6 +661,12 @@ private const val DESCRIPTION_LINES = 3
 
 @Composable
 private fun SwipeButtons(canUndo: Boolean, onSkip: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
+    // Swipes go right to add and left to skip in every language, so the buttons keep that order in right-to-left ones.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) { SwipeButtonRow(canUndo, onSkip, onUndo, onAdd) }
+}
+
+@Composable
+private fun SwipeButtonRow(canUndo: Boolean, onSkip: () -> Unit, onUndo: () -> Unit, onAdd: () -> Unit) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
