@@ -51,6 +51,9 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Add-only Photos access, so the share sheet offers "Save Image" for a shared deal or year card. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Lets you save a deal card or your year in deals to your photos when you share it.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
