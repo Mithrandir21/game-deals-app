@@ -36,8 +36,12 @@ struct SaleCountdownProvider: TimelineProvider {
     /// The dates rarely change; fetch them again after this long.
     private static let refreshAfter: TimeInterval = 6 * 60 * 60
 
+    /// Also the widget gallery's preview: the next real sale from the dates built into the app, never a made-up one,
+    /// so the preview can't be mistaken for a sale that isn't happening.
     func placeholder(in context: Context) -> SaleCountdownEntry {
-        SaleCountdownEntry(date: Date(), countdown: .running(Self.sample), failed: false)
+        let now = Date()
+        let builtIn = SaleCalendar.decode(Data(SaleCalendar.bundledJSON.utf8))
+        return SaleCountdownEntry(date: now, countdown: builtIn.flatMap { SaleCalendar.countdown($0, at: now) }, failed: false)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SaleCountdownEntry) -> Void) {
@@ -82,11 +86,6 @@ struct SaleCountdownProvider: TimelineProvider {
     private static func switchedOff(at date: Date) -> SaleCountdownEntry {
         SaleCountdownEntry(date: date, countdown: nil, failed: false, switchedOff: true)
     }
-
-    static let sample = StoreSale(
-        id: "sample", store: "Steam", name: "Steam Winter Sale",
-        start: Date().addingTimeInterval(-2 * 86_400), end: Date().addingTimeInterval(5 * 86_400)
-    )
 }
 
 struct SaleCountdownView: View {
