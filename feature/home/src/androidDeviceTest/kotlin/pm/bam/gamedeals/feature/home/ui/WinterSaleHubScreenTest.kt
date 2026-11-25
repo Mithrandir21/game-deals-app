@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performScrollToNode
 import kotlinx.collections.immutable.toImmutableList
 import org.junit.Assert.assertEquals
@@ -91,7 +93,9 @@ class WinterSaleHubScreenTest {
 
         scrollTo(hasContentDescription("Steam, 33,646 deals. See all"))
         composeTestRule.onNodeWithContentDescription("Steam, 33,646 deals. See all").performClick()
-        scrollTo(hasContentDescription("GOG, 6,127 deals. See all"))
+        // By the row's key: on a 360 dp phone the row starts exactly at the list's bottom edge, which counts as
+        // "visible" to scroll-to-node, so it never scrolled and the tap landed off-screen.
+        composeTestRule.onAllNodes(hasScrollToKeyAction()).onFirst().performScrollToKey("stores")
         composeTestRule.onNodeWithContentDescription("GOG, 6,127 deals. See all").performClick()
 
         assertEquals(listOf(WinterSaleShelf.Store(61), WinterSaleShelf.Store(35)), shelves)
