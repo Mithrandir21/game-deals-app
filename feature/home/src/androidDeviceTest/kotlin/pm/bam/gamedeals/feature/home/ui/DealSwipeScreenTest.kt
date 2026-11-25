@@ -323,6 +323,8 @@ class DealSwipeScreenTest {
         assertTrue("the title sits beside the art, not under it", title.left > card.left + card.width / 3)
         val add = composeTestRule.onNodeWithContentDescription("Add to waitlist").fetchSemanticsNode().boundsInRoot
         assertTrue("the buttons stay under the card", add.top >= card.bottom)
+        // No room for a description line on the short card, so none is cut in half.
+        composeTestRule.onNodeWithText("Battle out of hell.", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test

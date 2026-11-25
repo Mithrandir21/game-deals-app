@@ -617,7 +617,8 @@ private fun ColumnScope.SwipeDealDetails(
     signals.reviewText(deal.gameID)?.let { review ->
         Text(review, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    SwipeGameDetails(signals[deal.gameID], description)
+    // The sideways card has no room for even a line of description; a tap opens the game page with all of it.
+    SwipeGameDetails(signals[deal.gameID], description.takeUnless { compact })
 }
 
 /** What the game is: "Developer · Year", up to three specific tags, and a short description. Each part only when known. */
