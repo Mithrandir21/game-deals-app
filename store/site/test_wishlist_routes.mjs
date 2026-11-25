@@ -238,7 +238,13 @@ test("the preview line names up to three games", () => {
 /** A fetch that never answers until its signal gives up, like a stalled ITAD. */
 const stalled = (url, init = {}) => new Promise((_, reject) => {
   if (!init.signal) return reject(new Error("no time limit on this call"));
-  init.signal.addEventListener("abort", () => reject(init.signal.reason));
+  // AbortSignal.timeout's timer doesn't hold the event loop open, and Node 22's test runner then cancels the test
+  // mid-wait. This timer holds it open until the signal gives up.
+  const keepAlive = setTimeout(() => {}, 10_000);
+  init.signal.addEventListener("abort", () => {
+    clearTimeout(keepAlive);
+    reject(init.signal.reason);
+  });
 });
 
 test("every ITAD call carries the page's time limit", async () => {
