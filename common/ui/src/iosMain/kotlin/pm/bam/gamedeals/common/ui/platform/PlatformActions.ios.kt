@@ -27,7 +27,8 @@ class IosPlatformActions : PlatformActions {
     override suspend fun shareImage(png: ByteArray, text: String) {
         // The share sheet takes the image straight from memory; nothing is written to disk.
         val image = png.toNSData()?.let { UIImage.imageWithData(it) } ?: return share(text)
-        presentShareSheet(listOf(image, text))
+        // Wrapped so the sheet's header shows the card, not the text.
+        presentShareSheet(listOf(ShareImageItemSource(image, text), text))
     }
 
     private fun presentShareSheet(items: List<Any>) {
