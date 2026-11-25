@@ -1,0 +1,57 @@
+name: CodeQL (Kotlin)
+
+# Manual security scan of the Android/shared Kotlin code; results land in the repo's Security tab.
+# The pull_request trigger only fires when this workflow file itself changes, so edits to it are verified once.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths: [ ".github/workflows/codeql.yml" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checking out branch
+      uses: actions/checkout@v4
+
+    - name: JDK 21 Setup
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: platform-tools
+
+    - name: Gradle cache
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: java-kotlin
+        build-mode: manual
+        queries: security-extended
+
+    # CodeQL only sees code that is actually compiled in this run: no build cache, and the Kotlin compiler runs in-process.
+    - name: Build (traced by CodeQL)
+      run: ./gradlew --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process assembleDebug
+
+    - name: Perform CodeQL analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:java-kotlin"
