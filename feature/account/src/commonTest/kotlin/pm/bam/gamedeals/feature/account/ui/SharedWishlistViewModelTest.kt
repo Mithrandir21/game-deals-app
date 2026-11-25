@@ -2,6 +2,7 @@
 
 package pm.bam.gamedeals.feature.account.ui
 
+import pm.bam.gamedeals.common.exceptions.HttpStatusFailure
 import androidx.lifecycle.SavedStateHandle
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
@@ -212,6 +213,27 @@ class SharedWishlistViewModelTest : MainDispatcherTest() {
 
         assertFalse(vm.uiState.value.failed)
         assertEquals(listOf("cheap"), vm.uiState.value.others.map { it.gameId })
+    }
+
+    @Test
+    fun a_load_that_failed_because_itad_is_busy_says_so() = runTest {
+        everySuspend { sharedWishlistRepository.load(any()) } throws
+            IllegalStateException("none loaded", object : RuntimeException("HTTP 429"), HttpStatusFailure { override val httpStatus = 429 })
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.failed)
+        assertTrue(vm.uiState.value.itadBusy)
+    }
+
+    @Test
+    fun an_offline_failure_is_not_called_busy() = runTest {
+        everySuspend { sharedWishlistRepository.load(any()) } throws IllegalStateException("offline")
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.failed)
+        assertFalse(vm.uiState.value.itadBusy)
     }
 
     @Test

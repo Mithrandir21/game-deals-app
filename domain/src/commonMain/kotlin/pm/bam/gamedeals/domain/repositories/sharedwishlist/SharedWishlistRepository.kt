@@ -2,6 +2,7 @@ package pm.bam.gamedeals.domain.repositories.sharedwishlist
 
 import androidx.compose.runtime.Immutable
 import kotlin.coroutines.cancellation.CancellationException
+import pm.bam.gamedeals.common.exceptions.isRateLimited
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -34,7 +35,8 @@ data class SharedWishlist(
 interface SharedWishlistRepository {
     /**
      * Loads [gameIds] (repeats dropped). A game whose info can't be read is left out and counted in
-     * [SharedWishlist.unavailableCount]; prices are best-effort. Throws when no game at all could be read.
+     * [SharedWishlist.unavailableCount]; prices are best-effort. Throws when no game at all could be read, with a
+     * failure as the cause (a rate limit first), so callers can tell "ITAD is busy" from "offline".
      */
     suspend fun load(gameIds: List<String>): SharedWishlist
 }
@@ -50,19 +52,28 @@ internal class SharedWishlistRepositoryImpl(
         val prices = async { fetchPrices(ids) }
         val games = ids.map { id -> async { fetchGame(id) } }.awaitAll()
         val priceById = prices.await().associateBy { it.gameId }
-        val loaded = games.filterNotNull().map { it.copy(price = priceById[it.gameId]) }
-        if (loaded.isEmpty()) throw IllegalStateException("None of the ${ids.size} shared games could be loaded")
+        val loaded = games.mapNotNull { it.getOrNull() }.map { it.copy(price = priceById[it.gameId]) }
+        if (loaded.isEmpty()) {
+            val failures = games.mapNotNull { it.exceptionOrNull() }
+            throw IllegalStateException(
+                "None of the ${ids.size} shared games could be loaded",
+                failures.firstOrNull { it.isRateLimited() } ?: failures.firstOrNull(),
+            )
+        }
         SharedWishlist(games = loaded, unavailableCount = ids.size - loaded.size)
     }
 
-    private suspend fun fetchGame(gameId: String): SharedWishlistGame? = try {
+    /** The game, success with null when it has no title, or the failure. */
+    private suspend fun fetchGame(gameId: String): Result<SharedWishlistGame?> = try {
         val game = dealsSource.fetchGame(gameId)
-        game.title.takeIf { it.isNotBlank() }?.let { title -> SharedWishlistGame(gameId = gameId, title = title, artwork = game.artwork) }
+        Result.success(
+            game.title.takeIf { it.isNotBlank() }?.let { title -> SharedWishlistGame(gameId = gameId, title = title, artwork = game.artwork) },
+        )
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
         warn(logger, error) { "Shared wishlist game $gameId couldn't be loaded" }
-        null
+        Result.failure(error)
     }
 
     private suspend fun fetchPrices(gameIds: List<String>): List<BundleGamePrice> = try {

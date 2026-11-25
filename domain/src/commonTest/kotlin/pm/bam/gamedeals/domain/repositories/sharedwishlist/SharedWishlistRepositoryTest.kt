@@ -1,5 +1,8 @@
 package pm.bam.gamedeals.domain.repositories.sharedwishlist
 
+import kotlin.test.assertTrue
+import pm.bam.gamedeals.common.exceptions.isRateLimited
+import pm.bam.gamedeals.common.exceptions.HttpStatusFailure
 import dev.mokkery.MockMode
 import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
@@ -83,6 +86,14 @@ class SharedWishlistRepositoryTest {
     fun throws_when_no_game_could_be_read() = runTest {
         everySuspend { dealsSource.fetchGame(any()) } throws IllegalStateException("offline")
         assertFailsWith<IllegalStateException> { repository().load(listOf("a", "b")) }
+    }
+
+    @Test
+    fun when_itad_is_rate_limiting_every_game_the_failure_says_so() = runTest {
+        // So the screen can say "IsThereAnyDeal is busy" instead of blaming the connection.
+        everySuspend { dealsSource.fetchGame(any()) } throws object : RuntimeException("HTTP 429"), HttpStatusFailure { override val httpStatus = 429 }
+        val error = assertFailsWith<IllegalStateException> { repository().load(listOf("a", "b")) }
+        assertTrue(error.isRateLimited())
     }
 
     @Test

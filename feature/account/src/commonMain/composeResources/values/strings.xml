@@ -165,6 +165,7 @@
     <string name="shared_wishlist_sign_in_body">Sign in with IsThereAnyDeal and the games on both lists show first.</string>
     <string name="shared_wishlist_sign_in">Sign in</string>
     <string name="shared_wishlist_failed">This wishlist couldn't be loaded. Check your connection and try again.</string>
+    <string name="shared_wishlist_itad_busy">IsThereAnyDeal is busy right now. Try again in a minute.</string>
     <string name="shared_wishlist_retry">Try again</string>
     <string name="shared_wishlist_empty">This link doesn't hold any games we can show.</string>
     <string name="shared_wishlist_unavailable">Some games on this list couldn't be loaded right now.</string>

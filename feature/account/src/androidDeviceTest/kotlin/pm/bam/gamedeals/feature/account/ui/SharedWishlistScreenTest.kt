@@ -24,6 +24,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_also
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_both_want
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_both_want_none
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_failed
+import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_itad_busy
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_on_list
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_retry
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_sign_in_title
@@ -132,6 +133,17 @@ class SharedWishlistScreenTest {
         verify(exactly = 1) { viewModel.retry() }
     }
 
+    @Test
+    fun whenItadIsBusyTheMessageSaysSoInsteadOfBlamingTheConnection() {
+        show(SharedWishlistUiState(loading = false, failed = true, itadBusy = true))
+
+        composeTestRule.onNodeWithText(labels.itadBusy).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.failed).assertDoesNotExist()
+        composeTestRule.onNodeWithText(labels.retry).performClick()
+
+        verify(exactly = 1) { viewModel.retry() }
+    }
+
     private data class Labels(
         val signInTitle: String,
         val bothWant: String,
@@ -139,6 +151,7 @@ class SharedWishlistScreenTest {
         val alsoOnList: String,
         val onList: String,
         val failed: String,
+        val itadBusy: String,
         val retry: String,
     ) {
         companion object {
@@ -150,6 +163,7 @@ class SharedWishlistScreenTest {
                 alsoOnList = stringResource(Res.string.shared_wishlist_also_on_list),
                 onList = stringResource(Res.string.shared_wishlist_on_list),
                 failed = stringResource(Res.string.shared_wishlist_failed),
+                itadBusy = stringResource(Res.string.shared_wishlist_itad_busy),
                 retry = stringResource(Res.string.shared_wishlist_retry),
             )
         }

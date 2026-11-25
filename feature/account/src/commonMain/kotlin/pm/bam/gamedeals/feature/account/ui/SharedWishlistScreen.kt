@@ -61,6 +61,7 @@ import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_both
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_both_want_none
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_empty
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_failed
+import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_itad_busy
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_intro
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_on_list
 import pm.bam.gamedeals.feature.account.generated.resources.shared_wishlist_retry
@@ -134,7 +135,7 @@ private fun SharedWishlistContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = stringResource(Res.string.shared_wishlist_failed),
+                        text = stringResource(if (state.itadBusy) Res.string.shared_wishlist_itad_busy else Res.string.shared_wishlist_failed),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.politeLiveRegion(),

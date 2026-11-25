@@ -28,6 +28,7 @@ import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.runCatchingLogged
+import pm.bam.gamedeals.common.exceptions.isRateLimited
 
 @Immutable
 internal data class SharedWishlistRowUi(
@@ -52,6 +53,8 @@ internal data class SharedWishlistRowUi(
 internal data class SharedWishlistUiState(
     val loading: Boolean = true,
     val failed: Boolean = false,
+    /** The load failed because IsThereAnyDeal is rate-limiting the app, not because the phone is offline. */
+    val itadBusy: Boolean = false,
     val signedIn: Boolean = false,
     /** Signed in: the friend's games that are also on the user's waitlist, cheapest first. */
     val bothWant: ImmutableList<SharedWishlistRowUi> = persistentListOf(),
@@ -93,7 +96,7 @@ internal class SharedWishlistViewModel(
 
     private sealed interface Load {
         data object Loading : Load
-        data object Failed : Load
+        data class Failed(val busy: Boolean) : Load
         data class Done(val list: SharedWishlist) : Load
     }
 
@@ -126,14 +129,14 @@ internal class SharedWishlistViewModel(
         load.value = Load.Loading
         viewModelScope.launch {
             load.value = runCatchingLogged(logger) { sharedWishlistRepository.load(gameIds) }
-                .fold(onSuccess = { Load.Done(it) }, onFailure = { Load.Failed })
+                .fold(onSuccess = { Load.Done(it) }, onFailure = { Load.Failed(busy = it.isRateLimited()) })
         }
     }
 
     private fun Load.toUiState(signedIn: Boolean, waitlistIds: Set<String>, icons: Map<String, String>): SharedWishlistUiState =
         when (this) {
             Load.Loading -> SharedWishlistUiState(loading = true, signedIn = signedIn)
-            Load.Failed -> SharedWishlistUiState(loading = false, failed = true, signedIn = signedIn)
+            is Load.Failed -> SharedWishlistUiState(loading = false, failed = true, itadBusy = busy, signedIn = signedIn)
             is Load.Done -> {
                 // The waitlist id set is empty while signed out, so nothing counts as shared then.
                 val rows = list.games.map { it.toRowUi(isWaitlisted = signedIn && it.gameId in waitlistIds, icons) }
