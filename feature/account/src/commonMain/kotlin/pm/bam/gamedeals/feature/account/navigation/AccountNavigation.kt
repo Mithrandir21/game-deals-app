@@ -17,6 +17,7 @@ import pm.bam.gamedeals.feature.account.ui.IgnoredScreen
 import pm.bam.gamedeals.feature.account.ui.MyNotesScreen
 import pm.bam.gamedeals.feature.account.ui.NotificationDayScreen
 import pm.bam.gamedeals.feature.account.ui.NotificationsScreen
+import pm.bam.gamedeals.feature.account.ui.SharedWishlistScreen
 import pm.bam.gamedeals.feature.account.ui.WaitlistListScreen
 
 /**
@@ -51,6 +52,14 @@ fun NavGraphBuilder.accountScreen(
         // A tap opens the shared game-centric peek sheet (same as Home/Deals); the sheet routes to the full
         // game page via goToGame and to store deals via goToWeb.
         WaitlistListScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            goToGame = goToGame.dropUnlessResumed(),
+            goToWeb = goToWeb.dropUnlessResumed(),
+        )
+    }
+    composable<Destination.SharedWishlist> {
+        // A friend's wishlist link. The view model reads the ids from the route.
+        SharedWishlistScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
             goToGame = goToGame.dropUnlessResumed(),
             goToWeb = goToWeb.dropUnlessResumed(),

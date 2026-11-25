@@ -13,7 +13,10 @@ import androidx.compose.runtime.produceState
 import org.koin.android.ext.android.inject
 import pm.bam.gamedeals.common.navigation.Destination
 import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.shell.RefreshFeatureSwitchesOnStart
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.ThemeMode
@@ -23,6 +26,7 @@ import pm.bam.gamedeals.navigation.NavGraph
 import pm.bam.gamedeals.notifications.toNotificationRoute
 import pm.bam.gamedeals.shortcuts.AppShortcutBus
 import pm.bam.gamedeals.shortcuts.toAppShortcut
+import pm.bam.gamedeals.shortcuts.toSharedLinkShortcut
 
 class MainActivity : ComponentActivity() {
 
@@ -33,7 +37,9 @@ class MainActivity : ComponentActivity() {
         // targetSdk 35+ forces edge-to-edge; call this explicitly so the system-bar scrims/contrast are
         // applied on older API levels too. Per-surface insets are handled in the shell + screen scaffolds.
         enableEdgeToEdge()
-        handleLaunchIntent(intent) // cold-start notification tap, launcher shortcut or widget tap
+        // Cold-start notification tap, launcher shortcut, widget tap or shared link. Only on a fresh start: after a
+        // rotation or process restore the intent is the same one already handled, and the back stack is restored.
+        if (savedInstanceState == null) handleLaunchIntent(intent)
         setContent {
             // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the (fast)
             // Storage read lands. Recomposes live when the user changes it from the Account hub.
@@ -44,7 +50,10 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             GameDealsTheme(darkTheme = darkTheme) {
-                CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
+                CompositionLocalProvider(
+                    LocalPlatformActions provides rememberPlatformActions(),
+                    LocalGameSignals provides koinInject(),
+                ) {
                     // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast)
                     // Storage read is in flight — render nothing for that frame rather than flashing Home
                     // and bouncing into onboarding.
@@ -56,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     // Minimum-version gate. A sibling of the nav host rather than a child, so it covers every
                     // route — onboarding included — and shows even while startDestination is still resolving.
                     AppUpdateHost()
+                    RefreshFeatureSwitchesOnStart()
                 }
             }
         }
@@ -74,6 +84,6 @@ class MainActivity : ComponentActivity() {
      */
     private fun handleLaunchIntent(intent: Intent?) {
         intent?.toNotificationRoute()?.let { NotificationRouteBus.deliver(it) }
-        intent?.toAppShortcut()?.let { AppShortcutBus.deliver(it) }
+        (intent?.toAppShortcut() ?: intent?.toSharedLinkShortcut())?.let { AppShortcutBus.deliver(it) }
     }
 }

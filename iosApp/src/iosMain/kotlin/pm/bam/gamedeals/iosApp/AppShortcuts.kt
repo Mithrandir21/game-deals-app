@@ -3,6 +3,8 @@ package pm.bam.gamedeals.iosApp
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import pm.bam.gamedeals.common.links.ShareLinks
+import pm.bam.gamedeals.common.links.SharedLink
 
 /**
  * Where a Siri / Shortcuts / Spotlight action (the Swift `AppIntent`s in `AppShortcuts.swift`) or a widget link
@@ -16,6 +18,9 @@ internal sealed interface AppShortcut {
 
     /** A game's page — a row in the Waitlist deals widget. */
     data class Game(val gameId: String) : AppShortcut
+
+    /** A friend's wishlist — a shared `gamedeals.bam.pm/w/…` link. */
+    data class SharedWishlist(val gameIds: List<String>) : AppShortcut
 }
 
 /**
@@ -43,4 +48,21 @@ fun searchDealsShortcut(query: String) = AppShortcutBus.deliver(AppShortcut.Sear
 /** Swift-facing: a Waitlist deals widget row (`pm.bam.gamedeals://game/<id>`). A blank id is ignored. */
 fun openGameShortcut(gameId: String) {
     if (gameId.isNotBlank()) AppShortcutBus.deliver(AppShortcut.Game(gameId))
+}
+
+/**
+ * Swift-facing: a Universal Link (`https://gamedeals.bam.pm/g/<id>` or `…/w/<ids>`, see [ShareLinks]) opened from
+ * another app.
+ * Returns `false` for anything that isn't one of our links, so Swift can leave it alone.
+ */
+fun openSharedLink(url: String): Boolean = when (val link = ShareLinks.parse(url)) {
+    is SharedLink.Game -> {
+        AppShortcutBus.deliver(AppShortcut.Game(link.gameId))
+        true
+    }
+    is SharedLink.Wishlist -> {
+        AppShortcutBus.deliver(AppShortcut.SharedWishlist(link.gameIds))
+        true
+    }
+    null -> false
 }

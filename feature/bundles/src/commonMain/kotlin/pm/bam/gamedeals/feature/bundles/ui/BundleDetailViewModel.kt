@@ -23,7 +23,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
@@ -54,7 +55,7 @@ internal class BundleDetailViewModel(
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
 ) : ViewModel() {
 
     private val bundleId: Int? = savedStateHandle.get<Int>("bundleId")
@@ -117,14 +118,15 @@ internal class BundleDetailViewModel(
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(BundleDetailUiEvent.ShareDeal(text))
+        events.tryEmit(BundleDetailUiEvent.ShareDeal(share))
     }
 
     fun load() {
@@ -217,7 +219,7 @@ internal class BundleDetailViewModel(
     }
 
     internal sealed interface BundleDetailUiEvent {
-        data class ShareDeal(val text: String) : BundleDetailUiEvent
+        data class ShareDeal(val share: DealShare) : BundleDetailUiEvent
         data object SignInRequired : BundleDetailUiEvent
         data object ActionFailed : BundleDetailUiEvent
     }

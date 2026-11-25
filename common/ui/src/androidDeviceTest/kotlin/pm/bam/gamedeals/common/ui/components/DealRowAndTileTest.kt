@@ -59,6 +59,8 @@ class DealRowAndTileTest {
         isWaitlisted: Boolean = false,
         isCollected: Boolean = false,
         neutralChip: String? = null,
+        isRare: Boolean = false,
+        reviewText: String? = null,
         onClick: () -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -79,6 +81,8 @@ class DealRowAndTileTest {
                     storeName = STORE,
                     isWaitlisted = isWaitlisted,
                     isCollected = isCollected,
+                    isRare = isRare,
+                    reviewText = reviewText,
                 )
             }
         }
@@ -92,6 +96,7 @@ class DealRowAndTileTest {
         isLowestEver: Boolean = false,
         isStoreLow: Boolean = false,
         isWaitlisted: Boolean = false,
+        isRare: Boolean = false,
     ) {
         composeTestRule.setContent {
             loadLabels()
@@ -111,6 +116,7 @@ class DealRowAndTileTest {
                     contentDescription = CD,
                     onClick = {},
                     isWaitlisted = isWaitlisted,
+                    isRare = isRare,
                     modifier = Modifier.width(240.dp),
                 )
             }
@@ -233,6 +239,34 @@ class DealRowAndTileTest {
 
         composeTestRule.onAllNodesWithText("-0%", useUnmergedTree = true).assertCountEquals(0)
         listOf("N", "H", "S").forEach { composeTestRule.onAllNodesWithText(it, useUnmergedTree = true).assertCountEquals(0) }
+    }
+
+    // ---- Signals (matrix 6.3): a Rare chip and a review line with signals, nothing without.
+
+    @Test
+    fun aRowWithSignalsShowsRareAndItsReviewLineAndSaysBoth() {
+        setRow(isRare = true, reviewText = "98% positive on Steam")
+
+        composeTestRule.onNodeWithText("Rare", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("98% positive on Steam", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(", rare discount", substring = true).assertExists()
+        composeTestRule.onNodeWithContentDescription("98% positive on Steam", substring = true).assertExists()
+    }
+
+    @Test
+    fun aRowWithoutSignalsShowsNeither() {
+        setRow()
+
+        composeTestRule.onNodeWithText("Rare", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(", rare discount", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun aTileWithARareDiscountShowsTheChipAndSaysIt() {
+        setTile(isRare = true)
+
+        composeTestRule.onNodeWithText("Rare", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(", rare discount", substring = true).assertExists()
     }
 
     private data class Labels(

@@ -20,6 +20,10 @@ internal class NavigationActions(private val navController: NavHostController) {
 
     fun navigateToWinterSaleForYou() { navController.navigate(Destination.WinterSaleForYou) }
 
+    fun navigateToYearInDeals() { navController.navigate(Destination.YearInDeals) }
+
+    fun navigateToDealSwipe() { navController.navigate(Destination.DealSwipe) }
+
     fun navigateToWinterSaleList(shelf: String, saleEndEpochMillis: Long) {
         navController.navigate(Destination.WinterSaleList(shelf, saleEndEpochMillis))
     }
@@ -66,6 +70,11 @@ internal class NavigationActions(private val navController: NavHostController) {
         navController.navigate(Destination.Store(storeId)) {
             restoreState = storeId == 0
         }
+    }
+
+    /** A friend's shared wishlist link. */
+    fun navigateToSharedWishlist(gameIds: List<String>) {
+        navController.navigate(Destination.SharedWishlist(gameIds.joinToString(",")))
     }
 
     fun navigateToGame(gameId: String) {

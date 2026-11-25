@@ -66,6 +66,7 @@ fun DealHeroTile(
     storeIconUrl: String? = null,
     isWaitlisted: Boolean = false,
     isCollected: Boolean = false,
+    isRare: Boolean = false,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the tile's content description, keeping each badge and its TalkBack
@@ -75,6 +76,7 @@ fun DealHeroTile(
         isLowestEver = deal.isLowestEver,
         isStoreLow = deal.isStoreLow,
         hasVoucher = deal.hasVoucher,
+        isRare = isRare,
     ) + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected)
     Card(
         modifier = modifier,
@@ -108,6 +110,7 @@ fun DealHeroTile(
                         isLowestEver = deal.isLowestEver,
                         isStoreLow = deal.isStoreLow,
                         onArt = true,
+                        isRare = isRare,
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(GameDealsCustomTheme.spacing.small),

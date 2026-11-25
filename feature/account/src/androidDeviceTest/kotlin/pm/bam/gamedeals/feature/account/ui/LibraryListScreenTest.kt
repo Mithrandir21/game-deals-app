@@ -3,6 +3,9 @@ package pm.bam.gamedeals.feature.account.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -27,6 +30,8 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_collection_e
 import pm.bam.gamedeals.feature.account.generated.resources.account_list_loading
 import pm.bam.gamedeals.feature.account.generated.resources.account_navigation_back
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_empty
+import pm.bam.gamedeals.feature.account.generated.resources.waitlist_share
+import pm.bam.gamedeals.feature.account.generated.resources.waitlist_share_button
 
 /**
  * Device UI coverage for the library list screens ([WaitlistListScreen] + [CollectionListScreen], which
@@ -75,6 +80,7 @@ class LibraryListScreenTest {
     private fun setWaitlist(state: WaitlistUiState) {
         every { waitlistViewModel.peek } returns peek
         every { waitlistViewModel.uiState } returns MutableStateFlow(state)
+        every { waitlistViewModel.events } returns MutableSharedFlow<WaitlistEvent>().asSharedFlow()
         composeTestRule.setContent {
             labels = Labels.load()
             GameDealsTheme {
@@ -115,6 +121,35 @@ class LibraryListScreenTest {
         composeTestRule.onNodeWithText(GAME_TITLE).performClick()
 
         verify(exactly = 1) { peek.peek(GAME_ID, GAME_TITLE, null) }
+    }
+
+    @Test
+    fun theShareButtonShowsWhenTheWaitlistCanBeSharedAndOpensThePicker() {
+        setWaitlist(WaitlistUiState(loading = false, rows = persistentListOf(waitlistRow()), shareEnabled = true))
+
+        composeTestRule.onNodeWithContentDescription(labels.share).performClick()
+
+        verify(exactly = 1) { waitlistViewModel.openSharePicker() }
+    }
+
+    @Test
+    fun noShareButtonWhenShareLinksAreOff() {
+        setWaitlist(WaitlistUiState(loading = false, rows = persistentListOf(waitlistRow()), shareEnabled = false))
+
+        composeTestRule.onAllNodesWithContentDescription(labels.share).assertCountEquals(0)
+    }
+
+    @Test
+    fun thePickerListsTheWaitlistAndPicksARowOnTap() {
+        setWaitlist(
+            WaitlistUiState(loading = false, rows = persistentListOf(waitlistRow()), shareEnabled = true, sharePicked = persistentListOf()),
+        )
+
+        composeTestRule.onNodeWithText(labels.shareButton).assertIsDisplayed()
+        // The sheet's row is the checkbox toggle; the list row behind the sheet has the same title.
+        composeTestRule.onNode(hasText(GAME_TITLE) and isToggleable()).performClick()
+
+        verify(exactly = 1) { waitlistViewModel.toggleSharePick(GAME_ID) }
     }
 
     @Test
@@ -168,6 +203,8 @@ class LibraryListScreenTest {
         val waitlistEmpty: String,
         val collectionEmpty: String,
         val back: String,
+        val share: String,
+        val shareButton: String,
     ) {
         companion object {
             @Composable
@@ -176,6 +213,8 @@ class LibraryListScreenTest {
                 waitlistEmpty = stringResource(Res.string.account_waitlist_empty),
                 collectionEmpty = stringResource(Res.string.account_collection_empty),
                 back = stringResource(Res.string.account_navigation_back),
+                share = stringResource(Res.string.waitlist_share),
+                shareButton = stringResource(Res.string.waitlist_share_button),
             )
         }
     }

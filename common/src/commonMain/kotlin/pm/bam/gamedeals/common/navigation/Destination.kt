@@ -38,6 +38,22 @@ sealed interface Destination {
     @Serializable
     data class WinterSaleList(val shelf: String, val saleEndEpochMillis: Long) : Destination
 
+    /** The signed-in user's shareable "Year in deals" card, opened from its Home entry in December and January. */
+    @Serializable
+    data object YearInDeals : Destination
+
+    /** Deal swipe: a deck of today's hottest deals for signed-in users, opened from its Home card. */
+    @Serializable
+    data object DealSwipe : Destination
+
+    /**
+     * A friend's wishlist, opened from a shared `gamedeals.bam.pm/w/…` link (see `ShareLinks`). [gameIds] is the
+     * comma-joined ITAD game ids in the friend's order, kept as one string so the route stays on nav-compose's
+     * primitive argument types (like [DiscoverResults]).
+     */
+    @Serializable
+    data class SharedWishlist(val gameIds: String) : Destination
+
     /** Top-level tab: the full, browsable all-stores deals list (epic #219, Phase 4). */
     @Serializable
     data object Deals : Destination

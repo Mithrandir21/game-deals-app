@@ -7,6 +7,7 @@ import ComposeApp
 struct iOSApp: App {
     // Owns app-launch wiring (Koin, background-task registration, notification taps); see AppDelegate.
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -14,13 +15,25 @@ struct iOSApp: App {
                 // Widget links: `pm.bam.gamedeals://giveaways` (Free Games), `://waitlist` and `://game/<id>` (Waitlist
                 // deals). The same scheme carries the ITAD OAuth redirect, but ASWebAuthenticationSession consumes that one
                 // itself, so it never lands here.
+                // Shared game links, `https://gamedeals.bam.pm/g/<id>`, arrive here too as Universal Links (the Associated
+                // Domains entitlement plus the Worker's apple-app-site-association file).
                 .onOpenURL { url in
+                    if url.scheme == "https" {
+                        _ = AppShortcutsKt.openSharedLink(url: url.absoluteString)
+                        return
+                    }
                     switch url.host {
                     case "giveaways": AppShortcutsKt.openGiveawaysShortcut()
+                    // The Sale countdown widget and Live Activity: a blank search just opens the Deals tab.
+                    case "deals": AppShortcutsKt.searchDealsShortcut(query: "")
                     case "waitlist": AppShortcutsKt.openWaitlistShortcut()
                     case "game": AppShortcutsKt.openGameShortcut(gameId: url.lastPathComponent)
                     default: break
                     }
+                }
+                // A big sale in its last eight hours gets a lock-screen countdown when the app comes to the front.
+                .onChange(of: scenePhase) { phase in
+                    if phase == .active { SaleLiveActivity.refresh() }
                 }
         }
     }

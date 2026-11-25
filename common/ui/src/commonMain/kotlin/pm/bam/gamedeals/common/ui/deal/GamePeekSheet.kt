@@ -42,9 +42,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +62,14 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.components.RareBadge
+import pm.bam.gamedeals.common.ui.components.formatMonthYear
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
+import pm.bam.gamedeals.domain.models.RareDiscount
+import pm.bam.gamedeals.domain.models.rareDiscount
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_rare_title
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_rare_last_deep
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_rare_deepest
 import pm.bam.gamedeals.common.ui.components.AllTimeLowBadge
 import pm.bam.gamedeals.common.ui.components.DealLowFlag
 import pm.bam.gamedeals.common.ui.components.NewHistoricalLowBadge
@@ -323,6 +331,30 @@ private fun LowPriceLine(flag: DealLowFlag) {
     }
 }
 
+/** "[Rare] Rare discount: last this deep in Mar 2025" (or "the deepest in 2 years"). */
+@Composable
+private fun RareLine(rare: RareDiscount) {
+    val titleText = stringResource(Res.string.game_peek_rare_title)
+    val bodyText = rare.lastThisDeepEpochMs?.let { stringResource(Res.string.game_peek_rare_last_deep, formatMonthYear(it)) }
+        ?: stringResource(Res.string.game_peek_rare_deepest)
+    val spoken = "$titleText: $bodyText"
+    Row(
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = spoken },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
+    ) {
+        RareBadge()
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(titleText) }
+                append(": ")
+                append(bodyText)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
 @Composable
 private fun PeekBody(
     data: GamePeekSheetData.Data,
@@ -348,7 +380,9 @@ private fun PeekBody(
         verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
     ) {
         val lowFlags = peekLowFlags(data.bestDeal?.deal, data.otherStores.map { it.deal })
-        if (lowFlags.isNotEmpty()) {
+        val signals = rememberGameSignals(listOfNotNull(data.gameId.takeIf { it.isNotEmpty() }))
+        val rare = data.bestDeal?.let { best -> signals[data.gameId]?.rareDiscount(best.deal.savings) }
+        if (lowFlags.isNotEmpty() || rare != null) {
             // One soft grey box holds the letters' explanations, so they read as a note about the prices below.
             Column(
                 modifier = Modifier
@@ -357,6 +391,7 @@ private fun PeekBody(
                     .padding(horizontal = GameDealsCustomTheme.spacing.large - GameDealsCustomTheme.spacing.small, vertical = GameDealsCustomTheme.spacing.medium + GameDealsCustomTheme.spacing.extraSmall),
                 verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium),
             ) {
+                rare?.let { RareLine(it) }
                 lowFlags.forEach { flag -> LowPriceLine(flag) }
             }
         }

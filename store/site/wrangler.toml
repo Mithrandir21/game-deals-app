@@ -10,3 +10,15 @@ rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = true }]
 # Keep request logs off: the privacy policy says we do not keep a log of event-file requests.
 [observability]
 enabled = false
+# Per-game public signals (signals-routes.mjs). Create once with `npx wrangler@4 d1 create gamedeals-signals`, put
+# its id here, then apply migrations/ (see README). Holds public game data only, never anything about users.
+[[d1_databases]]
+binding = "SIGNALS_DB"
+database_name = "gamedeals-signals"
+database_id = "73189075-7f4b-4009-ba16-72378613b53e"
+migrations_dir = "migrations"
+# The app's remote feature switches (flags-routes.mjs). Create once with `npx wrangler@4 kv namespace create
+# gamedeals-flags`, put its id here, then store flags.json as the key `flags` (see README). Public settings only.
+[[kv_namespaces]]
+binding = "FLAGS"
+id = "b005beed965542a48245ec062d38cb61"

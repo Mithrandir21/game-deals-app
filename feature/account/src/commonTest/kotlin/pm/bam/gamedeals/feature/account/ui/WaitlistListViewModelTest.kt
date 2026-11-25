@@ -12,7 +12,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.links.ShareLinks
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Country
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
@@ -22,7 +23,12 @@ import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
 import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.NoOpFeatureFlags
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import pm.bam.gamedeals.testing.MainDispatcherTest
+import pm.bam.gamedeals.testing.utils.observeEmissions
 import pm.bam.gamedeals.testing.TestingLoggingListener
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -41,15 +47,17 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit)
     private val ignoredRepository: IgnoredRepository = mock(MockMode.autoUnit)
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val logger = TestingLoggingListener()
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
 
-    private fun viewModel() = WaitlistListViewModel(
+    private fun wishlistLinksOff() = FakeFeatureFlags(initial = mapOf(FeatureFlag.WishlistLinks to false))
+
+    private fun viewModel(featureFlags: FeatureFlags = NoOpFeatureFlags) = WaitlistListViewModel(
         waitlistRepository, storesRepository, regionRepository,
-        gamesRepository, collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        gamesRepository, collectionRepository, ignoredRepository, dealShareBuilder, featureFlags, logger,
     )
 
     private fun stubs(
@@ -134,5 +142,120 @@ class WaitlistListViewModelTest : MainDispatcherTest() {
         val beta = vm.uiState.value.rows.first { it.gameId == "b" }
         assertNull(beta.salePrice) // priced in DE but the user is in US — hidden until refresh
         assertEquals(0, beta.discountPercent)
+    }
+
+    // ---------------------------------------------------------------- sharing the wishlist
+
+    private fun itadId(n: Int) = "018d937f-0000-7000-8000-${n.toString().padStart(12, '0')}"
+
+    private fun itadSnapshot(count: Int) = WaitlistDisplaySnapshot(
+        items = (1..count).map { WaitlistDisplayItem(gameId = itadId(it), title = "Game $it", addedEpochMs = (100 - it).toLong()) },
+        regionCode = "US",
+    )
+
+    @Test
+    fun the_waitlist_can_be_shared_when_share_links_are_on_and_it_has_games() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+    }
+
+    @Test
+    fun the_waitlist_cannot_be_shared_when_share_links_are_off_or_it_is_empty() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val off = viewModel(wishlistLinksOff())
+        advanceUntilIdle()
+        assertFalse(off.uiState.value.canShare)
+        off.openSharePicker()
+        assertNull(off.uiState.value.sharePicked)
+
+        stubs(itadSnapshot(2), emptySet())
+        val empty = viewModel()
+        advanceUntilIdle()
+        assertFalse(empty.uiState.value.canShare)
+    }
+
+    @Test
+    fun the_share_button_follows_its_switch_while_the_screen_is_open() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val flags = FakeFeatureFlags()
+        val vm = viewModel(flags)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+
+        flags.set(FeatureFlag.WishlistLinks, false)
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.canShare)
+
+        flags.set(FeatureFlag.WishlistLinks, true)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+    }
+
+    @Test
+    fun turning_off_deal_links_leaves_wishlist_sharing_alone() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val vm = viewModel(FakeFeatureFlags(initial = mapOf(FeatureFlag.DealLinks to false)))
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canShare)
+    }
+
+    @Test
+    fun the_picker_opens_with_nothing_picked_and_keeps_the_order_picked() = runTest {
+        stubs(itadSnapshot(3), setOf(itadId(1), itadId(2), itadId(3)))
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.openSharePicker()
+        assertEquals<List<String>?>(emptyList(), vm.uiState.value.sharePicked)
+        vm.toggleSharePick(itadId(3))
+        vm.toggleSharePick(itadId(1))
+        assertEquals<List<String>?>(listOf(itadId(3), itadId(1)), vm.uiState.value.sharePicked)
+        vm.toggleSharePick(itadId(3))
+        assertEquals<List<String>?>(listOf(itadId(1)), vm.uiState.value.sharePicked)
+    }
+
+    @Test
+    fun no_more_than_ten_games_can_be_picked() = runTest {
+        stubs(itadSnapshot(12), (1..12).map(::itadId).toSet())
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.openSharePicker()
+        (1..12).forEach { vm.toggleSharePick(itadId(it)) }
+        assertEquals<List<String>?>((1..10).map(::itadId), vm.uiState.value.sharePicked)
+    }
+
+    @Test
+    fun sharing_emits_the_wishlist_link_for_the_picked_games_and_closes_the_picker() = runTest {
+        stubs(itadSnapshot(3), setOf(itadId(1), itadId(2), itadId(3)))
+        val vm = viewModel()
+        advanceUntilIdle()
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+
+        vm.openSharePicker()
+        vm.toggleSharePick(itadId(2))
+        vm.toggleSharePick(itadId(1))
+        vm.shareWishlist()
+
+        assertEquals(listOf<WaitlistEvent>(WaitlistEvent.ShareWishlist(ShareLinks.wishlist(listOf(itadId(2), itadId(1)))!!)), events)
+        assertNull(vm.uiState.value.sharePicked)
+    }
+
+    @Test
+    fun sharing_with_nothing_picked_does_nothing() = runTest {
+        stubs(itadSnapshot(2), setOf(itadId(1), itadId(2)))
+        val vm = viewModel()
+        advanceUntilIdle()
+        val events = vm.events.observeEmissions(backgroundScope, testDispatcher)
+
+        vm.openSharePicker()
+        vm.shareWishlist()
+
+        assertTrue(events.isEmpty())
+        assertEquals<List<String>?>(emptyList(), vm.uiState.value.sharePicked)
+        vm.closeSharePicker()
+        assertNull(vm.uiState.value.sharePicked)
     }
 }

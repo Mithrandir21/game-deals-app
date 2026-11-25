@@ -40,4 +40,15 @@ class NotificationRoutingTest {
         assertNull(intent(route = null).toNotificationRoute())
         assertNull(intent(route = "something-else").toNotificationRoute())
     }
+
+    @Test
+    fun bundle_watch_summaries_route_to_bundles_and_giveaways() {
+        assertEquals(NotificationRoute.Bundles, intent(ROUTE_BUNDLES).toNotificationRoute())
+        assertEquals(NotificationRoute.Giveaways, intent(ROUTE_GIVEAWAYS).toNotificationRoute())
+        // The iOS app delegate reads the same keys back through fromKey.
+        assertEquals(NotificationRoute.Bundles, NotificationRoute.fromKey(NotificationRoute.Bundles.key))
+        assertEquals(NotificationRoute.Giveaways, NotificationRoute.fromKey(NotificationRoute.Giveaways.key))
+        assertEquals(ROUTE_BUNDLES, NotificationRoute.Bundles.key)
+        assertEquals(ROUTE_GIVEAWAYS, NotificationRoute.Giveaways.key)
+    }
 }

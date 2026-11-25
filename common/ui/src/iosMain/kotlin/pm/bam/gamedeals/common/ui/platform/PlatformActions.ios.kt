@@ -4,9 +4,14 @@ package pm.bam.gamedeals.common.ui.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRectMake
+import platform.Foundation.NSData
 import platform.Foundation.NSURL
+import platform.Foundation.dataWithBytes
+import platform.UIKit.UIImage
 import platform.SafariServices.SFSafariViewController
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
@@ -17,12 +22,21 @@ import platform.UIKit.UIWindowScene
 import platform.UIKit.popoverPresentationController
 
 class IosPlatformActions : PlatformActions {
-    override fun share(text: String) {
+    override fun share(text: String) = presentShareSheet(listOf(text))
+
+    override suspend fun shareImage(png: ByteArray, text: String) {
+        // The share sheet takes the image straight from memory; nothing is written to disk.
+        val image = png.toNSData()?.let { UIImage.imageWithData(it) } ?: return share(text)
+        // Wrapped so the sheet's header shows the card, not the text.
+        presentShareSheet(listOf(ShareImageItemSource(image, text), text))
+    }
+
+    private fun presentShareSheet(items: List<Any>) {
         val keyWindow = resolveKeyWindow() ?: return
         val rootViewController = keyWindow.rootViewController ?: return
 
         val vc = UIActivityViewController(
-            activityItems = listOf(text),
+            activityItems = items,
             applicationActivities = null,
         )
 
@@ -96,6 +110,11 @@ class IosPlatformActions : PlatformActions {
         }
         return fallbackKeyWindow ?: fallbackFirstWindow
     }
+}
+
+private fun ByteArray.toNSData(): NSData? {
+    if (isEmpty()) return null
+    return usePinned { NSData.dataWithBytes(it.addressOf(0), size.toULong()) }
 }
 
 @Composable

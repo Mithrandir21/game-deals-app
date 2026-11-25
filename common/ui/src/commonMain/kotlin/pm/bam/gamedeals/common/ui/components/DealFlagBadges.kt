@@ -37,6 +37,8 @@ import pm.bam.gamedeals.common.ui.generated.resources.deal_all_time_low_badge_la
 import pm.bam.gamedeals.common.ui.generated.resources.deal_all_time_low_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_new_low_badge_label
 import pm.bam.gamedeals.common.ui.generated.resources.deal_new_low_content_suffix
+import pm.bam.gamedeals.common.ui.generated.resources.deal_rare_badge_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_rare_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_store_low_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_voucher_content_suffix
 import pm.bam.gamedeals.common.ui.generated.resources.deal_store_low_badge_label
@@ -105,6 +107,29 @@ fun AllTimeLowBadge(
     }
 }
 
+/**
+ * "Rare": the discount is the deepest this game has had in a year (see `GameSignals.rareDiscount`). Spelled out as a
+ * word, unlike the letters, because it is new and has no ITAD equivalent to learn from.
+ */
+@Composable
+fun RareBadge(
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
+    BadgeChip(
+        // The app's green: apart from the discount tiers' reds and blues and the low-price letters' orange.
+        container = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier,
+        contentDescription = contentDescription,
+    ) {
+        Text(
+            text = stringResource(CommonRes.string.deal_rare_badge_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
 @Composable
 fun VoucherBadge(
     modifier: Modifier = Modifier,
@@ -139,15 +164,17 @@ fun DealBadgeCluster(
     isLowestEver: Boolean = false,
     isStoreLow: Boolean = false,
     onArt: Boolean = false,
+    isRare: Boolean = false,
 ) {
     val lowFlag = dealLowFlag(isNewHistoricalLow = isNewHistoricalLow, isLowestEver = isLowestEver, isStoreLow = isStoreLow)
-    if (discountPercent <= 0 && !hasVoucher && lowFlag == null) return
+    if (discountPercent <= 0 && !hasVoucher && lowFlag == null && !isRare) return
     val chip = if (onArt) Modifier.shadow(elevation = 2.dp, shape = MaterialTheme.shapes.small) else Modifier
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (onArt) GameDealsCustomTheme.spacing.small else GameDealsCustomTheme.spacing.extraSmall),
     ) {
+        if (isRare) RareBadge(chip)
         if (hasVoucher) VoucherBadge(chip)
         DiscountBadge(discountPercent = discountPercent, modifier = chip)
         when (lowFlag) {
@@ -210,14 +237,17 @@ fun dealBadgeContentSuffix(
     isLowestEver: Boolean,
     isStoreLow: Boolean,
     hasVoucher: Boolean,
+    isRare: Boolean = false,
 ): String {
+    val rare = stringResource(CommonRes.string.deal_rare_content_suffix)
     val newLow = stringResource(CommonRes.string.deal_new_low_content_suffix)
     val allTimeLow = stringResource(CommonRes.string.deal_all_time_low_content_suffix)
     val storeLow = stringResource(CommonRes.string.deal_store_low_content_suffix)
     val voucher = stringResource(CommonRes.string.deal_voucher_content_suffix)
-    return dealBadgeSuffixes(isNewHistoricalLow = isNewHistoricalLow, isStoreLow = isStoreLow, hasVoucher = hasVoucher, isLowestEver = isLowestEver)
+    return dealBadgeSuffixes(isNewHistoricalLow = isNewHistoricalLow, isStoreLow = isStoreLow, hasVoucher = hasVoucher, isLowestEver = isLowestEver, isRare = isRare)
         .joinToString(separator = "") { suffix ->
             when (suffix) {
+                DealBadgeSuffix.RARE -> rare
                 DealBadgeSuffix.NEW_LOW -> newLow
                 DealBadgeSuffix.ALL_TIME_LOW -> allTimeLow
                 DealBadgeSuffix.STORE_LOW -> storeLow
@@ -227,7 +257,7 @@ fun dealBadgeContentSuffix(
 }
 
 /** A deal badge whose visual presence has a spoken (TalkBack) equivalent on the merged deal node. */
-enum class DealBadgeSuffix { NEW_LOW, ALL_TIME_LOW, STORE_LOW, VOUCHER }
+enum class DealBadgeSuffix { RARE, NEW_LOW, ALL_TIME_LOW, STORE_LOW, VOUCHER }
 
 /** The one low-price letter a deal shows: N (new low), H (at its all-time low) or S (store low). */
 enum class DealLowFlag { NEW_LOW, ALL_TIME_LOW, STORE_LOW }
@@ -253,7 +283,9 @@ internal fun dealBadgeSuffixes(
     isStoreLow: Boolean,
     hasVoucher: Boolean,
     isLowestEver: Boolean = false,
+    isRare: Boolean = false,
 ): List<DealBadgeSuffix> = buildList {
+    if (isRare) add(DealBadgeSuffix.RARE)
     when (dealLowFlag(isNewHistoricalLow = isNewHistoricalLow, isLowestEver = isLowestEver, isStoreLow = isStoreLow)) {
         DealLowFlag.NEW_LOW -> add(DealBadgeSuffix.NEW_LOW)
         DealLowFlag.ALL_TIME_LOW -> add(DealBadgeSuffix.ALL_TIME_LOW)

@@ -44,6 +44,8 @@ import pm.bam.gamedeals.feature.game.navigation.gamePageScreen
 import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
+import pm.bam.gamedeals.feature.home.navigation.yearInDealsScreen
+import pm.bam.gamedeals.feature.home.navigation.dealSwipeScreen
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
@@ -86,6 +88,7 @@ internal fun NavGraph(
                 AppShortcut.Giveaways -> navActions.navigateTopLevel(Destination.Giveaways)
                 AppShortcut.Deals -> navActions.navigateTopLevel(Destination.Deals)
                 is AppShortcut.Game -> navActions.navigateToGame(shortcut.gameId)
+                is AppShortcut.SharedWishlist -> navActions.navigateToSharedWishlist(shortcut.gameIds)
                 AppShortcut.Waitlist -> {
                     navActions.navigateToWaitlist()
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
@@ -153,6 +156,15 @@ internal fun NavGraph(
                 goToBundles = { navActions.navigateToBundles() },
                 goToBundle = { bundleId -> navActions.navigateToBundleDetail(bundleId) },
                 goToWinterSale = { navActions.navigateToWinterSaleGuide() },
+                goToYearInDeals = { navActions.navigateToYearInDeals() },
+                goToDealSwipe = { navActions.navigateToDealSwipe() },
+            )
+
+            yearInDealsScreen(onBack = { navController.popBackStack() })
+
+            dealSwipeScreen(
+                onBack = { navController.popBackStack() },
+                goToGame = { gameId -> navActions.navigateToGame(gameId) },
             )
 
             winterSaleGuideScreen(

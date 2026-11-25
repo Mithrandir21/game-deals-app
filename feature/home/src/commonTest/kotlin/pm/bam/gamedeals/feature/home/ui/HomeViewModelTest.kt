@@ -19,7 +19,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.deal.StoreDealPair
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -49,6 +50,8 @@ import pm.bam.gamedeals.testing.TestingLoggingListener
 import pm.bam.gamedeals.testing.fixtures.deal
 import pm.bam.gamedeals.testing.fixtures.store
 import pm.bam.gamedeals.testing.utils.observeEmissions
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.testing.FakeFeatureFlags
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -85,7 +88,7 @@ class HomeViewModelTest : MainDispatcherTest() {
     private val collectionRepository: CollectionRepository = mock(MockMode.autoUnit) {
         every { observeCollectionIds() } returns flowOf(persistentSetOf())
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val regionRepository: RegionRepository = mock(MockMode.autoUnit) {
         every { observeSelectedCountry() } returns flowOf(DEFAULT_COUNTRY)
     }
@@ -109,6 +112,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         everySuspend { getMatureOptIn() } returns false
     }
     private val logger = TestingLoggingListener()
+    private val featureFlags = FakeFeatureFlags()
 
     @BeforeTest fun setUp() = installMainDispatcher()
     @AfterTest fun tearDown() = resetMainDispatcher()
@@ -122,7 +126,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         accountRepository = accountRepository,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         regionRepository = regionRepository,
         ignoredRepository = ignoredRepository,
         gamesRepository = gamesRepository,
@@ -131,6 +135,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         recentlyViewedRepository = recentlyViewedRepository,
         settingsRepository = settingsRepository,
         logger = logger,
+        featureFlags = featureFlags,
     )
 
     @Test
@@ -231,6 +236,18 @@ class HomeViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun the_swipe_card_follows_its_switch() = runTest {
+        val vm = createViewModel()
+        val emissions = vm.dealSwipeOffered.observeEmissions(backgroundScope, testDispatcher)
+        advanceUntilIdle()
+        assertEquals(true, emissions.last())
+
+        featureFlags.set(FeatureFlag.DealSwipe, false)
+        advanceUntilIdle()
+        assertEquals(false, emissions.last())
+    }
+
+    @Test
     fun a_failed_section_is_hidden_but_the_feed_survives() = runTest {
         everySuspend { dealsRepository.getDeals(any()) } returns listOf(deal("d1"))
         everySuspend { statsRepository.getMostWaitlisted(any()) } throws RuntimeException("stats down")
@@ -297,7 +314,7 @@ class HomeViewModelTest : MainDispatcherTest() {
 
     @Test
     fun onShareClicked_emits_ShareDeal_event() = runTest {
-        every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
+        every { dealShareBuilder.build(any(), any(), any(), any(), any()) } returns DealShare("Built share text")
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -307,7 +324,7 @@ class HomeViewModelTest : MainDispatcherTest() {
         advanceUntilIdle()
 
         assertEquals(1, events.size)
-        assertEquals(HomeViewModel.HomeUiEvent.ShareDeal("Built share text"), events.first())
+        assertEquals(HomeViewModel.HomeUiEvent.ShareDeal(DealShare("Built share text")), events.first())
     }
 
     @Test

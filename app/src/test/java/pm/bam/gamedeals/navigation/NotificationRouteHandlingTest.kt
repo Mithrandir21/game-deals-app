@@ -46,4 +46,15 @@ class NotificationRouteHandlingTest {
         // Only the sale reminder needs the event check (a network call).
         assertFalse(checked)
     }
+
+    @Test
+    fun bundle_watch_summaries_open_bundles_and_the_giveaways_tab() = runTest {
+        openNotificationRoute(NotificationRoute.Bundles, analytics, navActions, winterSaleAvailable = { true })
+        openNotificationRoute(NotificationRoute.Giveaways, analytics, navActions, winterSaleAvailable = { true })
+
+        verify(exactly = 1) { navActions.navigateToBundles() }
+        verify(exactly = 1) { navActions.navigateTopLevel(Destination.Giveaways) }
+        verify(exactly = 1) { analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "bundles")) }
+        verify(exactly = 1) { analytics.capture(AnalyticsEvents.NOTIFICATION_OPENED, mapOf("route" to "giveaways")) }
+    }
 }

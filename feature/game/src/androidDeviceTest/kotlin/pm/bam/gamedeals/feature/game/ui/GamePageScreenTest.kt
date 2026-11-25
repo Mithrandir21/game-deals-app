@@ -150,6 +150,19 @@ class GamePageScreenTest {
     }
 
     @Test
+    fun notFoundStateSaysSoOffersBackAndNothingToRetryOrSave() {
+        setContent(GamePageData.NotFound)
+
+        composeTestRule.onNodeWithText("Game not found").assertIsDisplayed()
+        composeTestRule.onNodeWithText("This game isn't on IsThereAnyDeal any more", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.errorMsg).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Add to waitlist").assertDoesNotExist()
+
+        composeTestRule.onNodeWithText("Go back").performClick()
+        verify(exactly = 1) { onBack() }
+    }
+
+    @Test
     fun noMatchStateShowsMessageAndSearches() {
         setContent(GamePageData.NoMatch(TITLE))
 

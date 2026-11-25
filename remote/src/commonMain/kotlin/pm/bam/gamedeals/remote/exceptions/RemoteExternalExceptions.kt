@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.exceptions
 
 import io.ktor.client.plugins.ResponseException
+import pm.bam.gamedeals.common.exceptions.HttpStatusFailure
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.*
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_BAD_REQUEST
 import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_FORBIDDEN
@@ -20,7 +21,9 @@ import pm.bam.gamedeals.remote.exceptions.RemoteHttpException.Companion.CODE_UNA
  * text), so a Sentry issue says which failure it was. These are classes, not singletons: a shared exception
  * instance would also share the stack trace of whichever call created it first.
  */
-sealed class RemoteHttpException(val code: Int, cause: Throwable?) : RuntimeException("HTTP $code", cause) {
+sealed class RemoteHttpException(val code: Int, cause: Throwable?) : RuntimeException("HTTP $code", cause), HttpStatusFailure {
+
+    override val httpStatus: Int get() = code
 
     class BadRequest(cause: Throwable? = null) : RemoteHttpException(CODE_BAD_REQUEST, cause)
     class Unauthorized(cause: Throwable? = null) : RemoteHttpException(CODE_UNAUTHORIZED, cause)

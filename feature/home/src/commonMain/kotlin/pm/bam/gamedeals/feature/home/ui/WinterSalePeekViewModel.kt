@@ -19,7 +19,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
@@ -41,7 +42,7 @@ internal class WinterSalePeekViewModel(
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -89,14 +90,15 @@ internal class WinterSalePeekViewModel(
 
     fun share(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName} source=winter_sale" }
-        events.tryEmit(Event.Share(text))
+        events.tryEmit(Event.Share(share))
     }
 
     private fun launchLibraryWrite(write: suspend () -> RepoUpdateResult) {
@@ -110,7 +112,7 @@ internal class WinterSalePeekViewModel(
     }
 
     sealed interface Event {
-        data class Share(val text: String) : Event
+        data class Share(val share: DealShare) : Event
         data object SignInRequired : Event
         data object ActionFailed : Event
     }

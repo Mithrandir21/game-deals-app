@@ -6,14 +6,18 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.links.ShareLinks
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.WaitlistDisplayItem
 import pm.bam.gamedeals.domain.models.WaitlistDisplaySnapshot
 import pm.bam.gamedeals.domain.models.thumbnail
@@ -24,6 +28,8 @@ import pm.bam.gamedeals.domain.repositories.region.RegionRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.runCatchingLogged
 
 /** The available sort orders for the Waitlist "buy-decision dashboard". */
@@ -67,7 +73,18 @@ internal data class WaitlistUiState(
     val refreshFailed: Boolean = false,
     val sort: WaitlistSort = WaitlistSort.RECENTLY_ADDED,
     val rows: ImmutableList<WaitlistRowUi> = persistentListOf(),
-)
+    /** True when the waitlist can be shared as a link (share links are on). The button also needs rows. */
+    val shareEnabled: Boolean = false,
+    /** The games picked to share, in the order picked, while the share picker is open; null when it is closed. */
+    val sharePicked: ImmutableList<String>? = null,
+) {
+    val canShare: Boolean get() = shareEnabled && rows.isNotEmpty()
+}
+
+internal sealed interface WaitlistEvent {
+    /** Hand [link] (a `gamedeals.bam.pm/w/…` wishlist link) to the share sheet. */
+    data class ShareWishlist(val link: String) : WaitlistEvent
+}
 
 /**
  * Backs the Waitlist sub-screen as a buy-decision dashboard. The enriched + priced snapshot
@@ -83,18 +100,22 @@ internal class WaitlistListViewModel(
     gamesRepository: GamesRepository,
     collectionRepository: CollectionRepository,
     ignoredRepository: IgnoredRepository,
-    dealShareTextBuilder: DealShareTextBuilder,
+    dealShareBuilder: DealShareBuilder,
+    featureFlags: FeatureFlags,
     private val logger: Logger,
 ) : ViewModel() {
 
     /** Tapping a row opens the shared game-centric peek sheet (same as Home/Deals/Discover). */
     val peek = GamePeekDelegate(
         viewModelScope, gamesRepository, storesRepository, waitlistRepository,
-        collectionRepository, ignoredRepository, dealShareTextBuilder, logger,
+        collectionRepository, ignoredRepository, dealShareBuilder, logger,
     )
 
     val uiState: StateFlow<WaitlistUiState>
-        field = MutableStateFlow(WaitlistUiState(loading = true))
+        field = MutableStateFlow(WaitlistUiState(loading = true, shareEnabled = featureFlags.isEnabled(FeatureFlag.WishlistLinks)))
+
+    val events: SharedFlow<WaitlistEvent>
+        field = MutableSharedFlow<WaitlistEvent>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     private val sort = MutableStateFlow(WaitlistSort.RECENTLY_ADDED)
 
@@ -103,6 +124,10 @@ internal class WaitlistListViewModel(
 
     init {
         refresh()
+        // The share button follows its remote switch while the screen is open.
+        viewModelScope.launch {
+            featureFlags.observe(FeatureFlag.WishlistLinks).collect { on -> uiState.update { it.copy(shareEnabled = on) } }
+        }
         // Re-price when the user changes region (the first emission is the current region — skip it).
         viewModelScope.launch {
             regionRepository.observeSelectedCountry().drop(1).collect { refresh() }
@@ -134,6 +159,37 @@ internal class WaitlistListViewModel(
 
     fun setSort(value: WaitlistSort) {
         sort.value = value
+    }
+
+    /** Opens the share picker with nothing picked: sharing is outward, so every game on the link is a choice. */
+    fun openSharePicker() {
+        if (uiState.value.canShare) uiState.update { it.copy(sharePicked = persistentListOf()) }
+    }
+
+    fun closeSharePicker() {
+        uiState.update { it.copy(sharePicked = null) }
+    }
+
+    /** Picks or unpicks [gameId]; once [ShareLinks.MAX_WISHLIST_GAMES] are picked, more picks are ignored. */
+    fun toggleSharePick(gameId: String) {
+        uiState.update { state ->
+            val picked = state.sharePicked ?: return@update state
+            val next = when {
+                gameId in picked -> picked - gameId
+                picked.size < ShareLinks.MAX_WISHLIST_GAMES -> picked + gameId
+                else -> picked
+            }
+            state.copy(sharePicked = next.toImmutableList())
+        }
+    }
+
+    /** Shares a link to the picked games (any no longer on the waitlist dropped) and closes the picker. */
+    fun shareWishlist() {
+        val state = uiState.value
+        val onList = state.rows.map { it.gameId }.toSet()
+        val link = ShareLinks.wishlist(state.sharePicked.orEmpty().filter { it in onList }) ?: return
+        events.tryEmit(WaitlistEvent.ShareWishlist(link))
+        closeSharePicker()
     }
 
     private fun refresh() {

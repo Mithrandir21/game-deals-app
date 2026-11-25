@@ -53,7 +53,6 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -97,11 +96,16 @@ import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.PreviewStore
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.shell.TabSnackbarHost
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.adaptive.rememberIsWideLayout
 import pm.bam.gamedeals.common.ui.deal.GamePeekContent
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.Deal
@@ -224,7 +228,6 @@ internal fun DealsScreen(
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val savedSearches by viewModel.savedSearches.collectAsStateWithLifecycle()
     val currentSearchSaved by viewModel.currentSearchSaved.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.deals_screen_load_more_error_msg)
     val searchSavedConfirmation = stringResource(Res.string.deals_search_saved_confirmation)
 
@@ -237,9 +240,11 @@ internal fun DealsScreen(
         viewModel.setSearchQuery(activeSearch.orEmpty())
     }
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
-            is DealsViewModel.DealsUiEvent.ShareDeal -> platformActions.share(event.text)
+            is DealsViewModel.DealsUiEvent.ShareDeal -> dealSharer.share(event.share)
             DealsViewModel.DealsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DealsViewModel.DealsUiEvent.SignInRequired -> SignInPromptController.request()
             DealsViewModel.DealsUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
@@ -377,7 +382,7 @@ internal fun DealsContent(
         // The app shell owns the top bar + bottom nav and already insets the NavHost; this inner
         // Scaffold only hosts the snackbar, so it contributes no insets of its own.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { TabSnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding: PaddingValues ->
         Box(
             modifier = Modifier
@@ -584,6 +589,7 @@ private fun DealsListPane(
 
     // Load-more: fire once the user scrolls within LOAD_MORE_THRESHOLD rows of the end. The VM guards
     // against duplicate/exhausted calls (appending / endReached / non-Data state). Browse mode only.
+    val signals = rememberGameSignals(visibleDeals.map { it.gameID })
     val shouldLoadMore by remember(visibleDeals.size, data.deals.size, searching) {
         derivedStateOf {
             if (searching) return@derivedStateOf false
@@ -681,6 +687,8 @@ private fun DealsListPane(
                             storeIconUrl = store?.iconUrl,
                             isWaitlisted = isWaitlisted,
                             isCollected = isCollected,
+                            isRare = signals.isRare(deal.gameID, deal.savings.roundToInt()),
+                            reviewText = signals.reviewText(deal.gameID),
                         )
                     }
                     if (data.appending) {
@@ -852,6 +860,7 @@ private fun SearchResultsBody(
         is SearchResultsState.Results -> {
             // Hide ignored games from the results; the id set is Room-backed (cold-start/offline correct).
             val visible = remember(state.results, ignoredIds) { state.results.filter { it.gameID !in ignoredIds } }
+    val signals = rememberGameSignals(visible.map { it.gameID })
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 // Reserve the system nav-bar inset so the last row clears the safe zone (see AppShellScaffold).
@@ -892,6 +901,8 @@ private fun SearchResultsBody(
                         isWaitlisted = group.gameID in waitlistIds,
                         isCollected = group.gameID in collectionIds,
                         store = storesById[group.cheapestDeal.storeID],
+                        isRare = signals.isRare(group.gameID, group.cheapestDeal.savings.roundToInt()),
+                        reviewText = signals.reviewText(group.gameID),
                         onGame = { onPeekGame(group.gameID, group.cheapestDeal.title, group.cheapestDeal.artwork.thumbnail) },
                     )
                 }
@@ -908,6 +919,8 @@ private fun SearchResultListItem(
     isCollected: Boolean,
     store: Store?,
     onGame: () -> Unit,
+    isRare: Boolean = false,
+    reviewText: String? = null,
 ) {
     val showBadge = dealCount > 1
     // The row's spoken description names the title + cheapest price only; the separate "N deals" badge
@@ -938,6 +951,8 @@ private fun SearchResultListItem(
             storeIconUrl = store?.iconUrl,
             isWaitlisted = isWaitlisted,
             isCollected = isCollected,
+            isRare = isRare,
+            reviewText = reviewText,
         )
         if (showBadge) {
             DealCountBadge(count = dealCount)

@@ -49,10 +49,13 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.isAvailable
 import pm.bam.gamedeals.common.navigation.SearchController
 import pm.bam.gamedeals.common.navigation.SignInPromptController
+import pm.bam.gamedeals.common.ui.shell.RefreshFeatureSwitchesOnStart
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.common.time.Clock
 import pm.bam.gamedeals.common.version.AppInfo
+import org.koin.compose.koinInject
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
 import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
 import pm.bam.gamedeals.common.ui.shell.GameDealsAppShell
 import pm.bam.gamedeals.common.ui.shell.TopLevelDestination
@@ -88,11 +91,15 @@ import pm.bam.gamedeals.feature.giveaways.navigation.giveawaysScreen
 import pm.bam.gamedeals.feature.home.di.homeModule
 import pm.bam.gamedeals.feature.home.navigation.homeScreen
 import pm.bam.gamedeals.feature.home.navigation.winterSaleGuideScreen
+import pm.bam.gamedeals.feature.home.navigation.yearInDealsScreen
+import pm.bam.gamedeals.feature.home.navigation.dealSwipeScreen
 import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.onboarding.navigation.onboardingScreen
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.feature.store.navigation.storeScreen
 import pm.bam.gamedeals.feature.webview.navigation.webViewScreen
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.reportSwitchesToSentry
 import pm.bam.gamedeals.logging.Logger
 import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
 import pm.bam.gamedeals.logging.configureSentryOptions
@@ -260,6 +267,7 @@ private fun bootstrapKoin() {
     }
 
     attachSentryUser()
+    startFeatureSwitches()
     startNotificationLifecycle()
     startLibraryLifecycle()
 }
@@ -279,6 +287,24 @@ private fun attachSentryUser() {
             throw ce
         } catch (t: Throwable) {
             runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Failed to attach Sentry user." } }
+        }
+    }
+}
+
+/**
+ * Mirrors Android's `GameDealsApplication.startFeatureSwitches`: load the remote feature switches at launch (the saved
+ * copy, then the switch file unless fetched in the last 15 minutes) and keep Sentry reports stamped with their values.
+ */
+private fun startFeatureSwitches() {
+    sentryUserScope.launch {
+        try {
+            val featureFlags = KoinPlatform.getKoin().get<FeatureFlags>()
+            featureFlags.refresh()
+            reportSwitchesToSentry(featureFlags)
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            runCatching { error(KoinPlatform.getKoin().get<Logger>(), t) { "Feature switches couldn't be started." } }
         }
     }
 }
@@ -346,7 +372,10 @@ private fun App() {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
     GameDealsTheme(darkTheme = darkTheme) {
-        CompositionLocalProvider(LocalPlatformActions provides rememberPlatformActions()) {
+        CompositionLocalProvider(
+            LocalPlatformActions provides rememberPlatformActions(),
+            LocalGameSignals provides koinInject(),
+        ) {
             // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast) Storage read
             // is in flight — render nothing rather than flashing Home and bouncing into onboarding.
             val startDestination by produceState<Destination?>(initialValue = null) {
@@ -357,6 +386,7 @@ private fun App() {
             // Minimum-version gate. A sibling of the nav host rather than a child, so it covers every route —
             // onboarding included — and shows even while startDestination is still resolving. Mirrors MainActivity.
             AppUpdateHost()
+            RefreshFeatureSwitchesOnStart()
         }
     }
 }
@@ -367,6 +397,16 @@ private fun AppNavHost(startDestination: Destination) {
     // External / website links open in SFSafariViewController rather than the standalone Safari app, so the user
     // stays in-context — mirrors the Android NavGraph's Custom Tab routing.
     val platformActions = LocalPlatformActions.current
+
+    // Top-level (bottom-nav tab) navigation: pop to Home saving state, single-top, restore — mirrors the Android
+    // `NavigationActions.navigateTopLevel`. Home, not the graph's start destination, which is Onboarding on first run.
+    fun navigateTopLevel(destination: Destination) {
+        navController.navigate(destination) {
+            popUpTo(Destination.Home) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     // Route taps on background (OS-tray) notifications into the nav graph — mirrors the Android NavGraph.
     // The bus is consume-once, so this won't re-navigate.
@@ -383,17 +423,9 @@ private fun AppNavHost(startDestination: Destination) {
                     } else {
                         navController.navigate(Destination.Home) { popUpTo(Destination.Home); launchSingleTop = true }
                     }
+                NotificationRoute.Bundles -> navController.navigate(Destination.Bundles)
+                NotificationRoute.Giveaways -> navigateTopLevel(Destination.Giveaways)
             }
-        }
-    }
-
-    // Top-level (bottom-nav tab) navigation: pop to Home saving state, single-top, restore — mirrors the Android
-    // `NavigationActions.navigateTopLevel`. Home, not the graph's start destination, which is Onboarding on first run.
-    fun navigateTopLevel(destination: Destination) {
-        navController.navigate(destination) {
-            popUpTo(Destination.Home) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
         }
     }
 
@@ -403,6 +435,7 @@ private fun AppNavHost(startDestination: Destination) {
             when (shortcut) {
                 AppShortcut.Giveaways -> navigateTopLevel(Destination.Giveaways)
                 is AppShortcut.Game -> navController.navigate(Destination.Game(shortcut.gameId))
+                is AppShortcut.SharedWishlist -> navController.navigate(Destination.SharedWishlist(shortcut.gameIds.joinToString(",")))
                 AppShortcut.Waitlist -> {
                     navController.navigate(Destination.WaitlistList)
                     // Signed out, the waitlist is empty — offer sign-in on top of it rather than show a blank list.
@@ -461,6 +494,13 @@ private fun AppNavHost(startDestination: Destination) {
             goToBundles = { navController.navigate(Destination.Bundles) },
             goToBundle = { bundleId -> navController.navigate(Destination.BundleDetail(bundleId)) },
             goToWinterSale = { navController.navigate(Destination.WinterSaleGuide) },
+            goToYearInDeals = { navController.navigate(Destination.YearInDeals) },
+            goToDealSwipe = { navController.navigate(Destination.DealSwipe) },
+        )
+        yearInDealsScreen(onBack = { navController.popBackStack() })
+        dealSwipeScreen(
+            onBack = { navController.popBackStack() },
+            goToGame = { gameId -> navController.navigate(Destination.Game(gameId)) },
         )
         winterSaleGuideScreen(
             onBack = { navController.popBackStack() },

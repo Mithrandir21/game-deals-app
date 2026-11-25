@@ -24,12 +24,24 @@ sealed interface NotificationRoute {
         override val key = "winter_sale_guide"
     }
 
+    /** Bundle watch's summary of waitlisted games in new bundles opens the Bundles list. */
+    data object Bundles : NotificationRoute {
+        override val key = "bundles"
+    }
+
+    /** Bundle watch's summary of waitlisted games being given away opens the Giveaways tab. */
+    data object Giveaways : NotificationRoute {
+        override val key = "giveaways"
+    }
+
     companion object {
         /** Inverse of [key] — maps a payload string back to a route, or null when absent/unrecognised. */
         fun fromKey(key: String?): NotificationRoute? = when (key) {
             Notifications.key -> Notifications
             FollowedSeries.key -> FollowedSeries
             WinterSaleGuide.key -> WinterSaleGuide
+            Bundles.key -> Bundles
+            Giveaways.key -> Giveaways
             else -> null
         }
     }

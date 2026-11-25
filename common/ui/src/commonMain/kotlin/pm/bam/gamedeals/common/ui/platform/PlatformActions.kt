@@ -13,6 +13,13 @@ interface PlatformActions {
     fun share(text: String)
 
     /**
+     * Shares a PNG image (a deal card, a year card) together with [text] through the system share sheet, so chat apps
+     * get the picture plus the link. [png] comes from [pm.bam.gamedeals.common.ui.share.ShareCardCapture]. Suspends
+     * while the image is written somewhere the receiving app can read it. Falls back to sharing [text] alone.
+     */
+    suspend fun shareImage(png: ByteArray, text: String) = share(text)
+
+    /**
      * Opens [url] in an in-app browser tab — a Chrome Custom Tab on Android, an
      * `SFSafariViewController` on iOS — so the user stays in-context (and signed in) rather than being
      * sent to the standalone system browser. Implementations fall back gracefully (e.g. to the system

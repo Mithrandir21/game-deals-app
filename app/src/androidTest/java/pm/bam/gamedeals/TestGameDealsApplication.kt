@@ -10,6 +10,7 @@ import pm.bam.gamedeals.common.version.AppInfo
 import pm.bam.gamedeals.common.ui.di.commonUiModule
 import pm.bam.gamedeals.di.appModule
 import pm.bam.gamedeals.di.testDatabaseOverridesModule
+import pm.bam.gamedeals.di.testStorageOverridesModule
 import pm.bam.gamedeals.di.testImageLoaderOverridesModule
 import pm.bam.gamedeals.di.testNetworkOverridesModule
 import pm.bam.gamedeals.domain.di.domainAndroidModule
@@ -26,6 +27,8 @@ import pm.bam.gamedeals.feature.onboarding.di.onboardingModule
 import pm.bam.gamedeals.feature.store.di.storeModule
 import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.NoOpFeatureFlags
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -42,7 +45,7 @@ import pm.bam.gamedeals.remote.logic.RemoteBuildType
  * Application class swapped in by [KoinTestRunner] for instrumented tests. Loads the
  * production Koin modules and then layers `test*OverridesModule` on top; Koin's
  * last-load-wins semantics let those overrides redefine the network clients, the
- * DomainDatabase and the image loader without touching production code. Keep the module
+ * DomainDatabase, the settings and sign-in stores and the image loader without touching production code. Keep the module
  * list in step with GameDealsApplication, or MainActivity can't open every screen.
  */
 class TestGameDealsApplication : Application() {
@@ -86,8 +89,11 @@ class TestGameDealsApplication : Application() {
                 discoverModule,
                 onboardingModule,
                 appUpdateModule,
+                // Every switch at its default, without reading the Worker's switch file.
+                module { single<FeatureFlags> { NoOpFeatureFlags } },
                 testNetworkOverridesModule,
                 testDatabaseOverridesModule,
+                testStorageOverridesModule,
                 testImageLoaderOverridesModule,
             )
         }

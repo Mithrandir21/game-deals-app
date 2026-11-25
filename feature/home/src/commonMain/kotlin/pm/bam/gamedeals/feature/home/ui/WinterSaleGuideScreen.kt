@@ -121,14 +121,19 @@ internal fun winterSaleDay(epochMillis: Long, zone: TimeZone = TimeZone.currentS
  * ([totals], from the day-long store counts); before the sale, and when the counts haven't loaded, with the countdown.
  */
 @Composable
-internal fun WinterSaleHomeCard(event: WinterSaleEventState.Available, totals: WinterSaleDealTotals? = null, onOpen: () -> Unit) {
+internal fun WinterSaleHomeCard(
+    event: WinterSaleEventState.Available,
+    totals: WinterSaleDealTotals? = null,
+    modifier: Modifier = Modifier,
+    onOpen: () -> Unit,
+) {
     WinterSaleCard(
         event = event,
         totalDeals = totals?.totalDeals,
         storeCount = totals?.storeCount ?: 0,
         compact = true,
         onClick = onOpen,
-        modifier = Modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.medium),
+        modifier = modifier.padding(horizontal = GameDealsCustomTheme.spacing.medium),
     )
 }
 

@@ -19,8 +19,9 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import pm.bam.gamedeals.common.exceptions.HttpStatusFailure
 import pm.bam.gamedeals.common.favicon.FaviconResolverImpl
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameArtwork
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -71,7 +72,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         everySuspend { fetchGameDetailsByTitle(any()) } returns null
         everySuspend { fetchTimeToBeat(any()) } returns null
     }
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeIsWaitlisted(any()) } returns flowOf(false)
     }
@@ -99,7 +100,7 @@ class GamePageViewModelTest : MainDispatcherTest() {
         gamesRepository = gamesRepository,
         storesRepository = storesRepository,
         igdbRepository = igdbRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
         ignoredRepository = ignoredRepository,
@@ -321,6 +322,20 @@ class GamePageViewModelTest : MainDispatcherTest() {
     }
 
     @Test
+    fun a_link_to_a_game_itad_doesnt_know_is_not_found_rather_than_an_error() = runTest {
+        everySuspend { gamesRepository.getGameDetails("g1") } calls { throw HttpFailure(404) }
+
+        assertEquals(GamePageViewModel.GamePageData.NotFound, loadState(mapOf("gameId" to "g1")))
+    }
+
+    @Test
+    fun other_failures_on_a_link_stay_a_retryable_error() = runTest {
+        everySuspend { gamesRepository.getGameDetails("g1") } calls { throw HttpFailure(429) }
+
+        assertEquals(GamePageViewModel.GamePageData.Error, loadState(mapOf("gameId" to "g1")))
+    }
+
+    @Test
     fun deal_fetch_failure_surfaces_error_on_deals_facet_but_page_still_renders() = runTest {
         // Deals throw, but a title resolves IGDB → the page is still Data with the deal side in Error.
         everySuspend { gamesRepository.getGameDetails("g1") } calls { throw Exception("deals down") }
@@ -437,3 +452,6 @@ class GamePageViewModelTest : MainDispatcherTest() {
         assertFalse(isSameTitle("™", "®"))
     }
 }
+
+/** A failed call with an HTTP answer, as the network layer reports it. */
+private class HttpFailure(override val httpStatus: Int) : RuntimeException("HTTP $httpStatus"), HttpStatusFailure

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -53,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -61,8 +63,14 @@ import pm.bam.gamedeals.common.navigation.SignInPromptController
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.LocalRowSignals
+import pm.bam.gamedeals.common.ui.signals.ProvideGameSignals
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
 import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.feature.account.generated.resources.Res
@@ -84,6 +92,8 @@ import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sor
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_now_lowest
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_price_low_high
 import pm.bam.gamedeals.feature.account.generated.resources.account_waitlist_sort_recently_added
+import pm.bam.gamedeals.feature.account.generated.resources.waitlist_share
+import pm.bam.gamedeals.feature.account.generated.resources.waitlist_share_text
 import pm.bam.gamedeals.common.ui.generated.resources.Res as CommonRes
 import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
 import pm.bam.gamedeals.common.ui.generated.resources.videogame_thumb
@@ -119,7 +129,23 @@ internal fun WaitlistListScreen(
         WaitlistSort.PRICE_LOW_HIGH to stringResource(Res.string.account_waitlist_sort_price_low_high),
         WaitlistSort.NOW_AT_LOWEST to stringResource(Res.string.account_waitlist_sort_now_lowest),
     )
+    val platformActions = LocalPlatformActions.current
+    SingleEventEffect(viewModel.events) { event ->
+        when (event) {
+            is WaitlistEvent.ShareWishlist -> platformActions.share(getString(Res.string.waitlist_share_text, event.link))
+        }
+    }
+    state.sharePicked?.let { picked ->
+        WaitlistShareSheet(
+            rows = state.rows,
+            picked = picked,
+            onToggle = viewModel::toggleSharePick,
+            onShare = viewModel::shareWishlist,
+            onDismiss = viewModel::closeSharePicker,
+        )
+    }
     LibraryPeekHost(peek = viewModel.peek, goToGame = goToGame, goToWeb = goToWeb) {
+        ProvideGameSignals(state.rows.map { it.gameId }) {
         LibraryScaffold(
             title = stringResource(Res.string.account_section_waitlist),
             loading = state.loading,
@@ -127,12 +153,20 @@ internal fun WaitlistListScreen(
             emptyText = stringResource(Res.string.account_waitlist_empty),
             refreshFailed = state.refreshFailed,
             onBack = onBack,
-            actions = { SortMenu(sortOptions, state.sort, viewModel::setSort) },
+            actions = {
+                if (state.canShare) {
+                    IconButton(onClick = viewModel::openSharePicker) {
+                        Icon(imageVector = Icons.Filled.Share, contentDescription = stringResource(Res.string.waitlist_share))
+                    }
+                }
+                SortMenu(sortOptions, state.sort, viewModel::setSort)
+            },
         ) {
             itemsIndexed(state.rows, key = { _, row -> row.gameId }) { index, row ->
                 WaitlistRow(row) { viewModel.peek.peek(row.gameId, row.title, row.imageUrl) }
                 if (index < state.rows.lastIndex) HorizontalDivider()
             }
+        }
         }
     }
 }
@@ -173,7 +207,7 @@ internal fun CollectionListScreen(
  * routes the sheet's "View game page" / store opens to [goToGame] / [goToWeb]. Same UX as Home/Deals.
  */
 @Composable
-private fun LibraryPeekHost(
+internal fun LibraryPeekHost(
     peek: GamePeekDelegate,
     goToGame: (gameId: String) -> Unit,
     goToWeb: (url: String) -> Unit,
@@ -183,15 +217,16 @@ private fun LibraryPeekHost(
     val waitlistIds by peek.waitlistIds.collectAsStateWithLifecycle()
     val collectionIds by peek.collectionIds.collectAsStateWithLifecycle()
     val ignoredIds by peek.ignoredIds.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val snackbarHostState = remember { SnackbarHostState() }
     val actionFailed = stringResource(CommonRes.string.library_action_failed)
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(peek.events) { event ->
         when (event) {
             GamePeekEvent.SignInRequired -> SignInPromptController.request()
             GamePeekEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
-            is GamePeekEvent.ShareDeal -> platformActions.share(event.text)
+            is GamePeekEvent.ShareDeal -> dealSharer.share(event.share)
         }
     }
 
@@ -343,6 +378,8 @@ private fun WaitlistRow(row: WaitlistRowUi, onClick: () -> Unit) {
             storeName = row.storeName,
             storeIconUrl = row.storeIconUrl,
             isWaitlisted = true,
+            isRare = row.salePrice != null && LocalRowSignals.current.isRare(row.gameId, row.discountPercent),
+            reviewText = LocalRowSignals.current.reviewText(row.gameId),
         )
         if (ago != null) {
             Row(

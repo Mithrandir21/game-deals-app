@@ -41,6 +41,15 @@
     <!-- Spoken-only suffixes appended to a deal's merged content description for each badge shown, so
          TalkBack announces what the visual badges convey. -->
     <string name="deal_new_low_content_suffix">, new lowest price ever</string>
+    <!-- "Rare": the deepest discount this game has had in a year (from the Worker's per-game signals). -->
+    <string name="deal_rare_badge_label">Rare</string>
+    <string name="deal_rare_content_suffix">, rare discount</string>
+    <string name="game_peek_rare_title">Rare discount</string>
+    <string name="game_peek_rare_last_deep">last this deep in %1$s</string>
+    <string name="game_peek_rare_deepest">the deepest in 2 years</string>
+    <!-- Crowd signals from the Worker: the review line on rows, and the full set on the game sheet. -->
+    <string name="deal_review_steam">%1$d% positive</string>
+    <string name="deal_review_other">%1$s %2$d</string>
     <string name="deal_store_low_content_suffix">, lowest price at this store</string>
     <string name="deal_all_time_low_content_suffix">, at its lowest price ever</string>
     <string name="deal_voucher_content_suffix">, voucher available</string>
@@ -96,5 +105,14 @@
     <string name="recently_viewed_remove_confirm_message">Remove “%1$s” from your recently-viewed list?</string>
     <string name="recently_viewed_remove_confirm_action">Remove</string>
     <string name="recently_viewed_remove_cancel">Cancel</string>
+
+    <string name="deal_share_sheet_title">Share this deal</string>
+    <string name="deal_share_button">Share</string>
+    <string name="deal_share_link_only">Share the link only</string>
+    <string name="deal_share_failed">The card couldn't be captured. Try again, or share the link only.</string>
+    <string name="deal_share_new_low">New lowest price ever</string>
+    <string name="deal_share_lowest_ever">Lowest price ever</string>
+    <string name="deal_share_ends">Sale ends %1$s</string>
+    <string name="deal_share_footer">Found with Game Deals</string>
 
 </resources>

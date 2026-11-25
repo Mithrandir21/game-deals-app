@@ -45,6 +45,7 @@ import pm.bam.gamedeals.domain.scheduling.applyLibraryLifecycle
 import pm.bam.gamedeals.domain.scheduling.applyNotificationLifecycle
 import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
 import pm.bam.gamedeals.widget.FreeGamesWidget
+import pm.bam.gamedeals.widget.SaleCountdownWidget
 import pm.bam.gamedeals.widget.WaitlistDealsWidget
 import pm.bam.gamedeals.feature.account.di.accountModule
 import pm.bam.gamedeals.feature.appupdate.di.appUpdateModule
@@ -61,6 +62,9 @@ import pm.bam.gamedeals.logging.analytics.AnalyticsConfig
 import pm.bam.gamedeals.logging.configureSentryOptions
 import pm.bam.gamedeals.logging.di.loggingAndroidModule
 import pm.bam.gamedeals.logging.error
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.logging.featureflags.reportSwitchesToSentry
 import pm.bam.gamedeals.remote.di.remoteModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerNetworkModule
 import pm.bam.gamedeals.remote.gamerpower.di.gamerpowerRemoteModule
@@ -147,6 +151,7 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             )
         }
         attachSentryUser()
+        startFeatureSwitches()
         warmDomainDatabase()
         runCacheMaintenance()
         runNotificationLifecycle()
@@ -166,6 +171,29 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
 
     private fun isDebuggable(): Boolean =
         (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    /**
+     * Loads the remote feature switches at app start (the saved copy first, then the switch file unless it was fetched
+     * in the last 15 minutes), and keeps Sentry reports stamped with their values. Fire-and-forget on
+     * [applicationScope], off the main thread (resolving the reader builds the Worker's HTTP client); it can't fail
+     * the start.
+     */
+    private fun startFeatureSwitches() {
+        applicationScope.launch {
+            try {
+                val featureFlags = get<FeatureFlags>()
+                featureFlags.refresh()
+                reportSwitchesToSentry(featureFlags)
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                try {
+                    error(logger, throwable = t) { "Feature switches couldn't be started" }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+    }
 
     /**
      * Resolve [DomainDatabase] from Koin on a background thread. Without this, the
@@ -276,7 +304,8 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
     /**
      * Redraws the widgets when their data changes, so they don't wait for their 3-hour system refresh: the Waitlist
      * deals widget after the user signs in or out, waitlists a game, or its priced snapshot changes; the Free Games
-     * widget whenever giveaways are fetched (e.g. the Giveaways tab refreshed them). The first emission is dropped (it is
+     * widget whenever giveaways are fetched (e.g. the Giveaways tab refreshed them); the sale countdown when its
+     * switch flips. The first emission is dropped (it is
      * the state the widget already shows) and bursts are debounced. A no-op when no widget is placed. A widget's own
      * refresh updates its data too, but the redraw then finds that data fresh, so this can't loop.
      */
@@ -294,6 +323,8 @@ class GameDealsApplication : Application(), SingletonImageLoader.Factory {
             get<GiveawaysRepository>().observeGiveaways().map { list -> list.minOfOrNull { it.expires } },
             name = "Free Games",
         ) { FreeGamesWidget() }
+        // The sale countdown widget becomes a plain tile, or comes back, when its remote switch flips.
+        redrawOnChange(get<FeatureFlags>().observe(FeatureFlag.SaleCountdown), name = "Sale countdown") { SaleCountdownWidget() }
     }
 
     @OptIn(FlowPreview::class)

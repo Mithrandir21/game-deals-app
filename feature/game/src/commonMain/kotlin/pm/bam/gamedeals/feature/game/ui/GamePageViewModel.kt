@@ -23,9 +23,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import pm.bam.gamedeals.common.exceptions.isHttpNotFound
 import pm.bam.gamedeals.common.favicon.FaviconResolver
 import pm.bam.gamedeals.common.logFlow
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.GameDetails
 import pm.bam.gamedeals.domain.models.GameMeta
@@ -35,6 +37,7 @@ import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.models.RegionalPrice
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
+import pm.bam.gamedeals.domain.models.hero
 import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
 import pm.bam.gamedeals.domain.repositories.franchise.FranchiseFollowSeeder
@@ -71,7 +74,7 @@ internal class GamePageViewModel(
     private val gamesRepository: GamesRepository,
     private val storesRepository: StoresRepository,
     private val igdbRepository: IgdbRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val ignoredRepository: IgnoredRepository,
@@ -143,12 +146,13 @@ internal class GamePageViewModel(
         // Each facet captures its own outcome: Loaded(value | null | empty) when the fetch ran (even if it
         // returned nothing), Error when it threw — so the tabs can tell "no data" apart from "load failed".
         var gameId: String? = gameIdArg
+        var dealsNotFound = false
         val dealsState: SectionState<GameDetails?>
         val igdbResolution: IgdbResolution
 
         if (gameIdArg != null) {
             // Deal entry: ITAD details anchor the page; IGDB is enrichment off the resolved Steam-appid/title.
-            dealsState = fetchSection { gamesRepository.getGameDetails(gameIdArg) }
+            dealsState = fetchSection(onError = { dealsNotFound = it.isHttpNotFound() }) { gamesRepository.getGameDetails(gameIdArg) }
             igdbResolution = resolveIgdbForCurrentArgs(gameDetails = (dealsState as? SectionState.Loaded)?.value)
         } else {
             // Metadata entry: IGDB anchors; resolve the ITAD id from the Steam-appid so deals can load.
@@ -166,10 +170,12 @@ internal class GamePageViewModel(
         val igdbGame = (igdbResolution.state as? SectionState.Loaded)?.value
 
         if (gameDetails == null && igdbGame == null) {
-            // No usable data on either side. A thrown fetch → retryable Error; otherwise it's a genuine miss.
+            // No usable data on either side. ITAD saying the id doesn't exist → NotFound (a shared link to a removed or
+            // mistyped game); another thrown fetch → retryable Error; otherwise it's a genuine miss.
             val errored = dealsState is SectionState.Error || igdbResolution.state is SectionState.Error
             emit(
                 when {
+                    dealsNotFound && titleArg == null -> GamePageData.NotFound
                     errored -> GamePageData.Error
                     titleArg != null -> GamePageData.NoMatch(titleArg)
                     else -> GamePageData.Error
@@ -232,11 +238,12 @@ internal class GamePageViewModel(
             ?: persistentListOf()
 
     /** A captured fetch outcome wrapped for the UI: [SectionState.Loaded] on success (value may be null/empty), [SectionState.Error] when it threw. */
-    private suspend fun <T> fetchSection(block: suspend () -> T): SectionState<T> = try {
+    private suspend fun <T> fetchSection(onError: (Throwable) -> Unit = {}, block: suspend () -> T): SectionState<T> = try {
         SectionState.Loaded(block())
     } catch (ce: CancellationException) {
         throw ce
-    } catch (_: Throwable) {
+    } catch (error: Throwable) {
+        onError(error)
         SectionState.Error
     }
 
@@ -377,14 +384,15 @@ internal class GamePageViewModel(
     }
 
     fun onShareDealClicked(gameInfo: GameDetails.GameInfo, store: Store, deal: GameDetails.GameDeal) {
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = gameIdFlow.value.orEmpty(),
             gameTitle = gameInfo.title,
-            salePriceDenominated = deal.priceDenominated,
+            coverUrl = gameInfo.artwork.hero,
             storeName = store.storeName,
-            dealUrl = deal.url,
+            deal = deal,
         )
         info(logger, tag = "deal_shared") { "dealId=${deal.dealID} store=${store.storeName}" }
-        events.tryEmit(GameUiEvent.ShareDeal(text))
+        events.tryEmit(GameUiEvent.ShareDeal(share))
     }
 
     // --- IGDB title-match warning + candidate picker (from the old GameDetailsViewModel) ---
@@ -490,7 +498,7 @@ internal class GamePageViewModel(
     }
 
     internal sealed interface GameUiEvent {
-        data class ShareDeal(val text: String) : GameUiEvent
+        data class ShareDeal(val share: DealShare) : GameUiEvent
         data object SignInRequired : GameUiEvent
         data object ActionFailed : GameUiEvent
     }
@@ -512,6 +520,9 @@ internal class GamePageViewModel(
     sealed class GamePageData {
         data object Loading : GamePageData()
         data object Error : GamePageData()
+
+        /** ITAD doesn't know the game id (a shared link to a removed or mistyped game). Nothing to retry. */
+        data object NotFound : GamePageData()
         data class NoMatch(val title: String) : GamePageData()
 
         @Immutable

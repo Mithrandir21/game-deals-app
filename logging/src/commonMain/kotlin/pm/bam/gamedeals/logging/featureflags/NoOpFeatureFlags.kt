@@ -4,9 +4,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * No-op [FeatureFlags] bound while no remote flag provider is integrated (currently every build).
- * Every flag resolves to its [FeatureFlag.default], so gated features show their shipped/default state and
- * callers never have to special-case a missing provider.
+ * No-op [FeatureFlags]: every flag resolves to its [FeatureFlag.default], so gated features show their shipped
+ * state. For tests and previews; the apps bind the switch-file reader.
  */
 object NoOpFeatureFlags : FeatureFlags {
     override fun isEnabled(flag: FeatureFlag): Boolean = flag.default
@@ -16,4 +15,5 @@ object NoOpFeatureFlags : FeatureFlags {
     override fun payload(flag: FeatureFlag): String? = null
     override fun observePayload(flag: FeatureFlag): Flow<String?> = flowOf(null)
     override fun refresh() = Unit
+    override suspend fun awaitRefresh() = Unit
 }

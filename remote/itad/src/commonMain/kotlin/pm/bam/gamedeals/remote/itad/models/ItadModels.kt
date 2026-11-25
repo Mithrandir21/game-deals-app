@@ -50,6 +50,8 @@ data class ItadDeal(
     val isStoreLow: Boolean = false,
     /** `true` when the deal carries a voucher/coupon code (drives the "with voucher" scissors badge). */
     val hasVoucher: Boolean = false,
+    /** When the sale price ends, or null when the store gives no end time. */
+    val expiryEpochMs: Long? = null,
 )
 
 data class ItadGamePrices(

@@ -25,7 +25,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
 import pm.bam.gamedeals.common.ui.deal.StoreDealPair
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DEFAULT_COUNTRY
 import pm.bam.gamedeals.domain.models.GameDetails
@@ -55,7 +56,7 @@ class StoreViewModelTest : MainDispatcherTest() {
     private val storesRepository: StoresRepository = mock(MockMode.autoUnit)
     private val dealsRepository: DealsRepository = mock(MockMode.autoUnit)
     private val gamesRepository: GamesRepository = mock(MockMode.autoUnit)
-    private val dealShareTextBuilder: DealShareTextBuilder = mock(MockMode.autoUnit)
+    private val dealShareBuilder: DealShareBuilder = mock(MockMode.autoUnit)
     private val waitlistRepository: WaitlistRepository = mock(MockMode.autoUnit) {
         every { observeWaitlistIds() } returns flowOf(persistentSetOf())
     }
@@ -78,7 +79,7 @@ class StoreViewModelTest : MainDispatcherTest() {
         dealsRepository = dealsRepository,
         storesRepository = storesRepository,
         gamesRepository = gamesRepository,
-        dealShareTextBuilder = dealShareTextBuilder,
+        dealShareBuilder = dealShareBuilder,
         waitlistRepository = waitlistRepository,
         collectionRepository = collectionRepository,
         regionRepository = regionRepository,
@@ -211,7 +212,7 @@ class StoreViewModelTest : MainDispatcherTest() {
 
     @Test
     fun onShareClicked_emits_ShareDeal_event_with_built_text() = runTest {
-        every { dealShareTextBuilder.build(any(), any(), any(), any()) } returns "Built share text"
+        every { dealShareBuilder.build(any(), any(), any(), any(), any()) } returns DealShare("Built share text")
 
         val viewModel = createViewModel(storeId = 1)
         val events = viewModel.events.observeEmissions(this.backgroundScope, testDispatcher)
@@ -238,14 +239,15 @@ class StoreViewModelTest : MainDispatcherTest() {
         runCurrent()
 
         assertEquals(1, events.size)
-        assertEquals(StoreViewModel.StoreUiEvent.ShareDeal("Built share text"), events.first())
+        assertEquals(StoreViewModel.StoreUiEvent.ShareDeal(DealShare("Built share text")), events.first())
 
         verify(exactly(1)) {
-            dealShareTextBuilder.build(
+            dealShareBuilder.build(
+                gameId = "42",
                 gameTitle = "Halo",
-                salePriceDenominated = "$9.99",
+                coverUrl = "thumb-42",
                 storeName = "Steam",
-                dealUrl = "https://deal-url",
+                deal = data.bestDeal!!.deal,
             )
         }
     }

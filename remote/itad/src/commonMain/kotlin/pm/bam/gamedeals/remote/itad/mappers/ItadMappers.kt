@@ -1,6 +1,7 @@
 package pm.bam.gamedeals.remote.itad.mappers
 
 import kotlinx.collections.immutable.toImmutableList
+import kotlin.time.Instant
 import pm.bam.gamedeals.domain.models.Store
 import pm.bam.gamedeals.domain.models.isFreeWithoutDiscount
 import pm.bam.gamedeals.remote.itad.models.ItadDeal
@@ -60,6 +61,7 @@ internal fun RemoteItadDealEntry.toItadDeal(gameId: String, gameTitle: String, a
         isNewHistoricalLow = flag.isNewHistoryLowFlag(),
         isStoreLow = flag.isStoreLowFlag(),
         hasVoucher = voucher.isVoucherPresent(),
+        expiryEpochMs = expiry?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() },
     )
 
 /**

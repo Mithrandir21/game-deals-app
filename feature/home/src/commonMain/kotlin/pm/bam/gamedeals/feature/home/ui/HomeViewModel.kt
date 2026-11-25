@@ -32,7 +32,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.AuthState
 import pm.bam.gamedeals.domain.models.Bundle
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -62,6 +63,8 @@ import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
 import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.featureflags.FeatureFlag
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
 import pm.bam.gamedeals.logging.error
 import pm.bam.gamedeals.logging.info
 
@@ -102,7 +105,7 @@ internal class HomeViewModel(
     private val accountRepository: AccountRepository,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val regionRepository: RegionRepository,
     private val ignoredRepository: IgnoredRepository,
     private val gamesRepository: GamesRepository,
@@ -111,6 +114,7 @@ internal class HomeViewModel(
     private val recentlyViewedRepository: RecentlyViewedRepository,
     private val settingsRepository: SettingsRepository,
     private val logger: Logger,
+    featureFlags: FeatureFlags,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeScreenData>
@@ -148,6 +152,10 @@ internal class HomeViewModel(
         .onStart { emit(null) }
         .catch { emit(null) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Whether Home offers the deal swipe card (to signed-in users, under the stat cards); follows its remote switch. */
+    val dealSwipeOffered: StateFlow<Boolean> = featureFlags.observe(FeatureFlag.DealSwipe)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), featureFlags.isEnabled(FeatureFlag.DealSwipe))
 
     /** Stores keyed by id, for resolving each feed deal's store name/icon in the UI (UI Improvements #248). */
     val stores: StateFlow<ImmutableMap<Int, Store>> = storesRepository.observeStores()
@@ -268,14 +276,15 @@ internal class HomeViewModel(
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(HomeUiEvent.ShareDeal(text))
+        events.tryEmit(HomeUiEvent.ShareDeal(share))
     }
 
     private suspend fun loadReleases(matureOptIn: Boolean): List<Release> {
@@ -331,7 +340,7 @@ internal class HomeViewModel(
     }
 
     internal sealed interface HomeUiEvent {
-        data class ShareDeal(val text: String) : HomeUiEvent
+        data class ShareDeal(val share: DealShare) : HomeUiEvent
         data object SignInRequired : HomeUiEvent
         data object ActionFailed : HomeUiEvent
     }

@@ -43,8 +43,12 @@ import org.koin.compose.viewmodel.koinViewModel
 import pm.bam.gamedeals.common.ui.SingleEventEffect
 import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
 import pm.bam.gamedeals.common.ui.components.DealListRow
+import pm.bam.gamedeals.common.ui.signals.isRare
+import pm.bam.gamedeals.common.ui.signals.reviewText
+import pm.bam.gamedeals.common.ui.signals.rememberGameSignals
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheet
-import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.share.DealShareSheet
+import pm.bam.gamedeals.common.ui.share.rememberDealSharer
 import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
 import pm.bam.gamedeals.domain.models.BundleGamePrice
@@ -83,15 +87,16 @@ internal fun DiscoverResultsScreen(
     val ignoredIds by viewModel.ignoredIds.collectAsStateWithLifecycle()
     val storeIconsByName by viewModel.storeIconsByName.collectAsStateWithLifecycle()
     val gamePeek by viewModel.gamePeek.collectAsStateWithLifecycle()
-    val platformActions = LocalPlatformActions.current
     val loadMoreError = stringResource(Res.string.discover_results_load_more_error)
 
+    val dealSharer = rememberDealSharer()
+    DealShareSheet(dealSharer)
     SingleEventEffect(viewModel.events) { event ->
         when (event) {
             DiscoverResultsViewModel.DiscoverResultsUiEvent.LoadMoreError -> snackbarHostState.showSnackbar(loadMoreError)
             DiscoverResultsViewModel.DiscoverResultsUiEvent.SignInRequired -> SignInPromptController.request()
             DiscoverResultsViewModel.DiscoverResultsUiEvent.ActionFailed -> snackbarHostState.showSnackbar(actionFailed)
-            is DiscoverResultsViewModel.DiscoverResultsUiEvent.ShareDeal -> platformActions.share(event.text)
+            is DiscoverResultsViewModel.DiscoverResultsUiEvent.ShareDeal -> dealSharer.share(event.share)
         }
     }
 
@@ -153,6 +158,7 @@ private fun DiscoverResultsContent(
     }
 
     val noPriceLabel = stringResource(Res.string.discover_results_no_price)
+    val signals = rememberGameSignals(state.results.map { it.gameId })
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -221,6 +227,8 @@ private fun DiscoverResultsContent(
                                 storeIconUrl = price?.bestShopName?.let { storeIconsByName[it] },
                                 isWaitlisted = result.gameId in waitlistIds,
                                 isCollected = result.gameId in collectionIds,
+                                isRare = salePrice != null && signals.isRare(result.gameId, price?.bestCutPercent ?: 0),
+                                reviewText = signals.reviewText(result.gameId),
                             )
                         }
                         if (state.appending) {

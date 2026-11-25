@@ -149,4 +149,62 @@
         <item quantity="other">Starts in %1$d hours</item>
     </plurals>
     <string name="winter_sale_card_starts_soon">Starts within the hour</string>
+
+    <!-- Year in deals (next-versions M2) -->
+    <string name="year_in_deals_home_title">Your %1$d in deals</string>
+    <string name="year_in_deals_home_body">The games you collected, the drops you caught and your longest wait, on one card to share.</string>
+    <string name="year_in_deals_title">Year in deals</string>
+    <string name="year_in_deals_back">Back</string>
+    <string name="year_in_deals_card_heading">My %1$d in deals</string>
+    <plurals name="year_in_deals_collected">
+        <item quantity="one">%1$d game collected</item>
+        <item quantity="other">%1$d games collected</item>
+    </plurals>
+    <string name="year_in_deals_full_price">%1$s at full price</string>
+    <plurals name="year_in_deals_wins">
+        <item quantity="one">%1$d waitlist game hit its lowest price ever</item>
+        <item quantity="other">%1$d waitlist games hit their lowest price ever</item>
+    </plurals>
+    <string name="year_in_deals_newest_label">Newest in your collection</string>
+    <string name="year_in_deals_biggest_drop_label">Biggest drop</string>
+    <string name="year_in_deals_biggest_drop">%1$s, %2$s off, down to %3$s</string>
+    <string name="year_in_deals_longest_wait_label">Longest wait</string>
+    <plurals name="year_in_deals_longest_wait">
+        <item quantity="one">%1$s, on the waitlist for %2$d day</item>
+        <item quantity="other">%1$s, on the waitlist for %2$d days</item>
+    </plurals>
+    <string name="year_in_deals_footer">Made with Game Deals</string>
+    <string name="year_in_deals_share">Share my year</string>
+    <string name="year_in_deals_share_failed">The card couldn't be turned into an image. Try again.</string>
+    <string name="year_in_deals_empty">Not much to show for %1$d yet. Add games to your waitlist and collection on IsThereAnyDeal, and your card fills in.</string>
+    <string name="year_in_deals_failed">Your year couldn't be loaded. Check your connection and try again.</string>
+    <string name="year_in_deals_retry">Try again</string>
+    <string name="year_in_deals_full_price_note">The full price is what the year's new games cost today without a discount, not what you paid.</string>
+
+    <!-- Deal swipe (next-versions M8) -->
+    <string name="deal_swipe_home_title">Swipe today's deals</string>
+    <string name="deal_swipe_home_body">Right adds a game to your waitlist, left skips it.</string>
+    <string name="deal_swipe_title">Swipe deals</string>
+    <string name="deal_swipe_back">Back</string>
+    <string name="deal_swipe_hint">Swipe right to waitlist, left to skip. Tap a card for details.</string>
+    <plurals name="deal_swipe_added_count">
+        <item quantity="one">%1$d game added to your waitlist</item>
+        <item quantity="other">%1$d games added to your waitlist</item>
+    </plurals>
+    <string name="deal_swipe_skip">Skip</string>
+    <string name="deal_swipe_add">Add to waitlist</string>
+    <string name="deal_swipe_undo">Undo last swipe</string>
+    <string name="deal_swipe_stamp_add">Waitlist</string>
+    <string name="deal_swipe_stamp_skip">Skip</string>
+    <string name="deal_swipe_open">Open details</string>
+    <string name="deal_swipe_loading">Loading deals</string>
+    <string name="deal_swipe_finished_title">That's all of today's hot deals</string>
+    <string name="deal_swipe_finished_body">Come back tomorrow for new ones. Games you skip stay out of the deck for 30 days.</string>
+    <string name="deal_swipe_failed">Couldn't load deals. Check your connection and try again.</string>
+    <string name="deal_swipe_itad_busy">IsThereAnyDeal is busy right now. Try again in a minute.</string>
+    <string name="deal_swipe_retry">Try again</string>
+    <string name="deal_swipe_signed_out">Sign in with IsThereAnyDeal to add games to your waitlist with a swipe.</string>
+    <string name="deal_swipe_sign_in">Sign in</string>
+    <string name="deal_swipe_add_failed">Couldn't add %1$s to your waitlist.</string>
+    <string name="deal_swipe_undo_failed">Couldn't take %1$s off your waitlist.</string>
 </resources>

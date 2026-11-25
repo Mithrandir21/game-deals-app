@@ -9,6 +9,7 @@ import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.DealDetails
 import pm.bam.gamedeals.domain.models.Game
 import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.domain.models.GameHistoryLow
 import pm.bam.gamedeals.domain.models.GameMeta
 import pm.bam.gamedeals.domain.models.PriceHistory
 import pm.bam.gamedeals.domain.utils.formatMoney
@@ -19,6 +20,7 @@ import pm.bam.gamedeals.remote.itad.models.ItadMoney
 import pm.bam.gamedeals.remote.itad.models.ItadPriceHistoryEntry
 import pm.bam.gamedeals.remote.itad.models.RemoteItadBundle
 import pm.bam.gamedeals.remote.itad.models.RemoteItadGameInfo
+import pm.bam.gamedeals.remote.itad.models.RemoteItadHistoryLowEntry
 import pm.bam.gamedeals.remote.itad.models.toGameArtwork
 
 /**
@@ -155,6 +157,7 @@ internal fun ItadGamePrices.toBundleGamePrice(): BundleGamePrice {
         historicalLowValue = historyLowAll?.amount,
         historicalLowDenominated = historyLowAll?.denominated(),
         currency = best?.price?.currency ?: historyLowAll?.currency,
+        bestRegularValue = best?.let { it.regular?.amount ?: it.price.amount },
     )
 }
 
@@ -239,6 +242,7 @@ private fun ItadDeal.toGameDeal(): GameDetails.GameDeal {
         isLowestEver = isLowestEver,
         isNewHistoricalLow = isNewHistoricalLow,
         isStoreLow = isStoreLow,
+        expiryEpochMs = expiryEpochMs,
     )
 }
 
@@ -252,5 +256,18 @@ private fun ItadDeal.toCheaperStore(): DealDetails.CheaperStore {
         retailPriceValue = retail.amount,
         retailPriceDenominated = retail.denominated(),
         url = url,
+    )
+}
+
+/** ITAD `/games/historylow/v1` entry → domain [GameHistoryLow]; null when ITAD has no low for the game. */
+internal fun RemoteItadHistoryLowEntry.toGameHistoryLow(): GameHistoryLow? {
+    val low = low ?: return null
+    return GameHistoryLow(
+        gameId = id,
+        price = low.price.amount,
+        regular = low.regular?.amount,
+        cutPercent = low.cut,
+        currency = low.price.currency,
+        setAtEpochMs = low.timestamp?.let { runCatching { Instant.parse(it).toEpochMilliseconds() }.getOrNull() },
     )
 }

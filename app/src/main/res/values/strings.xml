@@ -9,6 +9,8 @@
     <!-- Bundled per-path tray summaries (#7 notification revamp): one each per poll. -->
     <string name="notification_waitlist_summary_title">Waitlist price drops</string>
     <string name="notification_franchise_summary_title">Followed-series deals</string>
+    <string name="notification_bundle_watch_bundles_title">Waitlisted games in bundles</string>
+    <string name="notification_bundle_watch_giveaways_title">Waitlisted games for free</string>
     <!-- One line per game inside a waitlist notification: title · -cut% · price -->
     <string name="notification_game_line">%1$s · -%2$d%% · %3$s</string>
     <string name="notification_game_line_expired">%1$s · deal expired</string>
@@ -33,6 +35,25 @@
     <string name="widget_free_games_error">Couldn\'t load giveaways. Tap to open the app.</string>
     <string name="widget_free_games_empty">No free PC games right now. Check back soon.</string>
     <string name="widget_free_games_ends">ends %1$s</string>
+    <string name="widget_sale_countdown_name">Sale countdown</string>
+    <string name="widget_sale_countdown_description">How long until the next Steam, Epic or GOG sale starts, and how long the current one has left.</string>
+    <string name="widget_sale_countdown_header">Sales</string>
+    <string name="widget_sale_starts_in">Starts in %1$s</string>
+    <string name="widget_sale_ends_in">Ends in %1$s</string>
+    <string name="widget_sale_under_an_hour">under an hour</string>
+    <string name="widget_sale_starts_on">%1$s · starts %2$s</string>
+    <string name="widget_sale_ends_on">%1$s · ends %2$s</string>
+    <string name="widget_sale_none">No sale announced yet.</string>
+    <!-- The countdown widget when the sale countdown is switched off remotely. -->
+    <string name="widget_sale_switched_off">Tap for today\'s deals</string>
+    <plurals name="widget_sale_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="widget_sale_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
 
     <!-- Waitlist deals home-screen widget. -->
     <string name="widget_waitlist_deals_name">Waitlist Deals</string>

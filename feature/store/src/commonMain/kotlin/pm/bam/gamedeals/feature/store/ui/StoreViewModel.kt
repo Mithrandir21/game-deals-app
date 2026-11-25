@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
 import pm.bam.gamedeals.common.logFlow
 import pm.bam.gamedeals.common.ui.deal.GamePeekController
 import pm.bam.gamedeals.common.ui.deal.GamePeekSheetData
-import pm.bam.gamedeals.common.ui.share.DealShareTextBuilder
+import pm.bam.gamedeals.common.ui.share.DealShare
+import pm.bam.gamedeals.common.ui.share.DealShareBuilder
 import pm.bam.gamedeals.domain.models.Deal
 import pm.bam.gamedeals.domain.models.RepoUpdateResult
 import pm.bam.gamedeals.domain.models.Store
@@ -50,7 +51,7 @@ internal class StoreViewModel(
     private val dealsRepository: DealsRepository,
     private val storesRepository: StoresRepository,
     private val gamesRepository: GamesRepository,
-    private val dealShareTextBuilder: DealShareTextBuilder,
+    private val dealShareBuilder: DealShareBuilder,
     private val waitlistRepository: WaitlistRepository,
     private val collectionRepository: CollectionRepository,
     private val regionRepository: RegionRepository,
@@ -176,14 +177,15 @@ internal class StoreViewModel(
 
     fun onShareClicked(data: GamePeekSheetData.Data) {
         val best = data.bestDeal ?: return
-        val text = dealShareTextBuilder.build(
+        val share = dealShareBuilder.build(
+            gameId = data.gameId,
             gameTitle = data.gameName,
-            salePriceDenominated = best.deal.priceDenominated,
+            coverUrl = data.heroArt ?: data.thumb,
             storeName = best.store.storeName,
-            dealUrl = best.deal.url,
+            deal = best.deal,
         )
         info(logger, tag = "store_deal_shared") { "gameId=${data.gameId} store=${best.store.storeName}" }
-        events.tryEmit(StoreUiEvent.ShareDeal(text))
+        events.tryEmit(StoreUiEvent.ShareDeal(share))
     }
 
     /** Runs a remote-first library write, routing sign-in and failure outcomes to one-shot events. */
@@ -198,7 +200,7 @@ internal class StoreViewModel(
     }
 
     internal sealed interface StoreUiEvent {
-        data class ShareDeal(val text: String) : StoreUiEvent
+        data class ShareDeal(val share: DealShare) : StoreUiEvent
         data object SignInRequired : StoreUiEvent
         data object ActionFailed : StoreUiEvent
     }

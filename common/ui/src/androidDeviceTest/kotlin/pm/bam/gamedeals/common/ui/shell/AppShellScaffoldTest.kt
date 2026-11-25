@@ -1,12 +1,23 @@
 package pm.bam.gamedeals.common.ui.shell
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
@@ -95,10 +106,49 @@ class AppShellScaffoldTest {
     }
 
     @Test
+    fun aTabScreensMessageSitsAboveTheBottomBar() {
+        // Tab content runs underneath the bottom bar (so the bar can slide away on scroll). A tab's
+        // snackbar was drawn at the very bottom, hidden behind the bar: Deals' "Couldn't load deals"
+        // with its Retry never showed.
+        composeTestRule.setContent {
+            GameDealsTheme {
+                GameDealsAppShell(
+                    selectedTab = TopLevelDestination.DEALS,
+                    showTopBar = true,
+                    showBottomBar = true,
+                    onSelectTab = {},
+                    activeSearchQuery = null,
+                    onSearchSubmit = {},
+                    onSearchClosed = {},
+                    content = { padding ->
+                        // The shape every tab screen uses: an inner Scaffold that only hosts the snackbar.
+                        val hostState = remember { SnackbarHostState() }
+                        LaunchedEffect(hostState) { hostState.showSnackbar(MESSAGE, actionLabel = "Retry") }
+                        Scaffold(
+                            modifier = Modifier.padding(padding),
+                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                            snackbarHost = { TabSnackbarHost(hostState) },
+                        ) { }
+                    },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(MESSAGE).assertIsDisplayed()
+        val messageBottom = composeTestRule.onNodeWithText(MESSAGE).getBoundsInRoot().bottom
+        val barItemTop = composeTestRule.onNode(hasText("Home") and isSelectable()).getBoundsInRoot().top
+        assertTrue("message bottom $messageBottom is below the bar's top $barItemTop", messageBottom <= barItemTop)
+    }
+
+    @Test
     fun accountTabNoLongerCarriesItsOwnBadge() {
         // The unread tally lives on the bell only; the Account tab icon must stay clean.
         setContent(showNotifications = true, unreadCount = 3)
 
         composeTestRule.onNodeWithContentDescription("unread notifications", substring = true).assertDoesNotExist()
+    }
+
+    private companion object {
+        const val MESSAGE = "Couldn't load deals"
     }
 }

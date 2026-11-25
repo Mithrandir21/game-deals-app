@@ -12,6 +12,7 @@ import pm.bam.gamedeals.R
 import pm.bam.gamedeals.domain.models.NotificationDealGame
 import pm.bam.gamedeals.domain.models.mergedByGameId
 import pm.bam.gamedeals.domain.repositories.notifications.NotificationPresenter
+import pm.bam.gamedeals.domain.repositories.notifications.AlertKind
 import pm.bam.gamedeals.domain.repositories.notifications.PendingNotificationAlert
 import pm.bam.gamedeals.logging.analytics.Analytics
 import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
@@ -19,10 +20,15 @@ import pm.bam.gamedeals.logging.analytics.AnalyticsEvents
 internal const val EXTRA_NOTIFICATION_ROUTE = "extra_notification_route"
 internal const val ROUTE_NOTIFICATIONS = "notifications"
 internal const val ROUTE_FOLLOWED_SERIES = "followed_series"
+internal const val ROUTE_BUNDLES = "bundles"
+internal const val ROUTE_GIVEAWAYS = "giveaways"
 
 /** Tray id of the bundled waitlist summary; [NotificationActionReceiver] dismisses it after "Mark as read". */
 internal const val WAITLIST_SUMMARY_ID = Int.MIN_VALUE
 private const val FRANCHISE_SUMMARY_ID = Int.MIN_VALUE + 1
+// Int.MIN_VALUE + 2 is the Winter Sale reminder.
+internal const val BUNDLE_WATCH_BUNDLES_ID = Int.MIN_VALUE + 3
+internal const val BUNDLE_WATCH_GIVEAWAYS_ID = Int.MIN_VALUE + 4
 
 /** Cap the per-game lines listed in an expanded notification so the tray text stays readable. */
 private const val MAX_GAME_LINES = 6
@@ -56,8 +62,9 @@ internal class AndroidNotificationPresenter(
 
     override suspend fun present(alerts: List<PendingNotificationAlert>) {
         if (alerts.isEmpty() || !manager.areNotificationsEnabled()) return
-        // A followed-franchise alert carries a gameId (and no games); an ITAD waitlist alert carries games.
-        val (franchiseAlerts, waitlistAlerts) = alerts.partition { it.gameId != null }
+        val byKind = alerts.groupBy { it.kind }
+        val waitlistAlerts = byKind[AlertKind.WAITLIST].orEmpty()
+        val franchiseAlerts = byKind[AlertKind.FOLLOWED_SERIES].orEmpty()
         try {
             if (waitlistAlerts.isNotEmpty()) {
                 // One line per game — a game that dropped several times this poll is collapsed to its
@@ -91,6 +98,30 @@ internal class AndroidNotificationPresenter(
                     ),
                 )
                 analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "franchise", "count" to franchiseGames.size))
+            }
+            // Bundle watch: one summary for bundles (tap → Bundles), one for giveaways (tap → Giveaways). Each
+            // alert's title self-describes ("Hades is in Humble Choice, from $11.99").
+            byKind[AlertKind.WAITLIST_BUNDLE]?.let { bundleAlerts ->
+                notifySummary(
+                    id = BUNDLE_WATCH_BUNDLES_ID,
+                    title = context.getString(R.string.notification_bundle_watch_bundles_title),
+                    lines = bundleAlerts.map { it.title }.distinct(),
+                    fallbackText = context.getString(R.string.notification_summary_text, bundleAlerts.size),
+                    contentIntent = routeIntent(ROUTE_BUNDLES, BUNDLE_WATCH_BUNDLES_ID),
+                    actions = emptyList(),
+                )
+                analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "bundle_watch_bundles", "count" to bundleAlerts.size))
+            }
+            byKind[AlertKind.WAITLIST_GIVEAWAY]?.let { giveawayAlerts ->
+                notifySummary(
+                    id = BUNDLE_WATCH_GIVEAWAYS_ID,
+                    title = context.getString(R.string.notification_bundle_watch_giveaways_title),
+                    lines = giveawayAlerts.map { it.title }.distinct(),
+                    fallbackText = context.getString(R.string.notification_summary_text, giveawayAlerts.size),
+                    contentIntent = routeIntent(ROUTE_GIVEAWAYS, BUNDLE_WATCH_GIVEAWAYS_ID),
+                    actions = emptyList(),
+                )
+                analytics.capture(AnalyticsEvents.NOTIFICATION_SHOWN, mapOf("kind" to "bundle_watch_giveaways", "count" to giveawayAlerts.size))
             }
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS revoked between the check and notify() — drop silently.
@@ -139,21 +170,22 @@ internal class AndroidNotificationPresenter(
         }
     }
 
-    private fun routeIntent(route: String, requestCode: Int): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(EXTRA_NOTIFICATION_ROUTE, route)
-        }
-        return PendingIntent.getActivity(context, requestCode, intent, PENDING_FLAGS)
-    }
+    private fun routeIntent(route: String, requestCode: Int): PendingIntent =
+        PendingIntent.getActivity(context, requestCode, notificationRouteIntent(context, route), PENDING_FLAGS)
 
     private fun markAllReadIntent(): PendingIntent {
         val intent = Intent(context, NotificationActionReceiver::class.java).setAction(ACTION_MARK_ALL_READ)
         return PendingIntent.getBroadcast(context, WAITLIST_SUMMARY_ID, intent, PENDING_FLAGS)
     }
 
-    private companion object {
+    companion object {
         const val CHANNEL_ID = "itad_waitlist"
-        const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        private const val PENDING_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     }
+}
+
+/** What a summary's tap opens: the app, routed to [route] (read back by [toNotificationRoute]). */
+internal fun notificationRouteIntent(context: Context, route: String): Intent = Intent(context, MainActivity::class.java).apply {
+    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+    putExtra(EXTRA_NOTIFICATION_ROUTE, route)
 }

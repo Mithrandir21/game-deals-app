@@ -42,6 +42,8 @@ sealed class GamePeekSheetData {
         val cheapestPriceEver: GameDetails.GameCheapestPriceEver? = null,
         /** True when there is no current deal (an unreleased / not-yet-sold game). */
         val upcoming: Boolean = false,
+        /** Wide (≈16:9) art for the shared deal card; null when ITAD has none. */
+        val heroArt: String? = null,
     ) : GamePeekSheetData()
 
     @Immutable

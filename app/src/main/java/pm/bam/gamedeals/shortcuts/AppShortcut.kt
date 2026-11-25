@@ -7,6 +7,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import pm.bam.gamedeals.MainActivity
+import pm.bam.gamedeals.common.links.ShareLinks
+import pm.bam.gamedeals.common.links.SharedLink
 
 /** Intent extra naming the [AppShortcut] a launcher shortcut or a widget asks [MainActivity] to open. */
 internal const val EXTRA_APP_SHORTCUT = "extra_app_shortcut"
@@ -26,6 +28,9 @@ internal sealed class AppShortcut(val key: String) {
 
     /** A game's page — a row in the Waitlist deals widget. */
     data class Game(val gameId: String) : AppShortcut(GAME_KEY)
+
+    /** A friend's wishlist — a shared `gamedeals.bam.pm/w/…` link. Only ever built from a link, never an intent extra. */
+    data class SharedWishlist(val gameIds: List<String>) : AppShortcut("shared_wishlist")
 
     /**
      * An explicit [MainActivity] intent that opens this shortcut. A [Game] intent gets a per-game data URI so each
@@ -52,6 +57,19 @@ internal fun Intent.toAppShortcut(): AppShortcut? = when (getStringExtra(EXTRA_A
     AppShortcut.Waitlist.key -> AppShortcut.Waitlist
     AppShortcut.GAME_KEY -> getStringExtra(EXTRA_GAME_ID)?.takeIf { it.isNotBlank() }?.let(AppShortcut::Game)
     else -> null
+}
+
+/**
+ * A shared game link (`https://gamedeals.bam.pm/g/<id>`) or wishlist link (`…/w/<ids>`, see [ShareLinks]) opened from
+ * another app, as the shortcut it stands for; `null` for any other intent. Android only routes verified links here (the manifest's App Links filter).
+ */
+internal fun Intent.toSharedLinkShortcut(): AppShortcut? {
+    if (action != Intent.ACTION_VIEW) return null
+    return when (val link = dataString?.let(ShareLinks::parse)) {
+        is SharedLink.Game -> AppShortcut.Game(link.gameId)
+        is SharedLink.Wishlist -> AppShortcut.SharedWishlist(link.gameIds)
+        null -> null
+    }
 }
 
 /**

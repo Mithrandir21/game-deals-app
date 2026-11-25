@@ -239,6 +239,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.compose.junit4)
+    // Renders a Glance widget's content in a test (the sale countdown widget's text for each state).
+    androidTestImplementation(libs.androidx.glance.appwidget.testing)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.kotlinx)

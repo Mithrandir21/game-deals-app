@@ -27,6 +27,13 @@ internal fun pm.bam.gamedeals.navigation.NavGraph(modifier: androidx.compose.ui.
     - navActions: RUNTIME (requires runtime check)
 
 @Composable
+private fun pm.bam.gamedeals.widget.CompactSaleCountdownLines(state: pm.bam.gamedeals.widget.SaleCountdownUi): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (marked @Stable or @Immutable)
+
+@Composable
 private fun pm.bam.gamedeals.widget.DealRow(deal: pm.bam.gamedeals.widget.WidgetDeal): kotlin.Unit
   skippable: true
   restartable: true
@@ -55,6 +62,15 @@ private fun pm.bam.gamedeals.widget.GameRow(game: pm.bam.gamedeals.widget.Widget
     - game: STABLE (marked @Stable or @Immutable)
 
 @Composable
+internal fun pm.bam.gamedeals.widget.LiveSaleCountdownContent(loaded: pm.bam.gamedeals.widget.SaleCountdownState, switchedOn: kotlinx.coroutines.flow.Flow<kotlin.Boolean>, reload: kotlin.coroutines.SuspendFunction0<pm.bam.gamedeals.widget.SaleCountdownState>): kotlin.Unit
+  skippable: false
+  restartable: true
+  params:
+    - loaded: STABLE (class with no mutable properties)
+    - switchedOn: UNKNOWN (interface or non-final class; concrete implementation unknown)
+    - reload: STABLE (function type)
+
+@Composable
 private fun pm.bam.gamedeals.widget.LowestEver(): kotlin.Unit
   skippable: true
   restartable: true
@@ -66,6 +82,20 @@ private fun pm.bam.gamedeals.widget.PriceLine(deal: pm.bam.gamedeals.widget.Widg
   restartable: true
   params:
     - deal: STABLE (marked @Stable or @Immutable)
+
+@Composable
+internal fun pm.bam.gamedeals.widget.SaleCountdownContent(state: pm.bam.gamedeals.widget.SaleCountdownState): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (class with no mutable properties)
+
+@Composable
+private fun pm.bam.gamedeals.widget.SaleCountdownLines(state: pm.bam.gamedeals.widget.SaleCountdownUi): kotlin.Unit
+  skippable: true
+  restartable: true
+  params:
+    - state: STABLE (marked @Stable or @Immutable)
 
 @Composable
 private fun pm.bam.gamedeals.widget.SmallDeal(deal: pm.bam.gamedeals.widget.WidgetDeal): kotlin.Unit

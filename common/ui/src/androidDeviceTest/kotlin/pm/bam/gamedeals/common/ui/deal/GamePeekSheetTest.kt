@@ -21,6 +21,10 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assume.assumeTrue
+import androidx.compose.runtime.CompositionLocalProvider
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
+import pm.bam.gamedeals.domain.models.GameSignals
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
 import org.junit.Rule
 import org.junit.Test
 import org.koin.core.context.startKoin
@@ -83,10 +87,18 @@ class GamePeekSheetTest {
         upcoming = false,
     )
 
-    private fun setContent(data: GamePeekSheetData, snackbarHostState: SnackbarHostState? = null) {
+    private fun setContent(
+        data: GamePeekSheetData,
+        snackbarHostState: SnackbarHostState? = null,
+        signals: Map<String, GameSignals> = emptyMap(),
+    ) {
+        val repository = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = signals.filterKeys { it in gameIds }
+        }
         composeTestRule.setContent {
             labels = Labels.load()
             GameDealsTheme {
+                CompositionLocalProvider(LocalGameSignals provides repository) {
                 GamePeekSheet(
                     snackbarHostState = snackbarHostState,
                     data = data,
@@ -102,6 +114,7 @@ class GamePeekSheetTest {
                     onViewGamePage = onViewGamePage,
                     onRetry = onRetry,
                 )
+                }
                 snackbarHostState?.let { state -> LaunchedEffect(state) { state.showSnackbar(labels.actionFailed) } }
             }
         }
@@ -115,6 +128,52 @@ class GamePeekSheetTest {
         composeTestRule.onNodeWithText(labels.bestPriceSubtitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(labels.otherStoresHeader).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    /** 104 weeks with the deepest discount [weeksAgo] weeks ago at [cut]%, and the current sale this week. */
+    private fun signals(currentCut: Int, weeksAgo: Int?, cut: Int) = GameSignals(
+        gameId = GAME_ID,
+        updatedEpochMs = 1_800_000_000_000,
+        weeklyMaxCut = List(104) { i -> if (i == 103) currentCut else if (weeksAgo != null && i == 103 - weeksAgo) cut else 0 },
+    )
+
+    @Test
+    fun aRareDiscountIsExplainedWithWhenItWasLastThisDeep() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = 70, cut = cut)))
+
+        composeTestRule.onNodeWithContentDescription("Rare discount: last this deep in", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theDeepestDiscountInTwoYearsSaysSo() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = null, cut = 0)))
+
+        composeTestRule.onNodeWithContentDescription("Rare discount: the deepest in 2 years").assertIsDisplayed()
+    }
+
+    @Test
+    fun aDiscountSeenWithinTheYearIsNotRare() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = 20, cut = cut)))
+
+        composeTestRule.onAllNodesWithContentDescription("Rare discount", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun theSheetLeavesPlayersAndReviewsToTheGamePage() {
+        // Bam, 2026-11-24: the game page already shows reviews and players, so the sheet doesn't repeat them.
+        val buzz = GameSignals(
+            gameId = GAME_ID, updatedEpochMs = 0, weeklyMaxCut = emptyList(),
+            reviewScore = 97, reviewCount = 250_000, reviewSource = "Steam",
+            playersRecent = 4_012, waitlisted = 45_678, collected = 120_000,
+        )
+        setContent(dataState, signals = mapOf(GAME_ID to buzz))
+
+        composeTestRule.onAllNodesWithText("Players and reviews").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("playing now", substring = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("users want it", substring = true).assertCountEquals(0)
     }
 
     @Test

@@ -75,6 +75,9 @@ fun DealListRow(
     isWaitlisted: Boolean = false,
     isCollected: Boolean = false,
     supportingText: String? = null,
+    isRare: Boolean = false,
+    /** The crowd's review, e.g. "97% positive" (from the Worker's per-game signals); shown under the store. */
+    reviewText: String? = null,
 ) {
     // The flag badges (new-low / store-low / voucher) are visual-only on this merged node, so append
     // their spoken equivalents to the row's content description, keeping each badge and its TalkBack
@@ -84,7 +87,9 @@ fun DealListRow(
         isLowestEver = isLowestEver,
         isStoreLow = isStoreLow,
         hasVoucher = hasVoucher,
-    ) + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected)
+        isRare = isRare,
+    ) + gameStateContentSuffix(isWaitlisted = isWaitlisted, isCollected = isCollected) +
+        (reviewText?.let { ", $it" } ?: "")
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -133,6 +138,14 @@ fun DealListRow(
                 if (storeName != null) {
                     StoreLabel(storeName = storeName, iconUrl = storeIconUrl)
                 }
+                if (reviewText != null) {
+                    Text(
+                        text = reviewText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
                 if (supportingText != null) {
                     Text(
                         text = supportingText,
@@ -155,6 +168,7 @@ fun DealListRow(
                     isNewHistoricalLow = isNewHistoricalLow,
                     isLowestEver = isLowestEver,
                     isStoreLow = isStoreLow,
+                    isRare = isRare,
                 )
                 if (salePrice != null) {
                     PriceBlock(

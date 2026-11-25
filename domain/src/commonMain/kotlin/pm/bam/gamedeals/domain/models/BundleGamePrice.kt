@@ -31,4 +31,6 @@ data class BundleGamePrice(
     val historicalLowDenominated: String?,
     /** ITAD currency code (e.g. "EUR") of this region's prices — lets the VM format summed totals. */
     val currency: String? = null,
+    /** The best deal's regular (undiscounted) price as a number, or its price when ITAD gives no regular one. */
+    val bestRegularValue: Double? = null,
 )

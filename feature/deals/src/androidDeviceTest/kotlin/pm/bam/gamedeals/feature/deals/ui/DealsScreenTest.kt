@@ -31,6 +31,8 @@ import pm.bam.gamedeals.feature.deals.generated.resources.deals_discover_by_tag
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_button
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_filter_sheet_title
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_empty_label
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_msg
+import pm.bam.gamedeals.feature.deals.generated.resources.deals_screen_loading_error_retry
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_loading_indicator
 import pm.bam.gamedeals.feature.deals.generated.resources.deals_search_no_results_label
 import pm.bam.gamedeals.feature.deals.ui.DealsViewModel.DealsScreenData
@@ -149,6 +151,18 @@ class DealsScreenTest {
     }
 
     @Test
+    fun aFailedFirstLoadSaysSoAndOffersRetry() {
+        every { viewModel.uiState } returns MutableStateFlow(DealsScreenData(status = DealsScreenData.Status.ERROR))
+
+        setContent()
+
+        composeTestRule.onNodeWithText(labels.loadError).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.retry).performClick()
+
+        verify(exactly = 1) { viewModel.retry() }
+    }
+
+    @Test
     fun filterButtonOpensFilterSheet() {
         every { viewModel.uiState } returns MutableStateFlow(
             DealsScreenData(
@@ -233,6 +247,8 @@ class DealsScreenTest {
         val discover: String,
         val searchNoResults: String,
         val searchLoading: String,
+        val loadError: String,
+        val retry: String,
     ) {
         companion object {
             @Composable
@@ -243,6 +259,8 @@ class DealsScreenTest {
                 discover = stringResource(Res.string.deals_discover_by_tag),
                 searchNoResults = stringResource(Res.string.deals_search_no_results_label),
                 searchLoading = stringResource(Res.string.deals_search_loading_indicator),
+                loadError = stringResource(Res.string.deals_screen_loading_error_msg),
+                retry = stringResource(Res.string.deals_screen_loading_error_retry),
             )
         }
     }

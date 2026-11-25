@@ -4,6 +4,7 @@ import androidx.room.RoomDatabase
 import org.koin.dsl.module
 import pm.bam.gamedeals.common.di.SECURE_QUALIFIER
 import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
+import pm.bam.gamedeals.common.version.AppInfo
 import pm.bam.gamedeals.domain.auth.AuthTokenStore
 import pm.bam.gamedeals.domain.auth.AuthTokenStoreImpl
 import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
@@ -89,6 +90,26 @@ import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepository
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
 import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchCheckerImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStore
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStoreImpl
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepository
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.EnglishBundleWatchCopy
+import pm.bam.gamedeals.domain.repositories.featureflags.FeatureFlagOverrides
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.domain.repositories.featureflags.RemoteFeatureFlags
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepository
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepository
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleMode
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleModeImpl
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
 import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
 import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
@@ -154,7 +175,7 @@ val domainModule = module {
     single<WinterSaleHubRepository> { WinterSaleHubRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
     single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get()) }
     // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
-    // exercised without a remote flag provider. Written by the Account hub, read by :feature:appupdate.
+    // exercised on one phone without the shared switch file. Written by the Account hub, read by :feature:appupdate.
     single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }
     // Recently-viewed games (#211): device-local Room history (dao, clock, analytics), not auth-gated.
     single<RecentlyViewedRepository> { RecentlyViewedRepositoryImpl(get(), get(), get()) }
@@ -172,6 +193,16 @@ val domainModule = module {
     single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
+    // Year in deals (next-versions M2): built on demand from the collection, waitlist, prices and all-time lows.
+    single<YearInDealsSampleMode> { YearInDealsSampleModeImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<SharedWishlistRepository> { SharedWishlistRepositoryImpl(get(), get()) }
+    single<GameSignalsRepository> { GameSignalsRepositoryImpl(get(), get(), get(), get()) }
+    single<SaleCalendarRepository> { SaleCalendarRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get()) }
+    // Remote feature switches: the Worker's switch file, saved for offline starts; debug builds may force switches.
+    single { RemoteFeatureFlags(get(), get(SETTINGS_QUALIFIER), get(), get(), get(), isDebug = get<AppInfo>().isDebug) }
+    single<FeatureFlags> { get<RemoteFeatureFlags>() }
+    single<FeatureFlagOverrides> { get<RemoteFeatureFlags>() }
+    single<YearInDealsRepository> { YearInDealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     single<NotificationCacheStore> { NotificationCacheStoreImpl(get(SETTINGS_QUALIFIER)) }
     single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get()) }
     // Background (OS-tray) notification delivery. Scheduler is platform-bound
@@ -197,10 +228,19 @@ val domainModule = module {
         }
     }
     single<FollowedFranchiseChecker> { get<FollowedFranchiseCheckerImpl>() }
+    // Bundle watch: waitlisted games in new bundles and giveaways, checked in the same background poll.
+    single<BundleWatchSeenStore> { BundleWatchSeenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<BundleWatchChecker> {
+        BundleWatchCheckerImpl(get(), get(), get(), get(), get(), EnglishBundleWatchCopy, get())
+    }
     single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
     // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
     single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
     single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get(), get()) }
+    // Deal swipe (next-versions M8): the hottest deals minus the user's library, with phone-only skips.
+    single<DealSwipeRepository> {
+        DealSwipeRepositoryImpl(get(), get(), get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get())
+    }
     single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.
