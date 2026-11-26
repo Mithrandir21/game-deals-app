@@ -1,0 +1,180 @@
+package pm.bam.gamedeals.feature.account.ui
+
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import pm.bam.gamedeals.domain.models.AuthState
+import pm.bam.gamedeals.domain.models.Country
+import pm.bam.gamedeals.domain.models.ThemeMode
+import pm.bam.gamedeals.domain.repositories.account.AccountRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.error
+
+/**
+ * Drives the Account hub (epic #272, P1.2): observes the ITAD auth state and exposes the data the hub
+ * needs — login status, profile, the reconnect prompt (#273), and the Waitlist/Collection counts. The
+ * waitlist/collection *lists* now live in their own sub-screens; the hub only shows counts, sourced
+ * reactively from the Room-backed id sets (no network). The remote-as-truth reconcile that fills those id
+ * sets on login is owned app-wide (`applyLibraryLifecycle`), so the counts stay current regardless of where
+ * the user signed in.
+ */
+internal class AccountViewModel(
+    private val accountRepository: AccountRepository,
+    private val waitlistRepository: WaitlistRepository,
+    private val collectionRepository: CollectionRepository,
+    private val regionRepository: RegionRepository,
+    private val settingsRepository: SettingsRepository,
+    private val notificationsRepository: NotificationsRepository,
+    private val logger: Logger,
+) : ViewModel() {
+
+    val uiState: StateFlow<AccountScreenData>
+        field = MutableStateFlow(AccountScreenData())
+
+    /** One-shot hub events (snackbars). Mirrors the Deals/Store event idiom. */
+    val events: SharedFlow<AccountUiEvent>
+        field = MutableSharedFlow<AccountUiEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
+    /** The full region list for the picker — static reference data, not part of the reactive state. */
+    val countries: ImmutableList<Country> = regionRepository.supportedCountries.toImmutableList()
+
+    init {
+        // The selected storefront region (app-local preference).
+        viewModelScope.launch {
+            regionRepository.observeSelectedCountry().collect { country ->
+                uiState.update { it.copy(selectedCountry = country) }
+            }
+        }
+
+        // Show-adult-titles opt-in: a single app-wide preference (the Deals & Bundles lists react to it),
+        // surfaced here instead of in each list's filters.
+        viewModelScope.launch {
+            settingsRepository.observeMatureOptIn().collect { mature ->
+                uiState.update { it.copy(matureOptIn = mature) }
+            }
+        }
+
+        // App theme preference (#193) — drives the app root's dark/light scheme; defaults to SYSTEM.
+        viewModelScope.launch {
+            settingsRepository.observeThemeMode().collect { mode ->
+                uiState.update { it.copy(themeMode = mode) }
+            }
+        }
+
+        // Unread games for the hub's Notifications row badge (same unit as the list's "· N games"). The app-wide refresh is
+        // driven by NotificationBellViewModel at the shell level; here we just observe the shared tally.
+        viewModelScope.launch {
+            notificationsRepository.observeUnreadGameCount().collect { unread ->
+                uiState.update { it.copy(unreadGames = unread) }
+            }
+        }
+
+        // Reactive, Room-backed library counts. The id sets are auth-gated (empty when logged out), so
+        // the counts zero out on logout without any extra wiring.
+        viewModelScope.launch {
+            combine(
+                waitlistRepository.observeWaitlistIds(),
+                collectionRepository.observeCollectionIds(),
+            ) { waitlistIds, collectionIds -> waitlistIds.size to collectionIds.size }
+                .collect { (waitlistCount, collectionCount) ->
+                    uiState.update { it.copy(waitlistCount = waitlistCount, collectionCount = collectionCount) }
+                }
+        }
+
+        viewModelScope.launch {
+            accountRepository.observeAuthState().collect { auth ->
+                when (auth) {
+                    is AuthState.LoggedOut -> uiState.update {
+                        it.copy(loggedIn = false, username = "", needsReconnect = false)
+                    }
+                    is AuthState.LoggedIn -> uiState.update {
+                        it.copy(loggedIn = true, username = auth.username, needsReconnect = auth.needsReconnect)
+                    }
+                }
+            }
+        }
+    }
+
+    fun onLogin() {
+        viewModelScope.launch {
+            uiState.update { it.copy(loggingIn = true) }
+            try {
+                accountRepository.login() // success flows through observeAuthState()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // A silent log here left the user staring at an unchanged signed-out hub with no idea
+                // the attempt had failed (Sentry KOTLIN-J) — tell them, and offer the retry.
+                error(logger, t)
+                events.tryEmit(AccountUiEvent.LoginError)
+            } finally {
+                uiState.update { it.copy(loggingIn = false) }
+            }
+        }
+    }
+
+    fun onLogout() {
+        viewModelScope.launch { accountRepository.logout() }
+    }
+
+    fun onCountrySelected(country: Country) {
+        viewModelScope.launch { regionRepository.setSelectedCountry(country) }
+    }
+
+    /** Toggle whether adult titles are shown across the app (persisted; Deals & Bundles react to it). */
+    fun onSetMatureOptIn(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setMatureOptIn(enabled) }
+    }
+
+    /** Set the app theme preference (persisted; the app root re-themes live). */
+    fun onSetThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settingsRepository.setThemeMode(mode) }
+    }
+
+    /** One-shot events the hub surfaces as a snackbar. */
+    internal sealed interface AccountUiEvent {
+        /** The OAuth round-trip failed outright (not a user cancel — that resolves to a no-op). */
+        data object LoginError : AccountUiEvent
+    }
+
+    @Immutable
+    data class AccountScreenData(
+        val loggedIn: Boolean = false,
+        val username: String = "",
+        val loggingIn: Boolean = false,
+        /** The stored token predates the current OAuth scope set — prompt a reconnect (#273). */
+        val needsReconnect: Boolean = false,
+        val waitlistCount: Int = 0,
+        val collectionCount: Int = 0,
+        /** Unread ITAD notifications; populated in P2 (#277/#278), 0 until then. */
+        val unreadGames: Int = 0,
+        /** Whether a Steam profile is linked; populated in P5 (#285/#286), false until then. */
+        val linkedSteam: Boolean = false,
+        /** The selected storefront region, shown on the Region row and pre-selected in the picker (#276). */
+        val selectedCountry: Country? = null,
+        /** Whether adult titles are shown app-wide (the single mature opt-in, moved out of the filters). */
+        val matureOptIn: Boolean = false,
+        /** App theme preference (#193) — defaults to SYSTEM (follow the OS). */
+        val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    )
+}

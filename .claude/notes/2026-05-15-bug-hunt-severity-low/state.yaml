@@ -1,0 +1,88 @@
+campaign_slug: "2026-05-15-bug-hunt-severity-low"
+labels: ["bug-hunt", "severity:low"]
+created: "2026-05-15"
+status: "complete"
+completed: "2026-05-15"
+current_wave: 2
+issues:
+  - number: 147
+    title: "Pair<Store, GameDeal> makes wrapping list parameter unstable in Compose"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-147-pair-compose-stability"
+    pr: 163
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/163"
+    status: "merged"
+    files:
+      - "feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModel.kt"
+      - "feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreen.kt"
+      - "feature/game/src/commonTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameViewModelTest.kt"
+      - "feature/game/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/feature/game/ui/GameScreenTest.kt"
+      - "common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetData.kt"
+      - "common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheet.kt"
+      - "common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/DealDetailsController.kt"
+      - "common/ui/src/androidInstrumentedTest/kotlin/pm/bam/gamedeals/common/ui/deal/DealBottomSheetTest.kt"
+      - "feature/game/src/commonMain/kotlin/pm/bam/gamedeals/feature/game/ui/StoreDealPair.kt"  # new
+      - "common/ui/src/commonMain/kotlin/pm/bam/gamedeals/common/ui/deal/StoreCheaperStorePair.kt"  # new
+  - number: 149
+    title: "SharingStarted.Eagerly keeps Room observation hot for GiveawaysViewModel lifetime"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-149-giveaways-while-subscribed"
+    pr: 162
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/162"
+    status: "merged"
+    notes: "5 existing tests required adjustment: (1) 3 tests assumed Eagerly's primed-upstream semantics → switched to `emissions.last()` instead of `first()`; (2) reload tests called `reloadGiveaways()` before subscribing → reordered subscribe-first, plus CompletableDeferred to gate the refresh and prevent SUCCESS racing in before LOADING is observed. Worth a lesson — `Eagerly`→`WhileSubscribed` is not test-transparent."
+    files:
+      - "feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+  - number: 150
+    title: "FavouritesRepository.toggleFavourite performs non-atomic read-modify-write (TOCTOU)"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-150-toggle-favourite-atomic"
+    pr: 161
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/161"
+    status: "merged"
+    notes: "Sub-agent added an extra `dateAddedMs: Long` param to the new DAO method (not in planner's literal signature) so the DAO doesn't need a Clock — repo passes `clock.nowMillis()`. Public repo signature unchanged. Insert path uses REPLACE-on-conflict matching existing addFavourites."
+    files:
+      - "domain/src/commonMain/kotlin/pm/bam/gamedeals/domain/db/dao/FavouritesDao.kt"
+      - "domain/src/commonMain/kotlin/pm/bam/gamedeals/domain/repositories/favourites/FavouritesRepository.kt"
+      - "domain/src/commonTest/kotlin/pm/bam/gamedeals/domain/repositories/favourites/FavouritesRepositoryTest.kt"
+  - number: 153
+    title: "Unmanaged CoroutineScope for DB warm-up in Application.onCreate"
+    severity: "low"
+    wave: 1
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-153-application-scoped-coroutine"
+    pr: 160
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/160"
+    status: "merged"
+    files:
+      - "app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt"
+  - number: 151
+    title: "Sentry.init runs on Main during Application.onCreate (dormant; SENTRY_DSN empty)"
+    severity: "low"
+    wave: 2
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-151-sentry-init-off-main"
+    pr: 164
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/164"
+    status: "merged"
+    files:
+      - "app/src/main/java/pm/bam/gamedeals/GameDealsApplication.kt"
+    notes: "Blocker #153 merged on dev (commit 2c77efb). Now reuses the hoisted `applicationScope` field for the background Sentry.init dispatch."
+  - number: 152
+    title: "httpClient default-arg on expect lost to Swift"
+    severity: "low"
+    wave: 2
+    branch: "wave/2026-05-15-bug-hunt-severity-low/issue-152-httpclient-swift-overload"
+    pr: 165
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/165"
+    status: "merged"
+    files:
+      - "remote/src/commonMain/kotlin/pm/bam/gamedeals/remote/logic/HttpClientFactory.kt"
+  - number: 148
+    title: "Sealed Destination loses Swift exhaustiveness (no SKIE)"
+    severity: "low"
+    wave: null
+    notes: "Informational; effort is 'N/A'; recommended fix is 'Adopt SKIE before exposing Destination to Swift directly' which is out of scope for a single-issue PR. Surfaced to user for separate decision (close as wontfix-until-SKIE / relabel as tech-debt / leave as watchlist)."
+    pr: null
+    status: "deferred-needs-user-decision"

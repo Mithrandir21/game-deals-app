@@ -1,0 +1,89 @@
+package pm.bam.gamedeals
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import org.koin.android.ext.android.inject
+import pm.bam.gamedeals.common.navigation.Destination
+import pm.bam.gamedeals.common.navigation.NotificationRouteBus
+import org.koin.compose.koinInject
+import pm.bam.gamedeals.common.ui.shell.RefreshFeatureSwitchesOnStart
+import pm.bam.gamedeals.common.ui.platform.LocalPlatformActions
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
+import pm.bam.gamedeals.common.ui.platform.rememberPlatformActions
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.ThemeMode
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.feature.appupdate.ui.AppUpdateHost
+import pm.bam.gamedeals.navigation.NavGraph
+import pm.bam.gamedeals.notifications.toNotificationRoute
+import pm.bam.gamedeals.shortcuts.AppShortcutBus
+import pm.bam.gamedeals.shortcuts.toAppShortcut
+import pm.bam.gamedeals.shortcuts.toSharedLinkShortcut
+
+class MainActivity : ComponentActivity() {
+
+    private val settingsRepository: SettingsRepository by inject()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // targetSdk 35+ forces edge-to-edge; call this explicitly so the system-bar scrims/contrast are
+        // applied on older API levels too. Per-surface insets are handled in the shell + screen scaffolds.
+        enableEdgeToEdge()
+        // Cold-start notification tap, launcher shortcut, widget tap or shared link. Only on a fresh start: after a
+        // rotation or process restore the intent is the same one already handled, and the back stack is restored.
+        if (savedInstanceState == null) handleLaunchIntent(intent)
+        setContent {
+            // Theme preference (#193): follow the stored choice, defaulting to SYSTEM until the (fast)
+            // Storage read lands. Recomposes live when the user changes it from the Account hub.
+            val themeMode by settingsRepository.observeThemeMode().collectAsState(initial = ThemeMode.SYSTEM)
+            val darkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            GameDealsTheme(darkTheme = darkTheme) {
+                CompositionLocalProvider(
+                    LocalPlatformActions provides rememberPlatformActions(),
+                    LocalGameSignals provides koinInject(),
+                ) {
+                    // First launch shows the onboarding carousel; thereafter Home. `null` while the (fast)
+                    // Storage read is in flight — render nothing for that frame rather than flashing Home
+                    // and bouncing into onboarding.
+                    val startDestination by produceState<Any?>(initialValue = null) {
+                        value = if (settingsRepository.getOnboardingCompleted()) Destination.Home else Destination.Onboarding
+                    }
+                    startDestination?.let { NavGraph(startDestination = it) }
+
+                    // Minimum-version gate. A sibling of the nav host rather than a child, so it covers every
+                    // route — onboarding included — and shows even while startDestination is still resolving.
+                    AppUpdateHost()
+                    RefreshFeatureSwitchesOnStart()
+                }
+            }
+        }
+    }
+
+    // singleTask: a tap while the app is already running re-delivers the launch intent here.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
+    }
+
+    /**
+     * Routes a tapped background notification (Phase B) into the Compose nav via [NotificationRouteBus], and a
+     * launcher shortcut or Free Games widget tap via [AppShortcutBus].
+     */
+    private fun handleLaunchIntent(intent: Intent?) {
+        intent?.toNotificationRoute()?.let { NotificationRouteBus.deliver(it) }
+        (intent?.toAppShortcut() ?: intent?.toSharedLinkShortcut())?.let { AppShortcutBus.deliver(it) }
+    }
+}
