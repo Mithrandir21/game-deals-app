@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher shortcuts (long-press the app icon, or drag one onto the home screen). Each opens MainActivity with
+    extra_app_shortcut set to an AppShortcut key (shortcuts/AppShortcut.kt); MainActivity hands it to the nav graph.
+    The iOS equivalent is the App Intents in iosApp/iosApp/AppShortcuts.swift.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_giveaways"
+        android:shortcutId="giveaways"
+        android:shortcutLongLabel="@string/shortcut_giveaways_long"
+        android:shortcutShortLabel="@string/shortcut_giveaways_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="pm.bam.gamedeals.MainActivity"
+            android:targetPackage="pm.bam.gamedeals">
+            <extra
+                android:name="extra_app_shortcut"
+                android:value="giveaways" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_deals"
+        android:shortcutId="deals"
+        android:shortcutLongLabel="@string/shortcut_deals_long"
+        android:shortcutShortLabel="@string/shortcut_deals_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="pm.bam.gamedeals.MainActivity"
+            android:targetPackage="pm.bam.gamedeals">
+            <extra
+                android:name="extra_app_shortcut"
+                android:value="deals" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_waitlist"
+        android:shortcutId="waitlist"
+        android:shortcutLongLabel="@string/shortcut_waitlist_long"
+        android:shortcutShortLabel="@string/shortcut_waitlist_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="pm.bam.gamedeals.MainActivity"
+            android:targetPackage="pm.bam.gamedeals">
+            <extra
+                android:name="extra_app_shortcut"
+                android:value="waitlist" />
+        </intent>
+    </shortcut>
+</shortcuts>
