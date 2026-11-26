@@ -37,7 +37,7 @@ reviews:
     - "!.agents/**"
     - "!.opencode/**"
     - "!docs/**"
-    - "!store/**"
+    - "!store/ios/**"
     - "!whatsnew/**"
     - "!**/*.stability"
     - "!**/generated/**"
@@ -57,6 +57,11 @@ reviews:
       instructions: |
         Thin iOS shell around the shared Kotlin framework. Report only crashes, lifecycle bugs, threading issues and wrong interop with
         the Kotlin framework. No style feedback.
+    - path: "store/site/**"
+      instructions: |
+        Cloudflare Worker behind gamedeals.bam.pm (public routes, D1, KV) that calls upstream deal APIs with a shared server-side key the
+        app also depends on. Report bugs and abuse paths: unbounded upstream work from anonymous requests, cache/claim races in D1,
+        wrong status handling that shows false data, input validation gaps, and secrets leaking into responses. No style feedback.
     - path: ".github/workflows/**"
       instructions: |
         Report only workflow bugs and security problems (wrong triggers, leaked secrets, unsafe use of untrusted input). No style feedback.
