@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_update_title">Update available</string>
+    <string name="app_update_body_blocking">This version of Game Deals is no longer supported. Please update to continue.</string>
+    <string name="app_update_body_optional">A newer version of Game Deals is available, with fixes and improvements.</string>
+    <string name="app_update_action_update">Update</string>
+    <string name="app_update_action_later">Later</string>
+</resources>

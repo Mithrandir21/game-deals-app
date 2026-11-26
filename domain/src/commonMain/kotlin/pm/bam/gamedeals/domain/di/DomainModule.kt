@@ -1,0 +1,251 @@
+package pm.bam.gamedeals.domain.di
+
+import androidx.room.RoomDatabase
+import org.koin.dsl.module
+import pm.bam.gamedeals.common.di.SECURE_QUALIFIER
+import pm.bam.gamedeals.common.di.SETTINGS_QUALIFIER
+import pm.bam.gamedeals.common.version.AppInfo
+import pm.bam.gamedeals.domain.auth.AuthTokenStore
+import pm.bam.gamedeals.domain.auth.AuthTokenStoreImpl
+import pm.bam.gamedeals.domain.db.DOMAIN_MIGRATIONS
+import pm.bam.gamedeals.domain.db.DomainDatabase
+import pm.bam.gamedeals.domain.repositories.account.AccountRepository
+import pm.bam.gamedeals.domain.repositories.account.AccountRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepository
+import pm.bam.gamedeals.domain.repositories.bundles.BundlesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.collection.CollectionDisplayStore
+import pm.bam.gamedeals.domain.repositories.collection.CollectionDisplayStoreImpl
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepository
+import pm.bam.gamedeals.domain.repositories.collection.CollectionRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.stats.StatsRepository
+import pm.bam.gamedeals.domain.repositories.stats.StatsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistDisplayStore
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistDisplayStoreImpl
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepository
+import pm.bam.gamedeals.domain.repositories.waitlist.WaitlistRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenance
+import pm.bam.gamedeals.domain.repositories.cache.CacheMaintenanceImpl
+import pm.bam.gamedeals.domain.repositories.deals.DealsRepository
+import pm.bam.gamedeals.domain.repositories.deals.DealsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepository
+import pm.bam.gamedeals.domain.repositories.discovery.TagDiscoveryRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedDealSeenStore
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedDealSeenStoreImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseChecker
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseCheckerImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepository
+import pm.bam.gamedeals.domain.repositories.franchise.FollowedFranchiseRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseFollowSeeder
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStore
+import pm.bam.gamedeals.domain.repositories.search.SearchHistoryRepository
+import pm.bam.gamedeals.domain.repositories.search.SearchHistoryRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.franchise.FranchiseSaleSnapshotStoreImpl
+import pm.bam.gamedeals.domain.repositories.games.GamesRepository
+import pm.bam.gamedeals.domain.repositories.games.GamesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepository
+import pm.bam.gamedeals.domain.repositories.giveaway.GiveawaysRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepository
+import pm.bam.gamedeals.domain.repositories.igdb.IgdbRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepository
+import pm.bam.gamedeals.domain.repositories.ignored.IgnoredRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.notes.NotesRepository
+import pm.bam.gamedeals.domain.repositories.notes.NotesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepository
+import pm.bam.gamedeals.domain.repositories.recommendations.RecommendationsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettings
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSettingsImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSync
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationCacheStore
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationCacheStoreImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationSyncImpl
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepository
+import pm.bam.gamedeals.domain.repositories.notifications.NotificationsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStore
+import pm.bam.gamedeals.domain.repositories.notifications.SurfacedNotificationStoreImpl
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepository
+import pm.bam.gamedeals.domain.repositories.recentlyviewed.RecentlyViewedRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.region.RegionRepository
+import pm.bam.gamedeals.domain.repositories.region.RegionRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepository
+import pm.bam.gamedeals.domain.repositories.releases.ReleasesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepository
+import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverride
+import pm.bam.gamedeals.domain.repositories.appupdate.AppUpdateDebugOverrideImpl
+import pm.bam.gamedeals.domain.repositories.settings.SettingsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleEventRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestMode
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleTestModeImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminder
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleReminderImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleCandidatesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesMapStore
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesMapStoreImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleSeriesRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepository
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleGuideRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOffersRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchChecker
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchCheckerImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStore
+import pm.bam.gamedeals.domain.repositories.bundlewatch.BundleWatchSeenStoreImpl
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepository
+import pm.bam.gamedeals.domain.repositories.dealswipe.DealSwipeRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.bundlewatch.EnglishBundleWatchCopy
+import pm.bam.gamedeals.domain.repositories.featureflags.FeatureFlagOverrides
+import pm.bam.gamedeals.logging.featureflags.FeatureFlags
+import pm.bam.gamedeals.domain.repositories.featureflags.RemoteFeatureFlags
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepository
+import pm.bam.gamedeals.domain.repositories.salecalendar.SaleCalendarRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.sharedwishlist.SharedWishlistRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepository
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsRepositoryImpl
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleMode
+import pm.bam.gamedeals.domain.repositories.yearindeals.YearInDealsSampleModeImpl
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepository
+import pm.bam.gamedeals.domain.repositories.stores.StoresRepositoryImpl
+import pm.bam.gamedeals.domain.utils.GiveawayPlatformsConverter
+import pm.bam.gamedeals.domain.utils.LocalDateSerializer
+import pm.bam.gamedeals.domain.utils.LocalDatetimeConverter
+import pm.bam.gamedeals.domain.utils.StoreImagesConverter
+
+val domainModule = module {
+    single { StoreImagesConverter(get()) }
+    single { GiveawayPlatformsConverter() }
+    single { LocalDatetimeConverter() }
+    single { LocalDateSerializer() }
+
+    single<DomainDatabase> {
+        get<RoomDatabase.Builder<DomainDatabase>>()
+            // Empty today (v1 baseline); future schema bumps register their Migration(n, n+1) here.
+            .addMigrations(*DOMAIN_MIGRATIONS)
+            // Dev-convenience ONLY: lets a dev device still on the old v22 recreate cleanly now that the
+            // code version dropped to 1. NEVER widen this to a blanket fallbackToDestructiveMigration() —
+            // that would wipe real user data on a future broken upgrade. See Migrations.kt for the policy.
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+            .addTypeConverter(get<StoreImagesConverter>())
+            .addTypeConverter(get<GiveawayPlatformsConverter>())
+            .addTypeConverter(get<LocalDatetimeConverter>())
+            .build()
+    }
+
+    single { get<DomainDatabase>().getDealsDao() }
+    single { get<DomainDatabase>().getGamesDao() }
+    single { get<DomainDatabase>().getStoresDao() }
+    single { get<DomainDatabase>().getReleasesDao() }
+    single { get<DomainDatabase>().getGiveawaysDao() }
+    single { get<DomainDatabase>().getDealDetailsCacheDao() }
+    single { get<DomainDatabase>().getGameDetailsCacheDao() }
+    single { get<DomainDatabase>().getPriceHistoryCacheDao() }
+    single { get<DomainDatabase>().getBundlesCacheDao() }
+    single { get<DomainDatabase>().getStatsRankingsCacheDao() }
+    single { get<DomainDatabase>().getGameIdMappingDao() }
+    single { get<DomainDatabase>().getWaitlistDao() }
+    single { get<DomainDatabase>().getCollectionDao() }
+    single { get<DomainDatabase>().getIgnoredDao() }
+    single { get<DomainDatabase>().getIgdbTagDao() }
+    single { get<DomainDatabase>().getRecentlyViewedDao() }
+
+    single<DealsRepository> { DealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<StoresRepository> { StoresRepositoryImpl(get(), get(), get(), get()) }
+    single<GamesRepository> { GamesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<GiveawaysRepository> { GiveawaysRepositoryImpl(get(), get(), get(), get()) }
+    single<ReleasesRepository> { ReleasesRepositoryImpl(get(), get(), get(), get()) }
+    single<IgdbRepository> { IgdbRepositoryImpl(get()) }
+    // Tag discovery: composes IGDB tag search + the ITAD pricing bridge, with a Room-cached
+    // picker vocabulary (logger, igdbRepository, gamesRepository, igdbTagDao, clock).
+    single<TagDiscoveryRepository> { TagDiscoveryRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<RegionRepository> { RegionRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleEventRepository> { WinterSaleEventRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get()) }
+    single<WinterSaleTestMode> { WinterSaleTestModeImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleOffersRepository> { WinterSaleOffersRepositoryImpl(get(), get(), get()) }
+    single<WinterSaleCandidatesRepository> { WinterSaleCandidatesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleSeriesMapStore> { WinterSaleSeriesMapStoreImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<WinterSaleSeriesRepository> { WinterSaleSeriesRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<WinterSaleGuideRepository> { WinterSaleGuideRepositoryImpl(get(), get(), get(), get()) }
+    single<WinterSaleHubRepository> { WinterSaleHubRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get()) }
+    single<WinterSaleReminder> { WinterSaleReminderImpl(get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get()) }
+    // Debug-only stand-in for the `force_update` flag payload, so the minimum-version gate can be
+    // exercised on one phone without the shared switch file. Written by the Account hub, read by :feature:appupdate.
+    single<AppUpdateDebugOverride> { AppUpdateDebugOverrideImpl(get(SETTINGS_QUALIFIER)) }
+    // Recently-viewed games (#211): device-local Room history (dao, clock, analytics), not auth-gated.
+    single<RecentlyViewedRepository> { RecentlyViewedRepositoryImpl(get(), get(), get()) }
+    single<BundlesRepository> { BundlesRepositoryImpl(get(), get(), get(), get(), get()) }
+
+    // ITAD account. AuthTokenStore is Storage-backed (like RegionRepository); Waitlist/Collection are
+    // backed by the live ITAD account source, Stats by the live ITAD stats source.
+    // Auth token is encrypted at rest — use the SECURE_QUALIFIER store (#239), not the settings store.
+    single<AuthTokenStore> { AuthTokenStoreImpl(get(SECURE_QUALIFIER)) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get(), get(), get()) }
+    // Waitlist/Collection display caches (JSON blobs in the settings store, like FranchiseSaleSnapshotStore)
+    // back the enriched dashboard rows for instant/offline render. Waitlist also merges a batched price
+    // lookup (dealsSource) keyed to the user's region; collection is price-less.
+    single<WaitlistDisplayStore> { WaitlistDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<CollectionDisplayStore> { CollectionDisplayStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<WaitlistRepository> { WaitlistRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<CollectionRepository> { CollectionRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
+    // Year in deals (next-versions M2): built on demand from the collection, waitlist, prices and all-time lows.
+    single<YearInDealsSampleMode> { YearInDealsSampleModeImpl(get(SETTINGS_QUALIFIER), get()) }
+    single<SharedWishlistRepository> { SharedWishlistRepositoryImpl(get(), get()) }
+    single<GameSignalsRepository> { GameSignalsRepositoryImpl(get(), get(), get(), get()) }
+    single<SaleCalendarRepository> { SaleCalendarRepositoryImpl(get(), get(SETTINGS_QUALIFIER), get(), get(), get()) }
+    // Remote feature switches: the Worker's switch file, saved for offline starts; debug builds may force switches.
+    single { RemoteFeatureFlags(get(), get(SETTINGS_QUALIFIER), get(), get(), get(), isDebug = get<AppInfo>().isDebug) }
+    single<FeatureFlags> { get<RemoteFeatureFlags>() }
+    single<FeatureFlagOverrides> { get<RemoteFeatureFlags>() }
+    single<YearInDealsRepository> { YearInDealsRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
+    single<NotificationCacheStore> { NotificationCacheStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get()) }
+    // Background (OS-tray) notification delivery. Scheduler is platform-bound
+    // (domainAndroidModule / domainIosModule); presenter is host-bound (:app / :iosApp).
+    single<SurfacedNotificationStore> { SurfacedNotificationStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationSettings> { NotificationSettingsImpl(get(SETTINGS_QUALIFIER)) }
+    single<NotificationSync> { NotificationSyncImpl(get(), get(), get(), get()) }
+    // Followed franchises/series (#7) — client-side, Storage-backed.
+    single<FollowedFranchiseRepository> { FollowedFranchiseRepositoryImpl(get(SETTINGS_QUALIFIER), get(), get()) }
+    // Recent + saved Deals searches (#6) — client-side, Storage-backed.
+    single<SearchHistoryRepository> { SearchHistoryRepositoryImpl(get(SETTINGS_QUALIFIER), get()) }
+    // Followed-franchise deal alerts: the client-side checker compares each followed franchise's games to
+    // live ITAD prices in the same background poll as the ITAD sync, deduped via the seen store. The alert
+    // title is built here (domain has no string resources) — concise English copy, consistent with the
+    // price-watch precedent and the ITAD waitlist channel.
+    single<FollowedDealSeenStore> { FollowedDealSeenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<FranchiseSaleSnapshotStore> { FranchiseSaleSnapshotStoreImpl(get(SETTINGS_QUALIFIER)) }
+    // One impl instance backs both the background checker and the follow-time seeder (seed-on-follow
+    // suppresses the existing on-sale back-catalog from the tray; the Followed-series screen still shows it).
+    single {
+        FollowedFranchiseCheckerImpl(get(), get(), get(), get(), get(), get()) { gameTitle, franchiseName, cutPercent, priceDenominated ->
+            "$gameTitle is $cutPercent% off in $franchiseName — now $priceDenominated"
+        }
+    }
+    single<FollowedFranchiseChecker> { get<FollowedFranchiseCheckerImpl>() }
+    // Bundle watch: waitlisted games in new bundles and giveaways, checked in the same background poll.
+    single<BundleWatchSeenStore> { BundleWatchSeenStoreImpl(get(SETTINGS_QUALIFIER)) }
+    single<BundleWatchChecker> {
+        BundleWatchCheckerImpl(get(), get(), get(), get(), get(), EnglishBundleWatchCopy, get())
+    }
+    single<FranchiseFollowSeeder> { get<FollowedFranchiseCheckerImpl>() }
+    // "For You" recommendations (#6): IGDB similarity seeded from the user's waitlist + collection.
+    single<RecommendationsRepository> { RecommendationsRepositoryImpl(get(), get(), get(), get()) }
+    single<IgnoredRepository> { IgnoredRepositoryImpl(get(), get(), get(), get(), get()) }
+    // Deal swipe (next-versions M8): the hottest deals minus the user's library, with phone-only skips.
+    single<DealSwipeRepository> {
+        DealSwipeRepositoryImpl(get(), get(), get(), get(), get(), get(SETTINGS_QUALIFIER), get(), get(), get(), get())
+    }
+    single<NotesRepository> { NotesRepositoryImpl(get(), get(), get(), get(), get()) }
+
+    // Startup cache maintenance: cacheSchemaVersion guard + eviction sweep over the ITAD caches.
+    single<CacheMaintenance> {
+        CacheMaintenanceImpl(get(SETTINGS_QUALIFIER), get(), get(), get(), get(), get(), get(), get(), get())
+    }
+    single<StatsRepository> { StatsRepositoryImpl(get(), get(), get(), get(), get()) }
+}
