@@ -1,0 +1,18 @@
+campaign_slug: "2026-05-06-bug-hunt-severity-high"
+labels: ["bug-hunt", "severity:high"]
+created: "2026-05-06"
+completed: "2026-05-06"
+status: "complete"
+current_wave: 1
+issues:
+  - number: 122
+    title: "reloadGiveaways swallows CancellationException via bare catch (_: Throwable)"
+    severity: "high"
+    wave: 1
+    branch: "wave/2026-05-06-bug-hunt-severity-high/issue-122-reloadgiveaways-rethrow-ce"
+    pr: 131
+    pr_url: "https://github.com/Mithrandir21/game-deals-android-app/pull/131"
+    status: "merged"
+    files:
+      - "feature/giveaways/src/commonMain/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModel.kt"
+      - "feature/giveaways/src/commonTest/kotlin/pm/bam/gamedeals/feature/giveaways/ui/GiveawaysViewModelTest.kt"

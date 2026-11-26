@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Shared container for the Waitlist deals widget's data (WaitlistWidgetExport.kt writes it, the widget reads it).
+	     The group must be registered in the Apple Developer account and enabled on this target's App ID. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.pm.bam.gamedeals</string>
+	</array>
+</dict>
+</plist>

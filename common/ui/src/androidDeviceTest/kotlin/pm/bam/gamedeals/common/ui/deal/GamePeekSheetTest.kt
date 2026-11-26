@@ -1,0 +1,454 @@
+package pm.bam.gamedeals.common.ui.deal
+
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.performClick
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.stringResource
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assume.assumeTrue
+import androidx.compose.runtime.CompositionLocalProvider
+import pm.bam.gamedeals.common.ui.signals.LocalGameSignals
+import pm.bam.gamedeals.domain.models.GameSignals
+import pm.bam.gamedeals.domain.repositories.signals.GameSignalsRepository
+import org.junit.Rule
+import org.junit.Test
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
+import pm.bam.gamedeals.common.ui.PreviewStore
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import pm.bam.gamedeals.domain.models.GameDetails
+import pm.bam.gamedeals.logging.analytics.Analytics
+import pm.bam.gamedeals.common.ui.generated.resources.Res
+import pm.bam.gamedeals.common.ui.generated.resources.deal_all_time_low_content_suffix
+import pm.bam.gamedeals.common.ui.generated.resources.deal_collection_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_msg
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_data_loading_error_retry
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_go_to_deal_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_loading_indicator
+import pm.bam.gamedeals.common.ui.generated.resources.deal_details_view_game_page_label
+import pm.bam.gamedeals.common.ui.generated.resources.deal_favourite_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_ignore_add_action
+import pm.bam.gamedeals.common.ui.generated.resources.deal_share_label
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_best_price_at_store
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_more_actions
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_no_deals_label
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_other_stores_label
+import pm.bam.gamedeals.common.ui.generated.resources.game_peek_store_row_description
+import pm.bam.gamedeals.common.ui.generated.resources.library_action_failed
+
+/**
+ * Device UI test for the shared [GamePeekSheet] — the quick-peek surface opened from every deal/game
+ * row across Home, Deals, Store, Discover and Bundle Detail. It takes hoisted state + lambda
+ * callbacks, so it's driven directly with fixture [GamePeekSheetData] (no ViewModel/Koin) and
+ * asserts both rendered state and that each action dispatches its callback. Matches by visible text /
+ * accessibility semantics, consistent with the rest of the suite (no testTags).
+ */
+class GamePeekSheetTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val onDismiss = mockk<() -> Unit>(relaxed = true)
+    private val onShare = mockk<(GamePeekSheetData.Data) -> Unit>(relaxed = true)
+    private val onToggleWaitlist = mockk<(String) -> Unit>(relaxed = true)
+    private val onToggleCollection = mockk<(String) -> Unit>(relaxed = true)
+    private val onToggleIgnore = mockk<(String) -> Unit>(relaxed = true)
+    private val goToWeb = mockk<(String, String) -> Unit>(relaxed = true)
+    private val onViewGamePage = mockk<(GamePeekSheetData.Data) -> Unit>(relaxed = true)
+    private val onRetry = mockk<() -> Unit>(relaxed = true)
+
+    private lateinit var labels: Labels
+
+    private val dataState = GamePeekSheetData.Data(
+        gameId = GAME_ID,
+        gameName = GAME_NAME,
+        thumb = null,
+        bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal()),
+        otherStores = persistentListOf(
+            StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal()),
+        ),
+        cheapestPriceEver = GameDetails.GameCheapestPriceEver(priceValue = 14.99, priceDenominated = "$14.99", date = ""),
+        upcoming = false,
+    )
+
+    private fun setContent(
+        data: GamePeekSheetData,
+        snackbarHostState: SnackbarHostState? = null,
+        signals: Map<String, GameSignals> = emptyMap(),
+    ) {
+        val repository = object : GameSignalsRepository {
+            override suspend fun getSignals(gameIds: Collection<String>) = signals.filterKeys { it in gameIds }
+        }
+        composeTestRule.setContent {
+            labels = Labels.load()
+            GameDealsTheme {
+                CompositionLocalProvider(LocalGameSignals provides repository) {
+                GamePeekSheet(
+                    snackbarHostState = snackbarHostState,
+                    data = data,
+                    isWaitlisted = false,
+                    isCollected = false,
+                    isIgnored = false,
+                    onDismiss = onDismiss,
+                    onShare = onShare,
+                    onToggleWaitlist = onToggleWaitlist,
+                    onToggleCollection = onToggleCollection,
+                    onToggleIgnore = onToggleIgnore,
+                    goToWeb = goToWeb,
+                    onViewGamePage = onViewGamePage,
+                    onRetry = onRetry,
+                )
+                }
+                snackbarHostState?.let { state -> LaunchedEffect(state) { state.showSnackbar(labels.actionFailed) } }
+            }
+        }
+    }
+
+    @Test
+    fun dataStateRendersGameBestPriceAndOtherStores() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithText(GAME_NAME).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.bestPriceSubtitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.otherStoresHeader).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    /** 104 weeks with the deepest discount [weeksAgo] weeks ago at [cut]%, and the current sale this week. */
+    private fun signals(currentCut: Int, weeksAgo: Int?, cut: Int) = GameSignals(
+        gameId = GAME_ID,
+        updatedEpochMs = 1_800_000_000_000,
+        weeklyMaxCut = List(104) { i -> if (i == 103) currentCut else if (weeksAgo != null && i == 103 - weeksAgo) cut else 0 },
+    )
+
+    @Test
+    fun aRareDiscountIsExplainedWithWhenItWasLastThisDeep() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = 70, cut = cut)))
+
+        composeTestRule.onNodeWithContentDescription("Rare discount: last this deep in", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theDeepestDiscountInTwoYearsSaysSo() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = null, cut = 0)))
+
+        composeTestRule.onNodeWithContentDescription("Rare discount: the deepest in 2 years").assertIsDisplayed()
+    }
+
+    @Test
+    fun aDiscountSeenWithinTheYearIsNotRare() {
+        val cut = bestDeal().savings
+        setContent(dataState, signals = mapOf(GAME_ID to signals(currentCut = cut, weeksAgo = 20, cut = cut)))
+
+        composeTestRule.onAllNodesWithContentDescription("Rare discount", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun theSheetLeavesPlayersAndReviewsToTheGamePage() {
+        // Bam, 2026-11-24: the game page already shows reviews and players, so the sheet doesn't repeat them.
+        val buzz = GameSignals(
+            gameId = GAME_ID, updatedEpochMs = 0, weeklyMaxCut = emptyList(),
+            reviewScore = 97, reviewCount = 250_000, reviewSource = "Steam",
+            playersRecent = 4_012, waitlisted = 45_678, collected = 120_000,
+        )
+        setContent(dataState, signals = mapOf(GAME_ID to buzz))
+
+        composeTestRule.onAllNodesWithText("Players and reviews").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("playing now", substring = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("users want it", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun eachLowPriceLetterIsSpelledOutOnOneLine() {
+        setContent(
+            dataState.copy(
+                bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal().copy(isNewHistoricalLow = true, isLowestEver = true)),
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isStoreLow = true)),
+                ),
+            ),
+        )
+
+        val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
+        newLow.assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertIsDisplayed()
+        // One line at the default text size on a typical phone; very narrow screens may wrap it.
+        val screenWidthDp = InstrumentationRegistry.getInstrumentation().targetContext.resources.configuration.screenWidthDp
+        assumeTrue("needs a typical phone width", screenWidthDp >= 400)
+        val height = newLow.fetchSemanticsNode().boundsInRoot.height
+        val oneLine = with(composeTestRule.density) { 24.dp.toPx() }
+        assertTrue("the explanation wraps: ${height}px", height <= oneLine)
+    }
+
+    @Test
+    fun noLettersMeansNoExplanation() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Store low: cheapest ever at this store").assertDoesNotExist()
+    }
+
+    @Test
+    fun anotherStoreAtItsAllTimeLowShowsHOnItsRowSaysItAndExplainsIt() {
+        setContent(
+            dataState.copy(
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isLowestEver = true)),
+                ),
+            ),
+        )
+
+        composeTestRule.onNodeWithContentDescription("Historic low: back at its lowest price").assertIsDisplayed()
+        // The row shows the letter before its price, and TalkBack hears what the letter means.
+        composeTestRule.onAllNodesWithText("H", useUnmergedTree = true).assertCountEquals(2) // the line's chip + the row's
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow + labels.allTimeLowSuffix).assertIsDisplayed()
+    }
+
+    @Test
+    fun aStoreRowWithoutALetterShowsNone() {
+        setContent(dataState)
+
+        listOf("N", "H", "S").forEach { letter ->
+            composeTestRule.onAllNodesWithText(letter, useUnmergedTree = true).assertCountEquals(0)
+        }
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun theBestDealsLetterIsExplainedFirstAndEachLetterOnlyOnce() {
+        setContent(
+            dataState.copy(
+                bestDeal = StoreDealPair(store = PreviewStore, deal = bestDeal().copy(isStoreLow = true)),
+                otherStores = persistentListOf(
+                    StoreDealPair(store = PreviewStore.copy(storeID = 7, storeName = OTHER_STORE), deal = otherDeal().copy(isNewHistoricalLow = true, isLowestEver = true)),
+                    StoreDealPair(
+                        store = PreviewStore.copy(storeID = 8, storeName = "Fanatical"),
+                        deal = otherDeal().copy(storeID = 8, dealID = "deal-3", priceDenominated = "$22.49", isStoreLow = true),
+                    ),
+                ),
+            ),
+        )
+
+        val storeLow = composeTestRule.onAllNodesWithContentDescription("Store low: cheapest ever at this store")
+        storeLow.assertCountEquals(1)
+        val newLow = composeTestRule.onNodeWithContentDescription("New low: just hit its lowest price ever")
+        assertTrue(
+            "the best deal's letter should come first",
+            storeLow[0].fetchSemanticsNode().boundsInRoot.top < newLow.fetchSemanticsNode().boundsInRoot.top,
+        )
+    }
+
+    @Test
+    fun tappingWaitlistDispatchesToggleWithGameId() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription(labels.waitlistAdd).performClick()
+
+        verify(exactly = 1) { onToggleWaitlist(GAME_ID) }
+    }
+
+    @Test
+    fun tappingCollectionDispatchesToggleWithGameId() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription(labels.collectionAdd).performClick()
+
+        verify(exactly = 1) { onToggleCollection(GAME_ID) }
+    }
+
+    @Test
+    fun overflowShareDispatchesShare() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription(labels.moreActions).performClick()
+        composeTestRule.onNodeWithText(labels.share).performClick()
+
+        verify(exactly = 1) { onShare(dataState) }
+    }
+
+    @Test
+    fun overflowIgnoreDispatchesToggleIgnore() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription(labels.moreActions).performClick()
+        composeTestRule.onNodeWithText(labels.ignoreAdd).performClick()
+
+        verify(exactly = 1) { onToggleIgnore(GAME_ID) }
+    }
+
+    @Test
+    fun tappingViewGamePageDispatchesNavigation() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithText(labels.viewGamePage).performClick()
+
+        verify(exactly = 1) { onViewGamePage(dataState) }
+    }
+
+    @Test
+    fun tappingGoToDealOpensBestDealUrl() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithText(labels.goToDeal).performClick()
+
+        verify(exactly = 1) { goToWeb(BEST_URL, GAME_NAME) }
+    }
+
+    @Test
+    fun tappingOtherStoreRowOpensThatStoreUrl() {
+        setContent(dataState)
+
+        composeTestRule.onNodeWithContentDescription(labels.otherStoreRow).performClick()
+
+        verify(exactly = 1) { goToWeb(OTHER_URL, GAME_NAME) }
+    }
+
+    @Test
+    fun actionFailedMessageShowsInsideTheSheet() {
+        val snackbarHostState = SnackbarHostState()
+        setContent(dataState, snackbarHostState)
+
+        composeTestRule.onNodeWithText(labels.actionFailed).assertIsDisplayed()
+    }
+
+    @Test
+    fun upcomingStateShowsNoDealsAndHidesGoToDeal() {
+        setContent(
+            GamePeekSheetData.Data(
+                gameId = GAME_ID,
+                gameName = GAME_NAME,
+                thumb = null,
+                bestDeal = null,
+                upcoming = true,
+            ),
+        )
+
+        composeTestRule.onNodeWithText(labels.noDeals).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.goToDeal).assertDoesNotExist()
+    }
+
+    @Test
+    fun loadingStateShowsSpinner() {
+        setContent(GamePeekSheetData.Loading(gameId = GAME_ID, gameName = GAME_NAME, thumb = null))
+
+        composeTestRule.onNodeWithContentDescription(labels.loading).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.goToDeal).assertDoesNotExist()
+    }
+
+    @Test
+    fun errorStateShowsMessageAndRetries() {
+        setContent(GamePeekSheetData.Error(gameId = GAME_ID, gameName = GAME_NAME, thumb = null))
+
+        composeTestRule.onNodeWithText(labels.errorMessage).assertIsDisplayed()
+        composeTestRule.onNodeWithText(labels.retry).performClick()
+
+        verify(exactly = 1) { onRetry() }
+    }
+
+    private data class Labels(
+        val bestPriceSubtitle: String,
+        val otherStoresHeader: String,
+        val otherStoreRow: String,
+        val waitlistAdd: String,
+        val collectionAdd: String,
+        val moreActions: String,
+        val share: String,
+        val ignoreAdd: String,
+        val viewGamePage: String,
+        val goToDeal: String,
+        val noDeals: String,
+        val loading: String,
+        val errorMessage: String,
+        val retry: String,
+        val actionFailed: String,
+        val allTimeLowSuffix: String,
+    ) {
+        companion object {
+            @Composable
+            fun load(): Labels = Labels(
+                bestPriceSubtitle = stringResource(Res.string.game_peek_best_price_at_store, BEST_PRICE, BEST_STORE),
+                otherStoresHeader = stringResource(Res.string.game_peek_other_stores_label),
+                otherStoreRow = stringResource(Res.string.game_peek_store_row_description, OTHER_PRICE, OTHER_STORE),
+                waitlistAdd = stringResource(Res.string.deal_favourite_add_action),
+                collectionAdd = stringResource(Res.string.deal_collection_add_action),
+                moreActions = stringResource(Res.string.game_peek_more_actions),
+                share = stringResource(Res.string.deal_share_label),
+                ignoreAdd = stringResource(Res.string.deal_ignore_add_action),
+                viewGamePage = stringResource(Res.string.deal_details_view_game_page_label),
+                goToDeal = stringResource(Res.string.deal_details_go_to_deal_label),
+                noDeals = stringResource(Res.string.game_peek_no_deals_label),
+                loading = stringResource(Res.string.deal_details_loading_indicator),
+                errorMessage = stringResource(Res.string.deal_details_data_loading_error_msg),
+                retry = stringResource(Res.string.deal_details_data_loading_error_retry),
+                actionFailed = stringResource(Res.string.library_action_failed),
+                allTimeLowSuffix = stringResource(Res.string.deal_all_time_low_content_suffix),
+            )
+        }
+    }
+
+    companion object {
+        // PeekBody resolves an Analytics via koinInject() to record deal-open click-throughs. Koin is kept up
+        // for the whole class (not per-test) so a late resolution during Compose disposal never hits a closed
+        // scope — a per-test stopKoin() in @After races the compose rule's teardown.
+        @JvmStatic
+        @BeforeClass
+        fun startKoinForAnalytics() {
+            startKoin { modules(module { single<Analytics> { mockk(relaxed = true) } }) }
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun stopKoinForAnalytics() {
+            stopKoin()
+        }
+
+        const val GAME_ID = "123"
+        const val GAME_NAME = "No Man's Sky"
+        const val BEST_PRICE = "$18.86"
+        const val BEST_STORE = "Store Name" // PreviewStore.storeName
+        const val OTHER_PRICE = "$21.99"
+        const val OTHER_STORE = "GOG"
+        const val BEST_URL = "https://example.com/deal"
+        const val OTHER_URL = "https://example.com/other"
+
+        fun bestDeal() = GameDetails.GameDeal(
+            storeID = PreviewStore.storeID,
+            dealID = "deal-1",
+            priceValue = 18.86,
+            priceDenominated = BEST_PRICE,
+            retailPriceValue = 58.99,
+            retailPriceDenominated = "$58.99",
+            savings = 68,
+            url = BEST_URL,
+        )
+
+        fun otherDeal() = GameDetails.GameDeal(
+            storeID = 7,
+            dealID = "deal-2",
+            priceValue = 21.99,
+            priceDenominated = OTHER_PRICE,
+            retailPriceValue = 58.99,
+            retailPriceDenominated = "$58.99",
+            savings = 62,
+            url = OTHER_URL,
+        )
+    }
+}

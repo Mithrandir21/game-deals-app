@@ -1,0 +1,259 @@
+@file:Suppress("DEPRECATION")
+
+package pm.bam.gamedeals.feature.game.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import org.jetbrains.compose.resources.stringResource
+import kotlin.math.round
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import pm.bam.gamedeals.common.ui.a11y.politeLiveRegion
+import pm.bam.gamedeals.common.ui.theme.GameDealsCustomTheme
+import pm.bam.gamedeals.domain.models.IgdbGame
+import pm.bam.gamedeals.domain.models.IgdbImageSize
+import pm.bam.gamedeals.domain.models.igdbImageUrl
+import pm.bam.gamedeals.domain.utils.groupThousands
+import pm.bam.gamedeals.feature.game.generated.resources.Res
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_cover_image_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_critic_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_similar_game_row_description
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_title_match_picker_current_tile_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_details_user_rating_label
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_error
+import pm.bam.gamedeals.feature.game.generated.resources.game_page_section_loading_cd
+import pm.bam.gamedeals.feature.game.generated.resources.game_screen_data_loading_error_retry
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import pm.bam.gamedeals.common.ui.theme.GameDealsTheme
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.width
+
+// IGDB video ids are YouTube ids; we open the watch page externally and show YouTube's thumbnail tile.
+internal fun youTubeWatchUrl(videoId: String): String = "https://www.youtube.com/watch?v=$videoId"
+internal fun youTubeThumbnailUrl(videoId: String): String = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+
+internal const val COVER_ASPECT_RATIO = 0.75f
+
+@Composable
+internal fun SectionHeader(text: String, modifier: Modifier = Modifier) {
+    Text(modifier = modifier.semantics { heading() }, text = text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+}
+
+/** Short "nothing here" line for an empty tab/section — matches the Regions tab's empty state. */
+@Composable
+internal fun TabEmpty(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.politeLiveRegion(),
+    )
+}
+
+/** "Couldn't load" line + a Retry button for a tab/section whose fetch failed (re-fetches that facet only). */
+@Composable
+internal fun TabError(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.small)) {
+        Text(
+            text = stringResource(Res.string.game_page_section_error),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.politeLiveRegion(),
+        )
+        TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
+            Text(stringResource(Res.string.game_screen_data_loading_error_retry))
+        }
+    }
+}
+
+/** Spinner shown while a tab/section is re-fetching after a Retry (initial load resolves before the tab renders). */
+@Composable
+internal fun TabLoading(modifier: Modifier = Modifier) {
+    val loadingCd = stringResource(Res.string.game_page_section_loading_cd)
+    Box(modifier = modifier.fillMaxWidth().height(120.dp)) {
+        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).semantics { contentDescription = loadingCd })
+    }
+}
+
+@Composable
+internal fun IgdbGameTile(game: IgdbGame.IgdbSimilarGame, onClick: (Long) -> Unit, modifier: Modifier = Modifier, isCurrent: Boolean = false) {
+    val rowCd = if (isCurrent) stringResource(Res.string.game_details_title_match_picker_current_tile_cd, game.name)
+    else stringResource(Res.string.game_details_similar_game_row_description, game.name)
+    val borderModifier = if (isCurrent) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(GameDealsCustomTheme.spacing.small)) else Modifier
+    Column(
+        modifier = modifier.clickable(role = Role.Button) { onClick(game.id) }.semantics(mergeDescendants = true) { contentDescription = rowCd },
+        verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.extraSmall),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(COVER_ASPECT_RATIO)
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+                .then(borderModifier),
+        ) {
+            game.coverImageId?.let { imageId ->
+                AsyncImage(
+                    model = igdbImageUrl(imageId, IgdbImageSize.CoverBig),
+                    contentDescription = stringResource(Res.string.game_details_cover_image_cd, game.name),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        // minLines = 2 always reserves two lines so a 1-line and a 2-line name take the same vertical
+        // space — otherwise the LazyRow's height changes as tiles scroll in and out.
+        Text(
+            text = game.name,
+            style = MaterialTheme.typography.labelMedium,
+            minLines = 2,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+internal fun RatingsRow(game: IgdbGame, onClick: (() -> Unit)? = null) {
+    val user = game.rating?.toInt()
+    val critic = game.aggregatedRating?.toInt()
+    if (user == null && critic == null) return
+    val rowModifier = if (onClick != null) Modifier.clickable(role = Role.Button) { onClick() } else Modifier
+    Row(modifier = rowModifier, horizontalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.medium)) {
+        if (user != null) RatingPill(stringResource(Res.string.game_details_user_rating_label), user, game.ratingCount)
+        if (critic != null) RatingPill(stringResource(Res.string.game_details_critic_rating_label), critic, game.aggregatedRatingCount)
+    }
+}
+
+@Composable
+internal fun RatingPill(label: String, value: Int, count: Long?) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(GameDealsCustomTheme.spacing.small))
+            .padding(horizontal = GameDealsCustomTheme.spacing.medium, vertical = GameDealsCustomTheme.spacing.small),
+    ) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        Text(text = "$value", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        if (count != null) Text(text = "($count)", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** KMP-safe thousands grouping for player/review counts (no java.text on common). */
+internal fun formatCount(value: Int): String {
+    val digits = value.toString()
+    val sb = StringBuilder()
+    for (i in digits.indices) {
+        if (i > 0 && (digits.length - i) % 3 == 0) sb.append(',')
+        sb.append(digits[i])
+    }
+    return sb.toString()
+}
+
+/** Seconds → nearest whole hour, as a string (HowLongToBeat values are coarse, so whole hours read fine). */
+internal fun hoursFromSeconds(seconds: Long): String = ((seconds + 1800) / 3600).toString()
+
+/**
+ * Scales an already-denominated price to a per-hour figure using the playtime in seconds, inheriting the
+ * currency symbol/suffix and decimal convention straight from [priceDenominated] (the deal carries no raw
+ * currency code). `formatMoney` writes the price as one number token, its whole units grouped with commas,
+ * which we splice the scaled (and likewise grouped) value back into. Returns null when playtime is
+ * missing/zero. E.g. ("$59.99", 59.99, 540000) → "$0.40"; ("¥6,800", 6800.0, 108000) → "¥227".
+ */
+private val PRICE_TOKEN_REGEX = Regex("""\d{1,3}(,\d{3})+(\.\d+)?|\d+(\.\d+)?""")
+
+internal fun perHourDenominated(priceDenominated: String, priceValue: Double, playtimeSeconds: Long): String? {
+    if (playtimeSeconds <= 0L || priceValue <= 0.0) return null
+    val hours = playtimeSeconds / 3600.0
+    val perHour = priceValue / hours
+    val match = PRICE_TOKEN_REGEX.find(priceDenominated) ?: return null
+    val decimals = match.value.substringAfter('.', "").length
+    val scaled = if (decimals == 0) {
+        groupThousands(round(perHour).toLong())
+    } else {
+        val unit = LongArray(decimals) { 10L }.fold(1L) { acc, ten -> acc * ten }
+        val minor = round(perHour * unit).toLong()
+        "${groupThousands(minor / unit)}.${(minor % unit).toString().padStart(decimals, '0')}"
+    }
+    return priceDenominated.replaceRange(match.range, scaled)
+}
+
+private val MONTH_ABBREV = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+internal fun formatReleaseDate(instant: Instant): String {
+    val date = instant.toLocalDateTime(TimeZone.UTC).date
+    return "${MONTH_ABBREV[date.month.ordinal]} ${date.dayOfMonth}, ${date.year}"
+}
+
+
+@Preview
+@Composable
+private fun SectionHeaderPreview() {
+    GameDealsTheme { Surface { SectionHeader("Similar games", Modifier.padding(GameDealsCustomTheme.spacing.large)) } }
+}
+
+@Preview
+@Composable
+private fun TabStatesPreview() {
+    GameDealsTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(GameDealsCustomTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(GameDealsCustomTheme.spacing.large),
+            ) {
+                TabEmpty("Nothing here yet")
+                TabError(onRetry = {})
+                TabLoading()
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun IgdbGameTilePreview() {
+    GameDealsTheme {
+        Surface {
+            IgdbGameTile(
+                game = PreviewSimilarGames.first(),
+                onClick = {},
+                modifier = Modifier.width(112.dp).padding(GameDealsCustomTheme.spacing.large),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RatingsRowPreview() {
+    GameDealsTheme { Surface { Box(Modifier.padding(GameDealsCustomTheme.spacing.large)) { RatingsRow(PreviewIgdbGame) } } }
+}
