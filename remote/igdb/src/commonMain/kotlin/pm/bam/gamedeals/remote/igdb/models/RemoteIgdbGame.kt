@@ -1,0 +1,167 @@
+package pm.bam.gamedeals.remote.igdb.models
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class RemoteIgdbGame(
+    val id: Long,
+    val name: String,
+    val summary: String? = null,
+    val storyline: String? = null,
+    val category: Int? = null,
+    @SerialName("game_type") val gameType: RemoteIgdbGameType? = null,
+    @SerialName("parent_game") val parentGame: Long? = null,
+    val cover: RemoteIgdbCover? = null,
+    val screenshots: List<RemoteIgdbScreenshot> = emptyList(),
+    @SerialName("first_release_date") val firstReleaseDate: Long? = null,
+    val rating: Double? = null,
+    @SerialName("rating_count") val ratingCount: Long? = null,
+    @SerialName("aggregated_rating") val aggregatedRating: Double? = null,
+    @SerialName("aggregated_rating_count") val aggregatedRatingCount: Long? = null,
+    @SerialName("total_rating_count") val totalRatingCount: Long? = null,
+    val genres: List<RemoteIgdbGenre> = emptyList(),
+    val themes: List<RemoteIgdbTheme>? = null,
+    @SerialName("involved_companies") val involvedCompanies: List<RemoteIgdbInvolvedCompany> = emptyList(),
+    val websites: List<RemoteIgdbWebsite> = emptyList(),
+    @SerialName("similar_games") val similarGames: List<RemoteIgdbSimilarGame> = emptyList(),
+    // DLCs and expansions share the similar-game shape (id, name, cover) so they map through the same path.
+    val dlcs: List<RemoteIgdbSimilarGame> = emptyList(),
+    val expansions: List<RemoteIgdbSimilarGame> = emptyList(),
+    // Newer-edition awareness (#7): the version/edition relation arrays all share the similar-game shape.
+    val remakes: List<RemoteIgdbSimilarGame> = emptyList(),
+    val remasters: List<RemoteIgdbSimilarGame> = emptyList(),
+    val ports: List<RemoteIgdbSimilarGame> = emptyList(),
+    @SerialName("standalone_expansions") val standaloneExpansions: List<RemoteIgdbSimilarGame> = emptyList(),
+    // The parent edition this record is a version of (e.g. this is the base game of a Deluxe Edition).
+    @SerialName("version_parent") val versionParent: RemoteIgdbSimilarGame? = null,
+    val platforms: List<RemoteIgdbPlatform> = emptyList(),
+    val videos: List<RemoteIgdbVideo> = emptyList(),
+    val franchises: List<RemoteIgdbFranchise> = emptyList(),
+    @SerialName("age_ratings") val ageRatings: List<RemoteIgdbAgeRating> = emptyList(),
+    @SerialName("game_modes") val gameModes: List<RemoteIgdbGameMode> = emptyList(),
+    @SerialName("external_games") val externalGames: List<RemoteIgdbExternalGame> = emptyList(),
+)
+
+/**
+ * IGDB `age_ratings` row (current API shape). `organization` is the rating board (1=ESRB, 2=PEGI, …) and
+ * `rating_category` the specific rating within it (e.g. ESRB cat 6 = "M", PEGI cat 12 = "18"). Both are
+ * nullable so unknown/absent rows map to nothing rather than failing. (The pre-2024 `category`/`rating`
+ * integer fields were removed by IGDB — verified live 2026-06-26.)
+ */
+@Serializable
+data class RemoteIgdbGameType(val type: String? = null)
+
+@Serializable
+data class RemoteIgdbAgeRating(
+    val id: Long,
+    val organization: Int? = null,
+    @SerialName("rating_category") val ratingCategory: Int? = null,
+)
+
+@Serializable
+data class RemoteIgdbGameMode(
+    val id: Long,
+    val name: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbFranchise(
+    val id: Long,
+    val name: String? = null,
+    // The franchise's member games share the similar-game shape (id, name, cover) so they map identically.
+    val games: List<RemoteIgdbSimilarGame> = emptyList(),
+)
+
+@Serializable
+data class RemoteIgdbPlatform(
+    val id: Long,
+    val name: String? = null,
+    val abbreviation: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbVideo(
+    val id: Long,
+    val name: String? = null,
+    @SerialName("video_id") val videoId: String? = null,
+)
+
+/**
+ * Row from IGDB's `/v4/game_time_to_beats` endpoint (epic #291, Phase 2). Completion times are in
+ * **seconds**; any tier IGDB lacks data for is null. Keyed by `game_id` on the request, not returned here.
+ */
+@Serializable
+data class RemoteIgdbTimeToBeat(
+    val hastily: Long? = null,
+    val normally: Long? = null,
+    val completely: Long? = null,
+    val count: Long? = null,
+)
+
+@Serializable
+data class RemoteIgdbExternalGame(
+    val uid: String? = null,
+    val name: String? = null,
+    @SerialName("external_game_source") val externalGameSource: Long? = null,
+)
+
+@Serializable
+data class RemoteIgdbCover(
+    val id: Long,
+    @SerialName("image_id") val imageId: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbScreenshot(
+    val id: Long,
+    @SerialName("image_id") val imageId: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbGenre(
+    val id: Long,
+    val name: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbTheme(
+    val id: Long,
+    val name: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbInvolvedCompany(
+    val id: Long,
+    val company: RemoteIgdbCompany? = null,
+    val developer: Boolean = false,
+    val publisher: Boolean = false,
+    val porting: Boolean = false,
+    val supporting: Boolean = false,
+)
+
+@Serializable
+data class RemoteIgdbCompany(
+    val id: Long,
+    val name: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbWebsite(
+    val id: Long,
+    val url: String? = null,
+    val type: RemoteIgdbWebsiteType? = null,
+)
+
+@Serializable
+data class RemoteIgdbWebsiteType(
+    val id: Long,
+    val type: String? = null,
+)
+
+@Serializable
+data class RemoteIgdbSimilarGame(
+    val id: Long,
+    val name: String? = null,
+    val cover: RemoteIgdbCover? = null,
+)

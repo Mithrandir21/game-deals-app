@@ -1,0 +1,50 @@
+package pm.bam.gamedeals.remote.itad.di
+
+import org.koin.dsl.module
+import pm.bam.gamedeals.domain.source.DealsSource
+import pm.bam.gamedeals.domain.source.ItadAccountSource
+import pm.bam.gamedeals.domain.source.ItadLoginSource
+import pm.bam.gamedeals.domain.source.StatsSource
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleHubSource
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSaleOfferSource
+import pm.bam.gamedeals.domain.repositories.wintersale.WinterSalePopularSource
+import pm.bam.gamedeals.remote.itad.ItadAccountSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadLoginSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadStatsSourceImpl
+import pm.bam.gamedeals.remote.itad.ItadWinterSaleHubSource
+import pm.bam.gamedeals.remote.itad.ItadWinterSaleOfferSource
+import pm.bam.gamedeals.remote.itad.ItadWinterSalePopularSource
+
+/**
+ * Binds the ITAD implementations of the domain source ports (epic #205 / #219).
+ *
+ * [DealsSource] is the live deal source since Phase 2b; its last `get()` resolves the `RegionRepository`
+ * (from `domainModule`) for regional pricing (Phase 3b, #212). [ItadAccountSource] is the user-scoped
+ * account port (epic #219, Phase 2.3) over the bearer (OAuth) client.
+ */
+val itadRemoteModule = module {
+    single<WinterSaleOfferSource> { ItadWinterSaleOfferSource(get(), get(), get()) }
+    single<WinterSalePopularSource> { ItadWinterSalePopularSource(get()) }
+    single<WinterSaleHubSource> { ItadWinterSaleHubSource(get(), get(), get(), get()) }
+    single<DealsSource> {
+        ItadSourceImpl(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
+
+    single<ItadAccountSource> { ItadAccountSourceImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+
+    // Global ranking stats: rankings + best-effort price enrichment.
+    single<StatsSource> { ItadStatsSourceImpl(get(), get(), get(), get(), get()) }
+
+    // Login orchestration: OAuth client + browser launcher (platform-bound) +
+    // account source + token store + credentials + clock + logger.
+    single<ItadLoginSource> { ItadLoginSourceImpl(get(), get(), get(), get(), get(), get(), get()) }
+}

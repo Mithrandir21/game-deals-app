@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Review-only branch: whole-codebase review of one module group. Never merge.
+language: en-GB
+reviews:
+  profile: chill
+  auto_review:
+    enabled: false
+  high_level_summary: false
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  changed_files_summary: false
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  slop_detection:
+    enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: 'off'
+    title:
+      mode: 'off'
+    description:
+      mode: 'off'
+    issue_assessment:
+      mode: 'off'
+  path_filters:
+  - domain/**
+  - '!**/*.md'
+  - '!**/*.stability'
+  - '!**/generated/**'
+  - '!**/build/**'
+  - '!store/ios/**'
+  - '!testing/**'
+  - '!**/src/*Test/**'
+  - '!**/src/*test/**'
+  - '!**/test_*'
+  path_instructions:
+  - path: '**/*.{kt,kts}'
+    instructions: 'Kotlin Multiplatform app (Android + iOS, Compose Multiplatform, Koin, Ktor, Room, coroutines/Flow). There is no backend.
+
+      Report only defects that change runtime behaviour or can crash, hang, leak, lose data or ship broken: logic errors, null/empty
+
+      edge cases, coroutine scope and cancellation mistakes, Flow/StateFlow misuse, blocking work on the main thread, lifecycle leaks,
+
+      Compose side effects outside effect handlers or wrong remember keys, expect/actual mismatches, iOS-only failures in shared code,
+
+      Room migration gaps, serialization or R8 keep-rule breakage, Koin wiring that fails at runtime, and race conditions.
+
+      Do not comment on style, naming, formatting, line length (160 is allowed), comments, KDoc, or test structure.
+
+      Skip linter findings that are style-only.
+
+      '
+  - path: '**/*.swift'
+    instructions: 'Thin iOS shell around the shared Kotlin framework. Report only crashes, lifecycle bugs, threading issues and wrong interop with
+
+      the Kotlin framework. No style feedback.
+
+      '
+  - path: store/site/**
+    instructions: 'Cloudflare Worker behind gamedeals.bam.pm (public routes, D1, KV) that calls upstream deal APIs with a shared server-side key the
+
+      app also depends on. Report bugs and abuse paths: unbounded upstream work from anonymous requests, cache/claim races in D1,
+
+      wrong status handling that shows false data, input validation gaps, and secrets leaking into responses. No style feedback.
+
+      '
+  - path: .github/workflows/**
+    instructions: 'Report only workflow bugs and security problems (wrong triggers, leaked secrets, unsafe use of untrusted input). No style feedback.
+
+      '
+  tools:
+    detekt:
+      enabled: true
+    swiftlint:
+      enabled: false
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+    yamllint:
+      enabled: false
+    vale:
+      enabled: false
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+    oxc:
+      enabled: false
+    htmlhint:
+      enabled: false
+    stylelint:
+      enabled: false
+knowledge_base:
+  code_guidelines:
+    enabled: false
+  learnings:
+    scope: local
