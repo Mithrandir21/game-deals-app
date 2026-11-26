@@ -1,0 +1,4 @@
+<resources>
+    <!-- Theme name required here for declaration in Manifest. -->
+    <style name="Theme.GameDeals" parent="Theme.MaterialComponents.DayNight.DarkActionBar" />
+</resources>

@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "sales": [
+    {
+      "id": "epic-holiday-2026",
+      "store": "Epic Games Store",
+      "name": "Epic Holiday Sale",
+      "kind": "big",
+      "start": "2026-12-10T16:00:00Z",
+      "end": "2027-01-07T16:00:00Z"
+    },
+    {
+      "id": "steam-winter-2026",
+      "store": "Steam",
+      "name": "Steam Winter Sale",
+      "kind": "big",
+      "start": "2026-12-17T18:00:00Z",
+      "end": "2027-01-04T18:00:00Z"
+    },
+    {
+      "id": "steam-desktop-companion-fest-2027",
+      "store": "Steam",
+      "name": "Desktop Companion Fest",
+      "kind": "fest",
+      "start": "2027-01-14T18:00:00Z",
+      "end": "2027-01-18T18:00:00Z"
+    },
+    {
+      "id": "steam-shop-keeper-fest-2027",
+      "store": "Steam",
+      "name": "Shop Keeper Fest",
+      "kind": "fest",
+      "start": "2027-01-25T18:00:00Z",
+      "end": "2027-02-01T18:00:00Z"
+    },
+    {
+      "id": "steam-sheep-fest-2027",
+      "store": "Steam",
+      "name": "Sheep Fest",
+      "kind": "fest",
+      "start": "2027-02-04T18:00:00Z",
+      "end": "2027-02-08T18:00:00Z"
+    },
+    {
+      "id": "steam-couch-co-op-fest-2027",
+      "store": "Steam",
+      "name": "Couch Co-Op Fest",
+      "kind": "fest",
+      "start": "2027-02-08T18:00:00Z",
+      "end": "2027-02-15T18:00:00Z"
+    },
+    {
+      "id": "steam-rhythm-fest-2027",
+      "store": "Steam",
+      "name": "Rhythm Fest",
+      "kind": "fest",
+      "start": "2027-03-08T18:00:00Z",
+      "end": "2027-03-15T17:00:00Z"
+    },
+    {
+      "id": "steam-spring-2027",
+      "store": "Steam",
+      "name": "Steam Spring Sale",
+      "kind": "big",
+      "start": "2027-03-18T17:00:00Z",
+      "end": "2027-03-25T17:00:00Z"
+    },
+    {
+      "id": "steam-dinos-vs-robots-fest-2027",
+      "store": "Steam",
+      "name": "Dinos vs. Robots Fest",
+      "kind": "fest",
+      "start": "2027-03-29T17:00:00Z",
+      "end": "2027-04-05T17:00:00Z"
+    },
+    {
+      "id": "steam-racing-fest-2027",
+      "store": "Steam",
+      "name": "Racing Fest",
+      "kind": "fest",
+      "start": "2027-04-12T17:00:00Z",
+      "end": "2027-04-19T17:00:00Z"
+    },
+    {
+      "id": "steam-witch-fest-2027",
+      "store": "Steam",
+      "name": "Witch Fest",
+      "kind": "fest",
+      "start": "2027-04-22T17:00:00Z",
+      "end": "2027-04-26T17:00:00Z"
+    },
+    {
+      "id": "steam-fighting-fest-2027",
+      "store": "Steam",
+      "name": "Fighting Fest",
+      "kind": "fest",
+      "start": "2027-04-26T17:00:00Z",
+      "end": "2027-05-03T17:00:00Z"
+    },
+    {
+      "id": "steam-real-time-strategy-fest-2027",
+      "store": "Steam",
+      "name": "Real-Time Strategy Fest",
+      "kind": "fest",
+      "start": "2027-05-10T17:00:00Z",
+      "end": "2027-05-17T17:00:00Z"
+    },
+    {
+      "id": "steam-mountaineering-fest-2027",
+      "store": "Steam",
+      "name": "Mountaineering Fest",
+      "kind": "fest",
+      "start": "2027-05-31T17:00:00Z",
+      "end": "2027-06-03T17:00:00Z"
+    },
+    {
+      "id": "steam-summer-2027",
+      "store": "Steam",
+      "name": "Steam Summer Sale",
+      "kind": "big",
+      "start": "2027-06-24T17:00:00Z",
+      "end": "2027-07-08T17:00:00Z"
+    }
+  ]
+}
