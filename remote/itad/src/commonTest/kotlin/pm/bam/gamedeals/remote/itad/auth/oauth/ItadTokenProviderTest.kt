@@ -1,0 +1,168 @@
+package pm.bam.gamedeals.remote.itad.auth.oauth
+
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import pm.bam.gamedeals.common.time.Clock
+import pm.bam.gamedeals.logging.LogLevel
+import pm.bam.gamedeals.logging.Logger
+import pm.bam.gamedeals.logging.LoggingInterface
+import pm.bam.gamedeals.remote.itad.auth.ItadCredentials
+import pm.bam.gamedeals.testing.TestingLoggingListener
+import pm.bam.gamedeals.testing.mockHttpClient
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class ItadTokenProviderTest {
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val credentials = ItadCredentials("key", "client-123", "pm.bam.gamedeals://oauth/itad")
+    private val clock = Clock { 1_000_000L }
+    private val logger = TestingLoggingListener()
+
+    @Test
+    fun refresh_success_persists_new_tokens_and_preserves_username() = runTest {
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob", scopeVersion = 7)
+        val oauth = ItadOAuthClient(
+            mockHttpClient(json) { _ ->
+                respond(
+                    """{"access_token":"NEW","token_type":"Bearer","expires_in":7200,"refresh_token":"NEW-RT"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            credentials,
+        )
+        val provider = ItadTokenProvider(store, oauth, clock, logger)
+
+        val result = provider.refresh()
+
+        assertEquals("NEW", result?.accessToken)
+        assertEquals("NEW-RT", result?.refreshToken)
+        assertEquals("NEW", store.getAccessToken())
+        assertEquals("NEW-RT", store.getRefreshToken())
+        assertEquals(1_000_000L + 7200 * 1000L, store.getExpiresAtEpochMs())
+        assertEquals("bob", store.getUsername()) // preserved across refresh
+        assertEquals(7, store.getScopeVersion()) // refresh grants no new scopes — scope version preserved
+    }
+
+    @Test
+    fun refresh_without_a_stored_refresh_token_clears_and_returns_null() = runTest {
+        val store = FakeAuthTokenStore(refresh = null)
+        val oauth = ItadOAuthClient(mockHttpClient(json) { _ -> respond("") }, credentials)
+
+        val result = ItadTokenProvider(store, oauth, clock, logger).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+    }
+
+    @Test
+    fun refresh_rejected_as_unauthorized_clears_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.Unauthorized), clock, logger).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+    }
+
+    @Test
+    fun transient_refresh_failures_keep_the_session() = runTest {
+        for (status in listOf(HttpStatusCode.InternalServerError, HttpStatusCode.ServiceUnavailable, HttpStatusCode.TooManyRequests)) {
+            val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+
+            val result = ItadTokenProvider(store, oauthAnswering(status), clock, logger).refresh()
+
+            assertNull(result, "status $status")
+            assertFalse(store.cleared, "status $status")
+            assertEquals("old-refresh", store.getRefreshToken(), "status $status")
+        }
+    }
+
+    @Test
+    fun network_failure_during_refresh_keeps_the_session() = runTest {
+        val store = FakeAuthTokenStore(access = "old", refresh = "old-refresh", username = "bob")
+        val oauth = ItadOAuthClient(mockHttpClient(json) { _ -> throw IllegalStateException("connection reset") }, credentials)
+
+        val result = ItadTokenProvider(store, oauth, clock, logger).refresh()
+
+        assertNull(result)
+        assertFalse(store.cleared)
+        assertEquals("bob", store.getUsername())
+    }
+
+    @Test
+    fun refresh_failure_clears_session() = runTest {
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        // expectSuccess=true ⇒ a 400 throws inside refreshToken; the provider must catch + clear.
+        val oauth = ItadOAuthClient(
+            mockHttpClient(json) { _ -> respond("nope", HttpStatusCode.BadRequest) },
+            credentials,
+        )
+
+        val result = ItadTokenProvider(store, oauth, clock, logger).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+    }
+
+    @Test
+    fun a_revoked_grant_clears_the_session_and_logs_a_warning_not_an_error() = runTest {
+        // Sentry GAME-DEALS-H: a user revoking the app on ITAD is an ordinary sign-out.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+        val body = """{"error":"invalid_grant","error_description":"The refresh token is invalid.","hint":"Token has been revoked"}"""
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.BadRequest, body), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.WARN), recorder.levels)
+    }
+
+    @Test
+    fun a_rejected_client_clears_the_session_and_still_logs_an_error() = runTest {
+        // invalid_client means the app's own credentials were refused — every user would hit it.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.Unauthorized, """{"error":"invalid_client"}"""), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.ERROR), recorder.levels)
+    }
+
+    @Test
+    fun a_rejection_without_a_readable_reason_still_logs_an_error() = runTest {
+        // Without "invalid_grant" in the reply we can't tell a user's sign-out from an app-wide fault, so report it.
+        val store = FakeAuthTokenStore(refresh = "old-refresh", username = "bob")
+        val recorder = LevelRecordingLogger()
+
+        val result = ItadTokenProvider(store, oauthAnswering(HttpStatusCode.BadRequest, body = ""), clock, recorder).refresh()
+
+        assertNull(result)
+        assertTrue(store.cleared)
+        assertEquals(listOf(LogLevel.ERROR), recorder.levels)
+    }
+
+    private fun oauthAnswering(status: HttpStatusCode, body: String = "nope") =
+        ItadOAuthClient(mockHttpClient(json) { _ -> respond(body, status) }, credentials)
+
+    private class LevelRecordingLogger : Logger {
+        val levels = mutableListOf<LogLevel>()
+        override fun log(level: LogLevel, tag: String?, throwable: Throwable?, messageProvider: () -> String) {
+            levels += level
+        }
+        override fun fatalThrowable(throwable: Throwable, tag: String?) = Unit
+        override fun addLoggerListener(loggingInterface: LoggingInterface) = Unit
+        override fun removeLoggerListener(loggingInterface: LoggingInterface) = Unit
+    }
+}
