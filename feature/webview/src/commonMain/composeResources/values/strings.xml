@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <string name="webview_screen_navigation_toolbar_overflow">Overflow button</string>
-    <string name="webview_screen_navigation_open_in_browser">Open in browser</string>
-
-    <string name="webview_screen_navigation_back_button">Back</string>
-
-</resources>

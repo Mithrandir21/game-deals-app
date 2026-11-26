@@ -1,8 +1,0 @@
-## Xcode user-specific
-xcuserdata/
-*.xcuserstate
-*.xcuserstatedata
-
-## Build artifacts
-build/
-DerivedData/
